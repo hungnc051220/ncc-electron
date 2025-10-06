@@ -61,7 +61,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.929 0.013 255.508);
   --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --ring: oklch(0.9359 0.0188 289.32);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -109,6 +109,15 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+}
+
+@theme {
+  --color-goku: #f5f5f5;
+  --color-jiren: #e9e8f6;
+  --color-hit: #40a69f;
+  --color-beerus: #e2e2e2;
+  --color-zeno: #707070;
+  --color-trunks: #595d62;
 }
 
 @layer base {

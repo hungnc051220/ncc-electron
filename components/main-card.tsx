@@ -3,9 +3,9 @@ import { Tilt } from "./ui/tilt";
 import Image from "next/image";
 
 const colorTypes = {
-  red: "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%);",
-  green: "linear-gradient(133.61deg, #2DC16A 2.5%, #1A9D4F 86.48%);",
-  blue: "linear-gradient(125.85deg, #4A62B7 2.77%, #2D47A5 97.31%);",
+  red: "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
+  green: "linear-gradient(133.61deg, #2DC16A 2.5%, #1A9D4F 86.48%)",
+  blue: "linear-gradient(125.85deg, #4A62B7 2.77%, #2D47A5 97.31%)",
 };
 
 interface MainCardProps {
@@ -23,7 +23,7 @@ const MainCard = ({ icon: Icon, title, description, color }: MainCardProps) => {
         style={{
           background:
             colorTypes[color as keyof typeof colorTypes] ||
-            "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%);",
+            "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
         }}
       >
         <Image

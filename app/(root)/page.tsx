@@ -1,6 +1,8 @@
 import MainCard from "@/components/main-card";
 import SecondaryCard from "@/components/secondary-card";
 import { TicketIcon, PrinterIcon, GiftIcon } from "lucide-react";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 
 const DashboardPage = () => {
   return (
@@ -8,10 +10,14 @@ const DashboardPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-bold text-[32px]">Xin chào, Cán bộ Hoàng Lân!</h2>
-          <p>Thứ 4, ngày 18 tháng 9 năm 2025</p>
+          <p className="text-trunks">
+            {format(new Date(), "'Thứ' EEEE, 'ngày' d 'tháng' M 'năm' yyyy", {
+              locale: vi,
+            })}
+          </p>
         </div>
         <div>
-          <div className="bg-gray-100 py-[6px] px-3 rounded-[10px] font-bold text-lg">
+          <div className="bg-goku py-[6px] px-3 rounded-[10px] font-bold text-lg">
             Máy: JQK
           </div>
         </div>
@@ -40,7 +46,7 @@ const DashboardPage = () => {
 
       <div className="grid grid-cols-4 gap-6 mt-8">
         <SecondaryCard
-          title="Bán vé khách lẻ"
+          title="Sơ đồ bán vé"
           description="Xem sơ đồ bán vé"
           icon={TicketIcon}
           color="text-yellow-500"
