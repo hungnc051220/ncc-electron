@@ -8,17 +8,11 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
+  NavigationMenuTrigger
 } from "@/components/ui/navigation-menu";
-import UsersModal from "./users/add-user-modal";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/constants";
 
 const NavItems = () => {
-  const [openUsers, setOpenUsers] = useState(false);
-
   return (
     <>
       <NavigationMenu viewport={false}>

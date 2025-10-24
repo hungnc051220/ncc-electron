@@ -6,25 +6,19 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTitle
 } from "@/components/ui/dialog";
-import { PlusIcon } from "lucide-react";
-import { useState } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import AddUserForm from "./add-user-form";
 
-const AddUserModal = () => {
-  const [open, setOpen] = useState(false);
+interface UserDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
+const UserDialog = ({open, onOpenChange}: UserDialogProps) => {
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button onClick={() => setOpen(true)}>
-          <PlusIcon />
-          Thêm người dùng
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[876px]">
         <DialogHeader className="border-b">
           <DialogTitle>Thêm mới người dùng</DialogTitle>
@@ -45,4 +39,4 @@ const AddUserModal = () => {
   );
 };
 
-export default AddUserModal;
+export default UserDialog;

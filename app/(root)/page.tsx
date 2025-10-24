@@ -3,6 +3,9 @@ import SecondaryCard from "@/components/secondary-card";
 import { TicketIcon, PrinterIcon, GiftIcon } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import RetailTicketSaleCard from "@/components/dashboard/retail-ticket-sale-card";
+import OnlineTicketPrintCard from "@/components/dashboard/online-ticket-print-card";
+import GiftVoucherPrintCard from "@/components/dashboard/gift-voucher-print-card";
 
 const DashboardPage = () => {
   return (
@@ -11,7 +14,7 @@ const DashboardPage = () => {
         <div>
           <h2 className="font-bold text-[32px]">Xin chào, Cán bộ Hoàng Lân!</h2>
           <p className="text-trunks">
-            {format(new Date(), "'Thứ' EEEE, 'ngày' d 'tháng' M 'năm' yyyy", {
+            {format(new Date(), "EEEE, 'ngày' d 'tháng' M 'năm' yyyy", {
               locale: vi,
             })}
           </p>
@@ -24,24 +27,9 @@ const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-6 mt-8">
-        <MainCard
-          title="Bán vé khách lẻ"
-          description="Lorem ipsum dolor sit amet consectetur elit"
-          color="red"
-          icon={TicketIcon}
-        />
-        <MainCard
-          title="In vé online"
-          description="Lorem ipsum dolor sit amet consectetur elit"
-          color="blue"
-          icon={PrinterIcon}
-        />
-        <MainCard
-          title="In voucher quà tặng"
-          description="Lorem ipsum dolor sit amet consectetur elit"
-          color="green"
-          icon={GiftIcon}
-        />
+        <RetailTicketSaleCard />
+        <OnlineTicketPrintCard />
+        <GiftVoucherPrintCard />
       </div>
 
       <div className="grid grid-cols-4 gap-6 mt-8">

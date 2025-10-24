@@ -118,6 +118,11 @@
   --color-beerus: #e2e2e2;
   --color-zeno: #707070;
   --color-trunks: #595d62;
+  --color-roshi: #2e7d32;
+  --color-chichi: #ff4e64;
+  --color-krillin: #FFB319;
+  --color-whis: #3448F0;
+  --color-dodoria: #D33030;
 }
 
 @layer base {

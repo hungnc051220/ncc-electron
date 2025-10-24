@@ -19,7 +19,7 @@ const MainCard = ({ icon: Icon, title, description, color }: MainCardProps) => {
   return (
     <Tilt rotationFactor={8} isRevese>
       <div
-        className="w-full h-[281px] rounded-3xl p-10 shadow-sm flex flex-col justify-between cursor-pointer relative"
+        className="w-full h-[281px] rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative"
         style={{
           background:
             colorTypes[color as keyof typeof colorTypes] ||
