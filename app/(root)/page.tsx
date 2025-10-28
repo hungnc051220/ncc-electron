@@ -1,11 +1,10 @@
-import MainCard from "@/components/main-card";
+import GiftVoucherPrintCard from "@/components/dashboard/gift-voucher-print-card";
+import OnlineTicketPrintCard from "@/components/dashboard/online-ticket-print-card";
+import RetailTicketSaleCard from "@/components/dashboard/retail-ticket-sale-card";
 import SecondaryCard from "@/components/secondary-card";
-import { TicketIcon, PrinterIcon, GiftIcon } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import RetailTicketSaleCard from "@/components/dashboard/retail-ticket-sale-card";
-import OnlineTicketPrintCard from "@/components/dashboard/online-ticket-print-card";
-import GiftVoucherPrintCard from "@/components/dashboard/gift-voucher-print-card";
+import { TicketIcon } from "lucide-react";
 
 const DashboardPage = () => {
   return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -7,27 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 
 const Filter = () => {
   return (
     <div className="flex gap-4">
-      <div className="flex-1">
-        <p className="text-sm mb-1">Nhóm người dùng</p>
+      <div>
+        <p className="text-sm mb-1">Năm</p>
         <Select>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Chọn nhóm người dùng" />
+          <SelectTrigger className="w-[285px]">
+            <SelectValue placeholder="Chọn năm" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="administrator">Administrator</SelectItem>
             <SelectItem value="customer">Customer</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-      <div className="flex-1">
-        <p className="text-sm mb-1">Tên/ Email</p>
-        <Input type="text" placeholder="Nhập tên hoặc Email" />
       </div>
       <Button className="mt-6" variant="outline">Tìm kiếm</Button>
     </div>

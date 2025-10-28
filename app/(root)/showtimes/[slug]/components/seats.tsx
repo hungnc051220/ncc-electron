@@ -30,7 +30,7 @@ const Seats = () => {
     };
 
     fetchSeats();
-  });
+  }, []);
 
   const [selected, setSelected] = useState<string[]>([]);
 

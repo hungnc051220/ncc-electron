@@ -80,7 +80,7 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
     <FormItemContext.Provider value={{ id }}>
       <div
         data-slot="form-item"
-        className={cn("grid", className)}
+        className={cn("grid gap-2", className)}
         {...props}
       />
     </FormItemContext.Provider>
@@ -97,7 +97,7 @@ function FormLabel({
     <Label
       data-slot="form-label"
       data-error={!!error}
-      className={cn("data-[error=true]:text-destructive mb-2", className)}
+      className={cn("data-[error=true]:text-destructive", className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -139,23 +139,18 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message ?? "") : props.children
 
-  // Always render a placeholder to reserve space, similar to Ant Design's help text.
-  const hasBody = Boolean(body)
+  if (!body) {
+    return null
+  }
 
   return (
     <p
       data-slot="form-message"
       id={formMessageId}
-      aria-live="polite"
-      className={cn(
-        // Reserve space and avoid layout shift when validation message appears
-        "text-xs mt-1 min-h-5",
-        hasBody ? "text-destructive" : "opacity-0",
-        className
-      )}
+      className={cn("text-destructive text-sm", className)}
       {...props}
     >
-      {hasBody ? body : "\u00A0"}
+      {body}
     </p>
   )
 }

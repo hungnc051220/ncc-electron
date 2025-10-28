@@ -1,4 +1,4 @@
-import UsersClient from "@/components/users/users-client";
+import UsersClient from "./components/users-client";
 import { getUsers } from "@/data/loaders";
 
 const Users = async () => {
