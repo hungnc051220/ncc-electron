@@ -1,3 +1,5 @@
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export const getUsers = async () => {
   const res = await fetch("https://jsonplaceholder.typicode.com/users");
   return res.json();
@@ -193,4 +195,16 @@ export const getSeats = async () => {
       ],
     },
   ];
+};
+
+export const onRefreshToken = async (refreshToken: string) => {
+  const url = new URL("/api/v1/staff/refresh-token", BASE_URL);
+
+  return await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
 };
