@@ -1,9 +1,9 @@
 import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { decodeToken } from "./lib/utils";
-import { onRefreshToken } from "./data/loaders";
+import { onRefreshToken } from "./data/loaders-server";
 
-const protectedRoutes = ["/"];
+const protectedRoutes = ["/", "/users", "/machine-serials"];
 const publicRoutes = ["/sign-in"];
 
 export async function proxy(req: NextRequest) {

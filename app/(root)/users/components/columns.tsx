@@ -5,15 +5,31 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UserProps } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
 
-export const columns: ColumnDef<any>[] = [
+interface ColumnsProps {
+  onEdit: (user: UserProps) => void;
+  onDelete: (user: UserProps) => void;
+  page: number;
+}
+
+export const createColumns = ({
+  onEdit,
+  onDelete,
+  page,
+}: ColumnsProps): ColumnDef<UserProps>[] => [
+  {
+    accessorKey: "no",
+    header: "STT",
+    cell: ({ row }) => (page - 1) * 10 + row.index + 1,
+  },
   {
     accessorKey: "id",
-    header: "STT",
+    header: "Mã người dùng",
   },
   {
     accessorKey: "username",
@@ -24,15 +40,15 @@ export const columns: ColumnDef<any>[] = [
     header: "Email",
   },
   {
-    accessorKey: "phone",
-    header: "Manufacturald",
+    accessorKey: "manufacturerId",
+    header: "Mã nhà sản xuất",
   },
   {
     accessorKey: "actions",
     header: "",
     enableHiding: false,
     cell: ({ row }) => {
-      const payment = row.original
+      const user = row.original;
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -42,15 +58,18 @@ export const columns: ColumnDef<any>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
-            >
+            <DropdownMenuItem onClick={() => onEdit(user)}>
               Cập nhật
             </DropdownMenuItem>
-            <DropdownMenuItem>Xóa</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(user)}
+              className="text-destructive"
+            >
+              Xóa
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      )
+      );
     },
   },
 ];

@@ -10,81 +10,108 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
+  Select as SelectUI,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  updateUserFormSchema,
+  UserFormInput,
+  userFormSchema,
+} from "@/lib/schemas";
+import { CustomerRoleProps } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ChevronDownIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import Select from "react-select";
 
-const formSchema = z.object({
-  group: z.string(),
-  firstName: z.string().min(1, {
-    error: "Họ là bắt buộc",
-  }),
-  lastName: z.string().min(1, {
-    error: "Tên là bắt buộc",
-  }),
-  manufactureId: z.string(),
-  address: z.string().optional(),
-  email: z.email("Email không đúng định dạng").min(1, {
-    error: "Email là bắt buộc",
-  }),
-  phoneNumber: z.string().regex(/^0\d{9}$/, "Số điện thoại không hợp lệ"),
-  userName: z.string().min(1, { error: "Tên người dùng là bắt buộc" }),
-  password: z.string().min(1, { error: "Mật khẩu là bắt buộc" }),
-});
+interface UserFormProps {
+  onSubmit: (values: UserFormInput) => void;
+  customerRoles: CustomerRoleProps[];
+  defaultValues?: Partial<UserFormInput>;
+  isEdit?: boolean;
+}
 
-const AddUserForm = () => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      group: "",
-      firstName: "",
-      lastName: "",
-      manufactureId: "1",
+const UserForm = ({
+  onSubmit,
+  customerRoles,
+  defaultValues,
+  isEdit = false,
+}: UserFormProps) => {
+  const form = useForm<UserFormInput>({
+    resolver: zodResolver(isEdit ? updateUserFormSchema : userFormSchema),
+    defaultValues: defaultValues || {
+      roleIds: [],
+      customerFirstName: "",
+      customerLastName: "",
+      manufacturerId: 0,
       address: "",
       email: "",
-      phoneNumber: "",
-      userName: "",
+      mobile: "",
+      username: "",
       password: "",
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
-  };
-
   return (
     <div className="px-6 py-5">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={form.handleSubmit(onSubmit)} id="user-form">
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <FormField
               control={form.control}
-              name="group"
+              name="roleIds"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="w-full">
                   <FormLabel>Nhóm người dùng</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Chọn nhóm người dùng" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="administrator">
-                        Administrator
-                      </SelectItem>
-                      <SelectItem value="customer">Customer</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    options={customerRoles?.map((role) => ({
+                      value: role.id,
+                      label: role.name,
+                    }))}
+                    placeholder="Chọn nhóm người dùng"
+                    isMulti
+                    defaultValue={field.value?.map((value) => ({
+                      value: value,
+                      label: customerRoles?.find((role) => role.id === value)
+                        ?.name,
+                    }))}
+                    onChange={(values) =>
+                      field.onChange(values?.map((value) => value.value))
+                    }
+                    components={{
+                      Control: ({ children, ...props }) => (
+                        <div
+                          ref={props.innerRef}
+                          {...props.innerProps}
+                          className="flex items-center min-h-9 gap-2 px-2.5 rounded-md border border-input bg-background text-sm focus-within:ring-2 focus-within:ring-ring"
+                        >
+                          {children}
+                        </div>
+                      ),
+                      DropdownIndicator: () => (
+                        <ChevronDownIcon className="size-4 text-gray-400 ml-2" />
+                      ),
+                      IndicatorSeparator: () => null,
+                    }}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: "unset",
+                        height: "unset",
+                        boxShadow: "none",
+                        border: "none",
+                      }),
+                      valueContainer: (base) => ({
+                        ...base,
+                        padding: 0,
+                        fontSize: "14px",
+                      }),
+                    }}
+                    isSearchable
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -93,9 +120,9 @@ const AddUserForm = () => {
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="firstName"
+                name="customerFirstName"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
                     <FormLabel>Họ</FormLabel>
                     <FormControl>
                       <Input placeholder="Nhập họ" {...field} />
@@ -106,9 +133,9 @@ const AddUserForm = () => {
               />
               <FormField
                 control={form.control}
-                name="lastName"
+                name="customerLastName"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
                     <FormLabel>Tên</FormLabel>
                     <FormControl>
                       <Input placeholder="Nhập tên" {...field} />
@@ -121,14 +148,13 @@ const AddUserForm = () => {
 
             <FormField
               control={form.control}
-              name="manufactureId"
+              name="manufacturerId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="w-full">
                   <FormLabel>Hãng sản xuất</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled
+                  <SelectUI
+                    onValueChange={(value) => field.onChange(Number(value))}
+                    value={field.value.toString()}
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
@@ -136,9 +162,9 @@ const AddUserForm = () => {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="1">A Company</SelectItem>
+                      <SelectItem value="0">A Company</SelectItem>
                     </SelectContent>
-                  </Select>
+                  </SelectUI>
                   <FormMessage />
                 </FormItem>
               )}
@@ -148,7 +174,7 @@ const AddUserForm = () => {
               control={form.control}
               name="address"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="w-full">
                   <FormLabel>Địa chỉ</FormLabel>
                   <FormControl>
                     <Input placeholder="Nhập địa chỉ" {...field} />
@@ -162,7 +188,7 @@ const AddUserForm = () => {
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="w-full">
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input placeholder="Nhập email" {...field} />
@@ -173,9 +199,9 @@ const AddUserForm = () => {
             />
             <FormField
               control={form.control}
-              name="phoneNumber"
+              name="mobile"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="w-full">
                   <FormLabel>Số điện thoại</FormLabel>
                   <FormControl>
                     <Input placeholder="Nhập số điện thoại" {...field} />
@@ -187,10 +213,10 @@ const AddUserForm = () => {
 
             <FormField
               control={form.control}
-              name="userName"
+              name="username"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tên</FormLabel>
+                <FormItem className="w-full">
+                  <FormLabel>Tên đăng nhập</FormLabel>
                   <FormControl>
                     <Input placeholder="Nhập tên đăng nhập" {...field} />
                   </FormControl>
@@ -203,12 +229,16 @@ const AddUserForm = () => {
               control={form.control}
               name="password"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mật khẩu</FormLabel>
+                <FormItem className="w-full">
+                  <FormLabel>
+                    Mật khẩu{isEdit && " (để trống nếu không đổi)"}
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Nhập mật khẩu"
+                      placeholder={
+                        isEdit ? "Để trống nếu không đổi" : "Nhập mật khẩu"
+                      }
                       {...field}
                     />
                   </FormControl>
@@ -223,4 +253,4 @@ const AddUserForm = () => {
   );
 };
 
-export default AddUserForm;
+export default UserForm;

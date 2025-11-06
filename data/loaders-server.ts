@@ -1,8 +1,67 @@
+"use server";
+
+import {
+  ApiResponse,
+  CustomerRoleProps,
+  PlanScreeningDetailProps,
+  PlanScreeningProps,
+  UserProps,
+} from "@/types";
+import { cookies } from "next/headers";
+import qs from "query-string";
+import { fetchAPI } from "./fetch-api";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export const getUsers = async () => {
-  const res = await fetch("https://jsonplaceholder.typicode.com/users");
-  return res.json();
+export const getUsers = async ({
+  roleId,
+  searchText,
+  page,
+  pageSize,
+}: {
+  roleId?: string;
+  searchText?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<UserProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/staff", BASE_URL);
+  url.search = qs.stringify(
+    {
+      filter: JSON.stringify({ roleId, keyword: searchText }),
+      current: page,
+      pageSize,
+    },
+    { skipEmptyString: true, skipNull: true, encode: false }
+  );
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getCustomerRoles = async (): Promise<CustomerRoleProps[]> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/customer-role", BASE_URL);
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getPlanScreeningsByDate = async (): Promise<
+  PlanScreeningProps[]
+> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/plan-screenings/get-by-date", BASE_URL);
+  url.search = qs.stringify({ date: "2025-10-16" });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getPlanScreeningDetail = async (
+  id: string
+): Promise<PlanScreeningDetailProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL(`/api/pos/plan-screenings/${id}`, BASE_URL);
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 
 export const getShowtimes = async () => {
@@ -198,13 +257,13 @@ export const getSeats = async () => {
 };
 
 export const onRefreshToken = async (refreshToken: string) => {
-  const url = new URL("/api/v1/staff/refresh-token", BASE_URL);
+  const url = new URL("/api/pos/staff/refresh-token", BASE_URL);
 
   return await fetch(url.toString(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ refresh_token: refreshToken }),
+    body: JSON.stringify({ refreshToken }),
   });
 };

@@ -20,7 +20,7 @@ const INITIAL_STATE = {
 };
 
 const SignInForm = () => {
-  const [formState, formAction, pending] = useActionState(
+  const [state, action, pending] = useActionState(
     signInAction,
     INITIAL_STATE
   );
@@ -34,8 +34,8 @@ const SignInForm = () => {
   });
 
   useEffect(() => {
-    if (formState.fieldErrors) {
-      Object.entries(formState.fieldErrors).forEach(([key, messages]) => {
+    if (state.fieldErrors) {
+      Object.entries(state.fieldErrors).forEach(([key, messages]) => {
         if (messages && messages.length > 0) {
           form.setError(key as keyof SignInInput, {
             type: "server",
@@ -45,17 +45,17 @@ const SignInForm = () => {
       });
     }
 
-    if (formState.error) {
-      toast.error(formState.error);
+    if (state.error) {
+      toast.error(state.error);
     }
-  }, [formState, form]);
+  }, [state, form]);
 
   const onSubmit = (values: SignInInput) => {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) =>
       formData.append(key, value)
     );
-    startTransition(() => formAction(formData));
+    startTransition(() => action(formData));
   };
 
   return (

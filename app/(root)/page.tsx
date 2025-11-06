@@ -1,10 +1,8 @@
-import GiftVoucherPrintCard from "@/components/dashboard/gift-voucher-print-card";
-import OnlineTicketPrintCard from "@/components/dashboard/online-ticket-print-card";
-import RetailTicketSaleCard from "@/components/dashboard/retail-ticket-sale-card";
+import MainCard from "@/components/main-card";
 import SecondaryCard from "@/components/secondary-card";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { TicketIcon } from "lucide-react";
+import { GiftIcon, PrinterIcon, TicketIcon } from "lucide-react";
 
 const DashboardPage = () => {
   return (
@@ -26,9 +24,25 @@ const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-6 mt-8">
-        <RetailTicketSaleCard />
-        <OnlineTicketPrintCard />
-        <GiftVoucherPrintCard />
+        <MainCard
+          title="Bán vé khách lẻ"
+          description="Lorem ipsum dolor sit amet consectetur elit"
+          color="red"
+          icon={TicketIcon}
+          href="retail-ticket-sales"
+        />
+        <MainCard
+          title="In vé online"
+          description="Lorem ipsum dolor sit amet consectetur elit"
+          color="blue"
+          icon={PrinterIcon}
+        />
+        <MainCard
+          title="In voucher quà tặng"
+          description="Lorem ipsum dolor sit amet consectetur elit"
+          color="green"
+          icon={GiftIcon}
+        />
       </div>
 
       <div className="grid grid-cols-4 gap-6 mt-8">

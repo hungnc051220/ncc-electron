@@ -1,6 +1,7 @@
 import { LucideIcon } from "lucide-react";
 import { Tilt } from "./ui/tilt";
 import Image from "next/image";
+import Link from "next/link";
 
 const colorTypes = {
   red: "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
@@ -13,34 +14,43 @@ interface MainCardProps {
   title: string;
   description: string;
   color: string;
+  href?: string;
 }
 
-const MainCard = ({ icon: Icon, title, description, color }: MainCardProps) => {
+const MainCard = ({
+  icon: Icon,
+  title,
+  description,
+  color,
+  href,
+}: MainCardProps) => {
   return (
     <Tilt rotationFactor={8} isRevese>
-      <div
-        className="w-full h-[281px] rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative"
-        style={{
-          background:
-            colorTypes[color as keyof typeof colorTypes] ||
-            "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
-        }}
-      >
-        <Image
-          src="/images/rectangle.png"
-          alt="rectangle"
-          width={150}
-          height={150}
-          className="absolute top-0 right-0"
-        />
-        <div className="bg-white/25 rounded-full flex items-center justify-center size-15">
-          <Icon className="text-white" size={36} />
+      <Link href={href ?? "#"}>
+        <div
+          className="w-full h-[281px] rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative"
+          style={{
+            background:
+              colorTypes[color as keyof typeof colorTypes] ||
+              "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
+          }}
+        >
+          <Image
+            src="/images/rectangle.png"
+            alt="rectangle"
+            width={150}
+            height={150}
+            className="absolute top-0 right-0"
+          />
+          <div className="bg-white/25 rounded-full flex items-center justify-center size-15">
+            <Icon className="text-white" size={36} />
+          </div>
+          <div>
+            <p className="font-bold text-2xl text-white">{title}</p>
+            <p className="text-sm mt-1 text-white">{description}</p>
+          </div>
         </div>
-        <div>
-          <p className="font-bold text-2xl text-white">{title}</p>
-          <p className="text-sm mt-1 text-white">{description}</p>
-        </div>
-      </div>
+      </Link>
     </Tilt>
   );
 };
