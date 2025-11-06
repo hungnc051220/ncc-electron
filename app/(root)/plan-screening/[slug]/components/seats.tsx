@@ -66,7 +66,7 @@ const Seats = ({ seats }: SeatsProps) => {
                 key={index}
                 className="flex gap-[6px] items-center justify-center seat"
               >
-                <div className="aspect-square w-3 sm:w-6 xl:h-10 xl:w-10 rounded-[2px] sm:rounded-sm xl:rounded-[8px] flex items-center justify-center text-[8px] sm:text-sm lg:hidden">
+                <div className="text-trunks font-medium h-[44px] w-[50px] flex items-center justify-center text-base">
                   {item[4].code.charAt(0)}
                 </div>
                 {item.map((seat) => (
@@ -77,7 +77,9 @@ const Seats = ({ seats }: SeatsProps) => {
                       colorMap[seat.type],
                       seat.type !== 12 && seat.status !== 1 && "cursor-pointer",
                       selectedSeats.some((s) => s.code === seat.code) &&
-                        "bg-whis text-white"
+                        "bg-whis text-white",
+                      seat.isContract && "bg-raditz text-white",
+                      seat.isHold && "bg-roshi text-white"
                     )}
                     onClick={() => handleSelectSeat(seat)}
                   >
@@ -97,7 +99,7 @@ const Seats = ({ seats }: SeatsProps) => {
                     )}
                   </div>
                 ))}
-                <div className="aspect-square w-3 sm:w-6 xl:h-10 xl:w-10 rounded-[2px] sm:rounded-sm xl:rounded-[8px] flex items-center justify-center text-[8px] sm:text-sm lg:hidden">
+                <div className="text-trunks font-medium h-[44px] w-[50px] flex items-center justify-center text-base">
                   {item[4].code.charAt(0)}
                 </div>
               </div>
@@ -168,7 +170,10 @@ const Seats = ({ seats }: SeatsProps) => {
               </div>
               <div className="w-2/5 bg-goku p-4 text-sm rounded-sm">
                 <p className="font-bold">Phương thức</p>
-                <RadioGroup defaultValue="r1" className="grid grid-cols-2 gap-4 mt-4">
+                <RadioGroup
+                  defaultValue="r1"
+                  className="grid grid-cols-2 gap-4 mt-4"
+                >
                   <div className="flex items-center gap-3">
                     <RadioGroupItem value="cash" id="r1" />
                     <Label htmlFor="r1">Tiền mặt</Label>
