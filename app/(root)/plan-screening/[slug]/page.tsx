@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Seats from "./components/seats";
 import { getPlanScreeningDetail } from "@/data/loaders-server";
 import { format } from "date-fns";
+import CustomerView from "./components/customer-view";
 
 interface PlanScreeningPageProps {
   params: Promise<{ slug: string }>;
@@ -22,10 +23,10 @@ const PlanScreeningPage = async ({ params }: PlanScreeningPageProps) => {
     <div className="pb-40">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-chichi text-lg font-medium">
+          {/* <p className="text-chichi text-lg font-medium">
             Buổi {format(new Date(data.projectTime), "HH:mm")} - Ngày{" "}
             {format(new Date(data.projectTime), "dd/MM/yyyy")}
-          </p>
+          </p> */}
           <p className="text-2xl font-bold mt-1">{data.filmInfo.filmName}</p>
         </div>
         <div className="bg-goku py-[6px] px-3 rounded-lg">
@@ -34,6 +35,7 @@ const PlanScreeningPage = async ({ params }: PlanScreeningPageProps) => {
       </div>
 
       <Seats seats={data.listSeats} />
+      <CustomerView planScreeningsId={Number(slug)} />
     </div>
   );
 };

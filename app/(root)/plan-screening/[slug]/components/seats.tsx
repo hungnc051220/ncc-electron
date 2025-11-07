@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { ListSeat } from "@/types";
 import { X } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import Legend from "./legend";
 
 const colorMap: { [key: string]: string } = {
@@ -23,6 +24,9 @@ interface SeatsProps {
 }
 
 const Seats = ({ seats }: SeatsProps) => {
+  const searchParams = useSearchParams();
+  const isCustomerView = searchParams.get("view") === "customer";
+
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
 
   const handleSelectSeat = (seat: ListSeat) => {
@@ -34,6 +38,18 @@ const Seats = ({ seats }: SeatsProps) => {
       }
     });
   };
+
+  useEffect(() => {
+    if (isCustomerView) {
+      window.electron?.onSeatUpdate((data) => setSelectedSeats(data));
+    }
+  }, [isCustomerView]);
+
+  useEffect(() => {
+    if (!isCustomerView && selectedSeats.length >= 0) {
+      window.electron?.sendSeatUpdate(selectedSeats);
+    }
+  }, [selectedSeats, isCustomerView]);
 
   const totalPrice = selectedSeats.reduce((acc, cur) => acc + cur.price, 0);
   const formattedTotalPrice = new Intl.NumberFormat("vi-VN", {
@@ -108,7 +124,12 @@ const Seats = ({ seats }: SeatsProps) => {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-beerus">
+      <div
+        className={cn(
+          "fixed bottom-0 left-0 right-0 bg-white border-t border-beerus",
+          isCustomerView && "hidden"
+        )}
+      >
         <div className="py-4 container flex gap-3">
           <div className="flex-1">
             <div className="flex gap-3">
