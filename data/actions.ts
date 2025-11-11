@@ -9,13 +9,16 @@ import { deleteSession } from "@/lib/session";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
+  bookingTicketService,
   createUserService,
+  deletePlanCinemaService,
   deleteUserService,
   signInService,
   updateUserService,
 } from "./services";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { BookingTicketBodyProps } from "@/types";
 
 export type ActionStateProps = {
   formData: Record<string, string> | null;
@@ -144,7 +147,7 @@ export const updateUserAction = async (
   const userId = formData.get("userId") as string;
   const formFields = {
     username: formData.get("username") as string,
-    password: formData.get("password") as string || "",
+    password: (formData.get("password") as string) || "",
     roleIds: formData.get("roleIds") as string,
     customerFirstName: formData.get("customerFirstName") as string,
     customerLastName: formData.get("customerLastName") as string,
@@ -228,6 +231,76 @@ export const deleteUserAction = async (
   }
 
   revalidatePath("/users");
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const bookingTicketAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const floorNo = Number(formData.get("floorNo") as string);
+
+  const dataToSend: BookingTicketBodyProps = {
+    planScreenId: Number(formData.get("planScreenId") as string),
+    floorNo,
+    paymentMethodSystemName: formData.get("paymentMethodSystemName") as string,
+    posName: formData.get("posName") as string,
+    posShortName: formData.get("posShortName") as string,
+  };
+
+  if (floorNo === 1) {
+    dataToSend.listChairIndexF1 = formData.get("listChairIndexF1") as string;
+    dataToSend.listChairValueF1 = formData.get("listChairValueF1") as string;
+  } else if (floorNo === 2) {
+    dataToSend.listChairIndexF2 = formData.get("listChairIndexF2") as string;
+    dataToSend.listChairValueF2 = formData.get("listChairValueF2") as string;
+  } else if (floorNo === 3) {
+    dataToSend.listChairIndexF3 = formData.get("listChairIndexF3") as string;
+    dataToSend.listChairValueF3 = formData.get("listChairValueF3") as string;
+  }
+
+  const res = await bookingTicketService(dataToSend);
+  const data = await res.json();
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      success: false,
+      error: data.message || "Tạo đơn thất bại",
+    };
+  }
+
+  revalidatePath(`/plan-screening/${data?.id}`);
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const deletePlanCinemaAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const planCinemaId = formData.get("planCinemaId") as string;
+
+  const res = await deletePlanCinemaService(Number(planCinemaId));
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Xóa kế hoạch chiếu phim thất bại",
+    };
+  }
+
+  revalidatePath("/film-scheduling");
 
   return {
     ...prevState,

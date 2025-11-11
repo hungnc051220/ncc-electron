@@ -1,4 +1,5 @@
 import Header from "@/components/header";
+import QueryProvider from "@/providers/query-provider";
 
 const DashboardLayout = ({
   children,
@@ -10,7 +11,9 @@ const DashboardLayout = ({
   return (
     <main className="min-h-screen">
       <Header />
-      <div className="container py-10">{children}</div>
+      <QueryProvider>
+        <div className="container py-10">{children}</div>
+      </QueryProvider>
       {modal}
     </main>
   );

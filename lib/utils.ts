@@ -17,3 +17,8 @@ export const decodeToken = (token: string) => {
     return null;
   }
 };
+
+export const formatMoney = (price: number) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+    price
+  );

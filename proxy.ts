@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { decodeToken } from "./lib/utils";
 import { onRefreshToken } from "./data/loaders-server";
 
-const protectedRoutes = ["/", "/users", "/machine-serials"];
+const protectedRoutes = ["/", "/users", "/machine-serials", "/film-scheduling"];
 const publicRoutes = ["/sign-in"];
 
 export async function proxy(req: NextRequest) {

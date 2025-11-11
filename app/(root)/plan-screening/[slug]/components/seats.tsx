@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn } from "@/lib/utils";
-import { ListSeat } from "@/types";
-import { X } from "lucide-react";
+import { cn, formatMoney } from "@/lib/utils";
+import { ListSeat, PlanScreeningDetailProps } from "@/types";
+import { Loader2, X } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import Legend from "./legend";
+import { bookingTicketAction } from "@/data/actions";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -19,15 +20,27 @@ const colorMap: { [key: string]: string } = {
   12: "bg-transparent",
 };
 
+const INITIAL_STATE = {
+  formData: null,
+  fieldErrors: null,
+  success: false,
+  error: null,
+};
+
 interface SeatsProps {
-  seats: ListSeat[][];
+  data: PlanScreeningDetailProps;
 }
 
-const Seats = ({ seats }: SeatsProps) => {
+const Seats = ({ data }: SeatsProps) => {
+  const { listSeats: seats } = data;
   const searchParams = useSearchParams();
   const isCustomerView = searchParams.get("view") === "customer";
-
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
+
+  const [state, action, pending] = useActionState(
+    bookingTicketAction,
+    INITIAL_STATE
+  );
 
   const handleSelectSeat = (seat: ListSeat) => {
     setSelectedSeats((prev) => {
@@ -52,13 +65,65 @@ const Seats = ({ seats }: SeatsProps) => {
   }, [selectedSeats, isCustomerView]);
 
   const totalPrice = selectedSeats.reduce((acc, cur) => acc + cur.price, 0);
-  const formattedTotalPrice = new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(totalPrice);
+
+  const onBooking = () => {
+    if (selectedSeats.length === 0) return;
+
+    const formData = new FormData();
+    const floorNo = 1;
+
+    type BodyType = {
+      planScreenId: number;
+      floorNo: number;
+      paymentMethodSystemName: string;
+      posName: string;
+      posShortName: string;
+      listChairIndexF1?: string;
+      listChairValueF1?: string;
+      listChairIndexF2?: string;
+      listChairValueF2?: string;
+      listChairIndexF3?: string;
+      listChairValueF3?: string;
+    };
+
+    const body: BodyType = {
+      planScreenId: data.id,
+      floorNo,
+      paymentMethodSystemName: "Pos",
+      posName: "POS Machine 1",
+      posShortName: "P1",
+    };
+
+    if (floorNo === 1) {
+      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 2) {
+      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 3) {
+      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
+    }
+
+    Object.entries(body).forEach(([key, value]) => {
+      if (value !== undefined) {
+        formData.append(key, value as string);
+      }
+    });
+
+    startTransition(() => action(formData));
+  };
 
   return (
-    <div>
+    <div className="relative">
+      {pending && (
+        <div className="absolute inset-0 size-full z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Đang tải...</span>
+          </div>
+        </div>
+      )}
       <div className="bg-goku mt-8 py-6 px-4 rounded-[12px]">
         <div className="mb-6 flex flex-wrap justify-center gap-4 text-sm">
           <Legend color="bg-jiren" label="Ghế mới" />
@@ -95,24 +160,18 @@ const Seats = ({ seats }: SeatsProps) => {
                       selectedSeats.some((s) => s.code === seat.code) &&
                         "bg-whis text-white",
                       seat.isContract && "bg-raditz text-white",
-                      seat.isHold && "bg-roshi text-white"
+                      seat.isHold && "bg-roshi text-white",
+                      seat.status === 1 && "bg-trunks text-white cursor-not-allowed"
                     )}
-                    onClick={() => handleSelectSeat(seat)}
+                    onClick={() =>
+                      seat.type !== 12 && seat.status !== 1
+                        ? handleSelectSeat(seat)
+                        : undefined
+                    }
                   >
-                    {/* {bookedIcon && seat.status === 1 && (
-                      <Image
-                        src={bookedIcon}
-                        alt="icon"
-                        fill
-                        className="rounded-[4px]"
-                      />
-                    )} */}
                     <p className="text-sm">
-                      {seat.type !== 12 && seat.status !== 1 ? seat.code : ""}
+                      {seat.type !== 12 ? seat.code : ""}
                     </p>
-                    {seat.status == 1 && (
-                      <X className="text-gray-300 md:text-gray-500 h-2 w-2 md:h-6 md:w-6" />
-                    )}
                   </div>
                 ))}
                 <div className="text-trunks font-medium h-[44px] w-[50px] flex items-center justify-center text-base">
@@ -126,7 +185,7 @@ const Seats = ({ seats }: SeatsProps) => {
 
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 bg-white border-t border-beerus",
+          "fixed bottom-0 left-0 right-0 bg-white border-t border-beerus z-50",
           isCustomerView && "hidden"
         )}
       >
@@ -160,11 +219,15 @@ const Seats = ({ seats }: SeatsProps) => {
                   <div>
                     <div className="flex items-center">
                       <p className="min-w-[100px] text-trunks">Số vé:</p>
-                      <p className="text-whis font-bold flex-1 text-right">5</p>
+                      <p className="text-whis font-bold flex-1 text-right">
+                        {selectedSeats.length}
+                      </p>
                     </div>
                     <div className="flex items-center mt-1">
                       <p className="min-w-[100px] text-trunks">Giảm giá:</p>
-                      <p className="text-hit font-bold flex-1 text-right">0đ</p>
+                      <p className="text-hit font-bold flex-1 text-right">
+                        {formatMoney(0)}
+                      </p>
                     </div>
                   </div>
 
@@ -172,12 +235,14 @@ const Seats = ({ seats }: SeatsProps) => {
                     <div className="flex items-center">
                       <p className="min-w-[100px] text-trunks">Tiền vé:</p>
                       <p className="font-bold text-right flex-1">
-                        {formattedTotalPrice}
+                        {formatMoney(totalPrice)}
                       </p>
                     </div>
                     <div className="flex items-center mt-1">
                       <p className="min-w-[100px] text-trunks">Còn lại:</p>
-                      <p className="font-bold text-right flex-1">0đ</p>
+                      <p className="font-bold text-right flex-1">
+                        {formatMoney(0)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -185,7 +250,7 @@ const Seats = ({ seats }: SeatsProps) => {
                 <div className="pt-2 flex items-center justify-between text-sm">
                   <p className="text-trunks">Tiền đã bán:</p>
                   <p className="text-primary font-bold text-base text-right flex-1">
-                    {formattedTotalPrice}
+                    {formatMoney(totalPrice)}
                   </p>
                 </div>
               </div>
@@ -256,7 +321,10 @@ const Seats = ({ seats }: SeatsProps) => {
                 </div>
               </div>
               <div className="flex flex-col gap-3">
-                <Button className="w-full flex-1 flex flex-col">
+                <Button
+                  className="w-full flex-1 flex flex-col"
+                  onClick={onBooking}
+                >
                   <Image
                     src="/images/ticket.svg"
                     width={24}

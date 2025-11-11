@@ -13,10 +13,10 @@ import { ApiResponse, CustomerRoleProps, UserProps } from "@/types";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { createColumns } from "./columns";
-import { DataTable } from "./data-table";
 import DeleteUserDialog from "./delete-user-dialog";
 import Filter from "./filter";
 import UserDialog from "./user-dialog";
+import { DataTable } from "@/components/data-table";
 
 interface UsersClientProps {
   data: ApiResponse<UserProps>;

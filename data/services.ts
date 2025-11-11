@@ -1,4 +1,5 @@
 import { SignInInput } from "@/lib/schemas";
+import { BookingTicketBodyProps } from "@/types";
 import { cookies } from "next/headers";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -61,6 +62,34 @@ export const updateUserService = async (
 
 export const deleteUserService = async (id: number) => {
   const url = new URL(`/api/pos/staff/${id}`, BASE_URL);
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+
+  return await fetch(url.toString(), {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+};
+
+export const bookingTicketService = async (data: BookingTicketBodyProps) => {
+  const url = new URL("/api/pos/order", BASE_URL);
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+
+  return await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ ...data }),
+  });
+};
+
+export const deletePlanCinemaService = async (id: number) => {
+  const url = new URL(`/api/pos/plan-cinema/${id}`, BASE_URL);
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
 

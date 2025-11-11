@@ -158,3 +158,45 @@ export interface ListSeat {
   isHold: number;
   positionName: string;
 }
+
+export interface BookingTicketBodyProps {
+  planScreenId: number;
+  floorNo: number;
+  paymentMethodSystemName: string;
+  posName: string;
+  posShortName: string;
+  listChairIndexF1?: string;
+  listChairValueF1?: string;
+  listChairIndexF2?: string;
+  listChairValueF2?: string;
+  listChairIndexF3?: string;
+  listChairValueF3?: string;
+}
+
+export interface PlanCinemaProps {
+  id: number;
+  name: string;
+  customerId: number;
+  dateOfIssue: string;
+  storeId: number;
+  limitedToStores: boolean;
+  desciption: string;
+  subjectToAcl: boolean;
+  status: number;
+  deleted: boolean;
+  userId: number;
+  createdOnUtc: string;
+  createdUser: string;
+  updatedOnUtc: string;
+  updatedUser: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface PlanFilmProps {
+  filmId: number;
+  planCinemaId: number;
+  createdOnUtc: string;
+  createdUser: string;
+  film: FilmInfo;
+}
