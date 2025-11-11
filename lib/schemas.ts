@@ -42,3 +42,15 @@ export const getUserFormInputSchema = (isEdit: boolean) =>
 
 export type SignInInput = z.infer<typeof signInSchema>;
 export type UserFormInput = z.infer<ReturnType<typeof getUserFormInputSchema>>;
+
+// Kế hoạch chiếu phim
+export const planCinemaFormSchema = z.object({
+  name: z.string().min(1, { error: "Tên kế hoạch là bắt buộc" }).trim(),
+  // API yêu cầu trường 'desciption' (chính tả theo backend)
+  desciption: z
+    .string()
+    .min(1, { error: "Mô tả kế hoạch là bắt buộc" })
+    .trim(),
+});
+
+export type PlanCinemaFormInput = z.infer<typeof planCinemaFormSchema>;

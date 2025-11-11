@@ -30,7 +30,7 @@ export const columns: ColumnDef<PlanFilmProps>[] = [
   {
     accessorKey: "filmName",
     header: "Tên phim",
-    cell: ({ row }) => row.original.film.filmName,
+    cell: ({ row }) => <p className="text-wrap">{row.original.film.filmName}</p>,
   },
   {
     accessorKey: "duration",

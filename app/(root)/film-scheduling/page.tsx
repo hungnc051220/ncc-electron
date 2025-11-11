@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import FilmSchedulingClient from "./components/film-scheduling-client";
 import { getFilmScheduling } from "@/data/loaders-server";
+import AddPlan from "./components/add-plan";
 
 const FilmSchedulingPage = async () => {
   const data = await getFilmScheduling();
@@ -33,6 +34,7 @@ const FilmSchedulingPage = async () => {
           </Breadcrumb>
           <h3 className="font-bold text-2xl mt-1">Lập kế hoạch chiếu phim</h3>
         </div>
+        <AddPlan />
       </div>
 
       <FilmSchedulingClient data={data} />

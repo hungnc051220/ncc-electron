@@ -96,6 +96,7 @@ export const getFilmScheduling = async (): Promise<
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/plan-cinema", BASE_URL);
+  url.search = qs.stringify({ current: 1, pageSize: 10000 });
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 

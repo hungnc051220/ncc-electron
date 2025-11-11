@@ -9,7 +9,9 @@ import { deleteSession } from "@/lib/session";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
+  approveRejectPlanCinemaService,
   bookingTicketService,
+  createPlanCinemaService,
   createUserService,
   deletePlanCinemaService,
   deleteUserService,
@@ -19,6 +21,7 @@ import {
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { BookingTicketBodyProps } from "@/types";
+import { planCinemaFormSchema } from "@/lib/schemas";
 
 export type ActionStateProps = {
   formData: Record<string, string> | null;
@@ -297,6 +300,75 @@ export const deletePlanCinemaAction = async (
       ...prevState,
       success: false,
       error: "Xóa kế hoạch chiếu phim thất bại",
+    };
+  }
+
+  revalidatePath("/film-scheduling");
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const createPlanCinemaAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const name = formData.get("name") as string;
+  const desciption = formData.get("desciption") as string;
+
+  const validatedFields = planCinemaFormSchema.safeParse({ name, desciption });
+
+  if (!validatedFields.success) {
+    return {
+      ...prevState,
+      formData: { name, desciption },
+      fieldErrors: z.flattenError(validatedFields.error).fieldErrors,
+    };
+  }
+
+  const response = await createPlanCinemaService(validatedFields.data);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ...prevState,
+      formData: { name, desciption },
+      success: false,
+      error: data?.message || "Tạo kế hoạch chiếu phim thất bại",
+    };
+  }
+
+  revalidatePath("/film-scheduling");
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const approveRejectPlanCinemaAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const id = formData.get("planCinemaId") as string;
+  const isApproved = formData.get("isApproved") as string;
+
+  console.log({ id, isApproved });
+
+  const res = await approveRejectPlanCinemaService({
+    id: Number(id),
+    isApproved: Boolean(isApproved),
+  });
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Duyệt kế hoạch thất bại",
     };
   }
 

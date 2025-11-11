@@ -13,6 +13,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import DeletePlanDialog from "./delete-plan-dialog";
+import ApproveRejectActions from "./tab-film/approve-reject-actions";
 
 interface FilmSchedulingClientProps {
   data: ApiResponse<PlanCinemaProps>;
@@ -28,8 +29,8 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
   );
 
   const plans = data?.data;
-  const createdOrRejectedPlans = plans?.filter((x) =>
-    [0, 2].includes(x.status)
+  const createdOrRejectedPlans = plans?.filter(
+    (x) => [0, 2].includes(x.status) || x.status === null
   );
   const waitingForApprovalPlans = plans?.filter((x) => x.status === 1);
   const approvedPlans = plans?.filter((x) => x.status === 3);
@@ -177,7 +178,8 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                   >
                     <Trash className="size-3" /> Xóa kế hoạch
                   </button>
-                  {[0, 2].includes(selectedPlan.status) && (
+                  {([0, 2].includes(selectedPlan.status) ||
+                    selectedPlan.status === null) && (
                     <button className="text-xs py-1 px-2 flex items-center gap-1 border border-trunks rounded-sm font-bold hover:opacity-85">
                       <CornerUpRight className="size-3" /> Gửi duyệt
                     </button>
@@ -186,6 +188,9 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                     <button className="text-xs py-1 px-2 flex items-center gap-1 border border-trunks rounded-sm font-bold hover:opacity-85">
                       <CornerUpRight className="size-3" /> Lưu trữ
                     </button>
+                  )}
+                  {selectedPlan.status === 1 && (
+                    <ApproveRejectActions planCinemaId={selectedPlan.id} />
                   )}
                 </div>
               </div>
@@ -216,7 +221,7 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
           )}
         </div>
 
-        {selectedPlan && (
+        {selectedPlan && openDelete && (
           <DeletePlanDialog
             open={openDelete}
             onOpenChange={onOpenChange}
