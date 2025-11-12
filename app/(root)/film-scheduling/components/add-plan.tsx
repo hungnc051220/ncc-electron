@@ -69,8 +69,10 @@ const AddPlan = () => {
     }
     if (state.success) {
       toast.success("Tạo kế hoạch chiếu phim thành công");
-      setOpen(false);
-      form.reset();
+      startTransition(() => {
+        setOpen(false);
+        form.reset();
+      });
     }
   }, [state, form]);
 

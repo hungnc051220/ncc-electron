@@ -6,14 +6,16 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { CornerUpRight, Trash } from "lucide-react";
-import TabsList from "./tabs-list";
-import { ApiResponse, PlanCinemaProps } from "@/types";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ApiResponse, PlanCinemaProps } from "@/types";
 import { format } from "date-fns";
+import { Trash } from "lucide-react";
+import { useState } from "react";
 import DeletePlanDialog from "./delete-plan-dialog";
 import ApproveRejectActions from "./tab-film/approve-reject-actions";
+import ArchivedActions from "./tab-film/archived-actions";
+import SendForApproveActions from "./tab-film/send-for-approve-actions";
+import TabsList from "./tabs-list";
 
 interface FilmSchedulingClientProps {
   data: ApiResponse<PlanCinemaProps>;
@@ -39,7 +41,7 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
   return (
     <div className="mt-8">
       <div className="flex gap-5">
-        <div className="w-[296px] p-4 rounded-xl bg-goku max-h-[calc(100vh-240px)] overflow-y-auto">
+        <div className="w-[296px] min-w-[296px] p-4 rounded-xl bg-goku max-h-[calc(100vh-240px)] overflow-y-auto">
           <Accordion
             type="single"
             collapsible
@@ -180,14 +182,10 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                   </button>
                   {([0, 2].includes(selectedPlan.status) ||
                     selectedPlan.status === null) && (
-                    <button className="text-xs py-1 px-2 flex items-center gap-1 border border-trunks rounded-sm font-bold hover:opacity-85">
-                      <CornerUpRight className="size-3" /> Gửi duyệt
-                    </button>
+                    <SendForApproveActions planCinemaId={selectedPlan.id} />
                   )}
                   {selectedPlan.status === 3 && (
-                    <button className="text-xs py-1 px-2 flex items-center gap-1 border border-trunks rounded-sm font-bold hover:opacity-85">
-                      <CornerUpRight className="size-3" /> Lưu trữ
-                    </button>
+                    <ArchivedActions planCinemaId={selectedPlan.id} />
                   )}
                   {selectedPlan.status === 1 && (
                     <ApproveRejectActions planCinemaId={selectedPlan.id} />

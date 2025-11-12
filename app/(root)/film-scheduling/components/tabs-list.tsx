@@ -36,8 +36,12 @@ const TabsList = ({ planCinemaId }: TabsListProps) => {
         <div className="border-b-2 border-beerus flex-1 self-end"></div>
       </div>
 
-      {currentTab === 0 && <TabFilm planCinemaId={planCinemaId} />}
-      {currentTab === 1 && <TabScheduling planCinemaId={planCinemaId} />}
+      {currentTab === 0 && (
+        <TabFilm key={planCinemaId} planCinemaId={planCinemaId} />
+      )}
+      {currentTab === 1 && (
+        <TabScheduling key={planCinemaId} planCinemaId={planCinemaId} />
+      )}
     </div>
   );
 };

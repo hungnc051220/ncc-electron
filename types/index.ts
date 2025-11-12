@@ -151,6 +151,7 @@ export interface ListSeat {
   code: string;
   type: number;
   status: number;
+  floor: number;
   price: number;
   checkinStatus: number;
   isInvitation: number;
@@ -171,6 +172,20 @@ export interface BookingTicketBodyProps {
   listChairValueF2?: string;
   listChairIndexF3?: string;
   listChairValueF3?: string;
+}
+
+export interface CreateQrCodeBodyProps {
+  orderId: number;
+  paymentMethod: string;
+  shortName: string;
+}
+
+export interface QrCodeResponseProps {
+  referenceLabelCode: string;
+  qrcode: string;
+  accountName: string;
+  accountNumber: string;
+  accountBankName: string;
 }
 
 export interface PlanCinemaProps {
@@ -199,4 +214,54 @@ export interface PlanFilmProps {
   createdOnUtc: string;
   createdUser: string;
   film: FilmInfo;
+}
+
+export interface FilmProps {
+  id: number;
+  filmNameEn: string;
+  filmName: string;
+  countryId: number;
+  duration: number;
+  director: string;
+  actors: string;
+  introduction: string;
+  manufacturerId: number;
+  versionCode: string;
+  statusCode: string;
+  languageCode: string;
+  holding: string;
+  description: string;
+  sellOnline: boolean;
+  metaDescription: string;
+  metaKeyword: string;
+  metaTitle: string;
+  limitedToStores: boolean;
+  subjectToAcl: boolean;
+  createdOnUtc: string;
+  updatedOnUtc: string;
+  published: boolean;
+  deleted: boolean;
+  pictureId: number;
+  imageUrl: string;
+  premieredDay: string;
+  videoUrl: string;
+  showOnHomePage: boolean;
+  tags: string;
+  allowCustomerReviews: boolean;
+  approvedRatingSum: number;
+  notApprovedRatingSum: number;
+  approvedTotalReviews: number;
+  notApprovedTotalReviews: number;
+  totalLike: number;
+  numberOfViews: number;
+  isHot: number;
+  ageAbove: number;
+  proposedPrice: number;
+  trailerOnHomePage: boolean;
+  orderNo: number;
+  sellOnlineBefore: number;
+  createdUser: string;
+  updatedUser: string;
+  isFree: string;
+  categories: number[];
 }

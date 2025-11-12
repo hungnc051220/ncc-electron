@@ -3,6 +3,7 @@ import Seats from "./components/seats";
 import { getPlanScreeningDetail } from "@/data/loaders-server";
 import { format } from "date-fns";
 import CustomerView from "./components/customer-view";
+import { formatInTimeZone } from "date-fns-tz";
 
 interface PlanScreeningPageProps {
   params: Promise<{ slug: string }>;
@@ -24,8 +25,8 @@ const PlanScreeningPage = async ({ params }: PlanScreeningPageProps) => {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-chichi text-lg font-medium">
-            Buổi {format(new Date(data.projectTime), "HH:mm")} - Ngày{" "}
-            {format(new Date(data.projectTime), "dd/MM/yyyy")}
+            Buổi {formatInTimeZone(data.projectTime, "UTC", "HH:mm")} - Ngày{" "}
+            {format(new Date(data.projectDate), "dd/MM/yyyy")}
           </p>
           <p className="text-2xl font-bold mt-1">{data.filmInfo.filmName}</p>
         </div>

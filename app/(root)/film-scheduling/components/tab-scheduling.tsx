@@ -14,7 +14,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     queryKey: ["plan-screenings", planCinemaId],
     queryFn: () => {
       const query = queryString.stringify(
-        { planCinemaId },
+        { filter: JSON.stringify({ planCinemaId }) },
         { skipEmptyString: true, skipNull: true }
       );
       return getPlanScreenings(query);

@@ -54,8 +54,6 @@ const Filter = ({ customerRoles, onSearchingChange }: FilterProps) => {
     }
   }, [isPending, onSearchingChange]);
 
-  console.log(customerRoles);
-
   return (
     <div className="flex gap-4">
       <div className="flex-1">

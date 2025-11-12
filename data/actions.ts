@@ -9,18 +9,21 @@ import { deleteSession } from "@/lib/session";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
+  addPlanFilmService,
   approveRejectPlanCinemaService,
   bookingTicketService,
   createPlanCinemaService,
+  createQrCodeService,
   createUserService,
   deletePlanCinemaService,
   deleteUserService,
   signInService,
+  updatePlanCinemaService,
   updateUserService,
 } from "./services";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { BookingTicketBodyProps } from "@/types";
+import { BookingTicketBodyProps, CreateQrCodeBodyProps } from "@/types";
 import { planCinemaFormSchema } from "@/lib/schemas";
 
 export type ActionStateProps = {
@@ -282,6 +285,7 @@ export const bookingTicketAction = async (
 
   return {
     ...prevState,
+    formData: data,
     success: true,
     error: null,
   };
@@ -357,11 +361,9 @@ export const approveRejectPlanCinemaAction = async (
   const id = formData.get("planCinemaId") as string;
   const isApproved = formData.get("isApproved") as string;
 
-  console.log({ id, isApproved });
-
   const res = await approveRejectPlanCinemaService({
     id: Number(id),
-    isApproved: Boolean(isApproved),
+    isApproved: isApproved === "true" ? true : false,
   });
 
   if (!res.ok) {
@@ -376,6 +378,134 @@ export const approveRejectPlanCinemaAction = async (
 
   return {
     ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const updatePlanCinemaAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const id = formData.get("planCinemaId") as string;
+  const status = formData.get("status") as string;
+
+  const res = await updatePlanCinemaService({
+    id: Number(id),
+    status: Number(status),
+  });
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Cập nhật kế hoạch thất bại",
+    };
+  }
+
+  revalidatePath("/film-scheduling");
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const addPlanFilmAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const planCinemaId = formData.get("planCinemaId") as string;
+  const filmIds = formData.get("filmIds") as string;
+
+  if (!planCinemaId || !filmIds) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Vui lòng chọn ít nhất một phim",
+    };
+  }
+
+  let parsedFilmIds: number[];
+  try {
+    parsedFilmIds = JSON.parse(filmIds);
+  } catch {
+    return {
+      ...prevState,
+      success: false,
+      error: "Dữ liệu phim không hợp lệ",
+    };
+  }
+
+  if (!Array.isArray(parsedFilmIds) || parsedFilmIds.length === 0) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Vui lòng chọn ít nhất một phim",
+    };
+  }
+
+  const res = await addPlanFilmService({
+    filmIds: parsedFilmIds,
+    planCinemaId: Number(planCinemaId),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      success: false,
+      error: data?.message || "Thêm phim vào kế hoạch thất bại",
+    };
+  }
+
+  revalidatePath("/film-scheduling");
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const createQrCodeAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const orderId = formData.get("orderId") as string;
+  const paymentMethod = formData.get("paymentMethod") as string;
+  const shortName = formData.get("shortName") as string;
+
+  if (!orderId || !paymentMethod || !shortName) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Thiếu thông tin để tạo QR code",
+    };
+  }
+
+  const dataToSend: CreateQrCodeBodyProps = {
+    orderId: Number(orderId),
+    paymentMethod,
+    shortName,
+  };
+
+  const res = await createQrCodeService(dataToSend);
+  const data = await res.json();
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      success: false,
+      error: data.message || "Tạo QR code thất bại",
+    };
+  }
+
+  return {
+    ...prevState,
+    formData: data,
     success: true,
     error: null,
   };

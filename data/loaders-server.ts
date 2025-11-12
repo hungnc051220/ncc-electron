@@ -3,6 +3,7 @@
 import {
   ApiResponse,
   CustomerRoleProps,
+  FilmProps,
   PlanCinemaProps,
   PlanFilmProps,
   PlanScreeningDetailProps,
@@ -106,6 +107,18 @@ export const getPlanFilms = async (
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/plan-film", BASE_URL);
+  if (query) {
+    url.search = query;
+  }
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getFilms = async (
+  query?: string
+): Promise<ApiResponse<FilmProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/v1/movies", BASE_URL);
   if (query) {
     url.search = query;
   }

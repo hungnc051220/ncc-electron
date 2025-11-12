@@ -47,10 +47,12 @@ export const columns: ColumnDef<PlanScreeningDetailProps>[] = [
   {
     accessorKey: "roomName",
     header: "Phòng",
+    cell: ({ row }) => row.original.roomInfo?.name,
   },
   {
     accessorKey: "filmName",
     header: "Tên phim",
+    cell: ({ row }) => <p className="text-wrap">{row.original.filmInfo?.filmName}</p>,
   },
   {
     accessorKey: "end",
