@@ -24,7 +24,7 @@ function startNextServer() {
   });
 }
 
-const baseURL = isDev ? "http://localhost:3000" : "http://localhost:3000";
+const baseURL = `http://localhost:${PORT}`;
 
 function createWindow() {
   mainWindow = new BrowserWindow({

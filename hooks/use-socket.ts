@@ -8,6 +8,7 @@ export const useSocket = () => {
 
   useEffect(() => {
     let active = true;
+    let currentSocket: Socket | null = null;
     const connectSocket = async () => {
       try {
         const res = await fetch("/api/socket-auth");
@@ -20,7 +21,7 @@ export const useSocket = () => {
           transports: ["websocket"],
           withCredentials: true,
         });
-
+        currentSocket = newSocket;
         setSocket(newSocket);
 
         newSocket.on("connect", () => {
@@ -39,9 +40,10 @@ export const useSocket = () => {
 
     return () => {
       active = false;
-      socket?.disconnect();
+      currentSocket?.disconnect();
+      setSocket(null);
     };
-  }, [socket]);
+  }, []);
 
   return socket;
 };

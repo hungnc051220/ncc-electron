@@ -45,7 +45,7 @@ interface SeatsProps {
 }
 
 const Seats = ({ data }: SeatsProps) => {
-  const socket = useSocketContext();
+  const socketRef = useSocketContext();
   const { listSeats: seats } = data;
   const searchParams = useSearchParams();
   const isCustomerView = searchParams.get("view") === "customer";
@@ -54,8 +54,8 @@ const Seats = ({ data }: SeatsProps) => {
   const [openQrDialog, setOpenQrDialog] = useState(false);
 
   useEffect(() => {
-    socket?.on("selecting_chair_update", (data) => console.log(data));
-  }, [socket]);
+    socketRef?.on("selecting_chair_update", (data) => console.log(data));
+  }, [socketRef]);
 
   const selectingChair = useMutation({
     mutationFn: (data: {
