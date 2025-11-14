@@ -7,9 +7,11 @@
     "dev": "concurrently \"pnpm dev:next\" \"pnpm dev:electron\"",
     "dev:next": "next dev",
     "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "build:next": "next build",
+    "lint": "eslint",
+    "start": "electron-forge start",
+    "make": "electron-forge make",
+    "build": "electron-forge make"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -47,6 +49,7 @@
     "cookies-next": "^6.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "electron-squirrel-startup": "^1.0.1",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.548.0",
@@ -72,6 +75,14 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.10.2",
+    "@electron-forge/maker-deb": "^7.10.2",
+    "@electron-forge/maker-rpm": "^7.10.2",
+    "@electron-forge/maker-squirrel": "^7.10.2",
+    "@electron-forge/maker-zip": "^7.10.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
+    "@electron-forge/plugin-fuses": "^7.10.2",
+    "@electron/fuses": "^1.8.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qs": "^6.14.0",

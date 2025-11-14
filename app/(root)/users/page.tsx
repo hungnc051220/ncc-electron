@@ -1,4 +1,4 @@
-import { getCustomerRoles, getUsers } from "@/data/loaders-server";
+import { getCustomerRoles, getUsers } from "@/data/loaders";
 import UsersClient from "./components/users-client";
 
 interface UsersPageProps {

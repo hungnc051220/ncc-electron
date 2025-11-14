@@ -1,6 +1,6 @@
 "use client";
 
-import { updatePlanCinemaAction } from "@/data/actions";
+import { updatePlanCinemaAction } from "@/actions/plan-cinema-actions";
 import { CornerUpRight } from "lucide-react";
 import { startTransition, useActionState, useEffect } from "react";
 import { toast } from "sonner";

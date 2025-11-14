@@ -1,12 +1,30 @@
 const { app, BrowserWindow, screen, ipcMain } = require("electron/main");
 const path = require("path");
+const { fork } = require("child_process");
 
 const isDev = !app.isPackaged;
 
 let mainWindow;
 let customerWindow;
+let nextServer;
 
-const baseURL = "http://localhost:3000";
+const PORT = 3000;
+
+// Khi build: chạy server Next từ standalone
+function startNextServer() {
+  const serverPath = path.join(__dirname, "../.next/standalone/server.js");
+
+  nextServer = fork(serverPath, ["-p", PORT], {
+    stdio: "inherit",
+    env: { ...process.env, PORT },
+  });
+
+  nextServer.on("exit", () => {
+    console.log("Next.js server stopped");
+  });
+}
+
+const baseURL = isDev ? "http://localhost:3000" : "http://localhost:3000";
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -21,25 +39,9 @@ function createWindow() {
   mainWindow.maximize();
   mainWindow.loadURL(baseURL);
 
-  mainWindow.webContents.openDevTools();
-
-  ipcMain.on("open-customer-window", (_, planCinemaId) => {
-    createCustomerWindow(planCinemaId);
-  });
-
-  ipcMain.on("seat-update", (_, data) => {
-    if (customerWindow) {
-      customerWindow.webContents.send("seat-update", data);
-    }
-  });
-
-  ipcMain.on("close-customer-window", () => {
-    console.log("📩 Received: close-customer-window");
-    if (customerWindow && !customerWindow.isDestroyed()) {
-      customerWindow.close();
-      customerWindow = null;
-    }
-  });
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
 }
 
 function createCustomerWindow(planScreeningsId) {
@@ -80,7 +82,27 @@ function createCustomerWindow(planScreeningsId) {
 }
 
 app.whenReady().then(() => {
+  if (!isDev) startNextServer();
+
   createWindow();
+
+  ipcMain.on("open-customer-window", (_, planCinemaId) => {
+    createCustomerWindow(planCinemaId);
+  });
+
+  ipcMain.on("close-customer-window", () => {
+    console.log("📩 Received: close-customer-window");
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.close();
+      customerWindow = null;
+    }
+  });
+
+  ipcMain.on("seat-update", (_, data) => {
+    if (customerWindow) {
+      customerWindow.webContents.send("seat-update", data);
+    }
+  });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -93,4 +115,8 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("quit", () => {
+  if (nextServer) nextServer.kill();
 });

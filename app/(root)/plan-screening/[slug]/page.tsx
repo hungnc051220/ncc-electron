@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Seats from "./components/seats";
-import { getPlanScreeningDetail } from "@/data/loaders-server";
+import { getPlanScreeningDetail } from "@/data/loaders";
 import { format } from "date-fns";
 import CustomerView from "./components/customer-view";
 import { formatInTimeZone } from "date-fns-tz";

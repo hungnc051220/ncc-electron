@@ -11,8 +11,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { addPlanFilmAction } from "@/data/actions";
-import { getFilms } from "@/data/loaders-server";
+import { addPlanFilmAction } from "@/actions/plan-cinema-actions";
+import { getFilms } from "@/data/loaders";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { RowSelectionState } from "@tanstack/react-table";
 import { startTransition, useActionState, useEffect, useState } from "react";

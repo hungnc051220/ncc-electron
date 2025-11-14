@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { createPlanCinemaAction } from "@/data/actions";
+import { createPlanCinemaAction } from "@/actions/plan-cinema-actions";
 import { planCinemaFormSchema, type PlanCinemaFormInput } from "@/lib/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useActionState, useEffect, useState } from "react";

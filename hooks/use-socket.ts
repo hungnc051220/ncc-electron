@@ -1,50 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-interface UseSocketProps {
-  token: string;
-}
-
-export function useSocket({ token }: UseSocketProps) {
-  const socketRef = useRef<Socket | null>(null);
-  const [connected, setConnected] = useState(false);
+export const useSocket = () => {
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    let active = true;
+    const connectSocket = async () => {
+      try {
+        const res = await fetch("/api/socket-auth");
+        if (!res.ok) return console.error("Socket auth error");
 
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
-      path: "/socket",
-      transports: ["websocket"],
-      query: { token },
-    });
+        const data = await res.json();
+        if (!active) return;
 
-    socketRef.current = socket;
+        const newSocket = io(data.socketUrl, {
+          transports: ["websocket"],
+          withCredentials: true,
+        });
 
-    socket.on("connect", () => {
-      console.log("🟢 Connected to socket:", socket.id);
-      setConnected(true);
-    });
+        setSocket(newSocket);
 
-    socket.on("disconnect", () => {
-      console.log("🔴 Disconnected");
-      setConnected(false);
-    });
+        newSocket.on("connect", () => {
+          console.log("Socket connected");
+        });
 
-    socket.on("connect_error", (err) => {
-      console.log("⚠️ Connect error:", err.message);
-    });
+        newSocket.on("disconnect", () => {
+          console.log("Socket disconnected");
+        });
+      } catch (error) {
+        console.error("Socket auth error", error);
+      }
+    };
+
+    connectSocket();
 
     return () => {
-      socket.disconnect();
+      active = false;
+      socket?.disconnect();
     };
-  }, [token]);
+  }, [socket]);
 
-  // Trả ra các hàm thao tác thay vì socket trực tiếp
-  const emit = (event: string, data?: any) => {
-    socketRef.current?.emit(event, data);
-  };
-
-  return { emit, connected };
-}
+  return socket;
+};

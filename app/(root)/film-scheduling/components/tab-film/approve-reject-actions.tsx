@@ -1,6 +1,6 @@
 "use client";
 
-import { approveRejectPlanCinemaAction } from "@/data/actions";
+import { approveRejectPlanCinemaAction } from "@/actions/plan-cinema-actions";
 import { startTransition, useActionState, useEffect } from "react";
 import { toast } from "sonner";
 

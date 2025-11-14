@@ -8,10 +8,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/utils";
+import { QrCodeResponseProps } from "@/types";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { Hourglass } from "lucide-react";
 import QRCode from "react-qr-code";
+import Countdown from "./countdown";
 
 interface QrCodeDialogProps {
   open: boolean;
@@ -20,11 +22,11 @@ interface QrCodeDialogProps {
   roomName: string;
   projectDate: string;
   projectTime: string;
-  qrCode: string;
-  accountName: string;
-  accountNumber: string;
-  totalAmount: number;
-  selectedSeats?: string;
+  dataQr: QrCodeResponseProps;
+  selectedSeats: string;
+  orderTotal?: number;
+  orderDiscount?: number;
+  orderCreatedAt?: string;
 }
 
 const QrCodeDialog = ({
@@ -34,11 +36,11 @@ const QrCodeDialog = ({
   roomName,
   projectDate,
   projectTime,
-  qrCode,
-  accountName,
-  accountNumber,
-  totalAmount,
+  dataQr,
   selectedSeats,
+  orderTotal,
+  orderDiscount,
+  orderCreatedAt,
 }: QrCodeDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,8 +82,8 @@ const QrCodeDialog = ({
               <div className="bg-krillin/10 rounded-lg p-4 mt-10 flex items-center justify-between">
                 <div>
                   <p className="font-bold text-sm">
-                    Bạn còn <span className="text-chichi">[04:59]</span> để
-                    thanh toán
+                    Bạn còn{" "}
+                    <Countdown orderCreatedAt={orderCreatedAt}/> để thanh toán
                   </p>
                   <p className="mt-1 text-trunks text-sm">
                     Đang chờ thanh toán ...
@@ -93,7 +95,7 @@ const QrCodeDialog = ({
             <div className="w-2/5">
               <div className="flex flex-col items-center">
                 <div className="p-5 relative bg-white">
-                  <QRCode value={qrCode} size={200} />
+                  <QRCode value={dataQr.qrcode} size={200} />
                   <div className="absolute inset-0 pointer-events-none flex justify-between items-between">
                     <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-2xl"></div>
                     <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-2xl"></div>
@@ -103,10 +105,13 @@ const QrCodeDialog = ({
                 </div>
 
                 <p className="text-center font-bold text-base mt-4">
-                  {accountNumber}
+                  {dataQr.accountNumber}
                 </p>
                 <p className="text-center font-bold text-base">
-                  {accountName}
+                  {dataQr.accountName}
+                </p>
+                <p className="text-center font-bold text-base">
+                  {dataQr.accountBankName}
                 </p>
               </div>
             </div>
@@ -119,18 +124,20 @@ const QrCodeDialog = ({
               <p className="text-trunks">
                 Tổng tiền vé:{" "}
                 <span className="font-bold text-black">
-                  {formatMoney(totalAmount)}
+                  {formatMoney(orderTotal || 0)}
                 </span>
               </p>
               <p className="text-trunks mt-1">
-                Phụ phí:{" "}
-                <span className="font-bold text-black">{formatMoney(0)}</span>
+                Giảm giá:{" "}
+                <span className="font-bold text-black">
+                  {formatMoney(orderDiscount || 0)}
+                </span>
               </p>
             </div>
             <div className="w-2/5 border-l pl-4">
               <p className="text-sm text-trunks">Tổng thanh toán</p>
               <p className="text-chichi font-bold text-xl mt-1">
-                {formatMoney(totalAmount)}
+                {formatMoney(orderTotal || 0)}
               </p>
             </div>
           </div>

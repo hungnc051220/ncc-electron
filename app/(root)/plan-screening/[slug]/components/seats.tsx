@@ -1,11 +1,15 @@
 "use client";
 
+import { bookingTicketAction } from "@/actions/booking-ticket-actions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { onSelectingChairs } from "@/data/loaders";
 import { cn, formatMoney } from "@/lib/utils";
-import { ListSeat, PlanScreeningDetailProps } from "@/types";
+import { useSocketContext } from "@/providers/socket-provider";
+import { ListSeat, PaymentType, PlanScreeningDetailProps } from "@/types";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -13,15 +17,12 @@ import {
   startTransition,
   useActionState,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import Legend from "./legend";
-import { bookingTicketAction, createQrCodeAction } from "@/data/actions";
-import QrCodeDialog from "./qr-code-dialog";
-import { QrCodeResponseProps } from "@/types";
 import { toast } from "sonner";
+import Legend from "./legend";
+import QrCodeDialog from "./qr-code-dialog";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -30,17 +31,13 @@ const colorMap: { [key: string]: string } = {
   12: "bg-transparent",
 };
 
-enum PaymentType {
-  POS = "Pos",
-  VNPAY = "VNPAY",
-  VIETQR = "VIETQR",
-}
-
 const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
   success: false,
   error: null,
+  data: undefined,
+  orderTotal: 0,
+  orderDisccount: 0,
+  orderCreatedAt: undefined,
 };
 
 interface SeatsProps {
@@ -48,36 +45,92 @@ interface SeatsProps {
 }
 
 const Seats = ({ data }: SeatsProps) => {
+  const socket = useSocketContext();
   const { listSeats: seats } = data;
   const searchParams = useSearchParams();
   const isCustomerView = searchParams.get("view") === "customer";
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
   const [paymentType, setPaymentType] = useState<PaymentType>(PaymentType.POS);
   const [openQrDialog, setOpenQrDialog] = useState(false);
-  const [qrCodeData, setQrCodeData] = useState<QrCodeResponseProps | null>(
-    null
-  );
-  const [posShortName, setPosShortName] = useState<string>("P1");
-  const [bookedSeats, setBookedSeats] = useState<ListSeat[]>([]);
-  const [bookedTotalAmount, setBookedTotalAmount] = useState<number>(0);
-  const bookingProcessedRef = useRef(false);
-  const qrProcessedRef = useRef(false);
+
+  useEffect(() => {
+    socket?.on("selecting_chair_update", (data) => console.log(data));
+  }, [socket]);
+
+  const selectingChair = useMutation({
+    mutationFn: (data: {
+      operation: "add" | "remove";
+      planScreenId: number;
+      posName: string;
+      selectingChairIndexF1?: string;
+      selectingChairIndexF2?: string;
+      selectingChairIndexF3?: string;
+    }) =>
+      onSelectingChairs(data.operation, {
+        planScreenId: data.planScreenId,
+        posName: data.posName,
+        selectingChairIndexF1: data.selectingChairIndexF1,
+        selectingChairIndexF2: data.selectingChairIndexF2,
+        selectingChairIndexF3: data.selectingChairIndexF3,
+      }),
+    onSuccess: () => {},
+    onError: () => {},
+  });
 
   const [state, action, pending] = useActionState(
     bookingTicketAction,
     INITIAL_STATE
   );
+  const prevPendingRef = useRef(pending);
+  const lastQrCodeRef = useRef<string | null>(null);
 
-  const [qrState, qrAction, qrPending] = useActionState(
-    createQrCodeAction,
-    INITIAL_STATE
-  );
+  useEffect(() => {
+    const currentQrCode = state.data?.qrcode ?? null;
+    const hasNewQrCode =
+      currentQrCode && lastQrCodeRef.current !== currentQrCode;
+
+    if (hasNewQrCode) {
+      startTransition(() => {
+        setOpenQrDialog(true);
+      });
+      lastQrCodeRef.current = currentQrCode;
+      return;
+    }
+
+    if (!currentQrCode) {
+      lastQrCodeRef.current = null;
+    }
+  }, [state.data]);
+
+  useEffect(() => {
+    const justCompleted = prevPendingRef.current && !pending;
+    if (justCompleted && state.success && !state.data) {
+      startTransition(() => {
+        toast.success("Đặt vé thành công");
+        setSelectedSeats([]);
+      });
+    }
+
+    prevPendingRef.current = pending;
+  }, [state, pending]);
 
   const handleSelectSeat = (seat: ListSeat) => {
     setSelectedSeats((prev) => {
       if (prev.find((s) => s.seat === seat.seat)) {
+        selectingChair.mutate({
+          operation: "remove",
+          planScreenId: data.id,
+          posName: "M16",
+          selectingChairIndexF1: seat.seat,
+        });
         return prev.filter((s) => s.seat !== seat.seat);
       } else {
+        selectingChair.mutate({
+          operation: "add",
+          planScreenId: data.id,
+          posName: "M16",
+          selectingChairIndexF1: seat.seat,
+        });
         return [...prev, seat];
       }
     });
@@ -99,10 +152,6 @@ const Seats = ({ data }: SeatsProps) => {
 
   const onBooking = () => {
     if (selectedSeats.length === 0) return;
-
-    // Store booked seats and total amount before clearing (for QR dialog)
-    setBookedSeats([...selectedSeats]);
-    setBookedTotalAmount(totalPrice);
 
     const formData = new FormData();
     const floorNo = selectedSeats[0]?.floor || 1;
@@ -126,10 +175,8 @@ const Seats = ({ data }: SeatsProps) => {
       floorNo,
       paymentMethodSystemName: paymentType,
       posName: "POS Machine 1",
-      posShortName: "P1",
+      posShortName: "M111",
     };
-
-    setPosShortName(body.posShortName);
 
     if (floorNo === 1) {
       body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
@@ -151,73 +198,15 @@ const Seats = ({ data }: SeatsProps) => {
     startTransition(() => action(formData));
   };
 
-  // Reset refs when state changes
-  useEffect(() => {
-    if (!state.success) {
-      bookingProcessedRef.current = false;
-    }
-  }, [state.success]);
-
-  useEffect(() => {
-    if (!qrState.success) {
-      qrProcessedRef.current = false;
-    }
-  }, [qrState.success]);
-
   useEffect(() => {
     if (state.error) {
       toast.error(state.error);
     }
   }, [state.error]);
 
-  useLayoutEffect(() => {
-    if (state.success && state.formData && !bookingProcessedRef.current) {
-      bookingProcessedRef.current = true;
-      const bookingResponse = state.formData as Record<string, unknown>;
-      const orderId = bookingResponse.orderId as number | undefined;
-
-      console.log("orderId", orderId);
-
-      // Only show QR dialog for VNPAY or VIETQR payment methods
-      if (
-        (paymentType === PaymentType.VNPAY ||
-          paymentType === PaymentType.VIETQR) &&
-        orderId
-      ) {
-        // Call QR code API
-        const qrFormData = new FormData();
-        qrFormData.append("orderId", orderId.toString());
-        qrFormData.append("paymentMethod", paymentType);
-        qrFormData.append("shortName", posShortName); // Using the same posShortName from booking
-
-        startTransition(() => {
-          qrAction(qrFormData);
-        });
-      } else {
-        // For POS payment, clear seats without showing QR dialog
-        queueMicrotask(() => {
-          setSelectedSeats([]);
-        });
-      }
-    }
-  }, [state.success, state.formData, paymentType, qrAction, posShortName]);
-
-  useLayoutEffect(() => {
-    if (qrState.success && qrState.formData && !qrProcessedRef.current) {
-      qrProcessedRef.current = true;
-      // Type assertion with unknown first to avoid type errors
-      const qrData = qrState.formData as unknown as QrCodeResponseProps;
-      queueMicrotask(() => {
-        setQrCodeData(qrData);
-        setSelectedSeats([]);
-        setOpenQrDialog(true);
-      });
-    }
-  }, [qrState.success, qrState.formData]);
-
   return (
     <div className="relative">
-      {(pending || qrPending) && (
+      {pending && (
         <div className="absolute inset-0 size-full z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -447,7 +436,7 @@ const Seats = ({ data }: SeatsProps) => {
         </div>
       </div>
 
-      {openQrDialog && qrCodeData && (
+      {openQrDialog && state.data && (
         <QrCodeDialog
           open={openQrDialog}
           onOpenChange={(newOpen: boolean) => setOpenQrDialog(newOpen)}
@@ -455,11 +444,11 @@ const Seats = ({ data }: SeatsProps) => {
           roomName={data.roomInfo.name}
           projectDate={data.projectDate}
           projectTime={data.projectTime}
-          qrCode={qrCodeData.qrcode}
-          accountName={qrCodeData.accountName}
-          accountNumber={qrCodeData.accountNumber}
-          totalAmount={bookedTotalAmount}
-          selectedSeats={bookedSeats.map((seat) => seat.code).join(", ")}
+          dataQr={state.data}
+          selectedSeats={selectedSeats.map((item) => item.code).join(", ")}
+          orderTotal={state.orderTotal}
+          orderDiscount={state.orderDiscount}
+          orderCreatedAt={state.orderCreatedAt}
         />
       )}
     </div>

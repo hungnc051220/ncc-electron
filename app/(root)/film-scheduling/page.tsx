@@ -7,7 +7,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import FilmSchedulingClient from "./components/film-scheduling-client";
-import { getFilmScheduling } from "@/data/loaders-server";
+import { getFilmScheduling } from "@/data/loaders";
 import AddPlan from "./components/add-plan";
 
 const FilmSchedulingPage = async () => {

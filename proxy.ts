@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { decodeToken } from "./lib/utils";
-import { onRefreshToken } from "./data/loaders-server";
+import { onRefreshToken } from "./data/loaders";
 
 const protectedRoutes = ["/", "/users", "/machine-serials", "/film-scheduling"];
 const publicRoutes = ["/sign-in"];

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { deleteUserAction } from "@/data/actions";
+import { deleteUserAction } from "@/actions/user-actions";
 import { startTransition, useActionState, useEffect } from "react";
 import { toast } from "sonner";
 

@@ -124,3 +124,23 @@ export const getFilms = async (
   }
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
+
+export const onSelectingChairs = async (
+  operation: "add" | "remove",
+  body: {
+    planScreenId: number;
+    posName: string;
+    selectingChairIndexF1?: string;
+    selectingChairIndexF2?: string;
+    selectingChairIndexF3?: string;
+  }
+): Promise<ApiResponse<FilmProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL(`/api/pos/seat/selecting-chairs/${operation}`, BASE_URL);
+  return fetchAPI(url.href, {
+    method: "POST",
+    authToken: accessToken,
+    body,
+  });
+};

@@ -265,3 +265,139 @@ export interface FilmProps {
   isFree: string;
   categories: number[];
 }
+
+export interface OrderResponseProps {
+  storeId: number;
+  customerId: number;
+  memberCardCode: string;
+  planScreenId: number;
+  floorNo: number;
+  paymentMethodSystemName: string;
+  posName: string;
+  posShortName: string;
+  listChairIndexF1: string;
+  listChairValueF1: string;
+  userId: number;
+  id: number;
+  orderGuid: string;
+  orderStatusId: number;
+  paymentStatusId: number;
+  shippingStatusId: number;
+  rewardPointsWereAdded: boolean;
+  billingAddressId: number;
+  shippingAddressId: string;
+  customerCurrencyCode: string;
+  currencyRate: number;
+  customerTaxDisplayTypeId: number;
+  vatNumber: string;
+  orderSubtotalInclTax: number;
+  orderSubtotalExclTax: number;
+  orderSubTotalDiscountInclTax: number;
+  orderSubTotalDiscountExclTax: number;
+  orderShippingInclTax: number;
+  orderShippingExclTax: number;
+  paymentMethodAdditionalFeeInclTax: number;
+  paymentMethodAdditionalFeeExclTax: number;
+  taxRates: string;
+  orderTax: number;
+  orderDiscount: number;
+  orderTotal: number;
+  refundedAmount: number;
+  checkoutAttributeDescription: string;
+  checkoutAttributesXml: string;
+  customerLanguageId: number;
+  affiliateId: number;
+  printingUserId: number;
+  inviterId: number;
+  customerIp: string;
+  allowStoringCreditCardNumber: boolean;
+  cardType: string;
+  cardName: string;
+  cardNumber: string;
+  maskedCreditCardNumber: string;
+  cardCvv2: string;
+  cardExpirationMonth: string;
+  cardExpirationYear: string;
+  authorizationTransactionId: string;
+  authorizationTransactionCode: string;
+  authorizationTransactionResult: string;
+  captureTransactionId: string;
+  captureTransactionResult: string;
+  subscriptionTransactionId: string;
+  purchaseOrderNumber: string;
+  paidDateUtc: string;
+  shippingMethod: string;
+  shippingRateComputationMethodSystemName: string;
+  deleted: boolean;
+  createdOnUtc: string;
+  printedOnUtc: string;
+  shippingTimeId: number;
+  isInvitation: boolean;
+  isOnline: boolean;
+  isContract: boolean;
+  barCode: string;
+  barCodeBinary: string;
+  vpcTelcoCode: string;
+  vpcMerchTxnRef: string;
+  isEmailSent: boolean;
+  isSmsSent: boolean;
+  customerFirstName: string;
+  customerLastName: string;
+  customerEmail: string;
+  customerPhone: string;
+  isAutoBuy: string;
+  pointReward: string;
+  pointCard: string;
+  voucherCode: string;
+  campaignId: string;
+  discountStatus: string;
+  isTicketUsed: boolean;
+  checkedInOnUtc: string;
+  checkedInUserId: string;
+  transactionId: string;
+  invNo: string;
+  errorStatus: string;
+  eTicketUrl: string;
+  items: OrderItem[];
+}
+
+export interface OrderItem {
+  orderId: number;
+  orderItemGuid: string;
+  planScreenId: number;
+  positionId: number;
+  quantity: number;
+  discountAmountInclTax: number;
+  unitPriceInclTax: number;
+  priceInclTax: number;
+  listChairIndexF1: string;
+  listChairIndexF2: string;
+  listChairIndexF3: string;
+  listChairValueF1: string;
+  listChairValueF2: string;
+  listChairValueF3: string;
+  printedChairIndexF1: string;
+  printedChairIndexF2: string;
+  printedChairIndexF3: string;
+  id: number;
+  productId: string;
+  unitPriceExclTax: number;
+  priceExclTax: number;
+  discountAmountExclTax: number;
+  originalProductCost: number;
+  attributeDescription: string;
+  attributesXml: string;
+  downloadCount: number;
+  isDownloadActivated: boolean;
+  licenseDownloadId: number;
+  itemWeight: number;
+  listChairCheckinIndexF1: string;
+  listChairCheckinIndexF2: string;
+  listChairCheckinIndexF3: string;
+}
+
+export enum PaymentType {
+  POS = "POS",
+  VNPAY = "VNPAY",
+  VIETQR = "VIETQR",
+}

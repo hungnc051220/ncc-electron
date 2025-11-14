@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { columns } from "./tab-scheduling/columns";
 import { DataTable } from "./tab-scheduling/data-table";
 import { useQuery } from "@tanstack/react-query";
-import { getPlanScreenings } from "@/data/loaders-server";
+import { getPlanScreenings } from "@/data/loaders";
 import queryString from "query-string";
 
 interface TabSchedulingProps {

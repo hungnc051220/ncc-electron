@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { getPlanFilms } from "@/data/loaders-server";
+import { getPlanFilms } from "@/data/loaders";
 import { useQuery } from "@tanstack/react-query";
 import { RowSelectionState } from "@tanstack/react-table";
 import queryString from "query-string";
