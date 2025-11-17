@@ -1,6 +1,18 @@
-import { ListSeat } from ".";
+import { ListSeat, QrCodeResponseProps } from ".";
 
 export {};
+
+interface QrDialogData {
+  dataQr: QrCodeResponseProps;
+  filmName: string;
+  roomName: string;
+  projectDate: string;
+  projectTime: string;
+  selectedSeats: string;
+  orderTotal?: number;
+  orderDiscount?: number;
+  orderCreatedAt?: string;
+}
 
 declare global {
   interface Window {
@@ -9,6 +21,10 @@ declare global {
       closeCustomerScreen: () => void;
       sendSeatUpdate: (data: ListSeat[]) => void;
       onSeatUpdate: (callback: (data: ListSeat[]) => void) => void;
+      sendQrDialogOpen: (data: QrDialogData) => void;
+      sendQrDialogClose: () => void;
+      onQrDialogOpen: (callback: (data: QrDialogData) => void) => void;
+      onQrDialogClose: (callback: () => void) => void;
     };
   }
 }

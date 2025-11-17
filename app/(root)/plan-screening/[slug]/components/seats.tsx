@@ -8,11 +8,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { onSelectingChairs } from "@/data/loaders";
 import { cn, formatMoney } from "@/lib/utils";
 import { useSocketContext } from "@/providers/socket-provider";
-import { ListSeat, PaymentType, PlanScreeningDetailProps } from "@/types";
+import {
+  ListSeat,
+  PaymentType,
+  PlanScreeningDetailProps,
+  QrCodeResponseProps,
+} from "@/types";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   startTransition,
   useActionState,
@@ -45,6 +50,7 @@ interface SeatsProps {
 }
 
 const Seats = ({ data }: SeatsProps) => {
+  const router = useRouter();
   const socketRef = useSocketContext();
   const { listSeats: seats } = data;
   const searchParams = useSearchParams();
@@ -52,10 +58,49 @@ const Seats = ({ data }: SeatsProps) => {
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
   const [paymentType, setPaymentType] = useState<PaymentType>(PaymentType.POS);
   const [openQrDialog, setOpenQrDialog] = useState(false);
+  const [qrDialogData, setQrDialogData] = useState<{
+    dataQr: QrCodeResponseProps;
+    filmName: string;
+    roomName: string;
+    projectDate: string;
+    projectTime: string;
+    selectedSeats: string;
+    orderTotal?: number;
+    orderDiscount?: number;
+    orderCreatedAt?: string;
+  } | null>(null);
 
   useEffect(() => {
-    socketRef?.on("selecting_chair_update", (data) => console.log(data));
-  }, [socketRef]);
+    if (!socketRef) {
+      return;
+    }
+
+    const handleSelectingUpdate = (payload: unknown) => {
+      console.log(payload);
+    };
+
+    const handleOrderPaymentUpdated = (payload: { orderStatus?: number }) => {
+      if (payload?.orderStatus === 30) {
+        toast.success("Thanh toán thành công");
+        setOpenQrDialog(false);
+        setQrDialogData(null);
+        setSelectedSeats([]);
+        // Gửi lệnh đóng dialog QR sang màn hình phụ
+        if (!isCustomerView) {
+          window.electron?.sendQrDialogClose();
+        }
+        router.refresh();
+      }
+    };
+
+    socketRef.on("selecting_chair_update", handleSelectingUpdate);
+    socketRef.on("orderPaymentUpdated", handleOrderPaymentUpdated);
+
+    return () => {
+      socketRef.off("selecting_chair_update", handleSelectingUpdate);
+      socketRef.off("orderPaymentUpdated", handleOrderPaymentUpdated);
+    };
+  }, [socketRef, router, isCustomerView]);
 
   const selectingChair = useMutation({
     mutationFn: (data: {
@@ -94,13 +139,36 @@ const Seats = ({ data }: SeatsProps) => {
         setOpenQrDialog(true);
       });
       lastQrCodeRef.current = currentQrCode;
+
+      // Gửi thông tin QR dialog sang màn hình phụ
+      if (!isCustomerView && state.data) {
+        window.electron?.sendQrDialogOpen({
+          dataQr: state.data,
+          filmName: data.filmInfo.filmName,
+          roomName: data.roomInfo.name,
+          projectDate: data.projectDate,
+          projectTime: data.projectTime,
+          selectedSeats: selectedSeats.map((item) => item.code).join(", "),
+          orderTotal: state.orderTotal,
+          orderDiscount: state.orderDiscount,
+          orderCreatedAt: state.orderCreatedAt,
+        });
+      }
       return;
     }
 
     if (!currentQrCode) {
       lastQrCodeRef.current = null;
     }
-  }, [state.data]);
+  }, [
+    state.data,
+    state.orderTotal,
+    state.orderDiscount,
+    state.orderCreatedAt,
+    isCustomerView,
+    data,
+    selectedSeats,
+  ]);
 
   useEffect(() => {
     const justCompleted = prevPendingRef.current && !pending;
@@ -139,6 +207,19 @@ const Seats = ({ data }: SeatsProps) => {
   useEffect(() => {
     if (isCustomerView) {
       window.electron?.onSeatUpdate((data) => setSelectedSeats(data));
+
+      // Lắng nghe khi màn hình chính gửi thông tin QR dialog
+      window.electron?.onQrDialogOpen((qrData) => {
+        setQrDialogData(qrData);
+        setOpenQrDialog(true);
+      });
+
+      // Lắng nghe khi màn hình chính gửi lệnh đóng dialog QR
+      window.electron?.onQrDialogClose(() => {
+        setOpenQrDialog(false);
+        setQrDialogData(null);
+        setSelectedSeats([]);
+      });
     }
   }, [isCustomerView]);
 
@@ -436,19 +517,22 @@ const Seats = ({ data }: SeatsProps) => {
         </div>
       </div>
 
-      {openQrDialog && state.data && (
+      {openQrDialog && (state.data || qrDialogData?.dataQr) && (
         <QrCodeDialog
           open={openQrDialog}
           onOpenChange={(newOpen: boolean) => setOpenQrDialog(newOpen)}
-          filmName={data.filmInfo.filmName}
-          roomName={data.roomInfo.name}
-          projectDate={data.projectDate}
-          projectTime={data.projectTime}
-          dataQr={state.data}
-          selectedSeats={selectedSeats.map((item) => item.code).join(", ")}
-          orderTotal={state.orderTotal}
-          orderDiscount={state.orderDiscount}
-          orderCreatedAt={state.orderCreatedAt}
+          filmName={qrDialogData?.filmName || data.filmInfo.filmName}
+          roomName={qrDialogData?.roomName || data.roomInfo.name}
+          projectDate={qrDialogData?.projectDate || data.projectDate}
+          projectTime={qrDialogData?.projectTime || data.projectTime}
+          dataQr={qrDialogData?.dataQr || state.data!}
+          selectedSeats={
+            qrDialogData?.selectedSeats ||
+            selectedSeats.map((item) => item.code).join(", ")
+          }
+          orderTotal={qrDialogData?.orderTotal || state.orderTotal}
+          orderDiscount={qrDialogData?.orderDiscount || state.orderDiscount}
+          orderCreatedAt={qrDialogData?.orderCreatedAt || state.orderCreatedAt}
         />
       )}
     </div>

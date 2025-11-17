@@ -14,6 +14,8 @@ const PORT = 3000;
 function startNextServer() {
   const serverPath = path.join(__dirname, "../.next/standalone/server.js");
 
+  console.log("Starting Next.js server...");
+
   nextServer = fork(serverPath, ["-p", PORT], {
     stdio: "inherit",
     env: { ...process.env, PORT },
@@ -82,7 +84,9 @@ function createCustomerWindow(planScreeningsId) {
 }
 
 app.whenReady().then(() => {
-  if (!isDev) startNextServer();
+  if(!isDev){
+    startNextServer();
+  }
 
   createWindow();
 
@@ -101,6 +105,18 @@ app.whenReady().then(() => {
   ipcMain.on("seat-update", (_, data) => {
     if (customerWindow) {
       customerWindow.webContents.send("seat-update", data);
+    }
+  });
+
+  ipcMain.on("open-qr-dialog", (_, data) => {
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.webContents.send("open-qr-dialog", data);
+    }
+  });
+
+  ipcMain.on("close-qr-dialog", () => {
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.webContents.send("close-qr-dialog");
     }
   });
 
