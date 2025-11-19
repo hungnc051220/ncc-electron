@@ -3,12 +3,11 @@ import { cookies } from "next/headers";
 import { decodeToken } from "./lib/utils";
 import { onRefreshToken } from "./data/loaders";
 
-const protectedRoutes = ["/", "/users", "/machine-serials", "/film-scheduling"];
 const publicRoutes = ["/sign-in"];
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const isProtectedRoute = protectedRoutes.includes(path);
+  const isProtectedRoute = !publicRoutes.includes(path);
   const isPublicRoute = publicRoutes.includes(path);
 
   const accessToken = (await cookies()).get("access_token")?.value;

@@ -1,28 +1,58 @@
 const { app, BrowserWindow, screen, ipcMain } = require("electron/main");
 const path = require("path");
-const { fork } = require("child_process");
-
-const isDev = !app.isPackaged;
+const { spawn } = require("child_process");
 
 let mainWindow;
 let customerWindow;
 let nextServer;
 
-const PORT = 3000;
+const isDev = false;
+const PORT = process.env.PORT || 3000;
+
+console.log("isPackaged", app.isPackaged);
 
 // Khi build: chạy server Next từ standalone
 function startNextServer() {
-  const serverPath = path.join(__dirname, "../.next/standalone/server.js");
+  return new Promise((resolve, reject) => {
+    if (isDev) {
+      resolve();
+      return;
+    }
 
-  console.log("Starting Next.js server...");
+    const serverPath = path.join(
+      process.resourcesPath,
+      ".next",
+      "standalone",
+      "server.js"
+    );
 
-  nextServer = fork(serverPath, ["-p", PORT], {
-    stdio: "inherit",
-    env: { ...process.env, PORT },
-  });
+    console.log("serverPath", serverPath);
 
-  nextServer.on("exit", () => {
-    console.log("Next.js server stopped");
+    nextServer = spawn("node", [serverPath], {
+      env: {
+        ...process.env,
+        PORT,
+        HOSTNAME: "localhost",
+      },
+      cwd: path.join(process.resourcesPath, ".next", "standalone"),
+    });
+
+    nextServer.stdout.on("data", (data) => {
+      console.log(`Next.js: ${data}`);
+      if (data.includes("Ready") || data.includes("started")) {
+        resolve();
+      }
+    });
+
+    nextServer.stderr.on("data", (data) => {
+      console.error(`Next.js Error: ${data}`);
+    });
+
+    nextServer.on("error", (error) => {
+      reject(error);
+    });
+
+    setTimeout(resolve, 3000);
   });
 }
 
@@ -44,6 +74,10 @@ function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 }
 
 function createCustomerWindow(planScreeningsId) {
@@ -83,10 +117,8 @@ function createCustomerWindow(planScreeningsId) {
   });
 }
 
-app.whenReady().then(() => {
-  if(!isDev){
-    startNextServer();
-  }
+app.whenReady().then(async () => {
+  await startNextServer();
 
   createWindow();
 
@@ -128,11 +160,17 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  if (nextServer) {
+    nextServer.kill();
+  }
+
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
 app.on("quit", () => {
-  if (nextServer) nextServer.kill();
+  if (nextServer) {
+    nextServer.kill();
+  }
 });

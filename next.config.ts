@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   experimental: {
     turbopackFileSystemCacheForDev: true,
   },
+  images: {
+    unoptimized: true,
+  },
+  distDir: ".next",
 };
 
 export default nextConfig;
