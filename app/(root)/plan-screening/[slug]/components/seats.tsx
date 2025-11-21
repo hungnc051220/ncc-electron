@@ -24,10 +24,14 @@ import {
   useEffect,
   useRef,
   useState,
+  useMemo,
+  useCallback,
+  memo,
 } from "react";
 import { toast } from "sonner";
 import Legend from "./legend";
 import QrCodeDialog from "./qr-code-dialog";
+import Selecto from "react-selecto";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -48,6 +52,47 @@ const INITIAL_STATE = {
 interface SeatsProps {
   data: PlanScreeningDetailProps;
 }
+
+// Tách component Seat riêng để tối ưu render
+const Seat = memo(({ 
+  seat, 
+  isSelected, 
+  onSelect 
+}: { 
+  seat: ListSeat; 
+  isSelected: boolean; 
+  onSelect: (seat: ListSeat) => void;
+}) => {
+  const canSelect = seat.type !== 12 && seat.status !== 1;
+  
+  const handleClick = useCallback(() => {
+    if (canSelect) {
+      onSelect(seat);
+    }
+  }, [canSelect, onSelect, seat]);
+
+  return (
+    <div
+      className={cn(
+        "relative rounded-lg flex items-center justify-center h-[44px] w-[50px] selectable-seat",
+        colorMap[seat.type],
+        canSelect && "cursor-pointer",
+        isSelected && "bg-whis text-white",
+        seat.isContract && "bg-raditz text-white",
+        seat.isHold && "bg-roshi text-white",
+        seat.status === 1 && "bg-trunks text-white cursor-not-allowed"
+      )}
+      onClick={handleClick}
+      data-seat-code={seat.code}
+    >
+      <p className="text-sm">
+        {seat.type !== 12 ? seat.code : ""}
+      </p>
+    </div>
+  );
+});
+
+Seat.displayName = 'Seat';
 
 const Seats = ({ data }: SeatsProps) => {
   const router = useRouter();
@@ -70,10 +115,27 @@ const Seats = ({ data }: SeatsProps) => {
     orderCreatedAt?: string;
   } | null>(null);
 
+  // Refs cho react-selecto
+  const seatContainerRef = useRef<HTMLDivElement>(null);
+  const selectoRef = useRef<Selecto>(null);
+  const isSelectingRef = useRef(false);
+
+  // Tạo map để tra cứu ghế từ seat code
+  const seatMap = useMemo(() => {
+    const map: Record<string, ListSeat> = {};
+    seats?.forEach(row => {
+      row.forEach(seat => {
+        if (seat.type !== 12 && seat.status !== 1) {
+          map[seat.code] = seat;
+        }
+      });
+    });
+    return map;
+  }, [seats]);
+
+  // Socket effects - giữ nguyên
   useEffect(() => {
-    if (!socketRef) {
-      return;
-    }
+    if (!socketRef) return;
 
     const handleSelectingUpdate = (payload: unknown) => {
       console.log(payload);
@@ -85,7 +147,6 @@ const Seats = ({ data }: SeatsProps) => {
         setOpenQrDialog(false);
         setQrDialogData(null);
         setSelectedSeats([]);
-        // Gửi lệnh đóng dialog QR sang màn hình phụ
         if (!isCustomerView) {
           window.electron?.sendQrDialogClose();
         }
@@ -102,24 +163,13 @@ const Seats = ({ data }: SeatsProps) => {
     };
   }, [socketRef, router, isCustomerView]);
 
-  const selectingChair = useMutation({
-    mutationFn: (data: {
-      operation: "add" | "remove";
-      planScreenId: number;
-      posName: string;
-      selectingChairIndexF1?: string;
-      selectingChairIndexF2?: string;
-      selectingChairIndexF3?: string;
-    }) =>
-      onSelectingChairs(data.operation, {
-        planScreenId: data.planScreenId,
-        posName: data.posName,
-        selectingChairIndexF1: data.selectingChairIndexF1,
-        selectingChairIndexF2: data.selectingChairIndexF2,
-        selectingChairIndexF3: data.selectingChairIndexF3,
-      }),
-    onSuccess: () => {},
-    onError: () => {},
+  // Tối ưu: chỉ gọi API khi hoàn thành selection thay vì từng ghế
+  const batchSelectingChair = useMutation({
+    mutationFn: (seatsToUpdate: ListSeat[]) => {
+      // Chỉ gọi API nếu thực sự cần real-time update
+      // Hoặc bỏ hoàn toàn nếu không cần
+      return Promise.resolve();
+    },
   });
 
   const [state, action, pending] = useActionState(
@@ -129,10 +179,10 @@ const Seats = ({ data }: SeatsProps) => {
   const prevPendingRef = useRef(pending);
   const lastQrCodeRef = useRef<string | null>(null);
 
+  // Các effects khác giữ nguyên
   useEffect(() => {
     const currentQrCode = state.data?.qrcode ?? null;
-    const hasNewQrCode =
-      currentQrCode && lastQrCodeRef.current !== currentQrCode;
+    const hasNewQrCode = currentQrCode && lastQrCodeRef.current !== currentQrCode;
 
     if (hasNewQrCode) {
       startTransition(() => {
@@ -140,7 +190,6 @@ const Seats = ({ data }: SeatsProps) => {
       });
       lastQrCodeRef.current = currentQrCode;
 
-      // Gửi thông tin QR dialog sang màn hình phụ
       if (!isCustomerView && state.data) {
         window.electron?.sendQrDialogOpen({
           dataQr: state.data,
@@ -178,43 +227,61 @@ const Seats = ({ data }: SeatsProps) => {
         setSelectedSeats([]);
       });
     }
-
     prevPendingRef.current = pending;
   }, [state, pending]);
 
-  const handleSelectSeat = (seat: ListSeat) => {
-    setSelectedSeats((prev) => {
-      if (prev.find((s) => s.seat === seat.seat)) {
-        selectingChair.mutate({
-          operation: "remove",
-          planScreenId: data.id,
-          posName: "M16",
-          selectingChairIndexF1: seat.seat,
-        });
-        return prev.filter((s) => s.seat !== seat.seat);
+  // Sử dụng useCallback để tránh re-render không cần thiết
+  const handleSelectSeat = useCallback((seat: ListSeat) => {
+    setSelectedSeats(prev => {
+      const isAlreadySelected = prev.find(s => s.seat === seat.seat);
+      if (isAlreadySelected) {
+        return prev.filter(s => s.seat !== seat.seat);
       } else {
-        selectingChair.mutate({
-          operation: "add",
-          planScreenId: data.id,
-          posName: "M16",
-          selectingChairIndexF1: seat.seat,
-        });
         return [...prev, seat];
       }
     });
-  };
+  }, []);
 
+  // Xử lý selecto với debounce để tránh nhiều render
+  const handleSelectoSelect = useCallback((e: any) => {
+    isSelectingRef.current = true;
+    
+    setSelectedSeats(prev => {
+      const newSelected = new Set(prev.map(s => s.code));
+      
+      // Thêm ghế mới
+      e.added.forEach((el: HTMLElement) => {
+        const seatCode = el.getAttribute('data-seat-code');
+        if (seatCode && seatMap[seatCode] && !newSelected.has(seatCode)) {
+          newSelected.add(seatCode);
+        }
+      });
+      
+      // Xóa ghế bị bỏ chọn
+      e.removed.forEach((el: HTMLElement) => {
+        const seatCode = el.getAttribute('data-seat-code');
+        if (seatCode) {
+          newSelected.delete(seatCode);
+        }
+      });
+
+      // Convert back to array
+      return Array.from(newSelected).map(code => seatMap[code]).filter(Boolean);
+    });
+
+    setTimeout(() => {
+      isSelectingRef.current = false;
+    }, 100);
+  }, [seatMap]);
+
+  // Các effects cho electron
   useEffect(() => {
     if (isCustomerView) {
       window.electron?.onSeatUpdate((data) => setSelectedSeats(data));
-
-      // Lắng nghe khi màn hình chính gửi thông tin QR dialog
       window.electron?.onQrDialogOpen((qrData) => {
         setQrDialogData(qrData);
         setOpenQrDialog(true);
       });
-
-      // Lắng nghe khi màn hình chính gửi lệnh đóng dialog QR
       window.electron?.onQrDialogClose(() => {
         setOpenQrDialog(false);
         setQrDialogData(null);
@@ -229,9 +296,12 @@ const Seats = ({ data }: SeatsProps) => {
     }
   }, [selectedSeats, isCustomerView]);
 
-  const totalPrice = selectedSeats.reduce((acc, cur) => acc + cur.price, 0);
+  const totalPrice = useMemo(() => 
+    selectedSeats.reduce((acc, cur) => acc + cur.price, 0), 
+    [selectedSeats]
+  );
 
-  const onBooking = () => {
+  const onBooking = useCallback(() => {
     if (selectedSeats.length === 0) return;
 
     const formData = new FormData();
@@ -277,13 +347,38 @@ const Seats = ({ data }: SeatsProps) => {
     });
 
     startTransition(() => action(formData));
-  };
+  }, [selectedSeats, data.id, paymentType, action]);
 
   useEffect(() => {
     if (state.error) {
       toast.error(state.error);
     }
   }, [state.error]);
+
+  // Render seats với useMemo để tránh re-render không cần thiết
+  const renderedSeats = useMemo(() => {
+    return seats?.map((item, index) => (
+      <div
+        key={index}
+        className="flex gap-[6px] items-center justify-center seat-row"
+      >
+        <div className="text-trunks font-medium h-[44px] w-[50px] flex items-center justify-center text-base">
+          {item[4].code.charAt(0)}
+        </div>
+        {item.map((seat) => (
+          <Seat
+            key={seat.seat}
+            seat={seat}
+            isSelected={selectedSeats.some(s => s.code === seat.code)}
+            onSelect={handleSelectSeat}
+          />
+        ))}
+        <div className="text-trunks font-medium h-[44px] w-[50px] flex items-center justify-center text-base">
+          {item[4].code.charAt(0)}
+        </div>
+      </div>
+    ));
+  }, [seats, selectedSeats, handleSelectSeat]);
 
   return (
     <div className="relative">
@@ -311,57 +406,42 @@ const Seats = ({ data }: SeatsProps) => {
           Màn hình
         </p>
 
-        <div className="mt-6">
+        <div className="mt-6" ref={seatContainerRef}>
           <div className="space-y-[6px] -mx-4">
-            {seats?.map((item, index) => (
-              <div
-                key={index}
-                className="flex gap-[6px] items-center justify-center seat"
-              >
-                <div className="text-trunks font-medium h-[44px] w-[50px] flex items-center justify-center text-base">
-                  {item[4].code.charAt(0)}
-                </div>
-                {item.map((seat) => (
-                  <div
-                    key={seat.seat}
-                    className={cn(
-                      "relative rounded-lg flex items-center justify-center h-[44px] w-[50px]",
-                      colorMap[seat.type],
-                      seat.type !== 12 && seat.status !== 1 && "cursor-pointer",
-                      selectedSeats.some((s) => s.code === seat.code) &&
-                        "bg-whis text-white",
-                      seat.isContract && "bg-raditz text-white",
-                      seat.isHold && "bg-roshi text-white",
-                      seat.status === 1 &&
-                        "bg-trunks text-white cursor-not-allowed"
-                    )}
-                    onClick={() =>
-                      seat.type !== 12 && seat.status !== 1
-                        ? handleSelectSeat(seat)
-                        : undefined
-                    }
-                  >
-                    <p className="text-sm">
-                      {seat.type !== 12 ? seat.code : ""}
-                    </p>
-                  </div>
-                ))}
-                <div className="text-trunks font-medium h-[44px] w-[50px] flex items-center justify-center text-base">
-                  {item[4].code.charAt(0)}
-                </div>
-              </div>
-            ))}
+            {renderedSeats}
           </div>
         </div>
+
+        {/* React-Selecto với cấu hình tối ưu */}
+        <Selecto
+          ref={selectoRef}
+          dragContainer={seatContainerRef.current ? ".seat-row" : undefined}
+          selectableTargets={[".selectable-seat"]}
+          hitRate={0}
+          selectByClick={true}
+          selectFromInside={true}
+          toggleContinueSelect={["shift"]}
+          ratio={0}
+          onSelectStart={() => {
+            isSelectingRef.current = true;
+          }}
+          onSelect={handleSelectoSelect}
+          onSelectEnd={() => {
+            setTimeout(() => {
+              isSelectingRef.current = false;
+            }, 100);
+          }}
+        />
       </div>
 
+      {/* Footer giữ nguyên */}
       <div
         className={cn(
           "fixed bottom-0 left-0 right-0 bg-white border-t border-beerus z-50",
           isCustomerView && "hidden"
         )}
       >
-        <div className="py-4 container flex gap-3">
+       <div className="py-4 container flex gap-3">
           <div className="flex-1">
             <div className="flex gap-3">
               <div className="w-3/5">

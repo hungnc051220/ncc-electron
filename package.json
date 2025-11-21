@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "main": "electron/main.js",
+  "author": {
+    "name": "HungNC",
+    "email": "hungnc@anvui.vn"
+  },
+  "description": "Phần mềm quản trị Rạp Chiếu Phim Quốc Gia",
   "scripts": {
     "dev": "concurrently \"pnpm dev:next\" \"pnpm dev:electron\"",
     "dev:next": "next dev",
@@ -94,6 +99,7 @@
     "react-qr-code": "^2.0.18",
     "react-resizable-panels": "^3.0.6",
     "react-select": "^5.10.2",
+    "react-selecto": "^1.26.3",
     "react-spinners": "^0.17.0",
     "recharts": "2.15.4",
     "socket.io-client": "^4.8.1",

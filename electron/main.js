@@ -1,15 +1,18 @@
-const { app, BrowserWindow, screen, ipcMain } = require("electron/main");
+const {
+  app,
+  BrowserWindow,
+  screen,
+  ipcMain,
+  utilityProcess,
+} = require("electron/main");
 const path = require("path");
-const { spawn } = require("child_process");
 
 let mainWindow;
 let customerWindow;
 let nextServer;
 
-const isDev = false;
+const isDev = !app.isPackaged;
 const PORT = process.env.PORT || 3000;
-
-console.log("isPackaged", app.isPackaged);
 
 // Khi build: chạy server Next từ standalone
 function startNextServer() {
@@ -26,9 +29,7 @@ function startNextServer() {
       "server.js"
     );
 
-    console.log("serverPath", serverPath);
-
-    nextServer = spawn("node", [serverPath], {
+    nextServer = utilityProcess.fork(serverPath, [], {
       env: {
         ...process.env,
         PORT,
@@ -37,19 +38,12 @@ function startNextServer() {
       cwd: path.join(process.resourcesPath, ".next", "standalone"),
     });
 
-    nextServer.stdout.on("data", (data) => {
-      console.log(`Next.js: ${data}`);
-      if (data.includes("Ready") || data.includes("started")) {
-        resolve();
-      }
-    });
-
-    nextServer.stderr.on("data", (data) => {
-      console.error(`Next.js Error: ${data}`);
-    });
-
     nextServer.on("error", (error) => {
       reject(error);
+    });
+
+    serverProcess.on("exit", (code) => {
+      console.log(`Server process exited with code ${code}`);
     });
 
     setTimeout(resolve, 3000);
@@ -60,15 +54,15 @@ const baseURL = `http://localhost:${PORT}`;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1920,
-    height: 1080,
+    width: 1024,
+    height: 768,
+    fullScreen: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
   });
 
   mainWindow.removeMenu();
-  mainWindow.maximize();
   mainWindow.loadURL(baseURL);
 
   if (isDev) {
@@ -77,6 +71,10 @@ function createWindow() {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+
+    if (customerWindow) {
+      customerWindow.close();
+    }
   });
 }
 
@@ -169,7 +167,7 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("quit", () => {
+app.on("before-quit", () => {
   if (nextServer) {
     nextServer.kill();
   }
