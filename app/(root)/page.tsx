@@ -1,3 +1,4 @@
+import Header from "@/components/header";
 import MainCard from "@/components/main-card";
 import SecondaryCard from "@/components/secondary-card";
 import { format } from "date-fns";
@@ -6,24 +7,25 @@ import { GiftIcon, PrinterIcon, TicketIcon } from "lucide-react";
 
 const DashboardPage = () => {
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div className="overflow-hidden">
+      <Header />
+      <div className="flex items-center justify-between mt-10">
         <div>
-          <h2 className="font-bold text-[32px]">Xin chào, Cán bộ Hoàng Lân!</h2>
-          <p className="text-trunks">
+          <h2 className="font-bold text-2xl">Xin chào, Cán bộ Hoàng Lân!</h2>
+          <p className="text-trunks text-sm">
             {format(new Date(), "EEEE, 'ngày' d 'tháng' M 'năm' yyyy", {
               locale: vi,
             })}
           </p>
         </div>
         <div>
-          <div className="bg-goku py-[6px] px-3 rounded-[10px] font-bold text-lg">
+          <div className="bg-goku py-2 px-3 rounded-[10px] font-bold text-sm">
             Máy: JQK
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6 mt-8">
+      <div className="grid grid-cols-3 gap-6 mt-6">
         <MainCard
           title="Bán vé khách lẻ"
           description="Lorem ipsum dolor sit amet consectetur elit"

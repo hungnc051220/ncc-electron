@@ -28,7 +28,7 @@ const MainCard = ({
     <Tilt rotationFactor={8} isRevese>
       <Link href={href ?? "#"}>
         <div
-          className="w-full h-[281px] rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative"
+          className="w-full h-[250px] rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative"
           style={{
             background:
               colorTypes[color as keyof typeof colorTypes] ||
@@ -42,11 +42,11 @@ const MainCard = ({
             height={150}
             className="absolute top-0 right-0"
           />
-          <div className="bg-white/25 rounded-full flex items-center justify-center size-15">
+          <div className="bg-white/25 rounded-full flex items-center justify-center size-14">
             <Icon className="text-white" size={36} />
           </div>
           <div>
-            <p className="font-bold text-2xl text-white">{title}</p>
+            <p className="font-bold text-xl text-white">{title}</p>
             <p className="text-sm mt-1 text-white">{description}</p>
           </div>
         </div>

@@ -14,7 +14,7 @@ const HeaderContent = () => {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 bg-white w-full h-[72px]",
+        "sticky top-0 z-50 bg-white w-full h-14",
         isCustomerView && "hidden"
       )}
     >
@@ -39,7 +39,7 @@ const HeaderContent = () => {
 const Header = () => {
   return (
     <Suspense fallback={
-      <header className="sticky top-0 z-50 bg-white w-full h-[72px]">
+      <header className="sticky top-0 z-50 bg-white w-full h-14">
         <div className="container h-full">
           <div className="flex items-center justify-between border-b h-full">
             <Link href="/">

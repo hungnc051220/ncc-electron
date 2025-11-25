@@ -21,8 +21,8 @@ const SecondaryCard = ({
           <Icon className={color} size={32} />
         </div>
         <div className="mt-5">
-          <p className="font-bold text-xl">{title}</p>
-          <p className="text-sm mt-1 text-trunks">{description}</p>
+          <p className="font-bold text-base">{title}</p>
+          <p className="text-xs mt-1 text-trunks">{description}</p>
         </div>
       </div>
     </Tilt>

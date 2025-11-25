@@ -19,7 +19,7 @@ const NavItems = () => {
         <NavigationMenuList>
           {NAV_ITEMS.map((navItem) => (
             <NavigationMenuItem key={navItem.title}>
-              <NavigationMenuTrigger>{navItem.title}</NavigationMenuTrigger>
+              <NavigationMenuTrigger className="text-xs">{navItem.title}</NavigationMenuTrigger>
               <NavigationMenuContent>
                 <ul className="grid w-[200px]">
                   {navItem.children.map((child) => (

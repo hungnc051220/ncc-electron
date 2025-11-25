@@ -1,4 +1,3 @@
-import Header from "@/components/header";
 import QueryProvider from "@/providers/query-provider";
 import { SocketProvider } from "@/providers/socket-provider";
 
@@ -11,10 +10,9 @@ const DashboardLayout = ({
 }) => {
   return (
     <main className="min-h-screen">
-      <Header />
       <QueryProvider>
         <SocketProvider>
-          <div className="container py-10">{children}</div>
+          <div className="container">{children}</div>
         </SocketProvider>
       </QueryProvider>
       {modal}
