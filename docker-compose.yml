@@ -1,0 +1,11 @@
+version: '3'
+services:
+  backend:
+    container_name: ncc-admin-app-new-dev
+    image: ncc-admin-app-new-dev
+    environment:
+      - NEXT_PUBLIC_API_URL=https://testapiv3.chieuphimquocgia.com.vn
+    ports:
+      - 3000:3000
+    networks:
+      - default
