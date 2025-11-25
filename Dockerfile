@@ -27,7 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # ENV NEXT_PUBLIC_API_URL=your_api_url
 
 # Build the application
-RUN pnpm build
+RUN pnpm build:next
 
 FROM node:22-alpine AS runner
 ENV HOME=/home/app
