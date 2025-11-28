@@ -6,21 +6,37 @@ const {
   utilityProcess,
 } = require("electron/main");
 const path = require("path");
+const { spawn } = require("child_process");
+const net = require("net");
 
 let mainWindow;
 let customerWindow;
-let nextServer;
+let nextProcess;
 
 const isDev = !app.isPackaged;
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
-// Khi build: chạy server Next từ standalone
-function startNextServer() {
+if (require("electron-squirrel-startup")) app.quit();
+
+// ---------------- WAIT FOR PORT (SAFE START) ----------------
+function waitForPort(port) {
+  return new Promise((resolve) => {
+    const timer = setInterval(() => {
+      const client = net.createConnection({ port }, () => {
+        clearInterval(timer);
+        client.end();
+        resolve();
+      });
+
+      client.on("error", () => {});
+    }, 200);
+  });
+}
+
+// ---------------- START NEXT.JS SERVER ----------------
+async function startNextServer() {
   return new Promise((resolve, reject) => {
-    if (isDev) {
-      resolve();
-      return;
-    }
+    if (isDev) return resolve();
 
     const serverPath = path.join(
       process.resourcesPath,
@@ -29,27 +45,29 @@ function startNextServer() {
       "server.js"
     );
 
-    nextServer = utilityProcess.fork(serverPath, [], {
+    console.log("➡ Starting Next.js server:", serverPath);
+    console.log("➡ Resource Path:", process.resourcesPath);
+
+    nextProcess = utilityProcess.fork(serverPath, [], {
       env: {
         ...process.env,
-        PORT,
+        PORT: `${PORT}`,
         HOSTNAME: "localhost",
       },
       cwd: path.join(process.resourcesPath, ".next", "standalone"),
     });
 
-    nextServer.on("error", (error) => {
-      reject(error);
+    nextProcess.on("exit", (code) => {
+      console.error("❌ Next.js exited with code", code);
+      reject(new Error("Next.js crashed."));
     });
 
-    serverProcess.on("exit", (code) => {
-      console.log(`Server process exited with code ${code}`);
-    });
-
-    setTimeout(resolve, 3000);
+    // Wait until Next.js actually starts
+    waitForPort(PORT).then(resolve);
   });
 }
 
+// ---------------- CREATE MAIN WINDOW ----------------
 const baseURL = `http://localhost:${PORT}`;
 
 function createWindow() {
@@ -78,14 +96,12 @@ function createWindow() {
   });
 }
 
+// ---------------- SECOND SCREEN WINDOW ----------------
 function createCustomerWindow(planScreeningsId) {
   const displays = screen.getAllDisplays();
+  const external = displays.find((d) => d.bounds.x !== 0 || d.bounds.y !== 0);
 
-  const externalDisplay = displays.find(
-    (d) => d.bounds.x !== 0 || d.bounds.y !== 0
-  );
-
-  if (!externalDisplay) return;
+  if (!external) return;
 
   if (customerWindow && !customerWindow.isDestroyed()) {
     if (customerWindow.isMinimized()) customerWindow.restore();
@@ -94,10 +110,10 @@ function createCustomerWindow(planScreeningsId) {
   }
 
   customerWindow = new BrowserWindow({
-    x: externalDisplay.bounds.x,
-    y: externalDisplay.bounds.y,
-    width: externalDisplay.bounds.width,
-    height: externalDisplay.bounds.height,
+    x: external.bounds.x,
+    y: external.bounds.y,
+    width: external.bounds.width,
+    height: external.bounds.height,
     fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -115,17 +131,17 @@ function createCustomerWindow(planScreeningsId) {
   });
 }
 
+// ---------------- APP INIT ----------------
 app.whenReady().then(async () => {
   await startNextServer();
 
   createWindow();
 
-  ipcMain.on("open-customer-window", (_, planCinemaId) => {
-    createCustomerWindow(planCinemaId);
+  ipcMain.on("open-customer-window", (_, id) => {
+    createCustomerWindow(id);
   });
 
   ipcMain.on("close-customer-window", () => {
-    console.log("📩 Received: close-customer-window");
     if (customerWindow && !customerWindow.isDestroyed()) {
       customerWindow.close();
       customerWindow = null;
@@ -151,16 +167,13 @@ app.whenReady().then(async () => {
   });
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
+// ---------------- CLEANUP ----------------
 app.on("window-all-closed", () => {
-  if (nextServer) {
-    nextServer.kill();
-  }
+  if (nextProcess) nextProcess.kill();
 
   if (process.platform !== "darwin") {
     app.quit();
@@ -168,7 +181,5 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  if (nextServer) {
-    nextServer.kill();
-  }
+  if (nextProcess) nextProcess.kill();
 });

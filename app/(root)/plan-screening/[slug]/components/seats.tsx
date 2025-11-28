@@ -2,10 +2,8 @@
 
 import { bookingTicketAction } from "@/actions/booking-ticket-actions";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { onSelectingChairs } from "@/data/loaders";
 import { cn, formatMoney } from "@/lib/utils";
 import { useSocketContext } from "@/providers/socket-provider";
 import {
@@ -14,24 +12,23 @@ import {
   PlanScreeningDetailProps,
   QrCodeResponseProps,
 } from "@/types";
-import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  memo,
   startTransition,
   useActionState,
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
-  useMemo,
-  useCallback,
-  memo,
 } from "react";
+import Selecto from "react-selecto";
 import { toast } from "sonner";
 import Legend from "./legend";
 import QrCodeDialog from "./qr-code-dialog";
-import Selecto from "react-selecto";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -176,15 +173,6 @@ const Seats = ({ data }: SeatsProps) => {
       socketRef.off("orderPaymentUpdated", handleOrderPaymentUpdated);
     };
   }, [socketRef, router, isCustomerView]);
-
-  // Tối ưu: chỉ gọi API khi hoàn thành selection thay vì từng ghế
-  const batchSelectingChair = useMutation({
-    mutationFn: (seatsToUpdate: ListSeat[]) => {
-      // Chỉ gọi API nếu thực sự cần real-time update
-      // Hoặc bỏ hoàn toàn nếu không cần
-      return Promise.resolve();
-    },
-  });
 
   const [state, action, pending] = useActionState(
     bookingTicketAction,
@@ -527,7 +515,7 @@ const Seats = ({ data }: SeatsProps) => {
           dragContainer=".seat-row"
           selectableTargets={[".selectable-seat"]}
           hitRate={0}
-          selectByClick={true}
+          selectByClick={false}
           selectFromInside={true}
           toggleContinueSelect={["shift"]}
           ratio={0}
@@ -594,7 +582,7 @@ const Seats = ({ data }: SeatsProps) => {
             </div>
           </div>
           <div className="flex-1">
-            <div className="flex items-center text-sm">
+            <div className="flex items-center text-xs">
               <p className="mr-1 whitespace-nowrap">Ghế đã chọn:</p>
               <div className="flex items-center gap-1 max-w-[250px] overflow-hidden">
                 {selectedSeats?.map((item) => (
@@ -652,138 +640,6 @@ const Seats = ({ data }: SeatsProps) => {
               <span className="text-base font-bold">In vé</span>
             </Button>
           </div>
-          {/* <div className="flex-1">
-            <div className="flex gap-3">
-              <div className="flex-1 bg-goku p-4 rounded-sm">
-                <div className="grid grid-cols-3 pb-2 text-sm gap-6">
-                  <div>
-                    <div className="flex items-center">
-                      <p className="min-w-[60px] text-trunks">Số vé:</p>
-                      <p className="text-whis font-bold flex-1 text-right">
-                        {selectedSeats.length}
-                      </p>
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <p className="min-w-[60px] text-trunks">Giảm giá:</p>
-                      <p className="text-hit font-bold flex-1 text-right">
-                        {formatMoney(0)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center">
-                      <p className="min-w-[60px] text-trunks">Tiền vé:</p>
-                      <p className="font-bold text-right flex-1">
-                        {formatMoney(totalPrice)}
-                      </p>
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <p className="min-w-[60px] text-trunks">Còn lại:</p>
-                      <p className="font-bold text-right flex-1">
-                        {formatMoney(0)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div>
-                      <p className="text-trunks">Tiền vé:</p>
-                      <p className="font-bold flex-1">
-                        {formatMoney(totalPrice)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="w-2/5 bg-goku p-4 text-sm rounded-sm">
-                <p className="font-bold">Phương thức</p>
-                <RadioGroup
-                  defaultValue={PaymentType.POS}
-                  value={paymentType}
-                  onValueChange={(value) =>
-                    setPaymentType(value as PaymentType)
-                  }
-                  className="grid grid-cols-2 gap-4 mt-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <RadioGroupItem value={PaymentType.POS} id="pos" />
-                    <Label htmlFor="pos">Tiền mặt</Label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <RadioGroupItem value={PaymentType.VNPAY} id="vnpay" />
-                    <Label htmlFor="vnpay">Quét VNpayQR</Label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <RadioGroupItem value={PaymentType.VIETQR} id="vietqr" />
-                    <Label htmlFor="vietqr">Quét VietQR</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-          </div> */}
-          {/* <div>
-            <div className="flex h-full gap-3">
-              <div className="grid grid-cols-2 h-full gap-2">
-                <div className="cursor-pointer hover:bg-jiren h-full border border-beerus min-w-[90px] text-xs font-bold flex items-center justify-center rounded-sm gap-1">
-                  <Image
-                    src="/images/restart_alt.svg"
-                    width={16}
-                    height={16}
-                    alt="icon"
-                  />
-                  <span>Đổi vé</span>
-                </div>
-                <div className="cursor-pointer hover:bg-jiren h-full border border-beerus min-w-[90px] text-xs font-bold flex items-center justify-center rounded-sm gap-1">
-                  <Image
-                    src="/images/card_giftcard.svg"
-                    width={16}
-                    height={16}
-                    alt="icon"
-                  />
-                  <span>Đổi quà</span>
-                </div>
-                <div className="cursor-pointer hover:bg-jiren h-full border border-beerus min-w-[90px] text-xs font-bold flex items-center justify-center rounded-sm gap-1">
-                  <Image
-                    src="/images/living.svg"
-                    width={16}
-                    height={16}
-                    alt="icon"
-                  />
-                  <span>Giữ chỗ</span>
-                </div>
-                <div className="cursor-pointer hover:bg-jiren h-full border border-beerus min-w-[90px] text-xs font-bold flex items-center justify-center rounded-sm gap-1">
-                  <Image
-                    src="/images/close.svg"
-                    width={16}
-                    height={16}
-                    alt="icon"
-                  />
-                  <span className="text-dodoria">Hủy giữ</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3">
-                <Button
-                  className="w-full flex-1 flex flex-col"
-                  onClick={onBooking}
-                >
-                  <Image
-                    src="/images/ticket.svg"
-                    width={24}
-                    height={24}
-                    alt="icon"
-                  />
-                  <span className="text-base font-bold">In vé</span>
-                </Button>
-                <div className="flex items-center gap-3">
-                  <Checkbox id="export" />
-                  <Label htmlFor="export" className="text-xs">
-                    Xuất hóa đơn
-                  </Label>
-                </div>
-              </div>
-            </div>
-          </div> */}
         </div>
       </div>
 
