@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore JavaScript files used by Electron and build scripts
+    "electron/**",
+    "forge.config.js",
+    "copy-standalone.js",
   ]),
 ]);
 

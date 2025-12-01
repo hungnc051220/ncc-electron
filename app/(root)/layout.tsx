@@ -1,5 +1,6 @@
-import QueryProvider from "@/providers/query-provider";
 import { SocketProvider } from "@/providers/socket-provider";
+import { ErrorBoundary } from "@/components/error-boundary";
+import Header from "@/components/header";
 
 const DashboardLayout = ({
   children,
@@ -10,11 +11,12 @@ const DashboardLayout = ({
 }) => {
   return (
     <main className="min-h-screen">
-      <QueryProvider>
+      <ErrorBoundary>
         <SocketProvider>
+          <Header />
           <div className="container">{children}</div>
         </SocketProvider>
-      </QueryProvider>
+      </ErrorBoundary>
       {modal}
     </main>
   );

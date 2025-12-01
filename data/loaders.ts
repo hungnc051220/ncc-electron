@@ -13,8 +13,9 @@ import {
 import { cookies } from "next/headers";
 import qs from "query-string";
 import { fetchAPI } from "./fetch-api";
+import { getApiBaseUrl } from "@/lib/env";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = getApiBaseUrl();
 
 export const onRefreshToken = async (refreshToken: string) => {
   const url = new URL("/api/pos/staff/refresh-token", BASE_URL);
@@ -72,13 +73,13 @@ export const getPlanScreenings = async (
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 
-export const getPlanScreeningsByDate = async (): Promise<
-  PlanScreeningProps[]
-> => {
+export const getPlanScreeningsByDate = async (
+  date?: string
+): Promise<PlanScreeningProps[]> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/plan-screenings/get-by-date", BASE_URL);
-  url.search = qs.stringify({ date: "2025-10-16" });
+  url.search = qs.stringify({ date });
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 

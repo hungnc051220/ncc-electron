@@ -12,8 +12,8 @@ export const decodeToken = (token: string) => {
       Buffer.from(payload, "base64").toString("utf-8")
     );
     return decodedPayload;
-  } catch (error) {
-    console.error("Invalid token", error);
+  } catch {
+    // Invalid token format
     return null;
   }
 };

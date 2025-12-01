@@ -8,22 +8,25 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ChevronDownIcon } from "lucide-react";
+import { getPlanScreeningsByDate } from "@/data/loaders";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { ChevronDownIcon, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Checkbox } from "../ui/checkbox";
-import { PlanScreeningProps } from "@/types";
 import { Table, TableBody, TableCell, TableRow } from "../ui/table";
-import { format } from "date-fns";
 
-interface RetailTicketSaleCardProps {
-  data: PlanScreeningProps[];
-}
-
-const RetailTicketSaleCard = ({ data }: RetailTicketSaleCardProps) => {
+const RetailTicketSaleCard = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [date, setDate] = useState<Date>(new Date());
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["plan-screenings", date],
+    queryFn: () => getPlanScreeningsByDate(format(date, "yyyy-MM-dd")),
+    enabled: !!date,
+  });
 
   return (
     <div className="px-6 py-5 max-w-[876px]">
@@ -39,7 +42,7 @@ const RetailTicketSaleCard = ({ data }: RetailTicketSaleCardProps) => {
                 id="date"
                 className="w-[398px] justify-between font-normal"
               >
-                {date ? date.toLocaleDateString() : "Chọn ngày chiếu"}
+                {date ? format(date, "dd/MM/yyyy") : "Chọn ngày chiếu"}
                 <ChevronDownIcon />
               </Button>
             </PopoverTrigger>
@@ -52,8 +55,10 @@ const RetailTicketSaleCard = ({ data }: RetailTicketSaleCardProps) => {
                 selected={date}
                 captionLayout="dropdown"
                 onSelect={(date) => {
-                  setDate(date);
-                  setOpen(false);
+                  if (date) {
+                    setDate(date);
+                    setOpen(false);
+                  }
                 }}
               />
             </PopoverContent>
@@ -65,33 +70,42 @@ const RetailTicketSaleCard = ({ data }: RetailTicketSaleCardProps) => {
         </div>
       </div>
 
-      <div className="mt-5 border rounded-sm overflow-x-auto">
-        <Table>
-          <TableBody>
-            {data?.map((item, index) => (
-              <TableRow key={index} className="divide-x">
-                <TableCell className="min-w-[50px] bg-goku sticky left-0 z-10">
-                  {index + 1}
-                </TableCell>
-                <TableCell className="font-bold bg-goku sticky left-[50px] z-10 min-w-[200px]">
-                  {item.filmName}
-                </TableCell>
-                {item.details.map((plan) => (
-                  <TableCell
-                    key={plan.planScreeningsId}
-                    className="text-center cursor-pointer hover:bg-primary hover:text-white min-w-[70px]"
-                    onClick={() => {
-                      router.push(`/plan-screening/${plan.planScreeningsId}`);
-                    }}
-                  >
-                    {format(new Date(plan.projectTime), "HH:mm")}
+      {isLoading && (
+        <div className="mt-10 w-full flex flex-col gap-2 items-center justify-center text-muted-foreground">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          Đang tải...
+        </div>
+      )}
+
+      {!isLoading && data && data?.length > 0 && (
+        <div className="mt-5 border rounded-sm overflow-x-auto">
+          <Table>
+            <TableBody>
+              {data.map((item, index) => (
+                <TableRow key={index} className="divide-x">
+                  <TableCell className="min-w-[50px] bg-goku sticky left-0 z-10">
+                    {index + 1}
                   </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                  <TableCell className="font-bold bg-goku sticky left-[50px] z-10 min-w-[200px]">
+                    {item.filmName}
+                  </TableCell>
+                  {item.details.map((plan) => (
+                    <TableCell
+                      key={plan.planScreeningsId}
+                      className="text-center cursor-pointer hover:bg-primary hover:text-white min-w-[70px]"
+                      onClick={() => {
+                        router.push(`/plan-screening/${plan.planScreeningsId}`);
+                      }}
+                    >
+                      {format(new Date(plan.projectTime), "HH:mm")}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };

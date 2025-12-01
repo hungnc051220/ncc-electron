@@ -1,7 +1,8 @@
 import { BookingTicketBodyProps, CreateQrCodeBodyProps } from "@/types";
 import { cookies } from "next/headers";
+import { getApiBaseUrl } from "@/lib/env";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = getApiBaseUrl();
 
 export const bookingTicketService = async (data: BookingTicketBodyProps) => {
   const url = new URL("/api/pos/order", BASE_URL);

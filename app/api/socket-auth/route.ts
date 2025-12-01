@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getSocketUrl } from "@/lib/env";
 
 export async function GET() {
   const token = (await cookies()).get("access_token")?.value;
@@ -9,6 +10,6 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    socketUrl: `${process.env.NEXT_PUBLIC_SOCKET_URL}/socket?token=${token}`,
+    socketUrl: `${getSocketUrl()}/socket?token=${token}`,
   });
 }

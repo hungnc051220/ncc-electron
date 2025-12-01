@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
+import { getApiBaseUrl } from "@/lib/env";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = getApiBaseUrl();
 
 export const deletePlanCinemaService = async (id: number) => {
   const url = new URL(`/api/pos/plan-cinema/${id}`, BASE_URL);

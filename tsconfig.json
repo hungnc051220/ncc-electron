@@ -36,8 +36,10 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next\\dev/types/**/*.ts",
-    ".next\\dev/types/**/*.ts"
-, "electron/preload.js", "electron/main.js", "app/(root)/film-scheduling/components/tabs-listtsx"  ],
+    ".next\\dev/types/**/*.ts",
+    "electron/preload.js",
+    "electron/main.js"
+  ],
   "exclude": [
     "node_modules"
   ]

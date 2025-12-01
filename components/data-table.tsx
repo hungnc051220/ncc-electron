@@ -78,7 +78,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="relative overflow-auto rounded-md border max-h-[calc(100vh-390px)]">
+      <div className="relative overflow-auto rounded-md border max-h-[calc(100vh-350px)]">
         {(loading || isPending) && (
           <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
             <div className="flex items-center gap-2 text-muted-foreground">

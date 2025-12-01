@@ -77,12 +77,13 @@ module.exports = {
           name: "ncc-admin-app-new",
         },
         auth: {
-          username: process.env.BITBUCKET_USERNAME, // string
-          appPassword: process.env.BITBUCKET_APP_PASSWORD, // string
+          username: process.env.BITBUCKET_USERNAME || "",
+          appPassword: process.env.BITBUCKET_APP_PASSWORD || "",
         },
         prerelease: false,
         draft: true,
       },
+      platforms: ["win32"],
     },
   ],
 };

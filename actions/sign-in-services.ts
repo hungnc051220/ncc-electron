@@ -1,6 +1,7 @@
 import { SignInInput } from "@/lib/schemas";
+import { getApiBaseUrl } from "@/lib/env";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = getApiBaseUrl();
 
 export const signInService = async ({ username, password }: SignInInput) => {
   const url = new URL("/api/pos/staff/login", BASE_URL);

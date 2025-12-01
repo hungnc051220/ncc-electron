@@ -148,8 +148,8 @@ const Seats = ({ data }: SeatsProps) => {
   useEffect(() => {
     if (!socketRef) return;
 
-    const handleSelectingUpdate = (payload: unknown) => {
-      console.log(payload);
+    const handleSelectingUpdate = () => {
+      // Handle selecting update payload
     };
 
     const handleOrderPaymentUpdated = (payload: { orderStatus?: number }) => {

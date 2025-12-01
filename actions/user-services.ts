@@ -1,7 +1,8 @@
 import { SignInInput } from "@/lib/schemas";
 import { cookies } from "next/headers";
+import { getApiBaseUrl } from "@/lib/env";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = getApiBaseUrl();
 
 export const createUserService = async (data: SignInInput) => {
     const url = new URL("/api/pos/staff", BASE_URL);

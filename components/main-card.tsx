@@ -46,8 +46,8 @@ const MainCard = ({
             <Icon className="text-white" size={36} />
           </div>
           <div>
-            <p className="font-bold text-xl text-white">{title}</p>
-            <p className="text-sm mt-1 text-white">{description}</p>
+            <p className="font-bold text-xl xl:text-2xl text-white">{title}</p>
+            <p className="text-sm xl:text-base mt-1 text-white">{description}</p>
           </div>
         </div>
       </Link>

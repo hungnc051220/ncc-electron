@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { logger } from "@/lib/logger";
 
 export const useSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -12,7 +13,7 @@ export const useSocket = () => {
     const connectSocket = async () => {
       try {
         const res = await fetch("/api/socket-auth");
-        if (!res.ok) return console.error("Socket auth error");
+        if (!res.ok) return logger.error("Socket authentication failed", { status: res.status });
 
         const data = await res.json();
         if (!active) return;
@@ -25,14 +26,14 @@ export const useSocket = () => {
         setSocket(newSocket);
 
         newSocket.on("connect", () => {
-          console.log("Socket connected");
+          logger.socketEvent("connect");
         });
 
         newSocket.on("disconnect", () => {
-          console.log("Socket disconnected");
+          logger.socketEvent("disconnect");
         });
       } catch (error) {
-        console.error("Socket auth error", error);
+        logger.error("Socket authentication error", { error });
       }
     };
 

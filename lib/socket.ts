@@ -1,6 +1,7 @@
 import { io } from "socket.io-client";
+import { getSocketUrl } from "@/lib/env";
 
-export const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
+export const socket = io(getSocketUrl(), {
   withCredentials: true, // cookie sẽ tự gửi theo
   transports: ["websocket"],
 });

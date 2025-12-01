@@ -47,7 +47,7 @@ export const signInAction = async (
   const cookieStore = await cookies();
   cookieStore.set("access_token", data.access_token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     sameSite: "lax",
     maxAge: data.expires_in,
@@ -55,7 +55,7 @@ export const signInAction = async (
 
   cookieStore.set("refresh_token", data.refresh_token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     sameSite: "lax",
     maxAge: data.refresh_expires_in,

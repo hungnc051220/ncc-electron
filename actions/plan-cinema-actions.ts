@@ -63,7 +63,13 @@ export const createPlanCinemaAction = async (
   }
 
   const response = await createPlanCinemaService(validatedFields.data);
-  const data = await response.json().catch(() => ({}));
+  
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = { message: 'Invalid server response' };
+  }
 
   if (!response.ok) {
     return {
@@ -180,7 +186,12 @@ export const addPlanFilmAction = async (
     planCinemaId: Number(planCinemaId),
   });
 
-  const data = await res.json().catch(() => ({}));
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = { message: 'Invalid server response' };
+  }
 
   if (!res.ok) {
     return {

@@ -6,7 +6,6 @@ const {
   utilityProcess,
 } = require("electron/main");
 const path = require("path");
-const { spawn } = require("child_process");
 const net = require("net");
 
 let mainWindow;

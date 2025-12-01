@@ -16,13 +16,13 @@ const SecondaryCard = ({
 }: SecondaryCardProps) => {
   return (
     <Tilt rotationFactor={8} isRevese>
-      <div className="w-full h-[204px] rounded-3xl p-6 bg-goku cursor-pointer">
+      <div className="w-full h-[220px] rounded-3xl p-6 bg-goku cursor-pointer">
         <div className="bg-white rounded-full flex items-center justify-center size-14">
           <Icon className={color} size={32} />
         </div>
         <div className="mt-5">
-          <p className="font-bold text-base">{title}</p>
-          <p className="text-xs mt-1 text-trunks">{description}</p>
+          <p className="font-bold text-base xl:text-lg">{title}</p>
+          <p className="text-xs xl:text-base mt-1 text-trunks">{description}</p>
         </div>
       </div>
     </Tilt>

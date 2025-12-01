@@ -20,7 +20,7 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "publish": "electron-forge publish"
+    "publish-app": "electron-forge publish"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -99,6 +99,7 @@
     "@types/qs": "^6.14.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.8.32",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^39.1.1",

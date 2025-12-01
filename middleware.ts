@@ -40,13 +40,13 @@ export async function middleware(req: NextRequest) {
       const response = NextResponse.next();
       response.cookies.set("access_token", data.access_token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         maxAge: data.expires_in,
         sameSite: "lax",
       });
       response.cookies.set("refresh_token", data.refresh_token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         maxAge: data.refresh_expires_in,
         sameSite: "lax",
       });
