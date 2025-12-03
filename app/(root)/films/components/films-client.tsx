@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/data-table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,64 +10,69 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { ApiResponse, CustomerRoleProps, UserProps } from "@/types";
+import { ApiResponse, FilmProps } from "@/types";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { createColumns } from "./columns";
-import DeleteUserDialog from "./delete-user-dialog";
+import DeleteFilmDialog from "./delete-film-dialog";
+import FilmDialog from "./film-dialog";
 import Filter from "./filter";
-import UserDialog from "./user-dialog";
-import { DataTable } from "@/components/data-table";
-
-interface UsersClientProps {
-  data: ApiResponse<UserProps>;
-  customerRoles: CustomerRoleProps[];
+import useGeneralData from "@/hooks/use-general-data";
+interface FilmsClientProps {
+  data: ApiResponse<FilmProps>;
   page: number;
 }
 
-const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
+const FilmsClient = ({ data, page }: FilmsClientProps) => {
+  const generalData = useGeneralData((state) => state.data);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProps | null>(null);
-  const [deletingUser, setDeletingUser] = useState<UserProps | null>(null);
+  const [editingFilm, setEditingFilm] = useState<FilmProps | null>(null);
+  const [deletingFilm, setDeletingFilm] = useState<FilmProps | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
   const handleAdd = useCallback(() => {
-    setEditingUser(null);
+    setEditingFilm(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((user: UserProps) => {
-    setEditingUser(user);
+  const handleEdit = useCallback((film: FilmProps) => {
+    setEditingFilm(film);
     setDialogOpen(true);
   }, []);
 
-  const handleDelete = useCallback((user: UserProps) => {
-    setDeletingUser(user);
+  const handleDelete = useCallback((film: FilmProps) => {
+    setDeletingFilm(film);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingUser(null);
+      setEditingFilm(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingUser(null);
+      setDeletingFilm(null);
     }
   }, []);
 
   const columns = useMemo(
-    () => createColumns({ onEdit: handleEdit, onDelete: handleDelete, page }),
-    [handleEdit, handleDelete, page]
+    () =>
+      createColumns({
+        onEdit: handleEdit,
+        onDelete: handleDelete,
+        page,
+        manufactures: generalData?.manufacturers || [],
+      }),
+    [handleEdit, handleDelete, page, generalData]
   );
 
   return (
-    <div className="space-y-8 mt-4 xl:mt-10">
+    <div className="space-y-6 xl:space-y-8 mt-4 xl:mt-10">
       <div className="flex items-center justify-between">
         <div>
           <Breadcrumb>
@@ -76,27 +82,24 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Hệ thống</BreadcrumbPage>
+                <BreadcrumbPage>Quản lý danh sách</BreadcrumbPage>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Quản lý người dùng</BreadcrumbPage>
+                <BreadcrumbPage>Danh sách phim</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h3 className="font-bold text-2xl mt-1">Quản lý người dùng</h3>
+          <h3 className="font-bold text-2xl mt-1">Danh sách phim</h3>
         </div>
 
         <Button onClick={handleAdd}>
           <PlusIcon className="size-6" />
-          Thêm người dùng
+          Thêm phim mới
         </Button>
       </div>
 
-      <Filter
-        customerRoles={customerRoles}
-        onSearchingChange={setIsSearching}
-      />
+      <Filter onSearchingChange={setIsSearching} />
       <DataTable
         columns={columns}
         data={data.data}
@@ -104,23 +107,22 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         loading={isSearching}
       />
       {dialogOpen && (
-        <UserDialog
+        <FilmDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          customerRoles={customerRoles}
-          editingUser={editingUser}
+          editingFilm={editingFilm}
         />
       )}
-      {deletingUser && (
-        <DeleteUserDialog
+      {deletingFilm && (
+        <DeleteFilmDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          userId={deletingUser.id}
-          username={deletingUser.username}
+          filmId={deletingFilm.id}
+          filmName={deletingFilm.filmName}
         />
       )}
     </div>
   );
 };
 
-export default UsersClient;
+export default FilmsClient;

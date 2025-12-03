@@ -263,7 +263,39 @@ export interface FilmProps {
   createdUser: string;
   updatedUser: string;
   isFree: string;
-  categories: number[];
+  categories: Category[];
+  filmStatus: FilmStatus;
+  filmVersion: FilmVersion;
+  filmLanguage: FilmLanguage;
+}
+
+export interface Category {
+  id: number;
+  filmId: number;
+  categoryId: number;
+  createdOnUtc: string;
+  createdUser: string;
+}
+
+export interface FilmStatus {
+  id: number;
+  statusCode: string;
+  statusName: string;
+  deleted: boolean;
+}
+
+export interface FilmVersion {
+  id: number;
+  versionCode: string;
+  versionName: string;
+  deleted: boolean;
+}
+
+export interface FilmLanguage {
+  id: number;
+  languageCode: string;
+  languageName: string;
+  deleted: boolean;
 }
 
 export interface OrderResponseProps {
@@ -400,4 +432,84 @@ export enum PaymentType {
   POS = "POS",
   VNPAY = "VNPAY",
   VIETQR = "VIETQR",
+}
+
+export interface FilmVersionProps {
+  id: number;
+  versionCode: string;
+  versionName: string;
+  deleted: boolean;
+}
+
+export interface CountryProps {
+  id: number;
+  name: string;
+  allowsBilling: boolean;
+  allowsShipping: boolean;
+  twoLetterIsoCode: string;
+  threeLetterIsoCode: string;
+  numericIsoCode: number;
+  subjectToVat: boolean;
+  published: boolean;
+  displayOrder: number;
+}
+
+export interface ManufacturerProps {
+  id: number;
+  name: string;
+  description: string;
+  manufacturerTemplateId: number;
+  metaKeywords: string;
+  metaDescription: string;
+  metaTitle: string;
+  pictureId: number;
+  pageSize: number;
+  allowCustomersToSelectPageSize: boolean;
+  pageSizeOptions: string;
+  priceRanges: string;
+  subjectToAcl: boolean;
+  limitedToStores: boolean;
+  published: boolean;
+  deleted: boolean;
+  displayOrder: number;
+  createdOnUtc: string;
+  updatedOnUtc: string;
+  fullName: string;
+  address: string;
+  acountBank: string;
+  bankName: string;
+  addressBank: string;
+  phoneNumber: string;
+  fax: string;
+  url: string;
+  createdUser: string;
+  updatedUser: string;
+}
+
+export interface LanguageProps {
+  id: number;
+  languageCode: string;
+  languageName: string;
+  deleted: boolean;
+}
+
+export interface FilmStatusProps {
+  id: number;
+  statusCode: string;
+  statusName: string;
+  deleted: boolean;
+}
+
+export interface GeneralDataProps {
+  filmVersions: FilmVersionProps[];
+  countries: CountryProps[];
+  manufacturers: ManufacturerProps[];
+  languages: LanguageProps[];
+  filmStatuses: FilmStatusProps[];
+}
+
+export interface FilmCategoryProps {
+  id: number;
+  name: string;
+  description: string;
 }

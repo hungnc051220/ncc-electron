@@ -1,5 +1,6 @@
 "use server";
 
+import { getApiBaseUrl } from "@/lib/env";
 import {
   ApiResponse,
   CustomerRoleProps,
@@ -13,7 +14,6 @@ import {
 import { cookies } from "next/headers";
 import qs from "query-string";
 import { fetchAPI } from "./fetch-api";
-import { getApiBaseUrl } from "@/lib/env";
 
 const BASE_URL = getApiBaseUrl();
 
@@ -143,5 +143,68 @@ export const onSelectingChairs = async (
     method: "POST",
     authToken: accessToken,
     body,
+  });
+};
+
+export const getFilmsList = async ({
+  filmName,
+  manufacturerId,
+  page,
+  pageSize,
+  premieredDay,
+}: {
+  filmName?: string;
+  manufacturerId?: number;
+  page?: number;
+  pageSize?: number;
+  premieredDay?: string;
+}): Promise<ApiResponse<FilmProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/v1/films", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+
+  if (filmName) {
+    filter.filmName = { like: `%${filmName}%` };
+  }
+
+  if (typeof manufacturerId === "number") {
+    filter.manufacturerId = manufacturerId;
+  }
+
+  if (premieredDay) {
+    filter.premieredDay = premieredDay;
+  }
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+    sort: "createdOnUtc.desc",
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  const queryString = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+
+  url.search = encodeURI(queryString);
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const onUploadFile = async (formData: FormData) => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/v1/attachments/admin/upload", BASE_URL);
+
+  return await fetch(url.toString(), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: formData,
   });
 };

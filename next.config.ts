@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   experimental: {
     turbopackFileSystemCacheForDev: true,
+    serverActions: {
+      bodySizeLimit: "50mb",
+    },
   },
   images: {
     unoptimized: true,

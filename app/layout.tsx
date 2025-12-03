@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import QueryProvider from "@/providers/query-provider";
 import "./globals.css";
+import "react-datepicker/dist/react-datepicker.css";
+import GetGeneralData from "@/components/get-general-data";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -22,7 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <GetGeneralData />
+          {children}
+        </QueryProvider>
         <Toaster richColors position="top-center" />
       </body>
     </html>

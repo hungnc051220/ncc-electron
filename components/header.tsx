@@ -22,7 +22,7 @@ const HeaderContent = () => {
         <div className="flex items-center justify-between border-b h-full">
           <Link href="/">
             <Image
-              src="/images/logo-text.svg"
+              src="/images/logo-text.png"
               alt="logo"
               width={100}
               height={40}
@@ -50,7 +50,7 @@ const Header = () => {
             <div className="flex items-center justify-between border-b h-full">
               <Link href="/">
                 <Image
-                  src="/images/logo-text.svg"
+                  src="/images/logo-text.png"
                   alt="logo"
                   width={100}
                   height={40}

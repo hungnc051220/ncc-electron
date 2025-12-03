@@ -24,8 +24,8 @@ export const NAV_ITEMS = [
     title: "Quản lý danh mục",
     children: [
       {
-        title: "Danh mục phim",
-        href: "/film-categories",
+        title: "Danh sách phim",
+        href: "/films",
       },
       {
         title: "Thay đổi thứ tự phim",

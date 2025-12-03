@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 
-const UsersLoading = () => {
+const Loading = () => {
   return (
     <div className="space-y-8 mt-10">
       <div className="flex items-center justify-between">
@@ -24,5 +24,5 @@ const UsersLoading = () => {
   );
 };
 
-export default UsersLoading;
+export default Loading;
 

@@ -6,7 +6,7 @@ const AuthLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
       <section className="">
         <div className="auth-box h-[90vh] max-h-[936px]">
           <Image
-            src="/images/logo-text.svg"
+            src="/images/logo-text.png"
             alt="logo"
             width={144}
             height={44}
