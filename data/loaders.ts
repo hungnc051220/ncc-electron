@@ -152,12 +152,14 @@ export const getFilmsList = async ({
   page,
   pageSize,
   premieredDay,
+  tabCode,
 }: {
   filmName?: string;
   manufacturerId?: number;
   page?: number;
   pageSize?: number;
   premieredDay?: string;
+  tabCode: string;
 }): Promise<ApiResponse<FilmProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -180,6 +182,7 @@ export const getFilmsList = async ({
   const queryObject: Record<string, unknown> = {
     current: page,
     pageSize,
+    tabCode,
     sort: "createdOnUtc.desc",
   };
 
@@ -207,4 +210,27 @@ export const onUploadFile = async (formData: FormData) => {
     headers: { Authorization: `Bearer ${accessToken}` },
     body: formData,
   });
+};
+
+export const getMachineSerials = async ({
+  year,
+  page,
+  pageSize,
+}: {
+  year?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<UserProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/print-times", BASE_URL);
+  url.search = qs.stringify(
+    {
+      filter: JSON.stringify({ year }),
+      current: page,
+      pageSize,
+    },
+    { skipEmptyString: true, skipNull: true, encode: false }
+  );
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };

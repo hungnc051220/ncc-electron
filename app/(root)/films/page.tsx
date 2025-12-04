@@ -9,6 +9,7 @@ const FilmsPage = async ({ searchParams }: FilmsPageProps) => {
   const filter = await searchParams;
   const filmName = filter?.filmName;
   const premieredDay = filter?.premieredDay;
+  const tabCode = filter?.tabCode || "ALL";
   const manufacturerId =
     filter?.manufacturerId && filter?.manufacturerId !== "all"
       ? Number(filter.manufacturerId)
@@ -22,6 +23,7 @@ const FilmsPage = async ({ searchParams }: FilmsPageProps) => {
     premieredDay,
     page,
     pageSize,
+    tabCode,
   });
 
   return <FilmsClient data={films} page={page} />;

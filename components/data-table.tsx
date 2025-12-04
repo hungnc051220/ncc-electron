@@ -57,6 +57,13 @@ export function DataTable<TData, TValue>({
   );
   const totalPages = Math.max(Math.ceil((total || 0) / pageSize), 1);
 
+  const getFooter = () => {
+    if (!data || data.length === 0) return "0";
+    const start = (selectedPage - 1) * pageSize + 1;
+    const end = Math.min(selectedPage * pageSize, total);
+    return `${start} - ${end}/${total}`;
+  };
+
   const buildUrl = (nextPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(nextPage));
@@ -78,7 +85,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="relative overflow-auto rounded-md border max-h-[calc(100vh-350px)]">
+      <div className="relative overflow-auto rounded-t-md border max-h-[calc(100vh-430px)]">
         {(loading || isPending) && (
           <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -136,71 +143,76 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <Pagination className="mt-4 justify-end">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              className={
-                currentPage === 1 ? "pointer-events-none opacity-50" : ""
-              }
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                if (currentPage > 1) {
-                  const next = currentPage - 1;
-                  setSelectedPage(next);
-                  startTransition(() => router.push(buildUrl(next)));
-                }
-              }}
-            />
-          </PaginationItem>
-
-          {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
-            let pageStart = Math.max(1, currentPage - 2);
-            const pageEnd = Math.min(totalPages, pageStart + 4);
-            pageStart = Math.max(1, pageEnd - 4);
-            const pageNum = pageStart + idx;
-            if (pageNum > totalPages) return null;
-            return (
-              <PaginationItem key={pageNum}>
-                <PaginationLink
-                  href="#"
-                  isActive={pageNum === selectedPage}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (pageNum !== currentPage) {
-                      setSelectedPage(pageNum);
-                      startTransition(() => router.push(buildUrl(pageNum)));
-                    }
-                  }}
-                >
-                  {pageNum}
-                </PaginationLink>
-              </PaginationItem>
-            );
-          })}
-
-          {totalPages > 5 && currentPage + 2 < totalPages && (
+      <div className="justify-between flex items-center w-full border-t-0 border rounded-b-md px-6 py-2">
+        <p className="whitespace-nowrap text-sm text-gray-600">
+          Hiển thị <span className="font-bold">{getFooter()}</span>
+        </p>
+        <Pagination className="justify-end">
+          <PaginationContent>
             <PaginationItem>
-              <PaginationEllipsis />
-            </PaginationItem>
-          )}
-
-          <PaginationItem>
-            <PaginationNext
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                if (currentPage < totalPages) {
-                  const next = currentPage + 1;
-                  setSelectedPage(next);
-                  startTransition(() => router.push(buildUrl(next)));
+              <PaginationPrevious
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
                 }
-              }}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) {
+                    const next = currentPage - 1;
+                    setSelectedPage(next);
+                    startTransition(() => router.push(buildUrl(next)));
+                  }
+                }}
+              />
+            </PaginationItem>
+
+            {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
+              let pageStart = Math.max(1, currentPage - 2);
+              const pageEnd = Math.min(totalPages, pageStart + 4);
+              pageStart = Math.max(1, pageEnd - 4);
+              const pageNum = pageStart + idx;
+              if (pageNum > totalPages) return null;
+              return (
+                <PaginationItem key={pageNum}>
+                  <PaginationLink
+                    href="#"
+                    isActive={pageNum === selectedPage}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (pageNum !== currentPage) {
+                        setSelectedPage(pageNum);
+                        startTransition(() => router.push(buildUrl(pageNum)));
+                      }
+                    }}
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
+
+            {totalPages > 5 && currentPage + 2 < totalPages && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) {
+                    const next = currentPage + 1;
+                    setSelectedPage(next);
+                    startTransition(() => router.push(buildUrl(next)));
+                  }
+                }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     </div>
   );
 }

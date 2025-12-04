@@ -513,3 +513,12 @@ export interface FilmCategoryProps {
   name: string;
   description: string;
 }
+
+export interface CustomerRoleMenuProps {
+  id: number;
+  customerRoleId: number;
+  menu: string;
+  menuName: string;
+  edit: boolean;
+  readOnly: boolean;
+}
