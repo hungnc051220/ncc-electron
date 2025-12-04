@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { customToast } from "@/components/ui/custom-toast";
 import {
   Table,
   TableBody,
@@ -20,9 +21,10 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { CustomerRoleMenuProps, CustomerRoleProps } from "@/types";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface UserRolesClientProps {
   customerRoles: CustomerRoleProps[];
@@ -33,6 +35,8 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
   const [bodyData, setBodyData] = useState<CustomerRoleMenuProps[] | undefined>(
     undefined
   );
+
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["role-menu", selectedRole],
@@ -51,18 +55,61 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
         const message = json?.error || "Lấy menu theo role thất bại";
         throw new Error(message);
       }
-  
+
       return json;
     },
     enabled: !!selectedRole,
   });
+
+  const updateRoleMenuMutation = useMutation({
+    mutationFn: async (updateData: {
+      actingGroups: CustomerRoleMenuProps[];
+    }) => {
+      console.log(updateData);
+      const res = await fetch("/api/role-menu/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        const message = json?.error || "Cập nhật quyền thất bại";
+        throw new Error(message);
+      }
+
+      return json;
+    },
+    onSuccess: () => {
+      customToast({
+        title: "Cập nhật thành công",
+        description: "Cập nhật quyền cho nhóm người dùng thành công",
+      });
+      // Refetch the role menu data to get the latest state
+      queryClient.invalidateQueries({ queryKey: ["role-menu", selectedRole] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const handleUpdatePermissions = () => {
+    if (!selectedRole || !bodyData) return;
+
+    updateRoleMenuMutation.mutate({
+      actingGroups: bodyData,
+    });
+  };
 
   useEffect(() => {
     setBodyData(data);
   }, [data]);
 
   return (
-    <div className="space-y-8 mt-4 xl:mt-10">
+    <div className="space-y-4 xl:space-y-6 mt-4 xl:mt-10">
       <div className="flex items-center justify-between">
         <div>
           <Breadcrumb>
@@ -121,7 +168,7 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
                 </span>
               </h4>
               {isLoading && (
-                <div className="flex flex-col items-center justify-center py-8">
+                <div className="flex flex-col items-center justify-center py-8 border rounded-md h-[calc(100vh-300px)] overflow-y-auto">
                   <Loader2 className="size-6 animate-spin" />
                   <p className="text-sm text-trunks mt-2">Đang tải menu...</p>
                 </div>
@@ -134,58 +181,64 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
               {bodyData && (
                 <div>
                   <div className="border rounded-md h-[calc(100vh-300px)] overflow-y-auto">
-                    <Table>
-                      <TableHeader className="bg-goku">
-                        <TableRow>
-                          <TableHead>STT</TableHead>
-                          <TableHead>Tên chức năng</TableHead>
-                          <TableHead className="text-center">Sửa</TableHead>
-                          <TableHead className="text-center">Chỉ đọc</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {bodyData?.map((item, index) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">
-                              {index + 1}
-                            </TableCell>
-                            <TableCell>
-                              {item?.menuName || item?.menu}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Checkbox
-                                checked={item.edit}
-                                onCheckedChange={(checked) => {
-                                  const indexItem = bodyData.findIndex(
-                                    (x) => x.id === item.id
-                                  );
-                                  const newData = [...bodyData];
-                                  newData[indexItem].edit = checked as boolean;
-                                  setBodyData(newData);
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Checkbox
-                                checked={item.readOnly}
-                                onCheckedChange={(checked) => {
-                                  const indexItem = bodyData.findIndex(
-                                    (x) => x.id === item.id
-                                  );
-                                  const newData = [...bodyData];
-                                  newData[indexItem].readOnly =
-                                    checked as boolean;
-                                  setBodyData(newData);
-                                }}
-                              />
-                            </TableCell>
+                    {bodyData.length > 0 ? (
+                      <Table>
+                        <TableHeader className="bg-goku">
+                          <TableRow>
+                            <TableHead>STT</TableHead>
+                            <TableHead>Tên chức năng</TableHead>
+                            <TableHead className="text-center">Sửa</TableHead>
+                            <TableHead className="text-center">
+                              Chỉ đọc
+                            </TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <div className="flex mt-4 justify-end gap-2">
-                    <Button>Cập nhật quyền</Button>
+                        </TableHeader>
+                        <TableBody>
+                          {bodyData?.map((item, index) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell>
+                                {item?.menuName || item?.menu}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Checkbox
+                                  checked={item.edit}
+                                  onCheckedChange={(checked) => {
+                                    const indexItem = bodyData.findIndex(
+                                      (x) => x.id === item.id
+                                    );
+                                    const newData = [...bodyData];
+                                    newData[indexItem].edit =
+                                      checked as boolean;
+                                    setBodyData(newData);
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Checkbox
+                                  checked={item.readOnly}
+                                  onCheckedChange={(checked) => {
+                                    const indexItem = bodyData.findIndex(
+                                      (x) => x.id === item.id
+                                    );
+                                    const newData = [...bodyData];
+                                    newData[indexItem].readOnly =
+                                      checked as boolean;
+                                    setBodyData(newData);
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-trunks text-sm">
+                        Không có dữ liệu
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -193,6 +246,23 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
           )}
         </div>
       </div>
+      {bodyData && bodyData.length > 0 && (
+        <div className="flex justify-end gap-2">
+          <Button
+            onClick={handleUpdatePermissions}
+            disabled={updateRoleMenuMutation.isPending}
+          >
+            {updateRoleMenuMutation.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin mr-2" />
+                Đang cập nhật...
+              </>
+            ) : (
+              <>Cập nhật quyền</>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
