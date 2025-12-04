@@ -71,6 +71,7 @@ const DashboardPage = () => {
           description="Cập nhật và thay đổi mật khẩu đăng nhập hệ thống"
           icon={TicketIcon}
           color="text-blue-700"
+          href="change-password"
         />
       </div>
     </div>

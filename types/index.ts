@@ -24,6 +24,16 @@ export interface UserProps {
   roleIds: string;
 }
 
+export interface ChangePasswordProps {
+  oldPassword: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordProps {
+  userId: string;
+  newPassword: string;
+}
+
 export interface CustomerRoleProps {
   id: number;
   name: string;

@@ -54,3 +54,27 @@ export const planCinemaFormSchema = z.object({
 });
 
 export type PlanCinemaFormInput = z.infer<typeof planCinemaFormSchema>;
+
+export const changePasswordFormSchema = z
+  .object({
+    oldPassword: z.string().min(1, { message: "Mật khẩu cũ là bắt buộc" }).trim(),
+    newPassword: z
+      .string()
+      .min(6, { message: "Mật khẩu mới phải có ít nhất 6 ký tự" })
+      .trim(),
+    confirmPassword: z
+      .string()
+      .min(1, { message: "Xác nhận mật khẩu là bắt buộc" })
+      .trim(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Mật khẩu xác nhận không khớp",
+    path: ["confirmPassword"],
+  });
+
+export const resetPasswordFormSchema = z.object({
+      password: z
+      .string()
+      .min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" })
+      .trim(),
+})
