@@ -11,7 +11,7 @@ const MachineSerialsPage = async ({
   const filter = await searchParams;
   const year = filter?.year;
   const page = filter?.page ? parseInt(filter.page, 10) || 1 : 1;
-  const pageSize = filter?.pageSize ? parseInt(filter.pageSize, 100) || 100 : 100;
+  const pageSize = filter?.pageSize ? parseInt(filter.pageSize, 10) || 100 : 100;
 
   const data = await getMachineSerials({ year, page, pageSize });
 

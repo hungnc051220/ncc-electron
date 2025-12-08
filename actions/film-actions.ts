@@ -39,7 +39,7 @@ export const createFilmAction = async (
     description: formData.get("description") as string,
     imageUrl: formData.get("imageUrl") as string,
     categoryIds: formData.get("categoryIds") as string,
-    isHot: formData.get("isHot") === "true",
+    isHot: formData.get("isHot") as string,
     sellOnline: formData.get("sellOnline") === "true",
     showOnHomePage: formData.get("showOnHomePage") === "true",
     trailerOnHomePage: formData.get("trailerOnHomePage") === "true",
@@ -64,6 +64,7 @@ export const createFilmAction = async (
       : [],
     premieredDay: formFields.premieredDay || undefined,
     orderNo: formFields.orderNo ? Number(formFields.orderNo) : 0,
+    isHot: formFields.isHot ? Number(formFields.isHot) : 0,
   };
 
   const validatedFields = filmFormSchema.safeParse(formatFormFields);

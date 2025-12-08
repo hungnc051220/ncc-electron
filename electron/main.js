@@ -102,7 +102,7 @@ function createWindow() {
   mainWindow.removeMenu();
   mainWindow.loadURL(baseURL);
 
-  if (!isDev) {
+  if (isDev) {
     mainWindow.webContents.openDevTools();
   }
 

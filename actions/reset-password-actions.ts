@@ -35,7 +35,7 @@ export const resetPasswordAction = async (
   const { userId } = validatedFields.data;
 
   const cookieStore = await cookies();
-  const accessToken = cookieStore.get("accessToken")?.value;
+  const accessToken = cookieStore.get("access_token")?.value;
 
   if (!accessToken) {
     return { ...prevState, success: false, error: "Unauthorized: Missing token." };
