@@ -14,7 +14,7 @@ const FilmSchedulingPage = async () => {
   const data = await getFilmScheduling();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 xl:space-y-8 mt-4 xl:mt-10">
       <div className="flex items-center justify-between">
         <div>
           <Breadcrumb>

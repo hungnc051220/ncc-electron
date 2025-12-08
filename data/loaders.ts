@@ -5,6 +5,7 @@ import {
   ApiResponse,
   CustomerRoleProps,
   FilmProps,
+  MachineSerialProps,
   PlanCinemaProps,
   PlanFilmProps,
   PlanScreeningDetailProps,
@@ -150,7 +151,7 @@ export const getFilmsList = async ({
   filmName,
   manufacturerId,
   page,
-  pageSize,
+  pageSize = 100,
   premieredDay,
   tabCode,
 }: {
@@ -220,17 +221,30 @@ export const getMachineSerials = async ({
   year?: string;
   page?: number;
   pageSize?: number;
-}): Promise<ApiResponse<UserProps>> => {
+}): Promise<ApiResponse<MachineSerialProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/print-times", BASE_URL);
-  url.search = qs.stringify(
-    {
-      filter: JSON.stringify({ year }),
-      current: page,
-      pageSize,
-    },
-    { skipEmptyString: true, skipNull: true, encode: false }
-  );
+
+  const filter: Record<string, unknown> = {};
+
+  if (year) {
+    filter.activeYear = year;
+  }
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };

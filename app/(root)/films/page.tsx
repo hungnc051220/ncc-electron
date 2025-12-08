@@ -15,7 +15,7 @@ const FilmsPage = async ({ searchParams }: FilmsPageProps) => {
       ? Number(filter.manufacturerId)
       : undefined;
   const page = filter?.page ? parseInt(filter.page, 10) || 1 : 1;
-  const pageSize = filter?.pageSize ? parseInt(filter.pageSize, 10) || 10 : 10;
+  const pageSize = filter?.pageSize ? parseInt(filter.pageSize, 10) || 100 : 100;
 
   const films = await getFilmsList({
     filmName,

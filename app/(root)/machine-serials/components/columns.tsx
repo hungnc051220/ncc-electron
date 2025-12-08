@@ -1,6 +1,7 @@
 "use client";
 
-import { UserProps } from "@/types";
+import { formatNumber } from "@/lib/utils";
+import { MachineSerialProps } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 
 interface ColumnsProps {
@@ -9,30 +10,32 @@ interface ColumnsProps {
 
 export const createColumns = ({
   page,
-}: ColumnsProps): ColumnDef<UserProps>[] => [
+}: ColumnsProps): ColumnDef<MachineSerialProps>[] => [
   {
     accessorKey: "no",
     header: "STT",
-    cell: ({ row }) => (page - 1) * 10 + row.index + 1,
+    cell: ({ row }) => (page - 1) * 100 + row.index + 1,
   },
   {
-    accessorKey: "year",
+    accessorKey: "activeYear",
     header: "Năm",
   },
   {
-    accessorKey: "code",
+    accessorKey: "shortName",
     header: "Ký hiệu",
   },
   {
-    accessorKey: "name",
+    accessorKey: "posName",
     header: "Tên máy",
   },
   {
-    accessorKey: "manufacturerId",
+    accessorKey: "printTimes",
     header: "Vé đã in",
+    cell: ({ row }) => formatNumber(row.original.printTimes),
   },
   {
-    accessorKey: "cancelTicket",
+    accessorKey: "cancelTimes",
     header: "Hủy vé",
+    cell: ({ row }) => formatNumber(row.original.cancelTimes),
   },
 ];

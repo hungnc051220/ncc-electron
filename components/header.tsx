@@ -18,8 +18,8 @@ const HeaderContent = () => {
         isCustomerView && "hidden"
       )}
     >
-      <div className="container h-full">
-        <div className="flex items-center justify-between border-b h-full">
+      <div className="h-full">
+        <div className="flex items-center justify-between border-b h-full px-4 shadow-sm">
           <Link href="/">
             <Image
               src="/images/logo-text.png"
@@ -29,7 +29,9 @@ const HeaderContent = () => {
               className="w-auto h-10 cursor-pointer"
             />
           </Link>
+          <div className="mx-auto">
           <NavItems />
+          </div>
         </div>
       </div>
     </header>
@@ -46,7 +48,7 @@ const Header = () => {
     <Suspense
       fallback={
         <header className="sticky top-0 z-50 bg-white w-full h-14">
-          <div className="container h-full">
+          <div className="h-full">
             <div className="flex items-center justify-between border-b h-full">
               <Link href="/">
                 <Image

@@ -9,13 +9,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { ApiResponse, UserProps } from "@/types";
+import { ApiResponse, MachineSerialProps } from "@/types";
 import { useMemo, useState } from "react";
 import { createColumns } from "./columns";
 import Filter from "./filter";
 
 interface MachineSerialsClientProps {
-  data: ApiResponse<UserProps>;
+  data: ApiResponse<MachineSerialProps>;
   page: number;
 }
 
@@ -25,7 +25,7 @@ const MachineSerialsClient = ({ data, page }: MachineSerialsClientProps) => {
   const columns = useMemo(() => createColumns({ page }), [page]);
 
   return (
-    <div className="space-y-8 mt-4 xl:mt-10">
+    <div className="space-y-3 mt-4">
       <div className="flex items-center justify-between">
         <div>
           <Breadcrumb>
@@ -39,13 +39,10 @@ const MachineSerialsClient = ({ data, page }: MachineSerialsClientProps) => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Xem Seri máy</BreadcrumbPage>
+                <BreadcrumbPage className="font-bold">Danh sách seri các máy bán vé</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h3 className="font-bold text-2xl mt-1">
-            Danh sách seri các máy bán vé
-          </h3>
         </div>
       </div>
 

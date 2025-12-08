@@ -11,11 +11,31 @@ const net = require("net");
 let mainWindow;
 let customerWindow;
 let nextProcess;
+let introWindow;
 
 const isDev = !app.isPackaged;
 const PORT = 3000;
 
 if (require("electron-squirrel-startup")) app.quit();
+
+function createIntroWindow() {
+  introWindow = new BrowserWindow({
+    width: 800,
+    height: 450,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    resizable: false,
+    show: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  introWindow.loadFile(path.join(__dirname, "public/intro.html"));
+  introWindow.once("ready-to-show", () => introWindow.show());
+}
 
 // ---------------- WAIT FOR PORT (SAFE START) ----------------
 function waitForPort(port) {
@@ -73,7 +93,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 768,
-    fullScreen: false,
+    fullScreen: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -82,7 +102,7 @@ function createWindow() {
   mainWindow.removeMenu();
   mainWindow.loadURL(baseURL);
 
-  if (isDev) {
+  if (!isDev) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -134,7 +154,13 @@ function createCustomerWindow(planScreeningsId) {
 app.whenReady().then(async () => {
   await startNextServer();
 
-  createWindow();
+  createIntroWindow();
+
+  ipcMain.on("intro-finished", () => {
+    introWindow.close();
+    createWindow();
+  });
+  
 
   ipcMain.on("open-customer-window", (_, id) => {
     createCustomerWindow(id);

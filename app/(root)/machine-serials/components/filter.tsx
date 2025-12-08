@@ -26,7 +26,7 @@ const Filter = ({ onSearchingChange }: FilterProps) => {
   const years = Array.from({ length: 31 }, (_, i) => currentYear - 20 + i);
 
   const [year, setYear] = useState<string | undefined>(
-    searchParams.get("year") || "2025"
+    searchParams.get("year") || undefined
   );
 
   const handleSearch = () => {
@@ -58,7 +58,7 @@ const Filter = ({ onSearchingChange }: FilterProps) => {
         <p className="text-sm mb-1">Năm</p>
         <Select value={year} onValueChange={setYear}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Chọn nhóm người dùng" />
+            <SelectValue placeholder="Chọn năm" />
           </SelectTrigger>
           <SelectContent>
             {years?.map((year) => (

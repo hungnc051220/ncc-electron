@@ -140,11 +140,11 @@ const CustomDatePicker = ({
           selected={selectedDate}
           onChange={onChangeDate}
           dateFormat="dd/MM/yyyy"
-          customInput={<DatePickerInput className="w-48" />}
+          customInput={<DatePickerInput className="w-full" />}
           renderCustomHeader={CustomHeader}
           popperClassName="z-50"
           calendarClassName="!border-border !bg-popover !text-popover-foreground !shadow-lg !rounded-lg !p-0 !font-sans custom-datepicker"
-          wrapperClassName="block"
+          wrapperClassName="block w-full"
           dayClassName={(date) =>
             cn(
               "!text-sm !w-8 !h-8 !leading-8 hover:!bg-accent hover:!text-accent-foreground !rounded-md !mx-0.5 !my-0.5 !flex !items-center !justify-center !cursor-pointer !transition-colors",

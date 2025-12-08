@@ -29,13 +29,13 @@ export const createColumns = ({
   {
     accessorKey: "no",
     header: "STT",
-    cell: ({ row }) => (page - 1) * 10 + row.index + 1,
+    cell: ({ row }) => <p className="w-[30px] text-center">{(page - 1) * 100 + row.index + 1}</p>,
   },
   {
     accessorKey: "filmName",
     header: "Tên phim",
     cell: ({ row }) => (
-      <p className="text-wrap uppercase font-bold text-hit w-[200px]">
+      <p className="whitespace-nowrap font-bold text-hit">
         {row.original.filmName}
       </p>
     ),

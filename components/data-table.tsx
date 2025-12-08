@@ -52,7 +52,7 @@ export function DataTable<TData, TValue>({
     1
   );
   const pageSize = Math.max(
-    parseInt(searchParams.get("pageSize") || "10", 10),
+    parseInt(searchParams.get("pageSize") || "100", 10),
     1
   );
   const totalPages = Math.max(Math.ceil((total || 0) / pageSize), 1);
@@ -85,7 +85,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="relative overflow-auto rounded-t-md border max-h-[calc(100vh-430px)]">
+      <div className="relative rounded-t-md border max-h-[calc(100vh-260px)] overflow-hidden">
         {(loading || isPending) && (
           <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -94,8 +94,9 @@ export function DataTable<TData, TValue>({
             </div>
           </div>
         )}
-        <Table>
-          <TableHeader>
+        <div className="overflow-auto max-h-[calc(100vh-260px)]">
+          <table className="w-full caption-bottom text-sm">
+            <TableHeader className="sticky top-0 bg-goku z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -113,37 +114,38 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    Không có kết quả nào.
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  Không có kết quả nào.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </table>
+        </div>
       </div>
-      <div className="justify-between flex items-center w-full border-t-0 border rounded-b-md px-6 py-2">
+      <div className="justify-between flex items-center w-full border-t-0 border rounded-b-md px-4 py-1">
         <p className="whitespace-nowrap text-sm text-gray-600">
           Hiển thị <span className="font-bold">{getFooter()}</span>
         </p>

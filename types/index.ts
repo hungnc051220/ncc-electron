@@ -532,3 +532,12 @@ export interface CustomerRoleMenuProps {
   edit: boolean;
   readOnly: boolean;
 }
+
+export interface MachineSerialProps {
+  shortName: string;
+  activeYear: number;
+  posName: string;
+  printTimes: number;
+  cancelTimes: number;
+  updatedOnUtc: string;
+}

@@ -65,7 +65,6 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
     mutationFn: async (updateData: {
       actingGroups: CustomerRoleMenuProps[];
     }) => {
-      console.log(updateData);
       const res = await fetch("/api/role-menu/update", {
         method: "POST",
         headers: {

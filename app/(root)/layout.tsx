@@ -14,7 +14,7 @@ const DashboardLayout = ({
       <ErrorBoundary>
         <SocketProvider>
           <Header />
-          <div className="container">{children}</div>
+          <div className="px-4">{children}</div>
         </SocketProvider>
       </ErrorBoundary>
       {modal}

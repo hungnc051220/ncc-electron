@@ -5,7 +5,7 @@ import { onRefreshToken } from "./data/loaders";
 
 const publicRoutes = ["/sign-in"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isProtectedRoute = !publicRoutes.includes(path);
   const isPublicRoute = publicRoutes.includes(path);
