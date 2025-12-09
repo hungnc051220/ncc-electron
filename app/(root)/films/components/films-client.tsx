@@ -190,6 +190,7 @@ const FilmsClient = ({ data, page }: FilmsClientProps) => {
         data={data.data}
         total={data.total}
         loading={isSearching}
+        className="max-h-[calc(100vh-260px)]"
       />
       {dialogOpen && (
         <FilmDialog

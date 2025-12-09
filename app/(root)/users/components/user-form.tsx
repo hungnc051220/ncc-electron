@@ -9,13 +9,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  Select as SelectUI,
-  SelectValue,
-} from "@/components/ui/select";
+import useGeneralData from "@/hooks/use-general-data";
 import {
   updateUserFormSchema,
   UserFormInput,
@@ -40,13 +34,14 @@ const UserForm = ({
   defaultValues,
   isEdit = false,
 }: UserFormProps) => {
+  const data = useGeneralData((state) => state.data);
   const form = useForm<UserFormInput>({
     resolver: zodResolver(isEdit ? updateUserFormSchema : userFormSchema),
     defaultValues: defaultValues || {
       roleIds: [],
       customerFirstName: "",
       customerLastName: "",
-      manufacturerId: 0,
+      manufacturerId: data?.manufacturers?.[0]?.id || 1,
       address: "",
       email: "",
       mobile: "",
@@ -151,20 +146,55 @@ const UserForm = ({
               name="manufacturerId"
               render={({ field }) => (
                 <FormItem className="w-full">
-                  <FormLabel>Hãng sản xuất</FormLabel>
-                  <SelectUI
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    value={field.value.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Chọn hãng sản xuất" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="0">A Company</SelectItem>
-                    </SelectContent>
-                  </SelectUI>
+                  <FormLabel>Hãng phát hành</FormLabel>
+                  <Select
+                    options={data?.manufacturers?.map((item) => ({
+                      value: item.id,
+                      label: item.name,
+                    }))}
+                    placeholder="Chọn hãng phát hành"
+                    value={
+                      field.value
+                        ? {
+                            value: field.value,
+                            label: data?.manufacturers?.find(
+                              (item) => item.id === field.value
+                            )?.name,
+                          }
+                        : null
+                    }
+                    onChange={(value) => field.onChange(value?.value)}
+                    components={{
+                      Control: ({ children, ...props }) => (
+                        <div
+                          ref={props.innerRef}
+                          {...props.innerProps}
+                          className="flex items-center min-h-9 gap-2 px-2.5 rounded-md border border-input bg-background text-sm focus-within:ring-2 focus-within:ring-ring"
+                        >
+                          {children}
+                        </div>
+                      ),
+                      DropdownIndicator: () => (
+                        <ChevronDownIcon className="size-4 text-gray-400 ml-2" />
+                      ),
+                      IndicatorSeparator: () => null,
+                    }}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: "unset",
+                        height: "unset",
+                        boxShadow: "none",
+                        border: "none",
+                      }),
+                      valueContainer: (base) => ({
+                        ...base,
+                        padding: 0,
+                        fontSize: "14px",
+                      }),
+                    }}
+                    isSearchable
+                  />
                   <FormMessage />
                 </FormItem>
               )}

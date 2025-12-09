@@ -21,19 +21,15 @@ export const NAV_ITEMS = [
     ],
   },
   {
-    title: "Quản lý danh mục",
+    title: "Quản lý danh sách",
     children: [
       {
         title: "Danh sách phim",
         href: "/films",
       },
       {
-        title: "Thay đổi thứ tự phim",
-        href: "/film-order",
-      },
-      {
-        title: "Danh mục chủ phim",
-        href: "/film-owners",
+        title: "Danh sách hãng phim",
+        href: "/manufacturers",
       },
       {
         title: "Quản lý phân chia doanh thu",

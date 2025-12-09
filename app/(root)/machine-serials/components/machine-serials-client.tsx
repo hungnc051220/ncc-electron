@@ -52,6 +52,7 @@ const MachineSerialsClient = ({ data, page }: MachineSerialsClientProps) => {
         data={data.data || []}
         total={data.total}
         loading={isSearching}
+        className="max-h-[calc(100vh-240px)]"
       />
     </div>
   );

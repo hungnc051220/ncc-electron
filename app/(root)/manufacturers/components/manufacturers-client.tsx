@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/data-table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,56 +10,55 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { ApiResponse, CustomerRoleProps, UserProps } from "@/types";
+import { ApiResponse, ManufacturerProps } from "@/types";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { createColumns } from "./columns";
-import DeleteUserDialog from "./delete-user-dialog";
-import Filter from "./filter";
-import UserDialog from "./user-dialog";
-import { DataTable } from "@/components/data-table";
 import { useMediaQuery } from "react-responsive";
+import { createColumns } from "./columns";
+import DeleteManufacturerDialog from "./delete-manufacturer-dialog";
+import ManufacturerDialog from "./manufacturer-dialog";
 
-interface UsersClientProps {
-  data: ApiResponse<UserProps>;
-  customerRoles: CustomerRoleProps[];
+interface ManufacturesClientProps {
+  data: ApiResponse<ManufacturerProps>;
   page: number;
 }
 
-const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
+const ManufacturesClient = ({
+  data,
+  page,
+}: ManufacturesClientProps) => {
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProps | null>(null);
-  const [deletingUser, setDeletingUser] = useState<UserProps | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(true);
+  const [editingManufacturer, setEditingManufacturer] = useState<ManufacturerProps | null>(null);
+  const [deletingManufacturer, setDeletingManufacturer] = useState<ManufacturerProps | null>(null);
 
   const handleAdd = useCallback(() => {
-    setEditingUser(null);
+    setEditingManufacturer(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((user: UserProps) => {
-    setEditingUser(user);
+  const handleEdit = useCallback((item: ManufacturerProps) => {
+    setEditingManufacturer(item);
     setDialogOpen(true);
   }, []);
 
-  const handleDelete = useCallback((user: UserProps) => {
-    setDeletingUser(user);
+  const handleDelete = useCallback((item: ManufacturerProps) => {
+    setDeletingManufacturer(item);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingUser(null);
+      setDeletingManufacturer(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingUser(null);
+      setDeletingManufacturer(null);
     }
   }, []);
 
@@ -83,7 +83,7 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-bold">
-                  Quản lý người dùng
+                  Danh sách hãng phim
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
@@ -91,17 +91,12 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         </div>
 
         <div className="flex gap-2 items-center">
-          <Filter
-            customerRoles={customerRoles}
-            onSearchingChange={setIsSearching}
-            isTabletOrMobile={isTabletOrMobile}
-          />
           <Button
             onClick={handleAdd}
             size={isTabletOrMobile ? "sm" : "default"}
           >
             <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm người dùng
+            Thêm hãng phim
           </Button>
         </div>
       </div>
@@ -110,27 +105,25 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         columns={columns}
         data={data.data}
         total={data.total}
-        loading={isSearching}
         className="max-h-[calc(100vh-200px)]"
       />
       {dialogOpen && (
-        <UserDialog
+        <ManufacturerDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          customerRoles={customerRoles}
-          editingUser={editingUser}
+          editingManufacturer={editingManufacturer}
         />
       )}
-      {deletingUser && (
-        <DeleteUserDialog
+      {deletingManufacturer && (
+        <DeleteManufacturerDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          userId={deletingUser.id}
-          username={deletingUser.username}
+          id={deletingManufacturer.id}
+          name={deletingManufacturer.name}
         />
       )}
     </div>
   );
 };
 
-export default UsersClient;
+export default ManufacturesClient;

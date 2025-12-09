@@ -27,12 +27,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   loading?: boolean;
   total: number;
+  className?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -40,6 +42,7 @@ export function DataTable<TData, TValue>({
   data,
   loading,
   total,
+  className,
 }: DataTableProps<TData, TValue>) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -85,7 +88,12 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="relative rounded-t-md border max-h-[calc(100vh-260px)] overflow-hidden">
+      <div
+        className={cn(
+          "relative rounded-t-md border overflow-hidden",
+          className
+        )}
+      >
         {(loading || isPending) && (
           <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -94,26 +102,26 @@ export function DataTable<TData, TValue>({
             </div>
           </div>
         )}
-        <div className="overflow-auto max-h-[calc(100vh-260px)]">
+        <div className={cn("overflow-auto", className)}>
           <table className="w-full caption-bottom text-sm">
             <TableHeader className="sticky top-0 bg-goku z-10">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (

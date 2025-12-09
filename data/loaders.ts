@@ -6,6 +6,7 @@ import {
   CustomerRoleProps,
   FilmProps,
   MachineSerialProps,
+  ManufacturerProps,
   PlanCinemaProps,
   PlanFilmProps,
   PlanScreeningDetailProps,
@@ -231,6 +232,36 @@ export const getMachineSerials = async ({
   if (year) {
     filter.activeYear = year;
   }
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getManufacturers = async ({
+  page,
+  pageSize,
+}: {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<ManufacturerProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/manufacturer", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
 
   const queryObject: Record<string, unknown> = {
     current: page,
