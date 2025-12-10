@@ -12,6 +12,7 @@ import {
   PlanFilmProps,
   PlanScreeningDetailProps,
   PlanScreeningProps,
+  RoomProps,
   UserProps,
 } from "@/types";
 import { cookies } from "next/headers";
@@ -291,6 +292,37 @@ export const getDiscounts = async ({
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/discount", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+  filter.deleted = false;
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getScreeningRooms = async ({
+  page,
+  pageSize,
+}: {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<RoomProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/rooms", BASE_URL);
 
   const filter: Record<string, unknown> = {};
   filter.deleted = false;
