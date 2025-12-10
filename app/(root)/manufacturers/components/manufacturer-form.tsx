@@ -19,13 +19,11 @@ import { useForm } from "react-hook-form";
 interface ManufacturerFormProps {
   onSubmit: (values: ManufacturerFormInput) => void;
   defaultValues?: Partial<ManufacturerFormInput>;
-  isEdit?: boolean;
 }
 
 const ManufacturerForm = ({
   onSubmit,
   defaultValues,
-  isEdit = false,
 }: ManufacturerFormProps) => {
   const form = useForm<ManufacturerFormInput>({
     resolver: zodResolver(manufacturerFormSchema),

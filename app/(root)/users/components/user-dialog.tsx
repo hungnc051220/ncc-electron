@@ -109,7 +109,7 @@ const UserDialog = ({
           </DialogClose>
           <Button type="submit" form="user-form" disabled={pending}>
             {pending && <Spinner />}
-            Xác nhận
+            {isEdit ? "Cập nhật" : "Xác nhận"}
           </Button>
         </DialogFooter>
       </DialogContent>

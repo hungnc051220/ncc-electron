@@ -31,7 +31,7 @@ interface FilmDialogProps {
   editingFilm?: FilmProps | null;
 }
 
-const  FilmDialog = ({ open, onOpenChange, editingFilm }: FilmDialogProps) => {
+const FilmDialog = ({ open, onOpenChange, editingFilm }: FilmDialogProps) => {
   const isEdit = !!editingFilm;
   const [state, action, pending] = useActionState(
     isEdit ? updateFilmAction : createFilmAction,
@@ -125,7 +125,7 @@ const  FilmDialog = ({ open, onOpenChange, editingFilm }: FilmDialogProps) => {
           </DialogClose>
           <Button type="submit" form="film-form" disabled={pending}>
             {pending && <Spinner />}
-            {isEdit ? "Lưu thông tin" : "Xác nhận"}
+            {isEdit ? "Cập nhật" : "Xác nhận"}
           </Button>
         </DialogFooter>
       </DialogContent>

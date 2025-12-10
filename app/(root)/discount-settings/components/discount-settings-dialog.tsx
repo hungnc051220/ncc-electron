@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  createManufacturerAction,
-  updateManufacturerAction,
-} from "@/actions/manufacturer-actions";
+  createDiscountAction,
+  updateDiscountAction,
+} from "@/actions/discount-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,11 +14,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { ManufacturerFormInput } from "@/lib/schemas/manufacturer-schema";
-import { ManufacturerProps } from "@/types";
+import { DiscountFormInput } from "@/lib/schemas/discount-schema";
+import { DiscountProps } from "@/types";
 import { startTransition, useActionState, useEffect } from "react";
 import { toast } from "sonner";
-import ManufacturerForm from "./manufacturer-form";
+import DiscountSettingsForm from "./discount-settings-form";
 
 const INITIAL_STATE = {
   formData: null,
@@ -27,27 +27,27 @@ const INITIAL_STATE = {
   error: null,
 };
 
-interface ManufacturerDialogProps {
+interface DiscountSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingManufacturer?: ManufacturerProps | null;
+  editingDiscount?: DiscountProps | null;
 }
 
-const ManufacturerDialog = ({
+const DiscountSettingsDialog = ({
   open,
   onOpenChange,
-  editingManufacturer,
-}: ManufacturerDialogProps) => {
-  const isEdit = !!editingManufacturer;
+  editingDiscount,
+}: DiscountSettingsDialogProps) => {
+  const isEdit = !!editingDiscount;
   const [state, action, pending] = useActionState(
-    isEdit ? updateManufacturerAction : createManufacturerAction,
+    isEdit ? updateDiscountAction : createDiscountAction,
     INITIAL_STATE
   );
 
-  const onSubmit = (values: ManufacturerFormInput) => {
+  const onSubmit = (values: DiscountFormInput) => {
     const formData = new FormData();
-    if (isEdit && editingManufacturer) {
-      formData.append("id", editingManufacturer.id.toString());
+    if (isEdit && editingDiscount) {
+      formData.append("id", editingDiscount.id.toString());
     }
     Object.entries(values).forEach(([key, value]) => {
       formData.append(key, value as string);
@@ -62,37 +62,32 @@ const ManufacturerDialog = ({
 
     if (state.success) {
       toast.success(
-        isEdit ? "Cập nhật hãng phim thành công" : "Thêm hãng phim thành công"
+        isEdit ? "Cập nhật giảm giá thành công" : "Thêm giảm giá thành công"
       );
       onOpenChange(false);
     }
   }, [state, isEdit, onOpenChange]);
 
-  const getDefaultValues = (): Partial<ManufacturerFormInput> | undefined => {
-    if (!editingManufacturer) return undefined;
+  const getDefaultValues = (): Partial<DiscountFormInput> | undefined => {
+    if (!editingDiscount) return undefined;
     return {
-      name: editingManufacturer.name,
-      fullName: editingManufacturer.fullName,
-      bankName: editingManufacturer.bankName,
-      phoneNumber: editingManufacturer.phoneNumber,
-      acountBank: editingManufacturer.acountBank,
-      addressBank: editingManufacturer.addressBank,
-      address: editingManufacturer.address,
-      fax: editingManufacturer.fax,
-      url: editingManufacturer.url,
+      discountName: editingDiscount.discountName,
+      discountAmount: editingDiscount.discountAmount,
+      discountRate: editingDiscount.discountRate,
+      discountType: !editingDiscount.discountAmount ? "rate" : "amount",
     };
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[612px]">
+      <DialogContent className="sm:max-w-[476px]">
         <DialogHeader className="border-b">
           <DialogTitle>
-            {isEdit ? "Cập nhật hãng phim" : "Thêm mới hãng phim"}
+            {isEdit ? "Cập nhật giảm giá" : "Thêm mới giảm giá"}
           </DialogTitle>
         </DialogHeader>
         <div>
-          <ManufacturerForm
+          <DiscountSettingsForm
             onSubmit={onSubmit}
             defaultValues={getDefaultValues()}
           />
@@ -103,7 +98,11 @@ const ManufacturerDialog = ({
               Hủy
             </Button>
           </DialogClose>
-          <Button type="submit" form="manufacturer-form" disabled={pending}>
+          <Button
+            type="submit"
+            form="discount-settings-form"
+            disabled={pending}
+          >
             {pending && <Spinner />}
             {isEdit ? "Cập nhật" : "Xác nhận"}
           </Button>
@@ -113,4 +112,4 @@ const ManufacturerDialog = ({
   );
 };
 
-export default ManufacturerDialog;
+export default DiscountSettingsDialog;
