@@ -80,7 +80,13 @@ export const updateSeatTypeAction = async (
     pictureUrl: formData.get("pictureUrl") as string,
   };
 
-  const validatedFields = seatTypeFormSchema.safeParse(formFields);
+  const formattedFormFields = {
+    ...formFields,
+    isSeat: formFields.isSeat === "true" ? true : false,
+    isDefault: formFields.isDefault === "true" ? true : false,
+  };
+
+  const validatedFields = seatTypeFormSchema.safeParse(formattedFormFields);
 
   if (!validatedFields.success) {
     return {

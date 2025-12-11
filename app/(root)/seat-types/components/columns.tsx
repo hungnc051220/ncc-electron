@@ -71,7 +71,7 @@ export const createColumns = ({
     header: "Ảnh",
     cell: ({ row }) =>
       row.original.pictureUrl ? (
-        <Image src={row.original.pictureUrl} alt="" />
+        <Image src={row.original.pictureUrl} alt="picture" width={50} height={50} className="rounded-md object-cover object-center w-15 h-9"/>
       ) : null,
   },
   {
