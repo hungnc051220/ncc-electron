@@ -555,22 +555,46 @@ export interface DiscountProps {
   updatedUser: string;
 }
 
+export interface CancellationReasonProps {
+  id: number;
+  reason: string;
+  deleted: boolean;
+  createdOnUtc: string;
+  createdUser: string;
+  updatedOnUtc: string;
+  updatedUser: string;
+}
+
 export interface RoomProps {
-  id: number
-  name: string
-  wideSizeF1: number
-  deepSizeF1: number
-  wideSizeF2: number
-  deepSizeF2: number
-  wideSizeF3: number
-  deepSizeF3: number
-  ruleOrder: string
-  noBreak: boolean
-  numberOfFloor: number
-  pictureId: number
-  deleted: boolean
-  subjectToAcl: boolean
-  limitedToStores: boolean
-  orderNo: number
-  floor: string
+  id: number;
+  name: string;
+  wideSizeF1: number;
+  deepSizeF1: number;
+  wideSizeF2: number;
+  deepSizeF2: number;
+  wideSizeF3: number;
+  deepSizeF3: number;
+  ruleOrder: string;
+  noBreak: boolean;
+  numberOfFloor: number;
+  pictureId: number;
+  deleted: boolean;
+  subjectToAcl: boolean;
+  limitedToStores: boolean;
+  orderNo: number;
+  floor: string;
+}
+
+export interface SeatTypeProps {
+  id: number;
+  positionCode: string;
+  name: string;
+  color: string;
+  pictureId: number;
+  isSeat: boolean;
+  isDefault: boolean;
+  deleted: boolean;
+  createdOnUtc: string;
+  updatedOnUtc: string;
+  pictureUrl?: string;
 }

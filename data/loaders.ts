@@ -3,6 +3,7 @@
 import { getApiBaseUrl } from "@/lib/env";
 import {
   ApiResponse,
+  CancellationReasonProps,
   CustomerRoleProps,
   DiscountProps,
   FilmProps,
@@ -13,6 +14,7 @@ import {
   PlanScreeningDetailProps,
   PlanScreeningProps,
   RoomProps,
+  SeatTypeProps,
   UserProps,
 } from "@/types";
 import { cookies } from "next/headers";
@@ -326,6 +328,66 @@ export const getScreeningRooms = async ({
 
   const filter: Record<string, unknown> = {};
   filter.deleted = false;
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getCancellationReasons = async ({
+  page,
+  pageSize,
+}: {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<CancellationReasonProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/order/cancel-reason", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getSeatTypes = async ({
+  page,
+  pageSize,
+}: {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<SeatTypeProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/position", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
 
   const queryObject: Record<string, unknown> = {
     current: page,
