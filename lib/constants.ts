@@ -36,36 +36,28 @@ export const NAV_ITEMS = [
         href: "/revenue-sharing",
       },
       {
-        title: "Danh mục loại ghế, vị trí",
+        title: "Danh sách loại ghế, vị trí",
         href: "/seat-types",
       },
       {
-        title: "Danh mục phòng chiếu",
+        title: "Danh sách phòng chiếu",
         href: "/screening-rooms",
       },
       {
-        title: "Danh mục ngày lễ",
+        title: "Danh sách ngày lễ",
         href: "/holidays",
       },
       {
-        title: "Danh mục khung giờ chiếu",
+        title: "Danh sách khung giờ chiếu",
         href: "/showtime-slots",
       },
       {
-        title: "Danh mục lý do hủy vé",
+        title: "Danh sách lý do hủy vé",
         href: "/cancellation-reasons",
       },
       {
-        title: "Ẩn/hiện nhân viên trên thống kê",
-        href: "/staff-visibility",
-      },
-      {
-        title: "Quản lý giá vé",
+        title: "Danh sách giá vé",
         href: "/ticket-prices",
-      },
-      {
-        title: "Quản lý quảng cáo",
-        href: "/advertisements",
       },
     ],
   },
@@ -79,10 +71,6 @@ export const NAV_ITEMS = [
       {
         title: "Xem lịch chiếu phim",
         href: "/showtime-schedule",
-      },
-      {
-        title: "Cho phép in lại vé",
-        href: "/reprint-tickets",
       },
       {
         title: "Thiết lập bán online theo ghế",
@@ -106,23 +94,19 @@ export const NAV_ITEMS = [
         href: "/retail-ticket-sales",
       },
       {
-        title: "Bán vé bằng thẻ ngân hàng",
-        href: "/bank-card-sales",
-      },
-      {
         title: "In vé online",
         href: "/online-ticket-printing",
-      },
-      {
-        title: "In vé bằng mã vạch",
-        href: "/barcode-ticket-printing",
       },
       {
         title: "Hủy vé",
         href: "/ticket-cancellation",
       },
       {
-        title: "Quản lý vé mời",
+        title: "Hoàn tiền",
+        href: "/refunds",
+      },
+      {
+        title: "Quản lý giấy mời",
         href: "/complimentary-tickets",
       },
       {
@@ -134,8 +118,8 @@ export const NAV_ITEMS = [
         href: "/ticket-sales-revenue",
       },
       {
-        title: "Tìm vé bán online",
-        href: "/search-online-tickets",
+        title: "Cho phép in lại vé",
+        href: "/reprint-tickets",
       },
     ],
   },
@@ -143,7 +127,7 @@ export const NAV_ITEMS = [
     title: "Tra cứu",
     children: [
       {
-        title: "Lịch sử truy cập",
+        title: "Lịch sử hoạt động",
         href: "/access-history",
       },
       {
@@ -155,11 +139,7 @@ export const NAV_ITEMS = [
         href: "/counter-sales-history",
       },
       {
-        title: "Lịch sử bán vé hợp đồng",
-        href: "/contract-sales-history",
-      },
-      {
-        title: "Lịch sử vé mời",
+        title: "Lịch sử cấp giấy mời",
         href: "/complimentary-tickets-history",
       },
       {

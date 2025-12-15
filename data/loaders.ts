@@ -5,6 +5,7 @@ import {
   ApiResponse,
   CancellationReasonProps,
   CustomerRoleProps,
+  DayPartProps,
   DiscountProps,
   FilmProps,
   MachineSerialProps,
@@ -15,6 +16,7 @@ import {
   PlanScreeningProps,
   RoomProps,
   SeatTypeProps,
+  TicketPriceProps,
   UserProps,
 } from "@/types";
 import { cookies } from "next/headers";
@@ -386,6 +388,66 @@ export const getSeatTypes = async ({
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/position", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getTicketPrices = async ({
+  page,
+  pageSize,
+}: {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<TicketPriceProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/pricing", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getDayParts = async ({
+  page,
+  pageSize,
+}: {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<DayPartProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/day-part", BASE_URL);
 
   const filter: Record<string, unknown> = {};
 

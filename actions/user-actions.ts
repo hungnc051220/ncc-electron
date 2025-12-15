@@ -30,12 +30,14 @@ export const createUserAction = async (
     address: formData.get("address") as string,
     email: formData.get("email") as string,
     mobile: formData.get("mobile") as string,
+    isHidden: formData.get("isHidden") as string,
   };
 
   const formatFormFields = {
     ...formFields,
     roleIds: formFields.roleIds.split(",").map(Number),
     manufacturerId: Number(formFields.manufacturerId),
+    isHidden: formFields.isHidden === "true" ? true : false,
   };
 
   const validatedFields = userFormSchema.safeParse(formatFormFields);
@@ -89,12 +91,14 @@ export const updateUserAction = async (
     address: formData.get("address") as string,
     email: formData.get("email") as string,
     mobile: formData.get("mobile") as string,
+    isHidden: formData.get("isHidden") as string,
   };
 
   const formatFormFields = {
     ...formFields,
     roleIds: formFields.roleIds.split(",").map(Number),
     manufacturerId: Number(formFields.manufacturerId),
+    isHidden: formFields.isHidden !== "true",
   };
 
   const validatedFields = updateUserFormSchema.safeParse(formatFormFields);
@@ -115,7 +119,7 @@ export const updateUserAction = async (
     manufacturerId: number;
     address?: string;
     email: string;
-    mobile: string;
+    mobile?: string;
     password?: string;
     confirmPassword?: string;
   } = {

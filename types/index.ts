@@ -22,6 +22,7 @@ export interface UserProps {
   address: string;
   mobile: string;
   roleIds: string;
+  isHidden: boolean;
 }
 
 export interface ChangePasswordProps {
@@ -597,4 +598,32 @@ export interface SeatTypeProps {
   createdOnUtc: string;
   updatedOnUtc: string;
   pictureUrl?: string;
+}
+
+export interface TicketPriceProps {
+  id: number;
+  versionCode: string;
+  daypartId: number;
+  positionId: number;
+  price: number;
+  deleted: boolean;
+  createdOnUtc: string;
+  createdUser: string;
+  updatedOnUtc: string;
+  updatedUser: string;
+}
+
+export interface DayPartProps {
+  id: number;
+  dateTypeId: number;
+  name: string;
+  fromTime: string;
+  toTime: string;
+  createdOnUtc: string;
+  createdUser: string;
+  updatedOnUtc: string;
+  updatedUser: string;
+  deleted: boolean;
+  CreatedOnUtc: string;
+  UpdatedOnUtc: string;
 }

@@ -28,9 +28,10 @@ export const userFormSchema = z.object({
   email: z.email("Email không đúng định dạng").min(1, {
     error: "Email là bắt buộc",
   }),
-  mobile: z.string().regex(/^0\d{9}$/, "Số điện thoại không hợp lệ"),
+  mobile: z.string().regex(/^0\d{9}$/, "Số điện thoại không hợp lệ").optional(),
   username: z.string().min(1, { error: "Tên người dùng là bắt buộc" }),
   password: z.string().min(1, { error: "Mật khẩu là bắt buộc" }),
+  isHidden: z.boolean().optional().nullable(),
 });
 
 export const updateUserFormSchema = userFormSchema.extend({
@@ -47,17 +48,17 @@ export type UserFormInput = z.infer<ReturnType<typeof getUserFormInputSchema>>;
 export const planCinemaFormSchema = z.object({
   name: z.string().min(1, { error: "Tên kế hoạch là bắt buộc" }).trim(),
   // API yêu cầu trường 'desciption' (chính tả theo backend)
-  desciption: z
-    .string()
-    .min(1, { error: "Mô tả kế hoạch là bắt buộc" })
-    .trim(),
+  desciption: z.string().min(1, { error: "Mô tả kế hoạch là bắt buộc" }).trim(),
 });
 
 export type PlanCinemaFormInput = z.infer<typeof planCinemaFormSchema>;
 
 export const changePasswordFormSchema = z
   .object({
-    oldPassword: z.string().min(1, { message: "Mật khẩu cũ là bắt buộc" }).trim(),
+    oldPassword: z
+      .string()
+      .min(1, { message: "Mật khẩu cũ là bắt buộc" })
+      .trim(),
     newPassword: z
       .string()
       .min(6, { message: "Mật khẩu mới phải có ít nhất 6 ký tự" })
@@ -73,8 +74,8 @@ export const changePasswordFormSchema = z
   });
 
 export const resetPasswordFormSchema = z.object({
-      password: z
-      .string()
-      .min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" })
-      .trim(),
-})
+  password: z
+    .string()
+    .min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" })
+    .trim(),
+});

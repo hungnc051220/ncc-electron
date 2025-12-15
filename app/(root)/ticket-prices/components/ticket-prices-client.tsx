@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/data-table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,71 +10,66 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { ApiResponse, CustomerRoleProps, UserProps } from "@/types";
+import {
+  ApiResponse,
+  DayPartProps,
+  SeatTypeProps,
+  TicketPriceProps,
+} from "@/types";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { createColumns } from "./columns";
-import DeleteUserDialog from "./delete-user-dialog";
-import Filter from "./filter";
-import UserDialog from "./user-dialog";
-import { DataTable } from "@/components/data-table";
 import { useMediaQuery } from "react-responsive";
-import ChangeHiddenUserDialog from "./change-hidden-user-dialog";
+import { createColumns } from "./columns";
+import DeleteTicketPriceDialog from "./delete-ticket-price-dialog";
+import TicketPriceDialog from "./ticket-price-dialog";
 
-interface UsersClientProps {
-  data: ApiResponse<UserProps>;
-  customerRoles: CustomerRoleProps[];
+interface TicketPricesClientProps {
+  data: ApiResponse<TicketPriceProps>;
   page: number;
+  positions: SeatTypeProps[];
+  dayParts: DayPartProps[];
 }
 
-const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
+const TicketPricesClient = ({
+  data,
+  page,
+  positions,
+  dayParts,
+}: TicketPricesClientProps) => {
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [changeHiddenDialogOpen, setChangeHiddenDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProps | null>(null);
-  const [deletingUser, setDeletingUser] = useState<UserProps | null>(null);
-  const [editingHidden, setEditingHidden] = useState<UserProps | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [editingTicketPrice, setEditingTicketPrice] =
+    useState<TicketPriceProps | null>(null);
+  const [deletingTicketPrice, setDeletingTicketPrice] =
+    useState<TicketPriceProps | null>(null);
 
   const handleAdd = useCallback(() => {
-    setEditingUser(null);
+    setEditingTicketPrice(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((user: UserProps) => {
-    setEditingUser(user);
+  const handleEdit = useCallback((item: TicketPriceProps) => {
+    setEditingTicketPrice(item);
     setDialogOpen(true);
   }, []);
 
-  const handleDelete = useCallback((user: UserProps) => {
-    setDeletingUser(user);
+  const handleDelete = useCallback((item: TicketPriceProps) => {
+    setDeletingTicketPrice(item);
     setDeleteDialogOpen(true);
-  }, []);
-
-  const handleChangeHidden = useCallback((user: UserProps) => {
-    setEditingHidden(user);
-    setChangeHiddenDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingUser(null);
+      setEditingTicketPrice(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingUser(null);
-    }
-  }, []);
-
-  const handleChangeHiddenDialogClose = useCallback((open: boolean) => {
-    setChangeHiddenDialogOpen(open);
-    if (!open) {
-      setEditingHidden(null);
+      setDeletingTicketPrice(null);
     }
   }, []);
 
@@ -83,9 +79,10 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         onEdit: handleEdit,
         onDelete: handleDelete,
         page,
-        onChangeHidden: handleChangeHidden,
+        positions,
+        dayParts,
       }),
-    [handleEdit, handleDelete, page, handleChangeHidden]
+    [handleEdit, handleDelete, page, dayParts, positions]
   );
 
   return (
@@ -99,12 +96,12 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Hệ thống</BreadcrumbPage>
+                <BreadcrumbPage>Quản lý danh sách</BreadcrumbPage>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-bold">
-                  Quản lý người dùng
+                  Danh sách giá vé
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
@@ -112,17 +109,12 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         </div>
 
         <div className="flex gap-2 items-center">
-          <Filter
-            customerRoles={customerRoles}
-            onSearchingChange={setIsSearching}
-            isTabletOrMobile={isTabletOrMobile}
-          />
           <Button
             onClick={handleAdd}
             size={isTabletOrMobile ? "sm" : "default"}
           >
             <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm người dùng
+            Thêm mới
           </Button>
         </div>
       </div>
@@ -131,35 +123,27 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         columns={columns}
         data={data.data}
         total={data.total}
-        loading={isSearching}
         className="max-h-[calc(100vh-200px)]"
       />
       {dialogOpen && (
-        <UserDialog
+        <TicketPriceDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          customerRoles={customerRoles}
-          editingUser={editingUser}
+          editingTicketPrice={editingTicketPrice}
+          positions={positions}
+          dayparts={dayParts}
         />
       )}
-      {deletingUser && (
-        <DeleteUserDialog
+      {deletingTicketPrice && (
+        <DeleteTicketPriceDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          userId={deletingUser.id}
-          username={deletingUser.username}
-        />
-      )}
-      {editingHidden && (
-        <ChangeHiddenUserDialog
-          open={changeHiddenDialogOpen}
-          onOpenChange={handleChangeHiddenDialogClose}
-          user={editingHidden}
-          username={editingHidden.username}
+          id={deletingTicketPrice.id}
+          versionCode={deletingTicketPrice.versionCode}
         />
       )}
     </div>
   );
 };
 
-export default UsersClient;
+export default TicketPricesClient;

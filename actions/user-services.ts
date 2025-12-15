@@ -29,7 +29,7 @@ export const createUserService = async (data: SignInInput) => {
       manufacturerId: number;
       address?: string;
       email: string;
-      mobile: string;
+      mobile?: string;
       password?: string;
       confirmPassword?: string;
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/data-table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,71 +10,60 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { ApiResponse, CustomerRoleProps, UserProps } from "@/types";
+import {
+  ApiResponse,
+  DayPartProps,
+} from "@/types";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { createColumns } from "./columns";
-import DeleteUserDialog from "./delete-user-dialog";
-import Filter from "./filter";
-import UserDialog from "./user-dialog";
-import { DataTable } from "@/components/data-table";
 import { useMediaQuery } from "react-responsive";
-import ChangeHiddenUserDialog from "./change-hidden-user-dialog";
+import { createColumns } from "./columns";
+import DeleteShowtimeSlotDialog from "./delete-showtime-slot-dialog";
+import ShowtimeSlotDialog from "./showtime-slot-dialog";
 
-interface UsersClientProps {
-  data: ApiResponse<UserProps>;
-  customerRoles: CustomerRoleProps[];
+interface ShowtimeSlotsClientProps {
+  data: ApiResponse<DayPartProps>;
   page: number;
 }
 
-const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
+const ShowtimeSlotsClient = ({
+  data,
+  page,
+}: ShowtimeSlotsClientProps) => {
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [changeHiddenDialogOpen, setChangeHiddenDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProps | null>(null);
-  const [deletingUser, setDeletingUser] = useState<UserProps | null>(null);
-  const [editingHidden, setEditingHidden] = useState<UserProps | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [editingShowtimeSlot, setEditingShowtimeSlot] =
+    useState<DayPartProps | null>(null);
+  const [deletingShowtimeSlot, setDeletingShowtimeSlot] =
+    useState<DayPartProps | null>(null);
 
   const handleAdd = useCallback(() => {
-    setEditingUser(null);
+    setEditingShowtimeSlot(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((user: UserProps) => {
-    setEditingUser(user);
+  const handleEdit = useCallback((item: DayPartProps) => {
+    setEditingShowtimeSlot(item);
     setDialogOpen(true);
   }, []);
 
-  const handleDelete = useCallback((user: UserProps) => {
-    setDeletingUser(user);
+  const handleDelete = useCallback((item: DayPartProps) => {
+    setDeletingShowtimeSlot(item);
     setDeleteDialogOpen(true);
-  }, []);
-
-  const handleChangeHidden = useCallback((user: UserProps) => {
-    setEditingHidden(user);
-    setChangeHiddenDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingUser(null);
+      setEditingShowtimeSlot(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingUser(null);
-    }
-  }, []);
-
-  const handleChangeHiddenDialogClose = useCallback((open: boolean) => {
-    setChangeHiddenDialogOpen(open);
-    if (!open) {
-      setEditingHidden(null);
+      setDeletingShowtimeSlot(null);
     }
   }, []);
 
@@ -83,9 +73,8 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         onEdit: handleEdit,
         onDelete: handleDelete,
         page,
-        onChangeHidden: handleChangeHidden,
       }),
-    [handleEdit, handleDelete, page, handleChangeHidden]
+    [handleEdit, handleDelete, page]
   );
 
   return (
@@ -99,12 +88,12 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Hệ thống</BreadcrumbPage>
+                <BreadcrumbPage>Quản lý danh sách</BreadcrumbPage>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-bold">
-                  Quản lý người dùng
+                  Danh sách khung giờ chiếu
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
@@ -112,17 +101,12 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         </div>
 
         <div className="flex gap-2 items-center">
-          <Filter
-            customerRoles={customerRoles}
-            onSearchingChange={setIsSearching}
-            isTabletOrMobile={isTabletOrMobile}
-          />
           <Button
             onClick={handleAdd}
             size={isTabletOrMobile ? "sm" : "default"}
           >
             <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm người dùng
+            Thêm mới
           </Button>
         </div>
       </div>
@@ -131,35 +115,26 @@ const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
         columns={columns}
         data={data.data}
         total={data.total}
-        loading={isSearching}
         className="max-h-[calc(100vh-200px)]"
       />
       {dialogOpen && (
-        <UserDialog
+        <ShowtimeSlotDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          customerRoles={customerRoles}
-          editingUser={editingUser}
+          editingShowtimeSlot={editingShowtimeSlot}
         />
       )}
-      {deletingUser && (
-        <DeleteUserDialog
+      {deletingShowtimeSlot && (
+        <DeleteShowtimeSlotDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          userId={deletingUser.id}
-          username={deletingUser.username}
-        />
-      )}
-      {editingHidden && (
-        <ChangeHiddenUserDialog
-          open={changeHiddenDialogOpen}
-          onOpenChange={handleChangeHiddenDialogClose}
-          user={editingHidden}
-          username={editingHidden.username}
+          id={deletingShowtimeSlot.id}
+          name={deletingShowtimeSlot.name}
         />
       )}
     </div>
   );
 };
 
-export default UsersClient;
+export default ShowtimeSlotsClient;
+

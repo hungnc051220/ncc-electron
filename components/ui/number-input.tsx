@@ -115,7 +115,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     };
 
     return (
-      <div className="flex items-center">
+      <div className="flex items-center number-input">
         <NumericFormat
           value={value}
           onValueChange={handleChange}
@@ -131,7 +131,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           prefix={prefix}
           customInput={Input}
           placeholder={placeholder}
-          className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none relative"
+          className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none relative w-full"
           getInputRef={combinedRef} // Use combined ref
           {...props}
         />
