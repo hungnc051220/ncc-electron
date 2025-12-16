@@ -4,6 +4,7 @@ import { getApiBaseUrl } from "@/lib/env";
 import {
   ApiResponse,
   CancellationReasonProps,
+  ContractTicketSaleProps,
   CustomerRoleProps,
   DayPartProps,
   DiscountProps,
@@ -454,6 +455,42 @@ export const getDayParts = async ({
   const queryObject: Record<string, unknown> = {
     current: page,
     pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getContractTicketSales = async ({
+  fromDate,
+  toDate,
+  page,
+  pageSize,
+}: {
+  fromDate: string;
+  toDate: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<ContractTicketSaleProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/order-contract", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+    fromDate,
+    toDate,
   };
 
   if (Object.keys(filter).length > 0) {
