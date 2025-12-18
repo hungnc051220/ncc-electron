@@ -48,10 +48,6 @@ export const updateSeatContractTicketSaleService = async (
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
 
-  console.log(url.toString())
-
-  console.log("data", data)
-
   return await fetch(url.toString(), {
     method: "POST",
     headers: {

@@ -14,8 +14,8 @@ const FilmSchedulingPage = async () => {
   const data = await getFilmScheduling();
 
   return (
-    <div className="space-y-6 xl:space-y-8 mt-4 xl:mt-10">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-100px)] mt-4">
+      <div className="flex items-center justify-between shrink-0 mb-3">
         <div>
           <Breadcrumb>
             <BreadcrumbList>
@@ -28,16 +28,19 @@ const FilmSchedulingPage = async () => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Lập kế hoạch chiếu phim</BreadcrumbPage>
+                <BreadcrumbPage className="font-bold">
+                  Lập kế hoạch chiếu phim
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h3 className="font-bold text-2xl mt-1">Lập kế hoạch chiếu phim</h3>
         </div>
         <AddPlan />
       </div>
 
-      <FilmSchedulingClient data={data} />
+      <div className="flex-1 min-h-0">
+        <FilmSchedulingClient data={data} />
+      </div>
     </div>
   );
 };

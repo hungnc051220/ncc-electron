@@ -1,8 +1,6 @@
 "use server";
 
-import {
-  planCinemaFormSchema
-} from "@/lib/schemas";
+import { planCinemaFormSchema } from "@/lib/schemas";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -10,7 +8,7 @@ import {
   approveRejectPlanCinemaService,
   createPlanCinemaService,
   deletePlanCinemaService,
-  updatePlanCinemaService
+  updatePlanCinemaService,
 } from "./plan-cinema-services";
 
 type ActionStateProps = {
@@ -63,12 +61,12 @@ export const createPlanCinemaAction = async (
   }
 
   const response = await createPlanCinemaService(validatedFields.data);
-  
+
   let data;
   try {
     data = await response.json();
   } catch {
-    data = { message: 'Invalid server response' };
+    data = { message: "Invalid server response" };
   }
 
   if (!response.ok) {
@@ -151,10 +149,9 @@ export const addPlanFilmAction = async (
   prevState: ActionStateProps,
   formData: FormData
 ): Promise<ActionStateProps> => {
-  const planCinemaId = formData.get("planCinemaId") as string;
-  const filmIds = formData.get("filmIds") as string;
+  const selectedFilms = formData.get("selectedFilms") as string;
 
-  if (!planCinemaId || !filmIds) {
+  if (!selectedFilms) {
     return {
       ...prevState,
       success: false,
@@ -162,9 +159,9 @@ export const addPlanFilmAction = async (
     };
   }
 
-  let parsedFilmIds: number[];
+  let parsedFilms: { filmId: number; planCinemaId: number; order: number }[];
   try {
-    parsedFilmIds = JSON.parse(filmIds);
+    parsedFilms = JSON.parse(selectedFilms);
   } catch {
     return {
       ...prevState,
@@ -173,7 +170,7 @@ export const addPlanFilmAction = async (
     };
   }
 
-  if (!Array.isArray(parsedFilmIds) || parsedFilmIds.length === 0) {
+  if (!Array.isArray(parsedFilms) || parsedFilms.length === 0) {
     return {
       ...prevState,
       success: false,
@@ -182,15 +179,14 @@ export const addPlanFilmAction = async (
   }
 
   const res = await addPlanFilmService({
-    filmIds: parsedFilmIds,
-    planCinemaId: Number(planCinemaId),
+    data: parsedFilms,
   });
 
   let data;
   try {
     data = await res.json();
   } catch {
-    data = { message: 'Invalid server response' };
+    data = { message: "Invalid server response" };
   }
 
   if (!res.ok) {

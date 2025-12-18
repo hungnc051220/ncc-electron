@@ -18,7 +18,11 @@ import { RowSelectionState } from "@tanstack/react-table";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DataTable } from "./data-table";
-import { columns } from "./movie-columns";
+import { columns } from "./columns";
+import AddSchedulingForm from "./add-scheduling-form";
+import { AddSchedulingFormInput } from "@/lib/schemas/add-scheduling-schema";
+import { format, formatISO } from "date-fns";
+import { createPlanScreeningAction } from "@/actions/plan-screening-actions";
 
 const INITIAL_STATE = {
   formData: null,
@@ -31,7 +35,7 @@ interface AddMoviesProps {
   planCinemaId: number;
 }
 
-const AddMovies = ({ planCinemaId }: AddMoviesProps) => {
+const AddScreenings = ({ planCinemaId }: AddMoviesProps) => {
   const queryClient = useQueryClient();
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
@@ -49,28 +53,22 @@ const AddMovies = ({ planCinemaId }: AddMoviesProps) => {
   const [open, setOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [state, action, pending] = useActionState(
-    addPlanFilmAction,
+    createPlanScreeningAction,
     INITIAL_STATE
   );
-  const handleSubmit = () => {
-    const selectedFilms = Object.keys(rowSelection)
-      .filter((key) => rowSelection[key])
-      .map((key, index) => {
-        const film = films[Number(key)];
-        return {
-          filmId: film?.id,
-          planCinemaId: planCinemaId,
-          order: index,
-        };
-      });
-
-    if (selectedFilms.length === 0) {
-      toast.error("Vui lòng chọn ít nhất một phim");
-      return;
-    }
+  const handleSubmit = (values: AddSchedulingFormInput) => {
+    console.log(values)
 
     const formData = new FormData();
-    formData.append("selectedFilms", JSON.stringify(selectedFilms));
+    formData.append("planCinemaId", planCinemaId.toString());
+    formData.append("projectDate", format(values.projectDate, "yyyy-MM-dd"));
+    formData.append("projectTime", formatISO(values.projectDate));
+    formData.append("filmId", values.filmId.toString());
+    formData.append("roomId", values.roomId.toString());
+    formData.append("priceOfPosition1", values.priceOfPosition1.toString());
+    formData.append("priceOfPosition2", values.priceOfPosition2.toString());
+    formData.append("priceOfPosition3", values.priceOfPosition3.toString());
+    formData.append("priceOfPosition4", values.priceOfPosition4.toString());
 
     startTransition(() => action(formData));
   };
@@ -81,7 +79,7 @@ const AddMovies = ({ planCinemaId }: AddMoviesProps) => {
     }
 
     if (state.success) {
-      toast.success("Thêm phim vào kế hoạch thành công");
+      toast.success("Thêm ca chiếu vào kế hoạch thành công");
       queryClient.invalidateQueries({ queryKey: ["plan-film"] });
       startTransition(() => {
         setOpen(false);
@@ -100,24 +98,15 @@ const AddMovies = ({ planCinemaId }: AddMoviesProps) => {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>Thêm phim cho kế hoạch</Button>
+        <Button>Thêm ca chiếu mới</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[795px]">
         <DialogHeader className="border-b">
-          <DialogTitle>Thêm phim cho kế hoạch</DialogTitle>
+          <DialogTitle>Thêm ca chiếu mới</DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 py-5">
-          <DataTable
-            columns={columns}
-            data={films}
-            loading={isLoading}
-            fetchNextPage={fetchNextPage}
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-            rowSelection={rowSelection}
-            onRowSelectionChange={setRowSelection}
-          />
+        <div>
+          <AddSchedulingForm planCinemaId={planCinemaId} onSubmit={handleSubmit}/>
         </div>
 
         <DialogFooter>
@@ -126,7 +115,7 @@ const AddMovies = ({ planCinemaId }: AddMoviesProps) => {
               Hủy
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleSubmit} disabled={pending}>
+          <Button type="submit" form="add-scheduling-form" disabled={pending}>
             {pending && <Spinner />}
             Xác nhận
           </Button>
@@ -136,4 +125,4 @@ const AddMovies = ({ planCinemaId }: AddMoviesProps) => {
   );
 };
 
-export default AddMovies;
+export default AddScreenings;

@@ -12,8 +12,13 @@ const INITIAL_STATE = {
   error: null,
 };
 
-const ArchivedActions
- = ({ planCinemaId }: { planCinemaId: number }) => {
+const ArchivedActions = ({
+  planCinemaId,
+  clearSelectedPlan,
+}: {
+  planCinemaId: number;
+  clearSelectedPlan: () => void;
+}) => {
   const [state, action, pending] = useActionState(
     updatePlanCinemaAction,
     INITIAL_STATE
@@ -30,9 +35,10 @@ const ArchivedActions
     if (state.error) {
       toast.error(state.error);
     } else if (state.success) {
+      clearSelectedPlan();
       toast.success("Cập nhật kế hoạch chiếu phim thành công");
     }
-  }, [state]);
+  }, [state, clearSelectedPlan]);
 
   return (
     <>

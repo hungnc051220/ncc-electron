@@ -235,6 +235,7 @@ export interface PlanFilmProps {
   planCinemaId: number;
   createdOnUtc: string;
   createdUser: string;
+  order: number;
   film: FilmInfo;
 }
 

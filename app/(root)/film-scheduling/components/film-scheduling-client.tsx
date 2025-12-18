@@ -38,10 +38,12 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
   const approvedPlans = plans?.filter((x) => x.status === 3);
   const archivedPlans = plans?.filter((x) => x.status === 4);
 
+  const clearSelectedPlan = () => setSelectedPlan(undefined);
+
   return (
-    <div className="mt-8">
-      <div className="flex gap-5">
-        <div className="w-[296px] min-w-[296px] p-4 rounded-xl bg-goku max-h-[calc(100vh-240px)] overflow-y-auto">
+    <div className="h-full flex flex-col">
+      <div className="flex gap-5 flex-1 min-h-0">
+        <div className="w-[296px] min-w-[296px] p-4 rounded-xl bg-goku h-full overflow-y-auto">
           <Accordion
             type="single"
             collapsible
@@ -60,16 +62,12 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                   <div
                     key={plan.id}
                     className={cn(
-                      "flex items-center justify-between p-2 pl-4 rounded-lg cursor-pointer gap-1",
+                      "flex items-center justify-between px-2 py-3 pl-4 rounded-lg cursor-pointer gap-1",
                       selectedPlan?.id === plan.id && "bg-trunks text-white"
                     )}
                     onClick={() => setSelectedPlan(plan)}
                   >
                     <p>{plan.name}</p>
-
-                    <div className="bg-white text-black rounded-md p-2 size-6 flex items-center justify-center text-[10px] font-semibold">
-                      99
-                    </div>
                   </div>
                 ))}
               </AccordionContent>
@@ -92,10 +90,6 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                     onClick={() => setSelectedPlan(plan)}
                   >
                     <p>{plan.name}</p>
-
-                    <div className="bg-white text-black rounded-md p-2 size-6 flex items-center justify-center text-[10px] font-semibold">
-                      99
-                    </div>
                   </div>
                 ))}
               </AccordionContent>
@@ -118,10 +112,6 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                     onClick={() => setSelectedPlan(plan)}
                   >
                     <p>{plan.name}</p>
-
-                    <div className="bg-white text-black rounded-sm p-2 size-6 flex items-center justify-center text-[10px] font-semibold">
-                      99
-                    </div>
                   </div>
                 ))}
               </AccordionContent>
@@ -144,17 +134,13 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                     onClick={() => setSelectedPlan(plan)}
                   >
                     <p>{plan.name}</p>
-
-                    <div className="bg-white rounded-sm p-2 size-6 flex items-center justify-center text-[10px] font-semibold text-black">
-                      99
-                    </div>
                   </div>
                 ))}
               </AccordionContent>
             </AccordionItem>
           </Accordion>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col min-h-0">
           {!selectedPlan ? (
             <div className="bg-white border border-muted rounded-lg">
               <div className="flex items-center justify-center py-20 rounded-lg">
@@ -164,8 +150,8 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
               </div>
             </div>
           ) : (
-            <div>
-              <div className="flex items-center justify-between">
+            <div className="flex flex-col h-full min-h-0">
+              <div className="flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-1 text-sm">
                   <p>Kế hoạch đang chọn:</p>
                   <span className="font-bold text-primary">
@@ -182,18 +168,18 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                   </button>
                   {([0, 2].includes(selectedPlan.status) ||
                     selectedPlan.status === null) && (
-                    <SendForApproveActions planCinemaId={selectedPlan.id} />
+                    <SendForApproveActions planCinemaId={selectedPlan.id} clearSelectedPlan={clearSelectedPlan}/>
                   )}
                   {selectedPlan.status === 3 && (
-                    <ArchivedActions planCinemaId={selectedPlan.id} />
+                    <ArchivedActions planCinemaId={selectedPlan.id} clearSelectedPlan={clearSelectedPlan}/>
                   )}
                   {selectedPlan.status === 1 && (
-                    <ApproveRejectActions planCinemaId={selectedPlan.id} />
+                    <ApproveRejectActions planCinemaId={selectedPlan.id} clearSelectedPlan={clearSelectedPlan}/>
                   )}
                 </div>
               </div>
 
-              <div className="bg-goku p-2 rounded-lg mt-4 flex items-center">
+              <div className="bg-goku p-2 rounded-lg mt-4 flex items-center shrink-0">
                 <div className="py-3 px-4 w-[177px]">
                   <p className="text-trunks text-xs">Người tạo</p>
                   <p className="mt-1 text-base">{selectedPlan.createdUser}</p>
@@ -214,7 +200,9 @@ const FilmSchedulingClient = ({ data }: FilmSchedulingClientProps) => {
                 </div>
               </div>
 
-              <TabsList planCinemaId={selectedPlan?.id} />
+              <div className="flex-1 min-h-0">
+                <TabsList planCinemaId={selectedPlan?.id} />
+              </div>
             </div>
           )}
         </div>

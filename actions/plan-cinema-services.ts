@@ -71,8 +71,7 @@ export const updatePlanCinemaService = async (data: {
 };
 
 export const addPlanFilmService = async (data: {
-  filmIds: number[];
-  planCinemaId: number;
+  data: { filmId: number; planCinemaId: number; order: number }[];
 }) => {
   const url = new URL("/api/pos/plan-film", BASE_URL);
   const cookieStore = await cookies();
@@ -87,4 +86,3 @@ export const addPlanFilmService = async (data: {
     body: JSON.stringify({ ...data }),
   });
 };
-

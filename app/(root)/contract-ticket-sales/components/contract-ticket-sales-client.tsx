@@ -42,8 +42,6 @@ const ContractTicketSalesClient = ({
     ];
   }, [tableData]);
 
-  console.log(planScreenIds);
-
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogUpdateSeatOpen, setDialogUpdateSeatOpen] = useState(false);

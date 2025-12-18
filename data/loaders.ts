@@ -137,6 +137,13 @@ export const getFilms = async (
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 
+export const getFilm = async (id: number): Promise<FilmProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL(`/api/v1/movies/${id}`, BASE_URL);
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
 export const onSelectingChairs = async (
   operation: "add" | "remove",
   body: {
@@ -539,14 +546,6 @@ export const getHolidays = async ({
   if (Object.keys(filter).length > 0) {
     queryObject.filter = JSON.stringify(filter);
   }
-
-  console.log(
-    qs.stringify(queryObject, {
-      skipEmptyString: true,
-      skipNull: true,
-      encode: true,
-    })
-  );
 
   url.search = qs.stringify(queryObject, {
     skipEmptyString: true,
