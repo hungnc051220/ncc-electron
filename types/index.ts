@@ -185,6 +185,17 @@ export interface BookingTicketBodyProps {
   listChairValueF3?: string;
 }
 
+export interface UpdateSeatContractTicketSaleBodyProps {
+  planScreenId: number;
+  floorNo: number;
+  listChairIndexF1?: string;
+  listChairValueF1?: string;
+  listChairIndexF2?: string;
+  listChairValueF2?: string;
+  listChairIndexF3?: string;
+  listChairValueF3?: string;
+}
+
 export interface CreateQrCodeBodyProps {
   orderId: number;
   paymentMethod: string;
@@ -764,4 +775,12 @@ export interface QrPayment {
   accountName: string;
   accountNumber: string;
   accountBankName: string;
+}
+
+export interface HolidayProps {
+  dateValue: string;
+  dateTypeId: number;
+  createdOnUtc: string;
+  createdUser: string;
+  CreatedOnUtc: string;
 }

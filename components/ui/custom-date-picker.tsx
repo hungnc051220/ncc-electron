@@ -122,19 +122,24 @@ interface CustomDatePickerProps {
   selectedDate: Date | null;
   onChangeDate: (date: Date | null) => void;
   className?: string;
+  // Cho phép truyền thêm props bất kỳ xuống `react-datepicker`
+  // (ví dụ: selectsStart, selectsEnd, startDate, endDate, minDate, ...).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 const CustomDatePicker = ({
   selectedDate,
   onChangeDate,
   className,
+  ...props
 }: CustomDatePickerProps) => {
   return (
     <>
       <div className={className}>
         <DatePicker
-          placeholderText="Chọn thời gian"
           isClearable
+          placeholderText="Chọn thời gian"
           todayButton="Hôm nay"
           locale="vi"
           selected={selectedDate}
@@ -172,6 +177,8 @@ const CustomDatePicker = ({
           previousMonthAriaLabel="Tháng trước"
           nextYearAriaLabel="Năm sau"
           previousYearAriaLabel="Năm trước"
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          {...(props as any)}
         />
       </div>
 

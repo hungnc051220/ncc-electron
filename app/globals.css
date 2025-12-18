@@ -162,3 +162,6 @@
   @apply w-full;
 }
 
+.selecto-selection {
+  display: none !important;
+}

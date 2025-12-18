@@ -9,6 +9,7 @@ import {
   DayPartProps,
   DiscountProps,
   FilmProps,
+  HolidayProps,
   MachineSerialProps,
   ManufacturerProps,
   PlanCinemaProps,
@@ -23,6 +24,7 @@ import {
 import { cookies } from "next/headers";
 import qs from "query-string";
 import { fetchAPI } from "./fetch-api";
+import { endOfYear, format, startOfYear } from "date-fns";
 
 const BASE_URL = getApiBaseUrl();
 
@@ -501,6 +503,55 @@ export const getContractTicketSales = async ({
     skipEmptyString: true,
     skipNull: true,
     encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getHolidays = async ({
+  page,
+  pageSize,
+  dateTypeId,
+  year = new Date().getFullYear().toString(),
+}: {
+  page?: number;
+  pageSize?: number;
+  dateTypeId: number;
+  year: string;
+}): Promise<ApiResponse<HolidayProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/date-in-year", BASE_URL);
+
+  const date = new Date(Number(year), 0, 1);
+  const startDate = format(startOfYear(date), "yyyy-MM-dd");
+  const endDate = format(endOfYear(date), "yyyy-MM-dd");
+
+  const filter: Record<string, unknown> = {
+    dateTypeId,
+    dateValue: { between: [startDate, endDate] },
+  };
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  console.log(
+    qs.stringify(queryObject, {
+      skipEmptyString: true,
+      skipNull: true,
+      encode: true,
+    })
+  );
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: true,
   });
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };

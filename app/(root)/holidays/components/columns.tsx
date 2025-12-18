@@ -7,56 +7,56 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserProps } from "@/types";
+import { HolidayProps } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
-import { Check, MoreHorizontal, X } from "lucide-react";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { MoreHorizontal } from "lucide-react";
 
 interface ColumnsProps {
-  onEdit: (user: UserProps) => void;
-  onDelete: (user: UserProps) => void;
-  onChangeHidden: (user: UserProps) => void;
+  onDelete: (item: HolidayProps) => void;
   page: number;
 }
 
 export const createColumns = ({
-  onEdit,
   onDelete,
-  onChangeHidden,
   page,
-}: ColumnsProps): ColumnDef<UserProps>[] => [
+}: ColumnsProps): ColumnDef<HolidayProps>[] => [
   {
     accessorKey: "no",
     header: "STT",
     cell: ({ row }) => (page - 1) * 100 + row.index + 1,
   },
   {
-    accessorKey: "id",
-    header: "Mã người dùng",
+    accessorKey: "dateValue",
+    header: "Ngày",
+    cell: ({ row }) => {
+      const dateValue = row.original.dateValue;
+      return format(dateValue, "dd/MM/yyyy");
+    },
   },
   {
-    accessorKey: "username",
-    header: "Tên đăng nhập",
+    accessorKey: "dateName",
+    header: "Thứ",
+    cell: ({ row }) => {
+      const dateValue = row.original.dateValue;
+      return format(dateValue, "EEEE", { locale: vi });
+    },
   },
   {
-    accessorKey: "email",
-    header: "Email",
-  },
-  {
-    accessorKey: "isHidden",
-    header: "Hiển thị trong danh sách",
-    cell: ({ row }) =>
-      !row.original.isHidden ? (
-        <Check className="size-4 text-green-500" />
-      ) : (
-        <X className="size-4 text-red-500" />
-      ),
+    accessorKey: "dateTypeId",
+    header: "Loại ngày",
+    cell: ({ row }) => {
+      const dateTypeId = row.original.dateTypeId;
+      return dateTypeId === 1 ? "Ngày thường" : "Ngày lễ";
+    },
   },
   {
     accessorKey: "actions",
     header: "",
     enableHiding: false,
     cell: ({ row }) => {
-      const user = row.original;
+      const item = row.original;
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -66,14 +66,8 @@ export const createColumns = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onChangeHidden(user)}>
-              Ẩn/Hiện
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(user)}>
-              Cập nhật
-            </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => onDelete(user)}
+              onClick={() => onDelete(item)}
               className="text-destructive"
             >
               Xóa

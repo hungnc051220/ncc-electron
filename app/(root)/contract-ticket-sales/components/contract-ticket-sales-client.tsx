@@ -28,6 +28,22 @@ const ContractTicketSalesClient = ({
   data,
   page,
 }: ContractTicketSalesClientProps) => {
+  const [tableData, setTableData] = useState<ContractTicketSaleProps[]>(
+    data.data ?? []
+  );
+
+  const planScreenIds = useMemo(() => {
+    return [
+      ...new Set(
+        tableData
+          .map(i => i.items?.[0]?.planScreenId)
+          .filter((id): id is number => typeof id === "number")
+      ),
+    ];
+  }, [tableData]);
+
+  console.log(planScreenIds);
+
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogUpdateSeatOpen, setDialogUpdateSeatOpen] = useState(false);

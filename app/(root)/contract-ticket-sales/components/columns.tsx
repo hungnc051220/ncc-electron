@@ -54,6 +54,11 @@ export const createColumns = ({
   {
     accessorKey: "ticketCount",
     header: "Số vé",
+    cell: ({ row }) => {
+      const tickets = row.original.items;
+      const totalQuantity = tickets.reduce((acc, cur) => acc + cur.quantity, 0);
+      return totalQuantity;
+    },
   },
   {
     accessorKey: "orderTotal",
