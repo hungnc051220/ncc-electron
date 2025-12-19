@@ -14,7 +14,7 @@ const FilmSchedulingPage = async () => {
   const data = await getFilmScheduling();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] mt-4">
+    <div className="flex flex-col h-[calc(100vh-100px)] mt-4 px-4">
       <div className="flex items-center justify-between shrink-0 mb-3">
         <div>
           <Breadcrumb>

@@ -108,7 +108,7 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
   }, [data]);
 
   return (
-    <div className="space-y-4 xl:space-y-6 mt-4 xl:mt-10">
+    <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
         <div>
           <Breadcrumb>
@@ -122,13 +122,10 @@ const UserRolesClient = ({ customerRoles }: UserRolesClientProps) => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Phân quyền nhóm người dùng</BreadcrumbPage>
+                <BreadcrumbPage className="font-bold">Phân quyền nhóm người dùng</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h3 className="font-bold text-2xl mt-1">
-            Phân quyền nhóm người dùng
-          </h3>
         </div>
       </div>
 

@@ -119,7 +119,7 @@ const FilmsClient = ({ data, page }: FilmsClientProps) => {
   }, [isPending, setIsSearching]);
 
   return (
-    <div className="space-y-3 mt-4">
+    <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
         <div>
           <Breadcrumb>
