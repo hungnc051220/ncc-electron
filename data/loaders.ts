@@ -65,6 +65,13 @@ export const getUsers = async ({
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 
+export const getUser = async (id: number): Promise<UserProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL(`/api/pos/staff/${id}`, BASE_URL);
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
 export const getCustomerRoles = async (): Promise<CustomerRoleProps[]> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;

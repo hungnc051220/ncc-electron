@@ -1,5 +1,4 @@
 import { LucideIcon } from "lucide-react";
-import { Tilt } from "./ui/tilt";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -25,33 +24,36 @@ const MainCard = ({
   href,
 }: MainCardProps) => {
   return (
-    <Tilt rotationFactor={8} isRevese>
-      <Link href={href ?? "#"}>
-        <div
-          className="size-full rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative shadow-sm"
-          style={{
-            background:
-              colorTypes[color as keyof typeof colorTypes] ||
-              "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
-          }}
-        >
-          <Image
-            src="/images/rectangle.png"
-            alt="rectangle"
-            width={150}
-            height={150}
-            className="absolute top-0 right-0"
-          />
-          <div className="bg-white/25 rounded-full flex items-center justify-center size-14">
-            <Icon className="text-white" size={36} />
-          </div>
-          <div>
-            <p className="font-bold text-xl xl:text-2xl 2xl:text-2xl text-white">{title}</p>
-            <p className="text-sm xl:text-base 2xl:text-lg mt-1 text-white">{description}</p>
-          </div>
+    <Link href={href ?? "#"}>
+      <div
+        className="size-full rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative min-h-[250px] transform transition-all duration-300
+            hover:scale-[1.02] hover:shadow-xl"
+        style={{
+          background:
+            colorTypes[color as keyof typeof colorTypes] ||
+            "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
+        }}
+      >
+        <Image
+          src="/images/rectangle.png"
+          alt="rectangle"
+          width={150}
+          height={150}
+          className="absolute top-0 right-0"
+        />
+        <div className="bg-white/25 rounded-full flex items-center justify-center size-15">
+          <Icon className="text-white" size={36} />
         </div>
-      </Link>
-    </Tilt>
+        <div>
+          <p className="font-bold text-xl xl:text-2xl 2xl:text-2xl text-white">
+            {title}
+          </p>
+          <p className="text-sm xl:text-base 2xl:text-base mt-1 text-white">
+            {description}
+          </p>
+        </div>
+      </div>
+    </Link>
   );
 };
 

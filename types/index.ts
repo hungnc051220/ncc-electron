@@ -23,6 +23,7 @@ export interface UserProps {
   mobile: string;
   roleIds: string;
   isHidden: boolean;
+  fullname: string;
 }
 
 export interface ChangePasswordProps {

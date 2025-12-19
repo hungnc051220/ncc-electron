@@ -1,6 +1,6 @@
-import { SocketProvider } from "@/providers/socket-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import Header from "@/components/header";
+import { SocketProvider } from "@/providers/socket-provider";
 
 const DashboardLayout = ({
   children,
@@ -10,11 +10,11 @@ const DashboardLayout = ({
   modal: React.ReactNode;
 }) => {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen flex flex-col">
       <ErrorBoundary>
         <SocketProvider>
           <Header />
-          <div className="px-4">{children}</div>
+          {children}
         </SocketProvider>
       </ErrorBoundary>
       {modal}
