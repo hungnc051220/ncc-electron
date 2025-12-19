@@ -18,7 +18,7 @@ export const deletePlanCinemaService = async (id: number) => {
 
 export const createPlanCinemaService = async (data: {
   name: string;
-  desciption: string;
+  desciption?: string;
 }) => {
   const url = new URL("/api/pos/plan-cinema", BASE_URL);
   const cookieStore = await cookies();
@@ -79,6 +79,23 @@ export const addPlanFilmService = async (data: {
 
   return await fetch(url.toString(), {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ ...data }),
+  });
+};
+
+export const deletePlanFilmService = async (data: {
+  data: { filmId: number; planCinemaId: number; order: number }[];
+}) => {
+  const url = new URL("/api/pos/plan-film", BASE_URL);
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+
+  return await fetch(url.toString(), {
+    method: "DELETE",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,

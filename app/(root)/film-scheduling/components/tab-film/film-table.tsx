@@ -1,6 +1,7 @@
 "use client";
 
 import { addPlanFilmAction } from "@/actions/plan-cinema-actions";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -20,11 +21,19 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
-import { GripVertical, Loader2 } from "lucide-react";
+import { Grip, Loader2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-function SortableRow({ item }: { item: PlanFilmProps }) {
+function SortableRow({
+  item,
+  isSelected,
+  onToggle,
+}: {
+  item: PlanFilmProps;
+  isSelected: boolean;
+  onToggle: (selected: boolean) => void;
+}) {
   const {
     setNodeRef,
     attributes,
@@ -45,12 +54,18 @@ function SortableRow({ item }: { item: PlanFilmProps }) {
       style={style}
       className={isDragging ? "opacity-50" : ""}
     >
+      <TableCell className="w-[24px] px-2">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={(checked) => onToggle(checked === true)}
+        />
+      </TableCell>
       <TableCell
         className="cursor-grab px-3 py-2 w-[50px]"
         {...attributes}
         {...listeners}
       >
-        <GripVertical size={18} className="text-trunks mx-auto" />
+        <Grip size={18} className="text-trunks mx-auto" />
       </TableCell>
       <TableCell className="w-[70px] px-2">{item.order + 1}</TableCell>
       <TableCell className="px-2">{item.film.filmName}</TableCell>
@@ -63,6 +78,8 @@ function SortableRow({ item }: { item: PlanFilmProps }) {
 interface FilmTableProps {
   initialData: PlanFilmProps[];
   isPending: boolean;
+  selectedFilmIds: number[];
+  onSelectedChange: (ids: number[]) => void;
 }
 
 const INITIAL_STATE = {
@@ -72,12 +89,18 @@ const INITIAL_STATE = {
   error: null,
 };
 
-const FilmTable = ({ initialData, isPending }: FilmTableProps) => {
+const FilmTable = ({
+  initialData,
+  isPending,
+  selectedFilmIds,
+  onSelectedChange,
+}: FilmTableProps) => {
   const queryClient = useQueryClient();
   const [state, action, pending] = useActionState(
     addPlanFilmAction,
     INITIAL_STATE
   );
+
   const [data, setData] = useState(initialData);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -121,6 +144,25 @@ const FilmTable = ({ initialData, isPending }: FilmTableProps) => {
               <Table className="table-fixed w-full border border-b-none rounded-t-lg">
                 <TableHeader className="bg-goku">
                   <TableRow>
+                    <TableHead className="w-[24px] px-2">
+                      <Checkbox
+                        checked={
+                          selectedFilmIds.length > 0 &&
+                          data.every((i) => selectedFilmIds.includes(i.filmId))
+                            ? true
+                            : selectedFilmIds.length > 0
+                            ? "indeterminate"
+                            : false
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            onSelectedChange(data.map((i) => i.filmId));
+                          } else {
+                            onSelectedChange([]);
+                          }
+                        }}
+                      />
+                    </TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="w-[70px]">Thứ tự</TableHead>
                     <TableHead>Tên phim</TableHead>
@@ -132,9 +174,7 @@ const FilmTable = ({ initialData, isPending }: FilmTableProps) => {
             </div>
             <div className="flex-1 overflow-y-auto relative">
               <Table className="table-fixed w-full border-b border-x">
-                <TableBody
-                  className={cn(pending && "opacity-50")}
-                >
+                <TableBody className={cn(pending && "opacity-50")}>
                   {isPending ? (
                     <TableRow>
                       <TableCell
@@ -149,7 +189,23 @@ const FilmTable = ({ initialData, isPending }: FilmTableProps) => {
                     </TableRow>
                   ) : (
                     data.map((item) => (
-                      <SortableRow key={item.filmId} item={item} />
+                      <SortableRow
+                        key={item.filmId}
+                        item={item}
+                        isSelected={selectedFilmIds.includes(item.filmId)}
+                        onToggle={(selected) => {
+                          if (selected) {
+                            onSelectedChange([
+                              ...selectedFilmIds,
+                              item.filmId,
+                            ]);
+                          } else {
+                            onSelectedChange(
+                              selectedFilmIds.filter((id) => id !== item.filmId)
+                            );
+                          }
+                        }}
+                      />
                     ))
                   )}
                   {data && data.length === 0 && (

@@ -8,6 +8,7 @@ import {
   approveRejectPlanCinemaService,
   createPlanCinemaService,
   deletePlanCinemaService,
+  deletePlanFilmService,
   updatePlanCinemaService,
 } from "./plan-cinema-services";
 
@@ -194,6 +195,67 @@ export const addPlanFilmAction = async (
       ...prevState,
       success: false,
       error: data?.message || "Thêm phim vào kế hoạch thất bại",
+    };
+  }
+
+  revalidatePath("/film-scheduling");
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const deletePlanFilmAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const selectedFilms = formData.get("selectedFilms") as string;
+
+  if (!selectedFilms) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Vui lòng chọn ít nhất một phim",
+    };
+  }
+
+  let parsedFilms: { filmId: number; planCinemaId: number; order: number }[];
+  try {
+    parsedFilms = JSON.parse(selectedFilms);
+  } catch {
+    return {
+      ...prevState,
+      success: false,
+      error: "Dữ liệu phim không hợp lệ",
+    };
+  }
+
+  if (!Array.isArray(parsedFilms) || parsedFilms.length === 0) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Vui lòng chọn ít nhất một phim",
+    };
+  }
+
+  const res = await deletePlanFilmService({
+    data: parsedFilms,
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = { message: "Invalid server response" };
+  }
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      success: false,
+      error: data?.message || "Xóa phim trong kế hoạch thất bại",
     };
   }
 

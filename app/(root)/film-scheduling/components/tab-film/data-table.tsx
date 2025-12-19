@@ -8,6 +8,7 @@ import {
   RowSelectionState,
   OnChangeFn,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 import {
   Table,
@@ -29,6 +30,7 @@ interface DataTableProps<TData, TValue> {
   isFetchingNextPage?: boolean;
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  getRowId?: (originalRow: TData, index: number, parent?: unknown) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -40,6 +42,7 @@ export function DataTable<TData, TValue>({
   isFetchingNextPage,
   rowSelection,
   onRowSelectionChange,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -47,12 +50,27 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     enableRowSelection: true,
     onRowSelectionChange,
+    getRowId,
     state: {
       rowSelection: rowSelection || {},
     },
   });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const rows = table.getRowModel().rows;
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 30,
+    overscan: 8,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+  const paddingTop = virtualRows.length ? virtualRows[0].start : 0;
+  const paddingBottom = virtualRows.length
+    ? totalSize - virtualRows[virtualRows.length - 1].end
+    : 0;
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -76,7 +94,7 @@ export function DataTable<TData, TValue>({
     <div className="relative">
       <div
         ref={scrollContainerRef}
-        className="relative overflow-auto rounded-md border max-h-[calc(100vh-500px)]"
+        className="relative overflow-auto rounded-md border max-h-[70vh]"
       >
         {loading && (
           <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
@@ -106,27 +124,47 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {rows?.length ? (
               <>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+                {paddingTop > 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={table.getVisibleLeafColumns().length}
+                      style={{ height: `${paddingTop}px` }}
+                    />
                   </TableRow>
-                ))}
+                )}
+                {virtualRows.map((virtualRow) => {
+                  const row = rows[virtualRow.index];
+                  return (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                      style={{ height: `${virtualRow.size}px` }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })}
+                {paddingBottom > 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={table.getVisibleLeafColumns().length}
+                      style={{ height: `${paddingBottom}px` }}
+                    />
+                  </TableRow>
+                )}
                 {isFetchingNextPage && (
                   <TableRow>
                     <TableCell
-                      colSpan={columns.length}
+                      colSpan={table.getVisibleLeafColumns().length}
                       className="h-16 text-center"
                     >
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -139,7 +177,10 @@ export function DataTable<TData, TValue>({
               </>
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={table.getVisibleLeafColumns().length}
+                  className="h-24 text-center"
+                >
                   Không có kết quả nào.
                 </TableCell>
               </TableRow>
