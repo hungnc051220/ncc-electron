@@ -1,6 +1,6 @@
 "use server";
 
-import { signInSchema } from "@/lib/schemas";
+import { signInSchema } from "@/lib/schemas/user-schema";
 import { signInService } from "./sign-in-services";
 import { z } from "zod";
 import { cookies } from "next/headers";

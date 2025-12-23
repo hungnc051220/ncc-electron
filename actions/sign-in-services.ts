@@ -1,4 +1,4 @@
-import { SignInInput } from "@/lib/schemas";
+import { SignInInput } from "@/lib/schemas/user-schema";
 import { getApiBaseUrl } from "@/lib/env";
 
 const BASE_URL = getApiBaseUrl();

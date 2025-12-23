@@ -1,13 +1,20 @@
 "use server";
 
-import { updateUserFormSchema, userFormSchema } from "@/lib/schemas";
+import {
+  changePasswordFormSchema,
+  updateUserFormSchema,
+  userFormSchema,
+} from "@/lib/schemas/user-schema";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
+  changePasswordService,
   createUserService,
   deleteUserService,
   updateUserService,
 } from "./user-services";
+import { deleteSession } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 type ActionStateProps = {
   formData: Record<string, string> | null;
@@ -175,4 +182,49 @@ export const deleteUserAction = async (
     success: true,
     error: null,
   };
+};
+
+export const changePasswordAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const formFields = {
+    password: formData.get("password") as string,
+    new_password: formData.get("new_password") as string,
+  };
+
+  const validatedFields = changePasswordFormSchema.safeParse(formFields);
+
+  if (!validatedFields.success) {
+    return {
+      ...prevState,
+      formData: formFields,
+      fieldErrors: z.flattenError(validatedFields.error).fieldErrors,
+    };
+  }
+
+  const dataToSend = validatedFields.data;
+
+  const res = await changePasswordService(dataToSend);
+  const data = await res.json();
+
+  if (!res.ok) {
+    return {
+      ...prevState,
+      formData: formFields,
+      success: false,
+      error: data.message || "Thay đổi mật khẩu thất bại",
+    };
+  }
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const logoutAction = async () => {
+  await deleteSession();
+  redirect("/sign-in");
 };

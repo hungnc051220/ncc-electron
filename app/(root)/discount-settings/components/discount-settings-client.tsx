@@ -54,7 +54,7 @@ const DiscountSettingsClient = ({
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setDeletingDiscount(null);
+      setEditingDiscount(null);
     }
   }, []);
 

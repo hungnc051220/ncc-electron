@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { createPlanCinemaAction } from "@/actions/plan-cinema-actions";
-import { planCinemaFormSchema, type PlanCinemaFormInput } from "@/lib/schemas";
+import { planCinemaFormSchema, type PlanCinemaFormInput } from "@/lib/schemas/plan-cinema-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";

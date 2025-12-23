@@ -23,7 +23,7 @@ const PlanScreeningPage = async ({ params }: PlanScreeningPageProps) => {
 
   return (
     <div className="pt-4 flex flex-col h-screen overflow-hidden">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between px-4">
         <div className="flex-1 flex items-center gap-3">
           <BackButton />
           <div>

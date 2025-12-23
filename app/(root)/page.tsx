@@ -1,4 +1,5 @@
 import Footer from "@/components/footer";
+import Logout from "@/components/logout";
 import MainCard from "@/components/main-card";
 import SecondaryCard from "@/components/secondary-card";
 import { getUser } from "@/data/loaders";
@@ -21,9 +22,12 @@ const DashboardPage = async () => {
       <main className="flex-1 max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between mt-10">
           <div>
-            <h2 className="font-bold text-2xl xl:text-3xl">
-              Xin chào, <span className="text-primary">{fullName}</span>
-            </h2>
+            <div className="flex gap-4 items-center">
+              <h2 className="font-bold text-2xl xl:text-3xl">
+                Xin chào, <span className="text-primary">{fullName}</span>
+              </h2>
+              <Logout />
+            </div>
             <p className="text-trunks text-sm xl:text-base">
               {format(new Date(), "EEEE, 'ngày' d 'tháng' M 'năm' yyyy", {
                 locale: vi,

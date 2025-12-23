@@ -14,7 +14,7 @@ import {
   updateUserFormSchema,
   UserFormInput,
   userFormSchema,
-} from "@/lib/schemas";
+} from "@/lib/schemas/user-schema";
 import { CustomerRoleProps } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDownIcon } from "lucide-react";

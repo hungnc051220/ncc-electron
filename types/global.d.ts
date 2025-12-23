@@ -25,6 +25,7 @@ declare global {
       sendQrDialogClose: () => void;
       onQrDialogOpen: (callback: (data: QrDialogData) => void) => void;
       onQrDialogClose: (callback: () => void) => void;
+      printTicket: () => void;
     };
   }
 }

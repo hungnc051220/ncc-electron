@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { SignInInput, signInSchema } from "@/lib/schemas";
+import { SignInInput, signInSchema } from "@/lib/schemas/user-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, KeyboardIcon, User2 } from "lucide-react";
 import {
@@ -94,9 +94,7 @@ const SignInForm = () => {
 
     if (button === "{tab}") {
       ignoreNextChange.current = true;
-      const currentIndex = activeField
-        ? FIELD_ORDER.indexOf(activeField)
-        : 0;
+      const currentIndex = activeField ? FIELD_ORDER.indexOf(activeField) : 0;
       const nextField = FIELD_ORDER[(currentIndex + 1) % FIELD_ORDER.length];
       focusField(nextField);
       return;
@@ -134,7 +132,9 @@ const SignInForm = () => {
   useEffect(() => {
     if (!activeField) return;
     const value =
-      activeField === "username" ? watchedUsername ?? "" : watchedPassword ?? "";
+      activeField === "username"
+        ? (watchedUsername ?? "")
+        : (watchedPassword ?? "");
     keyboardRef.current?.setInput?.(value);
   }, [activeField, watchedUsername, watchedPassword]);
 

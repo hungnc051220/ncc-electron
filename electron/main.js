@@ -89,7 +89,7 @@ async function startNextServer() {
 // ---------------- CREATE MAIN WINDOW ----------------
 const baseURL = `http://localhost:${PORT}`;
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 768,
@@ -104,6 +104,18 @@ function createWindow() {
 
   if (isDev) {
     mainWindow.webContents.openDevTools();
+  }
+
+  try {
+    const printers = await mainWindow.webContents.getPrintersAsync();
+    console.log("Available printers:", printers);
+    // You can now use the printer list, e.g., to find the default printer
+    const defaultPrinter = printers.find((p) => p.isDefault);
+    if (defaultPrinter) {
+      console.log("Default printer name:", defaultPrinter.displayName);
+    }
+  } catch (error) {
+    console.error("Error fetching printers:", error);
   }
 
   mainWindow.on("closed", () => {
@@ -160,7 +172,6 @@ app.whenReady().then(async () => {
     introWindow.close();
     createWindow();
   });
-  
 
   ipcMain.on("open-customer-window", (_, id) => {
     createCustomerWindow(id);
@@ -189,6 +200,41 @@ app.whenReady().then(async () => {
     if (customerWindow && !customerWindow.isDestroyed()) {
       customerWindow.webContents.send("close-qr-dialog");
     }
+  });
+
+  ipcMain.on("print-ticket", async (_, options) => {
+    const win = new BrowserWindow({
+      show: false,
+      width: 300,
+      height: 600,
+      webPreferences: {
+        nodeIntegration: false,
+      },
+    });
+    console.log("load ticket");
+
+    await win.loadURL(`http://localhost:3000/ticket`);
+
+    // delay nhẹ để QR render xong
+    setTimeout(() => {
+      win.webContents.print(
+        {
+          silent: true,
+          deviceName: "EPSON TM-T81III Receipt",
+          printBackground: true,
+          margins: { marginType: "none" },
+        },
+        (success, failureReason) => {
+          console.log("PRINT RESULT:", success, failureReason);
+
+          if (!success) {
+            console.error("PRINT FAILED:", failureReason);
+          }
+
+          win.close();
+        }
+      );
+    }, 300);
   });
 
   app.on("activate", () => {

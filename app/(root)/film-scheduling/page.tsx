@@ -9,9 +9,15 @@ import {
 import FilmSchedulingClient from "./components/film-scheduling-client";
 import { getFilmScheduling } from "@/data/loaders";
 import AddPlan from "./components/add-plan";
+import qs from "query-string";
 
 const FilmSchedulingPage = async () => {
-  const data = await getFilmScheduling();
+  const data = await getFilmScheduling(
+    qs.stringify({
+      page: 1,
+      pageSize: 10000,
+    })
+  );
 
   return (
     <div className="flex flex-col h-[calc(100vh-100px)] mt-4 px-4">

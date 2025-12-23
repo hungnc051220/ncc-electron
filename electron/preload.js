@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.on("open-qr-dialog", (_, data) => callback(data)),
   onQrDialogClose: (callback) =>
     ipcRenderer.on("close-qr-dialog", () => callback()),
+  printTicket: () => ipcRenderer.send("print-ticket"),
 });

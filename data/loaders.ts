@@ -110,13 +110,15 @@ export const getPlanScreeningDetail = async (
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 
-export const getFilmScheduling = async (): Promise<
-  ApiResponse<PlanCinemaProps>
-> => {
+export const getFilmScheduling = async (
+  query?: string
+): Promise<ApiResponse<PlanCinemaProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/plan-cinema", BASE_URL);
-  url.search = qs.stringify({ current: 1, pageSize: 10000 });
+  if (query) {
+    url.search = query;
+  }
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 

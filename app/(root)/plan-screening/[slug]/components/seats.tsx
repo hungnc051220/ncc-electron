@@ -485,10 +485,11 @@ const Seats = ({ data }: SeatsProps) => {
         className="bg-goku p-3 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
         style={{ marginTop: "1rem" }}
       >
-        <div className="shrink-0">
-          <div className="w-full h-[4px] bg-jiren mx-auto"></div>
-          <p className="text-center text-sm font-bold text-trunks">Màn hình</p>
-        </div>
+        <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
+          <legend className="mx-auto px-3 text-sm text-trunks font-bold">
+            Màn hình
+          </legend>
+        </fieldset>
 
         <div
           className="mt-4 flex-1 flex items-center justify-center min-h-0"
@@ -535,7 +536,7 @@ const Seats = ({ data }: SeatsProps) => {
       <div
         ref={footerRef}
         className={cn(
-          "bg-beerus border-t border-beerus shrink-0",
+          "bg-beerus border-t border-beerus shrink-0 px-4",
           isCustomerView && "hidden"
         )}
         style={{ marginTop: "0.75rem" }}
@@ -619,15 +620,21 @@ const Seats = ({ data }: SeatsProps) => {
             >
               <div className="flex items-center gap-3">
                 <RadioGroupItem value={PaymentType.POS} id="pos" />
-                <Label htmlFor="pos" className="text-xs">Tiền mặt</Label>
+                <Label htmlFor="pos" className="text-xs">
+                  Tiền mặt
+                </Label>
               </div>
               <div className="flex items-center gap-3">
                 <RadioGroupItem value={PaymentType.VNPAY} id="vnpay" />
-                <Label htmlFor="vnpay" className="text-xs">Quét VNpayQR</Label>
+                <Label htmlFor="vnpay" className="text-xs">
+                  Quét VNpayQR
+                </Label>
               </div>
               <div className="flex items-center gap-3">
                 <RadioGroupItem value={PaymentType.VIETQR} id="vietqr" />
-                <Label htmlFor="vietqr" className="text-xs">Quét VietQR</Label>
+                <Label htmlFor="vietqr" className="text-xs">
+                  Quét VietQR
+                </Label>
               </div>
             </RadioGroup>
             <Button className="flex flex-col h-16" onClick={onBooking}>

@@ -13,7 +13,7 @@ import UserForm from "./user-form";
 import { startTransition, useActionState, useEffect } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { createUserAction, updateUserAction } from "@/actions/user-actions";
-import { UserFormInput } from "@/lib/schemas";
+import { UserFormInput } from "@/lib/schemas/user-schema";
 import { toast } from "sonner";
 import { CustomerRoleProps, UserProps } from "@/types";
 

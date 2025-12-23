@@ -1,6 +1,6 @@
 "use server";
 
-import { planCinemaFormSchema } from "@/lib/schemas";
+import { planCinemaFormSchema } from "@/lib/schemas/plan-cinema-schema";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
