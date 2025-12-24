@@ -25,7 +25,11 @@ export async function fetchAPI(url: string, options: FetchAPIOptions) {
 
   try {
     const response = await fetch(url, headers);
-    return await response.json();
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.message || "API Error");
+    }
+    return data;
   } catch (error) {
     console.error(`Error ${method} data:`, error);
     throw error;

@@ -11,13 +11,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
-import { getFilm, getPlanFilms, getScreeningRooms } from "@/data/loaders";
+import {
+  getFilm,
+  getPlanFilms,
+  getPlanPricing,
+  getScreeningRooms,
+} from "@/data/loaders";
 import {
   AddSchedulingFormInput,
   addSchedulingFormSchema,
 } from "@/lib/schemas/add-scheduling-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
+import { formatISO, setHours, setMinutes, setSeconds } from "date-fns";
 import { ChevronDownIcon } from "lucide-react";
 import queryString from "query-string";
 import { useEffect } from "react";
@@ -47,14 +53,17 @@ const AddSchedulingForm = ({
     resolver: zodResolver(addSchedulingFormSchema),
     defaultValues: {
       projectDate: new Date(),
-      priceOfPosition1: 0,
-      priceOfPosition2: 0,
-      priceOfPosition3: 0,
-      priceOfPosition4: 0,
+      priceOfPosition1: "",
+      priceOfPosition2: "",
+      priceOfPosition3: "",
+      priceOfPosition4: "",
     },
   });
 
   const filmId = form.watch("filmId");
+  const roomId = form.watch("roomId");
+  const versionCode = form.watch("versionCode");
+  const projectDate = form.watch("projectDate");
   const projectTime = form.watch("projectTime");
 
   const { isPending, data } = useQuery({
@@ -89,6 +98,31 @@ const AddSchedulingForm = ({
     enabled: !!filmId,
   });
 
+  const { data: planPricing, isError } = useQuery({
+    queryKey: ["plan-pricing", roomId, versionCode, projectDate, projectTime],
+    queryFn: () => {
+      if (!roomId || !versionCode || !projectDate || !projectTime) return;
+      const [hours, minutes] = projectTime.split(":").map(Number);
+      const date = setSeconds(
+        setMinutes(setHours(projectDate, hours), minutes),
+        0
+      );
+      return getPlanPricing({ roomId, versionCode, date: formatISO(date) });
+    },
+    enabled:
+      !!filmId && !!roomId && !!versionCode && !!projectDate && !!projectTime,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (planPricing) {
+      form.setValue("priceOfPosition1", planPricing?.[0] || "");
+      form.setValue("priceOfPosition2", planPricing?.[1] || "");
+      form.setValue("priceOfPosition3", planPricing?.[2] || "");
+      form.setValue("priceOfPosition4", planPricing?.[3] || "");
+    }
+  }, [form, planPricing]);
+
   useEffect(() => {
     if (film) {
       form.setValue("duration", film.duration.toString());
@@ -102,6 +136,15 @@ const AddSchedulingForm = ({
       form.setValue("endTime", endTime);
     }
   }, [projectTime, form, film]);
+
+  useEffect(() => {
+    if (isError) {
+      form.setValue("priceOfPosition1", "");
+      form.setValue("priceOfPosition2", "");
+      form.setValue("priceOfPosition3", "");
+      form.setValue("priceOfPosition4", "");
+    }
+  }, [isError, form]);
 
   return (
     <div className="px-6 py-5">
@@ -292,13 +335,7 @@ const AddSchedulingForm = ({
                 <FormItem className="w-full">
                   <FormLabel>Giá vé 1</FormLabel>
                   <FormControl>
-                    <NumberInput
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      placeholder="Nhập giá vé 1"
-                      suffix=" VNĐ"
-                      thousandSeparator={","}
-                    />
+                    <Input placeholder="Nhập giá vé 1" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -311,13 +348,7 @@ const AddSchedulingForm = ({
                 <FormItem className="w-full">
                   <FormLabel>Giá vé 2</FormLabel>
                   <FormControl>
-                    <NumberInput
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      placeholder="Nhập giá vé 2"
-                      suffix=" VNĐ"
-                      thousandSeparator={","}
-                    />
+                    <Input placeholder="Nhập giá vé 2" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -330,13 +361,7 @@ const AddSchedulingForm = ({
                 <FormItem className="w-full">
                   <FormLabel>Giá vé 3</FormLabel>
                   <FormControl>
-                    <NumberInput
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      placeholder="Nhập giá vé 3"
-                      suffix=" VNĐ"
-                      thousandSeparator={","}
-                    />
+                    <Input placeholder="Nhập giá vé 3" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -349,13 +374,7 @@ const AddSchedulingForm = ({
                 <FormItem className="w-full">
                   <FormLabel>Giá vé 4</FormLabel>
                   <FormControl>
-                    <NumberInput
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      placeholder="Nhập giá vé 3"
-                      suffix=" VNĐ"
-                      thousandSeparator={","}
-                    />
+                    <Input placeholder="Nhập giá vé 4" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

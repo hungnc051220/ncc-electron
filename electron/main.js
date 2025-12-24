@@ -12,6 +12,7 @@ let mainWindow;
 let customerWindow;
 let nextProcess;
 let introWindow;
+let printWindow;
 
 const isDev = !app.isPackaged;
 const PORT = 3000;
@@ -202,39 +203,161 @@ app.whenReady().then(async () => {
     }
   });
 
-  ipcMain.on("print-ticket", async (_, options) => {
-    const win = new BrowserWindow({
-      show: false,
-      width: 300,
-      height: 600,
-      webPreferences: {
-        nodeIntegration: false,
-      },
-    });
-    console.log("load ticket");
+  // Helper function để in một vé
+  const printSingleTicket = (orderId, itemIndex, seatIndex) => {
+    return new Promise((resolve, reject) => {
+      if (printWindow && !printWindow.isDestroyed()) {
+        printWindow.close();
+      }
 
-    await win.loadURL(`http://localhost:3000/ticket`);
-
-    // delay nhẹ để QR render xong
-    setTimeout(() => {
-      win.webContents.print(
-        {
-          silent: true,
-          deviceName: "EPSON TM-T81III Receipt",
-          printBackground: true,
-          margins: { marginType: "none" },
+      printWindow = new BrowserWindow({
+        show: false, // ⚠️ BẮT BUỘC
+        width: 300,
+        height: 600,
+        webPreferences: {
+          devTools: true,
         },
-        (success, failureReason) => {
-          console.log("PRINT RESULT:", success, failureReason);
+      });
 
-          if (!success) {
-            console.error("PRINT FAILED:", failureReason);
-          }
+      printWindow.on("closed", () => {
+        printWindow = null;
+      });
 
-          win.close();
+      let isResolved = false;
+
+      printWindow.webContents.on("did-fail-load", (_e, code, desc, url) => {
+        console.error("did-fail-load", { code, desc, url });
+        if (!isResolved) {
+          isResolved = true;
+          reject(new Error(`Failed to load: ${desc}`));
         }
-      );
-    }, 300);
+      });
+
+      printWindow.webContents.on("dom-ready", () => {
+        setTimeout(() => {
+          printWindow.webContents.print(
+            {
+              silent: true,
+              deviceName: "EPSON TM-T81III Receipt",
+              printBackground: true,
+              margins: { marginType: "none" },
+            },
+            (success, error) => {
+              if (!isResolved) {
+                isResolved = true;
+                if (success) {
+                  console.log(`PRINT RESULT: Success for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`);
+                  resolve();
+                } else {
+                  console.error(`PRINT RESULT: Error for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`, error);
+                  reject(error);
+                }
+              }
+              // Đóng window sau một chút để đảm bảo print hoàn tất
+              setTimeout(() => {
+                printWindow?.close();
+              }, 100);
+            }
+          );
+        }, 1000); // ⚠️ đừng giảm
+      });
+
+      // Build URL with query params
+      const url = new URL(`${baseURL}/ticket/${orderId}`);
+      if (itemIndex !== undefined) {
+        url.searchParams.set("itemIndex", itemIndex.toString());
+      }
+      if (seatIndex !== undefined) {
+        url.searchParams.set("seatIndex", seatIndex.toString());
+      }
+
+      printWindow.loadURL(url.toString()).catch((err) => {
+        if (!isResolved) {
+          isResolved = true;
+          reject(err);
+        }
+      });
+    });
+  };
+
+  ipcMain.on("print-ticket", async (_, orderId, itemIndex, seatIndex) => {
+    // Nếu có orderId, in vé cụ thể
+    if (orderId !== undefined && orderId !== null) {
+      try {
+        await printSingleTicket(orderId, itemIndex, seatIndex);
+      } catch (error) {
+        console.error("Print ticket error:", error);
+      }
+      return;
+    }
+
+    // Fallback: print ticket không có params (backward compatibility)
+    try {
+      await printSingleTicket(undefined, undefined, undefined);
+    } catch (error) {
+      console.error("Print ticket error:", error);
+    }
+  });
+
+  ipcMain.on("print-tickets", async (_, orderId, ticketsData) => {
+    // ticketsData là array của { itemIndex, seatIndex } để in
+    // Nếu không có ticketsData, sẽ lấy từ API (fallback)
+    try {
+      let ticketsToPrint = ticketsData;
+
+      // Nếu không có ticketsData, lấy từ API
+      if (!ticketsToPrint || ticketsToPrint.length === 0) {
+        const response = await fetch(`${baseURL}/api/order-items/${orderId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch order items: ${response.statusText}`);
+        }
+        const orderData = await response.json();
+
+        // Tạo danh sách vé cần in
+        ticketsToPrint = [];
+        for (let itemIndex = 0; itemIndex < orderData.items.length; itemIndex++) {
+          const item = orderData.items[itemIndex];
+
+          // Tách từng ghế từ listChairValueF1, F2, F3
+          const getSeatsList = (item) => {
+            const seatsF1 = item.listChairValueF1
+              ? item.listChairValueF1.split(",").map((s) => s.trim()).filter(Boolean)
+              : [];
+            const seatsF2 = item.listChairValueF2
+              ? item.listChairValueF2.split(",").map((s) => s.trim()).filter(Boolean)
+              : [];
+            const seatsF3 = item.listChairValueF3
+              ? item.listChairValueF3.split(",").map((s) => s.trim()).filter(Boolean)
+              : [];
+            return [...seatsF1, ...seatsF2, ...seatsF3];
+          };
+
+          const seatsList = getSeatsList(item);
+
+          // Thêm từng ghế vào danh sách
+          for (let seatIndex = 0; seatIndex < seatsList.length; seatIndex++) {
+            ticketsToPrint.push({ itemIndex, seatIndex });
+          }
+        }
+      }
+
+      // In từng vé
+      for (const ticket of ticketsToPrint) {
+        try {
+          await printSingleTicket(orderId, ticket.itemIndex, ticket.seatIndex);
+          // Delay giữa các lần in để tránh conflict
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(
+            `Error printing ticket ${ticket.itemIndex}-${ticket.seatIndex}:`,
+            error
+          );
+          // Tiếp tục in các vé khác dù có lỗi
+        }
+      }
+    } catch (error) {
+      console.error("Print tickets error:", error);
+    }
   });
 
   app.on("activate", () => {

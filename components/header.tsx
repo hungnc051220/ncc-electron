@@ -30,7 +30,7 @@ const HeaderContent = () => {
             />
           </Link>
           <div className="mx-auto">
-          <NavItems />
+            <NavItems />
           </div>
         </div>
       </div>
@@ -40,9 +40,10 @@ const HeaderContent = () => {
 
 const Header = () => {
   const pathname = usePathname();
-  const isPlanningPage = pathname.includes("/plan-screening");
+  const isHiddenHeader =
+    pathname.includes("/plan-screening") || pathname.includes("/ticket");
 
-  if (isPlanningPage) return null;
+  if (isHiddenHeader) return null;
 
   return (
     <Suspense

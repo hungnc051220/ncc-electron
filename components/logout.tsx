@@ -25,16 +25,11 @@ const Logout = () => {
 
   const onLogout = () => startTransition(() => action());
 
-  const onPrint = async () => {
-    await window.electron?.printTicket();
-  }
-
   return (
     <>
       <Button variant="outline" disabled={pending} onClick={onLogout}>
         Đăng xuất
       </Button>
-      <Button onClick={onPrint}>In</Button>
     </>
   );
 };

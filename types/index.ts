@@ -786,3 +786,10 @@ export interface HolidayProps {
   createdUser: string;
   CreatedOnUtc: string;
 }
+
+export interface OrderDetailProps {
+  order: OrderResponseProps;
+  planScreening: PlanScreeningDetailProps;
+  film: FilmProps;
+  room: RoomProps;
+}

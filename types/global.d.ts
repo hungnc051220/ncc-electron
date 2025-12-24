@@ -25,7 +25,15 @@ declare global {
       sendQrDialogClose: () => void;
       onQrDialogOpen: (callback: (data: QrDialogData) => void) => void;
       onQrDialogClose: (callback: () => void) => void;
-      printTicket: () => void;
+      printTicket: (
+        orderId?: number,
+        itemIndex?: number,
+        seatIndex?: number
+      ) => void;
+      printTickets: (
+        orderId: number,
+        ticketsData?: Array<{ itemIndex: number; seatIndex: number }>
+      ) => void;
     };
   }
 }

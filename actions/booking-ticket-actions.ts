@@ -15,6 +15,7 @@ type ActionStateProps = {
   success: boolean;
   error: string | null;
   data?: QrCodeResponseProps;
+  orderId?: number;
   orderTotal?: number;
   orderDiscount?: number;
   orderCreatedAt?: string;
@@ -47,6 +48,7 @@ export const bookingTicketAction = async (
 
   const res = await bookingTicketService(dataToSend);
   const data = await res.json();
+  console.log(data);
 
   if (!res.ok) {
     return {
@@ -56,7 +58,9 @@ export const bookingTicketAction = async (
     };
   }
 
-  revalidatePath(`/plan-screening/${data?.id}`);
+  const orderId = data?.id;
+
+  revalidatePath(`/plan-screening/${dataToSend.planScreenId}`);
 
   if (dataToSend.paymentMethodSystemName === PaymentType.POS) {
     return {
@@ -64,6 +68,7 @@ export const bookingTicketAction = async (
       success: true,
       error: null,
       data: undefined,
+      orderId,
     };
   }
 
@@ -87,6 +92,7 @@ export const bookingTicketAction = async (
     success: true,
     error: null,
     data: dataQr as QrCodeResponseProps,
+    orderId,
     orderTotal: data?.orderTotal,
     orderDiscount: data?.orderDiscount,
     orderCreatedAt: data?.createdOnUtc,

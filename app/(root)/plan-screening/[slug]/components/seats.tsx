@@ -228,10 +228,60 @@ const Seats = ({ data }: SeatsProps) => {
       startTransition(() => {
         toast.success("Đặt vé thành công");
         setSelectedSeats([]);
+        
+        // In vé khi đặt vé thành công (chỉ với POS payment)
+        if (state.orderId && paymentType === PaymentType.POS && !isCustomerView) {
+          // Lấy order items và in từng vé
+          const printTickets = async () => {
+            try {
+              const response = await fetch(`/api/order-items/${state.orderId}`);
+              if (!response.ok) {
+                console.error("Failed to fetch order items for printing");
+                return;
+              }
+              
+              const orderData = await response.json();
+              
+              // Tạo danh sách vé cần in
+              const ticketsToPrint: Array<{ itemIndex: number; seatIndex: number }> = [];
+              
+              for (let itemIndex = 0; itemIndex < orderData.items.length; itemIndex++) {
+                const item = orderData.items[itemIndex];
+                
+                // Tách từng ghế từ listChairValueF1, F2, F3
+                const seatsF1 = item.listChairValueF1
+                  ? item.listChairValueF1.split(",").map((s: string) => s.trim()).filter(Boolean)
+                  : [];
+                const seatsF2 = item.listChairValueF2
+                  ? item.listChairValueF2.split(",").map((s: string) => s.trim()).filter(Boolean)
+                  : [];
+                const seatsF3 = item.listChairValueF3
+                  ? item.listChairValueF3.split(",").map((s: string) => s.trim()).filter(Boolean)
+                  : [];
+                const seatsList = [...seatsF1, ...seatsF2, ...seatsF3];
+                
+                // Thêm từng ghế vào danh sách
+                for (let seatIndex = 0; seatIndex < seatsList.length; seatIndex++) {
+                  ticketsToPrint.push({ itemIndex, seatIndex });
+                }
+              }
+              
+              // Gọi electron để in từng vé
+              if (ticketsToPrint.length > 0 && window.electron) {
+                window.electron.printTickets(state.orderId!, ticketsToPrint);
+              }
+            } catch (error) {
+              console.error("Error preparing tickets for printing:", error);
+            }
+          };
+          
+          // Sử dụng setTimeout để đảm bảo state đã cập nhật xong
+          setTimeout(printTickets, 500);
+        }
       });
     }
     prevPendingRef.current = pending;
-  }, [state, pending]);
+  }, [state, pending, paymentType, isCustomerView]);
 
   // Sử dụng useCallback để tránh re-render không cần thiết
   const handleSelectSeat = useCallback((seat: ListSeat) => {

@@ -12,6 +12,7 @@ import {
   HolidayProps,
   MachineSerialProps,
   ManufacturerProps,
+  OrderDetailProps,
   PlanCinemaProps,
   PlanFilmProps,
   PlanScreeningDetailProps,
@@ -143,6 +144,13 @@ export const getFilms = async (
   if (query) {
     url.search = query;
   }
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getOrderDetail = async (id: number): Promise<OrderDetailProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL(`/api/pos/order/${id}`, BASE_URL);
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 
@@ -562,4 +570,23 @@ export const getHolidays = async ({
     encode: true,
   });
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getPlanPricing = async ({
+  roomId,
+  versionCode,
+  date,
+}: {
+  roomId: number;
+  versionCode: string;
+  date: string;
+}): Promise<string[]> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/pricing/plan-pricing", BASE_URL);
+  return fetchAPI(url.href, {
+    method: "POST",
+    body: { roomId, versionCode, date },
+    authToken: accessToken,
+  });
 };
