@@ -83,10 +83,10 @@ const RetailTicketSaleCard = () => {
             <TableBody>
               {data.map((item, index) => (
                 <TableRow key={index} className="divide-x">
-                  <TableCell className="min-w-[50px] bg-goku sticky left-0 z-10">
+                  <TableCell className="w-[50px] bg-goku sticky left-0 z-10">
                     {index + 1}
                   </TableCell>
-                  <TableCell className="font-bold bg-goku sticky left-[50px] z-10 min-w-[200px]">
+                  <TableCell className="font-bold bg-goku sticky left-[50px] z-10 min-w-[200px] px-2">
                     {item.filmName}
                   </TableCell>
                   {item.details.map((plan) => (

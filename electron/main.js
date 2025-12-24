@@ -263,7 +263,7 @@ app.whenReady().then(async () => {
       });
 
       // Build URL with query params
-      const url = new URL(`${baseURL}/ticket/${orderId}`);
+      const url = new URL(`${baseURL}/print-ticket/${orderId}`);
       if (itemIndex !== undefined) {
         url.searchParams.set("itemIndex", itemIndex.toString());
       }

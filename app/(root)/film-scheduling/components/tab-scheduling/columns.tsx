@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PlanScreeningDetailProps } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
+import { addMinutesToTime } from "./add-scheduling-form";
 
 export const columns: ColumnDef<PlanScreeningDetailProps>[] = [
   {
@@ -41,7 +41,7 @@ export const columns: ColumnDef<PlanScreeningDetailProps>[] = [
     accessorKey: "projectTime",
     header: "Giờ chiếu",
     cell: ({ row }) => {
-      return formatInTimeZone(row.original.projectTime, "UTC", "HH:mm");
+      return format(row.original.projectTime, "HH:mm");
     },
   },
   {
@@ -52,11 +52,18 @@ export const columns: ColumnDef<PlanScreeningDetailProps>[] = [
   {
     accessorKey: "filmName",
     header: "Tên phim",
-    cell: ({ row }) => <p className="text-wrap">{row.original.filmInfo?.filmName}</p>,
+    cell: ({ row }) => (
+      <p className="text-wrap">{row.original.filmInfo?.filmName}</p>
+    ),
   },
   {
-    accessorKey: "end",
+    accessorKey: "endTime",
     header: "Kết thúc",
+    cell: ({ row }) => {
+      const time = format(row.original.projectTime, "HH:mm");
+      const endTime = addMinutesToTime(time, row.original.filmInfo?.duration ?? 0);
+      return endTime;
+    },
   },
   {
     accessorKey: "priceOfPosition1",

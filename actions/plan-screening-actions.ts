@@ -4,7 +4,10 @@ import { addSchedulingFormSchema } from "@/lib/schemas/add-scheduling-schema";
 import { format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createPlanScreeningService, deletePlanScreeningService } from "./plan-screening-services";
+import {
+  createPlanScreeningService,
+  deletePlanScreeningService,
+} from "./plan-screening-services";
 
 type ActionStateProps = {
   formData: Record<string, string> | null;
@@ -34,15 +37,14 @@ export const createPlanScreeningAction = async (
     planCinemaId: Number(formFields.planCinemaId),
     filmId: Number(formFields.filmId),
     roomId: Number(formFields.roomId),
-    priceOfPosition1: Number(formFields.priceOfPosition1),
-    priceOfPosition2: Number(formFields.priceOfPosition2),
-    priceOfPosition3: Number(formFields.priceOfPosition3),
-    priceOfPosition4: Number(formFields.priceOfPosition4),
     projectDate: new Date(formFields.projectDate),
   };
 
-  const validatedFields =
-    addSchedulingFormSchema.safeParse(formatttedFormFields);
+  const cleaned = Object.fromEntries(
+    Object.entries(formatttedFormFields).filter(([_, v]) => v != null)
+  );
+
+  const validatedFields = addSchedulingFormSchema.safeParse(cleaned);
 
   if (!validatedFields.success) {
     return {
@@ -56,14 +58,10 @@ export const createPlanScreeningAction = async (
     ...validatedFields.data,
     planCinemaId: formatttedFormFields.planCinemaId,
     projectDate: format(validatedFields.data.projectDate, "yyyy-MM-dd"),
-    priceOfPosition1: `D:${validatedFields.data.priceOfPosition1}`,
-    priceOfPosition2: `T:${validatedFields.data.priceOfPosition2}`,
-    priceOfPosition3: `V:${validatedFields.data.priceOfPosition3}`,
-    priceOfPosition4: `PT:${validatedFields.data.priceOfPosition4}`,
   };
 
   const res = await createPlanScreeningService(dataToSend);
-  
+
   const data = await res.json();
 
   if (!res.ok) {
@@ -97,6 +95,52 @@ export const deletePlanScreeningAction = async (
       ...prevState,
       success: false,
       error: "Xóa ca chiếu trong kế hoạch thất bại",
+    };
+  }
+
+  revalidatePath("/film-scheduling");
+
+  return {
+    ...prevState,
+    success: true,
+    error: null,
+  };
+};
+
+export const deleteMultiPlanScreeningAction = async (
+  prevState: ActionStateProps,
+  formData: FormData
+): Promise<ActionStateProps> => {
+  const planIds = formData.get("planIds") as string;
+  const parsedPlanIds: number[] = JSON.parse(planIds) || [];
+
+  if (!parsedPlanIds.length) {
+    return {
+      ...prevState,
+      success: false,
+      error: "Không có kế hoạch nào để xóa",
+    };
+  }
+
+  const results = await Promise.allSettled(parsedPlanIds.map(id => deletePlanScreeningService(id)));
+  const failedIds: number[] = [];
+
+  results.forEach((result, index) => {
+    if (
+      result.status === "rejected" ||
+      (result.status === "fulfilled" && !result.value.ok)
+    ) {
+      failedIds.push(parsedPlanIds[index]);
+    }
+  });
+
+  revalidatePath("/film-scheduling");
+
+  if (failedIds.length > 0) {
+    return {
+      ...prevState,
+      success: false,
+      error: `Xóa thất bại ${failedIds.length}/${parsedPlanIds.length} kế hoạch`,
     };
   }
 

@@ -4,6 +4,8 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  OnChangeFn,
+  RowSelectionState,
   useReactTable,
 } from "@tanstack/react-table";
 
@@ -21,17 +23,29 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   loading: boolean;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  getRowId?: (originalRow: TData, index: number, parent?: unknown) => string;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   loading,
+  rowSelection,
+  onRowSelectionChange,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: true,
+    onRowSelectionChange,
+    getRowId,
+    state: {
+      rowSelection: rowSelection || {},
+    },
   });
 
   return (

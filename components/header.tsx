@@ -41,7 +41,7 @@ const HeaderContent = () => {
 const Header = () => {
   const pathname = usePathname();
   const isHiddenHeader =
-    pathname.includes("/plan-screening") || pathname.includes("/ticket");
+    pathname.includes("/plan-screening") || pathname.includes("/print-ticket");
 
   if (isHiddenHeader) return null;
 

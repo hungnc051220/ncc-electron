@@ -48,7 +48,6 @@ export const bookingTicketAction = async (
 
   const res = await bookingTicketService(dataToSend);
   const data = await res.json();
-  console.log(data);
 
   if (!res.ok) {
     return {

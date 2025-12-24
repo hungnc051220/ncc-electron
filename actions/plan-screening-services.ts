@@ -12,10 +12,10 @@ export type CreatePlanScreeningPayload = {
   projectTime: string;
   endTime?: string;
   versionCode?: string;
-  priceOfPosition1: string;
-  priceOfPosition2: string;
-  priceOfPosition3: string;
-  priceOfPosition4: string;
+  priceOfPosition1?: string;
+  priceOfPosition2?: string;
+  priceOfPosition3?: string;
+  priceOfPosition4?: string;
 };
 
 export const createPlanScreeningService = async (

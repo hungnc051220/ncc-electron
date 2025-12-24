@@ -1,5 +1,6 @@
 "use client";
 
+import { createPlanScreeningAction } from "@/actions/plan-screening-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,18 +12,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { addPlanFilmAction } from "@/actions/plan-cinema-actions";
-import { getFilms } from "@/data/loaders";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { RowSelectionState } from "@tanstack/react-table";
+import { AddSchedulingFormInput } from "@/lib/schemas/add-scheduling-schema";
+import { useQueryClient } from "@tanstack/react-query";
+import { format, formatISO } from "date-fns";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { DataTable } from "./data-table";
-import { columns } from "./columns";
 import AddSchedulingForm from "./add-scheduling-form";
-import { AddSchedulingFormInput } from "@/lib/schemas/add-scheduling-schema";
-import { format, formatISO } from "date-fns";
-import { createPlanScreeningAction } from "@/actions/plan-screening-actions";
 
 const INITIAL_STATE = {
   formData: null,
@@ -31,44 +26,36 @@ const INITIAL_STATE = {
   error: null,
 };
 
-interface AddMoviesProps {
+interface AddSchedulingDialogProps {
   planCinemaId: number;
 }
 
-const AddScreenings = ({ planCinemaId }: AddMoviesProps) => {
+const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
   const queryClient = useQueryClient();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ["movies"],
-      queryFn: ({ pageParam = 1 }) => getFilms(`?current=${pageParam}`),
-      initialPageParam: 1,
-      getNextPageParam: (lastPage, pages) => {
-        const currentPage = pages.length;
-        return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-      },
-    });
-
-  const films = data?.pages.flatMap((page) => page.data) ?? [];
-
   const [open, setOpen] = useState(false);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [state, action, pending] = useActionState(
     createPlanScreeningAction,
     INITIAL_STATE
   );
   const handleSubmit = (values: AddSchedulingFormInput) => {
-    console.log(values)
-
     const formData = new FormData();
     formData.append("planCinemaId", planCinemaId.toString());
     formData.append("projectDate", format(values.projectDate, "yyyy-MM-dd"));
     formData.append("projectTime", formatISO(values.projectDate));
     formData.append("filmId", values.filmId.toString());
     formData.append("roomId", values.roomId.toString());
-    formData.append("priceOfPosition1", values.priceOfPosition1.toString());
-    formData.append("priceOfPosition2", values.priceOfPosition2.toString());
-    formData.append("priceOfPosition3", values.priceOfPosition3.toString());
-    formData.append("priceOfPosition4", values.priceOfPosition4.toString());
+    if (values.priceOfPosition1) {
+      formData.append("priceOfPosition1", values.priceOfPosition1);
+    }
+    if (values.priceOfPosition2) {
+      formData.append("priceOfPosition2", values.priceOfPosition2);
+    }
+    if (values.priceOfPosition3) {
+      formData.append("priceOfPosition3", values.priceOfPosition3);
+    }
+    if (values.priceOfPosition4) {
+      formData.append("priceOfPosition4", values.priceOfPosition4);
+    }
 
     startTransition(() => action(formData));
   };
@@ -80,19 +67,15 @@ const AddScreenings = ({ planCinemaId }: AddMoviesProps) => {
 
     if (state.success) {
       toast.success("Thêm ca chiếu vào kế hoạch thành công");
-      queryClient.invalidateQueries({ queryKey: ["plan-film"] });
+      queryClient.invalidateQueries({ queryKey: ["plan-screenings"] });
       startTransition(() => {
         setOpen(false);
-        setRowSelection({});
       });
     }
   }, [state, queryClient]);
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
-    if (!newOpen) {
-      setRowSelection({});
-    }
   };
 
   return (
@@ -106,7 +89,10 @@ const AddScreenings = ({ planCinemaId }: AddMoviesProps) => {
         </DialogHeader>
 
         <div>
-          <AddSchedulingForm planCinemaId={planCinemaId} onSubmit={handleSubmit}/>
+          <AddSchedulingForm
+            planCinemaId={planCinemaId}
+            onSubmit={handleSubmit}
+          />
         </div>
 
         <DialogFooter>
@@ -125,4 +111,4 @@ const AddScreenings = ({ planCinemaId }: AddMoviesProps) => {
   );
 };
 
-export default AddScreenings;
+export default AddSchedulingDialog;

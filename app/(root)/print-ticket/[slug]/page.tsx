@@ -7,12 +7,12 @@ import { format } from "date-fns";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-interface TicketPageProps {
+interface PrintTicketPageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ itemIndex?: string; seatIndex?: string }>;
 }
 
-const TicketPage = async ({ params, searchParams }: TicketPageProps) => {
+const PrintTicketPage = async ({ params, searchParams }: PrintTicketPageProps) => {
   const slug = (await params).slug;
   const { itemIndex, seatIndex } = await searchParams;
 
@@ -267,4 +267,4 @@ const TicketPage = async ({ params, searchParams }: TicketPageProps) => {
   );
 };
 
-export default TicketPage;
+export default PrintTicketPage;

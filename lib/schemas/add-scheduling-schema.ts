@@ -19,10 +19,10 @@ export const addSchedulingFormSchema = z
     projectTime: z.string(),
     endTime: z.string().optional(),
     versionCode: z.string().optional(),
-    priceOfPosition1: z.string(),
-    priceOfPosition2: z.string(),
-    priceOfPosition3: z.string(),
-    priceOfPosition4: z.string(),
+    priceOfPosition1: z.string().optional(),
+    priceOfPosition2: z.string().optional(),
+    priceOfPosition3: z.string().optional(),
+    priceOfPosition4: z.string().optional(),
   })
   .refine(
     (data) =>
