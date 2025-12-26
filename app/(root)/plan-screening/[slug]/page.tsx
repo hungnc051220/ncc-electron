@@ -22,23 +22,7 @@ const PlanScreeningPage = async ({ params }: PlanScreeningPageProps) => {
   if (!data) return null;
 
   return (
-    <div className="pt-4 flex flex-col h-screen overflow-hidden">
-      <div className="flex items-start justify-between px-4">
-        <div className="flex-1 flex items-center gap-3">
-          <BackButton />
-          <div>
-            <p className="text-chichi text-sm xl:text-lg font-medium">
-              Buổi {formatInTimeZone(data.projectTime, "UTC", "HH:mm")} - Ngày{" "}
-              {format(new Date(data.projectDate), "dd/MM/yyyy")}
-            </p>
-            <p className="font-bold mt-1 text-base xl:text-xl">{data.filmInfo.filmName}</p>
-          </div>
-        </div>
-        <div className="bg-goku py-1 px-2 rounded-lg">
-          <p className="text-sm xl:text-base font-bold">Phòng {data.roomInfo.name}</p>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-screen overflow-hidden">
       <Seats data={data} />
       <CustomerView planScreeningsId={Number(slug)} />
     </div>

@@ -29,6 +29,9 @@ import Selecto from "react-selecto";
 import { toast } from "sonner";
 import Legend from "./legend";
 import QrCodeDialog from "./qr-code-dialog";
+import BackButton from "./back-button";
+import { formatInTimeZone } from "date-fns-tz";
+import { format } from "date-fns";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -88,6 +91,8 @@ const Seat = memo(
         }}
         onClick={handleClick}
         data-seat-code={seat.code}
+        data-seat-floor={seat.floor}
+        data-seat-unique-key={`${seat.floor}-${seat.code}`}
       >
         <p
           className="text-xs"
@@ -101,6 +106,11 @@ const Seat = memo(
 );
 
 Seat.displayName = "Seat";
+
+// Helper function để tạo unique key cho ghế (kết hợp floor và code)
+const getSeatUniqueKey = (seat: ListSeat): string => {
+  return `${seat.floor}-${seat.code}`;
+};
 
 const Seats = ({ data }: SeatsProps) => {
   const router = useRouter();
@@ -131,13 +141,54 @@ const Seats = ({ data }: SeatsProps) => {
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [seatSize, setSeatSize] = useState(44);
 
-  // Tạo map để tra cứu ghế từ seat code
+  // Tính toán số tầng có sẵn
+  const availableFloors = useMemo(() => {
+    const floors = new Set<number>();
+    seats?.forEach((row) => {
+      row.forEach((seat) => {
+        if (seat.floor) {
+          floors.add(seat.floor);
+        }
+      });
+    });
+    return Array.from(floors).sort((a, b) => a - b);
+  }, [seats]);
+
+  // State cho tầng được chọn bởi người dùng
+  const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(
+    null
+  );
+
+  // Tính toán tầng được chọn: ưu tiên userSelectedFloor, nếu không hợp lệ thì dùng tầng đầu tiên
+  const selectedFloor = useMemo(() => {
+    if (availableFloors.length === 0) return 1;
+    if (userSelectedFloor && availableFloors.includes(userSelectedFloor)) {
+      return userSelectedFloor;
+    }
+    return availableFloors[0];
+  }, [availableFloors, userSelectedFloor]);
+
+  // Không filter selectedSeats khi đổi tầng - cho phép chọn ghế từ nhiều tầng cùng lúc
+
+  // Filter seats theo tầng được chọn
+  const filteredSeats = useMemo(() => {
+    if (!seats) return [];
+    return seats
+      .map((row) => row.filter((seat) => seat.floor === selectedFloor))
+      .filter((row) => row.length > 0);
+  }, [seats, selectedFloor]);
+
+  // Key prop trên Selecto component sẽ force re-mount khi selectedFloor thay đổi
+  // Điều này đảm bảo Selecto nhận biết các element mới sau khi chuyển tầng
+
+  // Tạo map để tra cứu ghế từ unique key (kết hợp floor và code để tránh trùng)
   const seatMap = useMemo(() => {
     const map: Record<string, ListSeat> = {};
     seats?.forEach((row) => {
       row.forEach((seat) => {
         if (seat.type !== 12 && seat.status !== 1) {
-          map[seat.code] = seat;
+          const uniqueKey = getSeatUniqueKey(seat);
+          map[uniqueKey] = seat;
         }
       });
     });
@@ -228,9 +279,13 @@ const Seats = ({ data }: SeatsProps) => {
       startTransition(() => {
         toast.success("Đặt vé thành công");
         setSelectedSeats([]);
-        
+
         // In vé khi đặt vé thành công (chỉ với POS payment)
-        if (state.orderId && paymentType === PaymentType.POS && !isCustomerView) {
+        if (
+          state.orderId &&
+          paymentType === PaymentType.POS &&
+          !isCustomerView
+        ) {
           // Lấy order items và in từng vé
           const printTickets = async () => {
             try {
@@ -239,33 +294,53 @@ const Seats = ({ data }: SeatsProps) => {
                 console.error("Failed to fetch order items for printing");
                 return;
               }
-              
+
               const orderData = await response.json();
-              
+
               // Tạo danh sách vé cần in
-              const ticketsToPrint: Array<{ itemIndex: number; seatIndex: number }> = [];
-              
-              for (let itemIndex = 0; itemIndex < orderData.items.length; itemIndex++) {
+              const ticketsToPrint: Array<{
+                itemIndex: number;
+                seatIndex: number;
+              }> = [];
+
+              for (
+                let itemIndex = 0;
+                itemIndex < orderData.items.length;
+                itemIndex++
+              ) {
                 const item = orderData.items[itemIndex];
-                
+
                 // Tách từng ghế từ listChairValueF1, F2, F3
                 const seatsF1 = item.listChairValueF1
-                  ? item.listChairValueF1.split(",").map((s: string) => s.trim()).filter(Boolean)
+                  ? item.listChairValueF1
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
                   : [];
                 const seatsF2 = item.listChairValueF2
-                  ? item.listChairValueF2.split(",").map((s: string) => s.trim()).filter(Boolean)
+                  ? item.listChairValueF2
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
                   : [];
                 const seatsF3 = item.listChairValueF3
-                  ? item.listChairValueF3.split(",").map((s: string) => s.trim()).filter(Boolean)
+                  ? item.listChairValueF3
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
                   : [];
                 const seatsList = [...seatsF1, ...seatsF2, ...seatsF3];
-                
+
                 // Thêm từng ghế vào danh sách
-                for (let seatIndex = 0; seatIndex < seatsList.length; seatIndex++) {
+                for (
+                  let seatIndex = 0;
+                  seatIndex < seatsList.length;
+                  seatIndex++
+                ) {
                   ticketsToPrint.push({ itemIndex, seatIndex });
                 }
               }
-              
+
               // Gọi electron để in từng vé
               if (ticketsToPrint.length > 0 && window.electron) {
                 window.electron.printTickets(state.orderId!, ticketsToPrint);
@@ -274,7 +349,7 @@ const Seats = ({ data }: SeatsProps) => {
               console.error("Error preparing tickets for printing:", error);
             }
           };
-          
+
           // Sử dụng setTimeout để đảm bảo state đã cập nhật xong
           setTimeout(printTickets, 500);
         }
@@ -286,9 +361,12 @@ const Seats = ({ data }: SeatsProps) => {
   // Sử dụng useCallback để tránh re-render không cần thiết
   const handleSelectSeat = useCallback((seat: ListSeat) => {
     setSelectedSeats((prev) => {
-      const isAlreadySelected = prev.find((s) => s.seat === seat.seat);
+      const seatUniqueKey = getSeatUniqueKey(seat);
+      const isAlreadySelected = prev.find(
+        (s) => getSeatUniqueKey(s) === seatUniqueKey
+      );
       if (isAlreadySelected) {
-        return prev.filter((s) => s.seat !== seat.seat);
+        return prev.filter((s) => getSeatUniqueKey(s) !== seatUniqueKey);
       } else {
         return [...prev, seat];
       }
@@ -304,27 +382,27 @@ const Seats = ({ data }: SeatsProps) => {
       isSelectingRef.current = true;
 
       setSelectedSeats((prev) => {
-        const newSelected = new Set(prev.map((s) => s.code));
+        const newSelected = new Set(prev.map((s) => getSeatUniqueKey(s)));
 
         // Thêm ghế mới
         e.added.forEach((el) => {
-          const seatCode = el.getAttribute("data-seat-code");
-          if (seatCode && seatMap[seatCode] && !newSelected.has(seatCode)) {
-            newSelected.add(seatCode);
+          const uniqueKey = el.getAttribute("data-seat-unique-key");
+          if (uniqueKey && seatMap[uniqueKey] && !newSelected.has(uniqueKey)) {
+            newSelected.add(uniqueKey);
           }
         });
 
         // Xóa ghế bị bỏ chọn
         e.removed.forEach((el) => {
-          const seatCode = el.getAttribute("data-seat-code");
-          if (seatCode) {
-            newSelected.delete(seatCode);
+          const uniqueKey = el.getAttribute("data-seat-unique-key");
+          if (uniqueKey) {
+            newSelected.delete(uniqueKey);
           }
         });
 
         // Convert back to array
         return Array.from(newSelected)
-          .map((code) => seatMap[code])
+          .map((uniqueKey) => seatMap[uniqueKey])
           .filter(Boolean);
       });
 
@@ -335,6 +413,7 @@ const Seats = ({ data }: SeatsProps) => {
     [seatMap]
   );
 
+  
   // Các effects cho electron
   useEffect(() => {
     if (isCustomerView) {
@@ -350,6 +429,8 @@ const Seats = ({ data }: SeatsProps) => {
       });
     }
   }, [isCustomerView]);
+
+  console.log("selectedSeats", selectedSeats);
 
   useEffect(() => {
     if (!isCustomerView && selectedSeats.length >= 0) {
@@ -417,6 +498,7 @@ const Seats = ({ data }: SeatsProps) => {
   }, [state.error]);
 
   // Tính toán kích thước ghế tự động để fit vào màn hình
+  // Tính dựa trên tầng có nhiều ghế nhất để đảm bảo tất cả tầng đều fit và nhất quán
   useEffect(() => {
     if (!seats || seats.length === 0 || !seatContainerRef.current) return;
 
@@ -429,9 +511,36 @@ const Seats = ({ data }: SeatsProps) => {
       const availableHeight = containerRect.height;
       const availableWidth = containerRect.width;
 
-      // Tính số hàng và số ghế trong hàng dài nhất
-      const numRows = seats.length;
-      const maxSeatsPerRow = Math.max(...seats.map((row) => row.length));
+      // Tính toán số hàng và số ghế trong hàng dài nhất của tầng có nhiều ghế nhất
+      // Điều này đảm bảo kích thước nhất quán giữa các tầng và không bị tính lại khi đổi tầng
+      let maxRows = 0;
+      let maxSeatsPerRow = 0;
+
+      // Tìm tầng có nhiều ghế nhất
+      availableFloors.forEach((floor) => {
+        const floorSeats = seats
+          .map((row) => row.filter((seat) => seat.floor === floor))
+          .filter((row) => row.length > 0);
+
+        if (floorSeats.length > maxRows) {
+          maxRows = floorSeats.length;
+        }
+
+        const maxSeatsInFloor = Math.max(
+          ...floorSeats.map((row) => row.length)
+        );
+        if (maxSeatsInFloor > maxSeatsPerRow) {
+          maxSeatsPerRow = maxSeatsInFloor;
+        }
+      });
+
+      // Fallback nếu không tìm thấy tầng nào
+      if (maxRows === 0 || maxSeatsPerRow === 0) {
+        maxRows = seats.length;
+        maxSeatsPerRow = Math.max(...seats.map((row) => row.length));
+      }
+
+      const numRows = maxRows;
 
       // Tính gap giữa các ghế (6px) và label bên trái/phải (ước tính ban đầu)
       const gapBetweenSeats = 6;
@@ -474,11 +583,11 @@ const Seats = ({ data }: SeatsProps) => {
       clearTimeout(timeoutId);
       window.removeEventListener("resize", handleResize);
     };
-  }, [seats]);
+  }, [seats, availableFloors]); // Chỉ tính lại khi seats hoặc availableFloors thay đổi, không phải khi đổi tầng
 
   // Render seats với useMemo để tránh re-render không cần thiết
   const renderedSeats = useMemo(() => {
-    return seats?.map((item, index) => (
+    return filteredSeats?.map((item, index) => (
       <div
         key={index}
         className="flex gap-[6px] items-center justify-center seat-row"
@@ -498,7 +607,9 @@ const Seats = ({ data }: SeatsProps) => {
           <Seat
             key={seat.seat}
             seat={seat}
-            isSelected={selectedSeats.some((s) => s.code === seat.code)}
+            isSelected={selectedSeats.some(
+              (s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat)
+            )}
             onSelect={handleSelectSeat}
             size={seatSize}
           />
@@ -515,210 +626,254 @@ const Seats = ({ data }: SeatsProps) => {
         </div>
       </div>
     ));
-  }, [seats, selectedSeats, handleSelectSeat, seatSize]);
+  }, [filteredSeats, selectedSeats, handleSelectSeat, seatSize]);
 
   return (
-    <div
-      className="relative flex flex-col"
-      style={{ height: "100vh", overflow: "hidden" }}
-    >
-      {pending && (
-        <div className="absolute inset-0 size-full z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Đang tải...</span>
+    <>
+      <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex-1 flex items-center gap-3">
+          <BackButton />
+          <div className="flex items-center gap-4">
+            <p className="text-chichi text-sm xl:text-lg font-medium">
+              Buổi {formatInTimeZone(data.projectTime, "UTC", "HH:mm")} - Ngày{" "}
+              {format(new Date(data.projectDate), "dd/MM/yyyy")}
+            </p>
+            <p className="font-bold text-base xl:text-xl">
+              {data.filmInfo.filmName}
+            </p>
           </div>
         </div>
-      )}
-      <div
-        ref={mainContainerRef}
-        className="bg-goku p-3 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
-        style={{ marginTop: "1rem" }}
-      >
-        <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
-          <legend className="mx-auto px-3 text-sm text-trunks font-bold">
-            Màn hình
-          </legend>
-        </fieldset>
-
-        <div
-          className="mt-4 flex-1 flex items-center justify-center min-h-0"
-          ref={seatContainerRef}
-        >
-          <div className="space-y-[6px] w-full flex flex-col items-center">
-            {renderedSeats}
-          </div>
+        <div className="rounded-lg flex items-center gap-4">
+          {availableFloors.length > 1 && (
+            <div className="flex justify-center gap-2">
+              {availableFloors.map((floor) => (
+                <p
+                  key={floor}
+                  onClick={() => {
+                    setUserSelectedFloor(floor);
+                    // Không xóa ghế đã chọn - cho phép chọn ghế từ nhiều tầng cùng lúc
+                  }}
+                  className={cn(
+                    "pr-1 border-b-2 border-transparent text-sm font-bold",
+                    selectedFloor === floor &&
+                      "border-primary text-primary"
+                  )}
+                >
+                  Tầng {floor}
+                </p>
+              ))}
+            </div>
+          )}
+          <p className="text-sm font-bold bg-beerus py-1 px-2 rounded-sm">
+            Phòng {data.roomInfo.name}
+          </p>
         </div>
-
-        <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs shrink-0">
-          <Legend color="bg-jiren" label="Ghế mới" />
-          <Legend color="bg-whis" label="Đang chọn" />
-          <Legend color="bg-roshi" label="Đang giữ chỗ" />
-          <Legend color="bg-trunks" label="Ghế đã bán" />
-          <Legend color="bg-krillin" label="Ghế VIP" />
-          <Legend color="bg-raditz" label="Ghế hợp đồng" />
-          <Legend color="bg-chichi" label="Ghế đôi" />
-        </div>
-
-        {/* React-Selecto với cấu hình tối ưu */}
-        <Selecto
-          ref={selectoRef}
-          dragContainer=".seat-row"
-          selectableTargets={[".selectable-seat"]}
-          hitRate={0}
-          selectByClick={false}
-          selectFromInside={true}
-          toggleContinueSelect={["shift"]}
-          ratio={0}
-          onSelectStart={() => {
-            isSelectingRef.current = true;
-          }}
-          onSelect={handleSelectoSelect}
-          onSelectEnd={() => {
-            setTimeout(() => {
-              isSelectingRef.current = false;
-            }, 100);
-          }}
-        />
       </div>
-
-      {/* Footer giữ nguyên */}
       <div
-        ref={footerRef}
-        className={cn(
-          "bg-beerus border-t border-beerus shrink-0 px-4",
-          isCustomerView && "hidden"
-        )}
-        style={{ marginTop: "0.75rem" }}
+        className="relative flex flex-col"
+        style={{ height: "100vh", overflow: "hidden" }}
       >
-        <div className="p-2 flex gap-3">
-          <div className="flex-1">
-            <div className="flex gap-4 bg-white p-2">
-              <div className="text-sm">
-                <div className="flex items-center">
-                  <p className="min-w-[70px] text-trunks">Số vé:</p>
-                  <p className="text-whis font-bold flex-1 text-right">
-                    {selectedSeats.length}
-                  </p>
+        {pending && (
+          <div className="absolute inset-0 size-full z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Đang tải...</span>
+            </div>
+          </div>
+        )}
+        <div
+          ref={mainContainerRef}
+          className="bg-goku p-2 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
+        >
+          {/* Button group chọn tầng - chỉ hiển thị khi có nhiều hơn 1 tầng */}
+
+          <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
+            <legend className="mx-auto px-3 text-sm text-trunks font-bold">
+              Màn hình
+            </legend>
+          </fieldset>
+
+          <div
+            className="mt-2 flex-1 flex items-center justify-center min-h-0"
+            ref={seatContainerRef}
+          >
+            <div className="space-y-[6px] w-full flex flex-col items-center">
+              {renderedSeats}
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs shrink-0">
+            <Legend color="bg-jiren" label="Ghế mới" />
+            <Legend color="bg-whis" label="Đang chọn" />
+            <Legend color="bg-roshi" label="Đang giữ chỗ" />
+            <Legend color="bg-trunks" label="Ghế đã bán" />
+            <Legend color="bg-krillin" label="Ghế VIP" />
+            <Legend color="bg-raditz" label="Ghế hợp đồng" />
+            <Legend color="bg-chichi" label="Ghế đôi" />
+          </div>
+
+          {/* React-Selecto với cấu hình tối ưu */}
+          <Selecto
+            key={`selecto-${selectedFloor}`}
+            ref={selectoRef}
+            dragContainer=".seat-row"
+            selectableTargets={[".selectable-seat"]}
+            hitRate={0}
+            selectByClick={false}
+            selectFromInside={true}
+            toggleContinueSelect={["shift"]}
+            ratio={0}
+            onSelectStart={() => {
+              isSelectingRef.current = true;
+            }}
+            onSelect={handleSelectoSelect}
+            onSelectEnd={() => {
+              setTimeout(() => {
+                isSelectingRef.current = false;
+              }, 100);
+            }}
+          />
+        </div>
+
+        {/* Footer giữ nguyên */}
+        <div
+          ref={footerRef}
+          className={cn(
+            "bg-beerus border-t border-gray-300 shrink-0 px-4",
+            isCustomerView && "hidden"
+          )}
+        >
+          <div className="p-2 flex gap-3">
+            <div className="flex-1">
+              <div className="flex gap-4 bg-white p-2">
+                <div className="text-sm">
+                  <div className="flex items-center">
+                    <p className="min-w-[70px] text-trunks">Số vé:</p>
+                    <p className="text-whis font-bold flex-1 text-right">
+                      {selectedSeats.length}
+                    </p>
+                  </div>
+                  <div className="flex items-center mt-1">
+                    <p className="min-w-[70px] text-trunks">Giảm giá:</p>
+                    <p className="text-hit font-bold flex-1 text-right">
+                      {formatMoney(0)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center mt-1">
-                  <p className="min-w-[70px] text-trunks">Giảm giá:</p>
-                  <p className="text-hit font-bold flex-1 text-right">
-                    {formatMoney(0)}
-                  </p>
+                <div className="text-sm">
+                  <div className="flex items-center">
+                    <p className="min-w-[60px] text-trunks">Tiền vé:</p>
+                    <p className="font-bold text-right flex-1">
+                      {formatMoney(totalPrice)}
+                    </p>
+                  </div>
+                  <div className="flex items-center mt-1">
+                    <p className="min-w-[60px] text-trunks">Còn lại:</p>
+                    <p className="font-bold text-right flex-1">
+                      {formatMoney(0)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="text-sm">
-                <div className="flex items-center">
-                  <p className="min-w-[60px] text-trunks">Tiền vé:</p>
-                  <p className="font-bold text-right flex-1">
+                <div>
+                  <p className="text-trunks text-sm whitespace-nowrap">
+                    Thanh toán:
+                  </p>
+                  <p className="font-bold flex-1 text-primary text-xl">
                     {formatMoney(totalPrice)}
                   </p>
                 </div>
-                <div className="flex items-center mt-1">
-                  <p className="min-w-[60px] text-trunks">Còn lại:</p>
-                  <p className="font-bold text-right flex-1">
-                    {formatMoney(0)}
-                  </p>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center text-xs">
+                <p className="mr-1 whitespace-nowrap">Ghế đã chọn:</p>
+                <div className="flex items-center gap-1 max-w-[250px] overflow-hidden">
+                  {selectedSeats?.map((item) => (
+                    <span
+                      className="bg-zeno/56 rounded-sm text-white py-px text-xs px-1"
+                      key={item.code}
+                    >
+                      {item.code}
+                    </span>
+                  ))}
                 </div>
               </div>
-              <div>
-                <p className="text-trunks text-sm whitespace-nowrap">
-                  Thanh toán:
-                </p>
-                <p className="font-bold flex-1 text-primary text-xl">
-                  {formatMoney(totalPrice)}
-                </p>
+              <div className="mt-1 flex gap-1">
+                <button className="h-10 flex-1 bg-white border border-dodoria/60 text-dodoria px-2 text-xs rounded-md font-bold">
+                  Hủy chỗ
+                </button>
+                <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
+                  Giữ chỗ
+                </button>
+                <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
+                  Đổi vé
+                </button>
+                <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
+                  Đổi quà
+                </button>
               </div>
             </div>
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center text-xs">
-              <p className="mr-1 whitespace-nowrap">Ghế đã chọn:</p>
-              <div className="flex items-center gap-1 max-w-[250px] overflow-hidden">
-                {selectedSeats?.map((item) => (
-                  <span
-                    className="bg-zeno/56 rounded-sm text-white py-px text-xs px-1"
-                    key={item.code}
-                  >
-                    {item.code}
-                  </span>
-                ))}
-              </div>
+            <div className="flex gap-3">
+              <RadioGroup
+                defaultValue={PaymentType.POS}
+                value={paymentType}
+                onValueChange={(value) => setPaymentType(value as PaymentType)}
+                className="gap-1"
+              >
+                <div className="flex items-center gap-3">
+                  <RadioGroupItem value={PaymentType.POS} id="pos" />
+                  <Label htmlFor="pos" className="text-xs">
+                    Tiền mặt
+                  </Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <RadioGroupItem value={PaymentType.VNPAY} id="vnpay" />
+                  <Label htmlFor="vnpay" className="text-xs">
+                    Quét VNpayQR
+                  </Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <RadioGroupItem value={PaymentType.VIETQR} id="vietqr" />
+                  <Label htmlFor="vietqr" className="text-xs">
+                    Quét VietQR
+                  </Label>
+                </div>
+              </RadioGroup>
+              <Button className="flex flex-col h-16" onClick={onBooking}>
+                <Image
+                  src="/images/ticket.svg"
+                  width={24}
+                  height={24}
+                  alt="icon"
+                />
+                <span className="text-base font-bold">In vé</span>
+              </Button>
             </div>
-            <div className="mt-1 flex gap-1">
-              <button className="h-10 flex-1 bg-white border border-dodoria/60 text-dodoria px-2 text-xs rounded-md font-bold">
-                Hủy chỗ
-              </button>
-              <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
-                Giữ chỗ
-              </button>
-              <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
-                Đổi vé
-              </button>
-              <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
-                Đổi quà
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <RadioGroup
-              defaultValue={PaymentType.POS}
-              value={paymentType}
-              onValueChange={(value) => setPaymentType(value as PaymentType)}
-              className="gap-1"
-            >
-              <div className="flex items-center gap-3">
-                <RadioGroupItem value={PaymentType.POS} id="pos" />
-                <Label htmlFor="pos" className="text-xs">
-                  Tiền mặt
-                </Label>
-              </div>
-              <div className="flex items-center gap-3">
-                <RadioGroupItem value={PaymentType.VNPAY} id="vnpay" />
-                <Label htmlFor="vnpay" className="text-xs">
-                  Quét VNpayQR
-                </Label>
-              </div>
-              <div className="flex items-center gap-3">
-                <RadioGroupItem value={PaymentType.VIETQR} id="vietqr" />
-                <Label htmlFor="vietqr" className="text-xs">
-                  Quét VietQR
-                </Label>
-              </div>
-            </RadioGroup>
-            <Button className="flex flex-col h-16" onClick={onBooking}>
-              <Image
-                src="/images/ticket.svg"
-                width={24}
-                height={24}
-                alt="icon"
-              />
-              <span className="text-base font-bold">In vé</span>
-            </Button>
           </div>
         </div>
-      </div>
 
-      {openQrDialog && (state.data || qrDialogData?.dataQr) && (
-        <QrCodeDialog
-          open={openQrDialog}
-          onOpenChange={(newOpen: boolean) => setOpenQrDialog(newOpen)}
-          filmName={qrDialogData?.filmName || data.filmInfo.filmName}
-          roomName={qrDialogData?.roomName || data.roomInfo.name}
-          projectDate={qrDialogData?.projectDate || data.projectDate}
-          projectTime={qrDialogData?.projectTime || data.projectTime}
-          dataQr={qrDialogData?.dataQr || state.data!}
-          selectedSeats={
-            qrDialogData?.selectedSeats ||
-            selectedSeats.map((item) => item.code).join(", ")
-          }
-          orderTotal={qrDialogData?.orderTotal || state.orderTotal}
-          orderDiscount={qrDialogData?.orderDiscount || state.orderDiscount}
-          orderCreatedAt={qrDialogData?.orderCreatedAt || state.orderCreatedAt}
-        />
-      )}
-    </div>
+        {openQrDialog && (state.data || qrDialogData?.dataQr) && (
+          <QrCodeDialog
+            open={openQrDialog}
+            onOpenChange={(newOpen: boolean) => setOpenQrDialog(newOpen)}
+            filmName={qrDialogData?.filmName || data.filmInfo.filmName}
+            roomName={qrDialogData?.roomName || data.roomInfo.name}
+            projectDate={qrDialogData?.projectDate || data.projectDate}
+            projectTime={qrDialogData?.projectTime || data.projectTime}
+            dataQr={qrDialogData?.dataQr || state.data!}
+            selectedSeats={
+              qrDialogData?.selectedSeats ||
+              selectedSeats.map((item) => item.code).join(", ")
+            }
+            orderTotal={qrDialogData?.orderTotal || state.orderTotal}
+            orderDiscount={qrDialogData?.orderDiscount || state.orderDiscount}
+            orderCreatedAt={
+              qrDialogData?.orderCreatedAt || state.orderCreatedAt
+            }
+          />
+        )}
+      </div>
+    </>
   );
 };
 
