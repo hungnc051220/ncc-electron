@@ -94,11 +94,11 @@ export const NAV_ITEMS = [
         href: "/retail-ticket-sales",
       },
       {
-        title: "In vé online",
-        href: "/online-ticket-printing",
+        title: "Quản lý vé online",
+        href: "/online-tickets",
       },
       {
-        title: "Hủy vé",
+        title: "Quản lý vé hủy",
         href: "/ticket-cancellation",
       },
       {
@@ -116,10 +116,6 @@ export const NAV_ITEMS = [
       {
         title: "Thông kê doanh thu bán vé",
         href: "/ticket-sales-revenue",
-      },
-      {
-        title: "Cho phép in lại vé",
-        href: "/reprint-tickets",
       },
     ],
   },

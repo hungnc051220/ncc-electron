@@ -147,6 +147,44 @@ export const getFilms = async (
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 
+export const getOrders = async ({
+  searchText,
+  page,
+  pageSize,
+}: {
+  searchText?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<OrderDetailProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/pos/order", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+  filter.isOnline = false;
+
+  if (filter.searchText) {
+    filter.keyword = searchText;
+  }
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+    sort: "createdOnUtc.desc",
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
 export const getOrderDetail = async (id: number): Promise<OrderDetailProps> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
