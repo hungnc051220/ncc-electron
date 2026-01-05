@@ -9,22 +9,17 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  ApiResponse,
-  OrderDetailProps
-} from "@/types";
+import { ApiResponse, OrderDetailProps } from "@/types";
 import { useMemo, useState } from "react";
 import { createColumns } from "./columns";
+import Filter from "./filter";
 
 interface OnlineTicketsClientProps {
   data: ApiResponse<OrderDetailProps>;
   page: number;
 }
 
-const OnlineTicketsClient = ({
-  data,
-  page,
-}: OnlineTicketsClientProps) => {
+const OnlineTicketsClient = ({ data, page }: OnlineTicketsClientProps) => {
   const [isSearching, setIsSearching] = useState(false);
 
   const columns = useMemo(
@@ -56,6 +51,9 @@ const OnlineTicketsClient = ({
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+        </div>
+        <div className="flex items-center gap-3">
+          <Filter onSearchingChange={setIsSearching} />
         </div>
       </div>
 

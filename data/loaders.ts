@@ -4,6 +4,7 @@ import { getApiBaseUrl } from "@/lib/env";
 import {
   ApiResponse,
   CancellationReasonProps,
+  CancellationTicketProps,
   ContractTicketSaleProps,
   CustomerRoleProps,
   DayPartProps,
@@ -20,12 +21,12 @@ import {
   RoomProps,
   SeatTypeProps,
   TicketPriceProps,
-  UserProps,
+  UserProps
 } from "@/types";
+import { endOfYear, format, startOfYear } from "date-fns";
 import { cookies } from "next/headers";
 import qs from "query-string";
 import { fetchAPI } from "./fetch-api";
-import { endOfYear, format, startOfYear } from "date-fns";
 
 const BASE_URL = getApiBaseUrl();
 
@@ -627,4 +628,56 @@ export const getPlanPricing = async ({
     body: { roomId, versionCode, date },
     authToken: accessToken,
   });
+};
+
+export const getCancellationTickets = async ({
+  filmId,
+  userId,
+  fromDate,
+  toDate,
+  page,
+  pageSize,
+}: {
+  filmId?: string;
+  userId?: string;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResponse<CancellationTicketProps>> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/pos/cancel-ticket", BASE_URL);
+
+  const filter: Record<string, unknown> = {};
+
+  if (filmId) {
+    filter.filmId = Number(filmId);
+  }
+
+  if (userId) {
+    filter.userId = Number(userId);
+  }
+
+  if (fromDate && toDate) {
+    filter.createdOnUtc = { between: [fromDate, toDate] };
+  }
+
+  const queryObject: Record<string, unknown> = {
+    current: page,
+    pageSize,
+    sort: "createdOnUtc.desc",
+  };
+
+  if (Object.keys(filter).length > 0) {
+    queryObject.filter = JSON.stringify(filter);
+  }
+  console.log(queryObject.filter);
+
+  url.search = qs.stringify(queryObject, {
+    skipEmptyString: true,
+    skipNull: true,
+    encode: false,
+  });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };

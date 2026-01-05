@@ -1,5 +1,5 @@
 import { getOrders } from "@/data/loaders";
-import OnlineTicketsClient from "./components/online-ticket-printing-client";
+import OnlineTicketsClient from "./components/online-tickets-client";
 
 interface OnlineTicketsPageProps {
   searchParams: Promise<{ [key: string]: string | undefined }>;

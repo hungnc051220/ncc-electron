@@ -99,7 +99,7 @@ export const NAV_ITEMS = [
       },
       {
         title: "Quản lý vé hủy",
-        href: "/ticket-cancellation",
+        href: "/cancellation-tickets",
       },
       {
         title: "Hoàn tiền",
@@ -127,24 +127,8 @@ export const NAV_ITEMS = [
         href: "/access-history",
       },
       {
-        title: "Lịch sử hủy vé",
-        href: "/ticket-cancellation-history",
-      },
-      {
-        title: "Lịch sử bán vé tại quầy",
-        href: "/counter-sales-history",
-      },
-      {
-        title: "Lịch sử cấp giấy mời",
-        href: "/complimentary-tickets-history",
-      },
-      {
-        title: "Lịch sử bán vé Online",
-        href: "/online-sales-history",
-      },
-      {
-        title: "Lịch sử bán vé Offline",
-        href: "/offline-sales-history",
+        title: "Lịch sử bán vé",
+        href: "/ticket-history",
       },
     ],
   },
@@ -164,7 +148,7 @@ export const NAV_ITEMS = [
         href: "/showtime-revenue-statistics",
       },
       {
-        title: "Báo cáo Quý, doaanh thu, buổi chiếu, khán giả",
+        title: "Báo cáo quý, doanh thu, buổi chiếu, khán giả",
         href: "/quarterly-report",
       },
       {

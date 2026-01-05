@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { getApiBaseUrl } from "@/lib/env";
+import { cookies } from "next/headers";
 
 const BASE_URL = getApiBaseUrl();
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { OrderStatusBadge } from "@/components/order-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +13,6 @@ import { OrderDetailProps } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Check, MoreHorizontal, X } from "lucide-react";
-
 interface ColumnsProps {
   page: number;
 }
@@ -32,7 +33,8 @@ export const createColumns = ({
   {
     accessorKey: "createdOnUtc",
     header: "Thời gian mua",
-    cell: ({ row }) => format(row.original.order.createdOnUtc, "HH:mm dd/MM/yyyy"), //row.original.order.createdOnUtc,
+    cell: ({ row }) =>
+      format(row.original.order.createdOnUtc, "HH:mm dd/MM/yyyy"), //row.original.order.createdOnUtc,
   },
   {
     accessorKey: "customerName",
@@ -55,18 +57,23 @@ export const createColumns = ({
   {
     accessorKey: "filmName",
     header: "Tên phim",
-    cell: ({ row }) => row.original.film.filmName,
+    cell: ({ row }) => row.original.film?.filmName,
   },
   {
     accessorKey: "projectDate",
     header: "Ngày chiếu",
     cell: ({ row }) =>
-      format(row.original.planScreening.projectDate, "dd/MM/yyyy"),
+      row.original.planScreening?.projectDate
+        ? format(row.original.planScreening.projectDate, "dd/MM/yyyy")
+        : "",
   },
   {
     accessorKey: "projectTime",
     header: "Giờ chiếu",
-    cell: ({ row }) => format(row.original.planScreening.projectTime, "HH:mm"),
+    cell: ({ row }) =>
+      row.original.planScreening?.projectTime
+        ? format(row.original.planScreening.projectTime, "HH:mm")
+        : "",
   },
   {
     accessorKey: "numberOfTickets",
@@ -91,6 +98,26 @@ export const createColumns = ({
       ),
   },
   {
+    accessorKey: "orderStatusId",
+    header: "Trạng thái đơn",
+    cell: ({ row }) => (
+      <OrderStatusBadge
+        status={row.original.order.orderStatusId}
+        type="order"
+      />
+    ),
+  },
+  {
+    accessorKey: "paymentStatusId",
+    header: "Trạng thái thanh toán",
+    cell: ({ row }) => (
+      <OrderStatusBadge
+        status={row.original.order.paymentStatusId}
+        type="payment"
+      />
+    ),
+  },
+  {
     accessorKey: "actions",
     header: "",
     enableHiding: false,
@@ -105,6 +132,7 @@ export const createColumns = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => {}}>Xem chi tiết</DropdownMenuItem>
             <DropdownMenuItem onClick={() => {}}>In vé</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -793,3 +793,39 @@ export interface OrderDetailProps {
   film: FilmProps;
   room: RoomProps;
 }
+
+export interface CancellationTicketProps {
+  id: number;
+  filmName: string;
+  roomName: string;
+  projectDate: string;
+  projectTime: string;
+  quantity: number;
+  cancelChairIndexF1: string;
+  cancelChairIndexF2: string;
+  cancelChairIndexF3: string;
+  cancelChairValueF1: string;
+  cancelChairValueF2: string;
+  cancelChairValueF3: string;
+  createdOnUtc: string;
+  userName: string;
+  reason: string;
+}
+
+export enum OrderStatus {
+  PENDING = 10,
+  PROCESSING = 20,
+  COMPLETED = 30,
+  CANCELLED = 40,
+  FAIL = 60,
+}
+
+export enum PaymentStatus {
+  PENDING = 10,
+  AUTHORIZED = 20,
+  PAID = 30,
+  PARTIALLY_REFUNDED = 35,
+  REFUNDED = 40,
+  VOIDED = 50,
+  FAIL = 60,
+}
