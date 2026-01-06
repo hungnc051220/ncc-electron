@@ -11,15 +11,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { getFilm, getFilms, getUser, getUsers } from "@/data/loaders";
-import { useDebounce } from "@/hooks/use-debounce";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { FilterIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { default as qs, default as queryString } from "query-string";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import Select from "react-select";
+import { default as qs } from "query-string";
+import { useEffect, useState, useTransition } from "react";
 
 interface FilterProps {
   onSearchingChange?: (pending: boolean) => void;
@@ -30,10 +26,6 @@ const Filter = ({ onSearchingChange }: FilterProps) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [searchText, setSearchText] = useState<string | undefined>(undefined);
-  const [searchTextUser, setSearchTextUser] = useState<string | undefined>(
-    undefined
-  );
   const [orderInfo, setOrderInfo] = useState<string | undefined>(
     searchParams.get("orderInfo") || undefined
   );

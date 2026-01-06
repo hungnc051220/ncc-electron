@@ -14,12 +14,12 @@ import { useMemo, useState } from "react";
 import { createColumns } from "./columns";
 import Filter from "./filter";
 
-interface OnlineTicketsClientProps {
+interface FindOnlineTicketsClientProps {
   data: ApiResponse<OrderDetailProps>;
   page: number;
 }
 
-const OnlineTicketsClient = ({ data, page }: OnlineTicketsClientProps) => {
+const FindOnlineTicketsClient = ({ data, page }: FindOnlineTicketsClientProps) => {
   const [isSearching, setIsSearching] = useState(false);
 
   const columns = useMemo(
@@ -46,7 +46,7 @@ const OnlineTicketsClient = ({ data, page }: OnlineTicketsClientProps) => {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-bold">
-                  Quản lý vé online
+                  Tìm vé online
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
@@ -68,4 +68,4 @@ const OnlineTicketsClient = ({ data, page }: OnlineTicketsClientProps) => {
   );
 };
 
-export default OnlineTicketsClient;
+export default FindOnlineTicketsClient;

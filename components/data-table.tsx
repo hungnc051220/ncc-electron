@@ -4,6 +4,8 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  OnChangeFn,
+  RowSelectionState,
   useReactTable,
 } from "@tanstack/react-table";
 
@@ -35,6 +37,9 @@ interface DataTableProps<TData, TValue> {
   loading?: boolean;
   total: number;
   className?: string;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  getRowId?: (originalRow: TData, index: number, parent?: unknown) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -43,6 +48,9 @@ export function DataTable<TData, TValue>({
   loading,
   total,
   className,
+  rowSelection,
+  onRowSelectionChange,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -80,6 +88,11 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     rowCount: total,
+    onRowSelectionChange,
+    getRowId,
+    state: {
+      rowSelection: rowSelection || {},
+    },
   });
 
   useEffect(() => {

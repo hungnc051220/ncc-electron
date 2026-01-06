@@ -21,7 +21,7 @@ import {
   RoomProps,
   SeatTypeProps,
   TicketPriceProps,
-  UserProps
+  UserProps,
 } from "@/types";
 import { endOfYear, format, startOfYear } from "date-fns";
 import { cookies } from "next/headers";
@@ -150,22 +150,62 @@ export const getFilms = async (
 
 export const getOrders = async ({
   searchText,
+  isOnline,
+  barCode,
   page,
   pageSize,
+  id,
+  phoneNumber,
+  email,
+  fromDate,
+  toDate,
 }: {
+  isOnline?: string;
   searchText?: string;
+  barCode?: string;
   page?: number;
   pageSize?: number;
+  id?: string;
+  phoneNumber?: string;
+  email?: string;
+  fromDate?: string;
+  toDate?: string;
 }): Promise<ApiResponse<OrderDetailProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/order", BASE_URL);
 
   const filter: Record<string, unknown> = {};
-  filter.isOnline = false;
+
+  if (id) {
+    filter.id = id;
+  }
+
+  if (phoneNumber) {
+    filter.customerPhone = phoneNumber;
+  }
+
+  if (email) {
+    filter.customerEmail = email;
+  }
+
+  if (isOnline) {
+    filter.isOnline = isOnline === "ONLINE" ? true : false;
+    filter.IsInvitation = false;
+    filter.IsContract = false;
+    filter.Deleted = 0;
+  }
+
+  if (barCode) {
+    filter.barCode = barCode;
+  }
 
   if (filter.searchText) {
     filter.keyword = searchText;
+  }
+
+  if (fromDate && toDate) {
+    filter.createdOnUtc = { between: [fromDate, toDate] };
   }
 
   const queryObject: Record<string, unknown> = {

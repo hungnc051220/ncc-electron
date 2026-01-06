@@ -562,7 +562,7 @@ const Seats = ({ data }: SeatsProps) => {
 
       // Giới hạn kích thước tối thiểu và tối đa
       const minSize = 30;
-      const maxSize = 60;
+      const maxSize = 80;
       const finalSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
 
       setSeatSize(finalSize);

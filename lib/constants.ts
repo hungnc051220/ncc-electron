@@ -94,8 +94,12 @@ export const NAV_ITEMS = [
         href: "/retail-ticket-sales",
       },
       {
-        title: "Quản lý vé online",
-        href: "/online-tickets",
+        title: "In vé online",
+        href: "/print-online-tickets",
+      },
+      {
+        title: "Tìm vé online",
+        href: "/find-online-tickets",
       },
       {
         title: "Quản lý vé hủy",
@@ -128,7 +132,7 @@ export const NAV_ITEMS = [
       },
       {
         title: "Lịch sử bán vé",
-        href: "/ticket-history",
+        href: "/order-history",
       },
     ],
   },

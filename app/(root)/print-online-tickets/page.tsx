@@ -1,11 +1,11 @@
 import { getOrders } from "@/data/loaders";
-import OnlineTicketsClient from "./components/online-tickets-client";
+import PrintOnlineTicketsClient from "./components/print-online-tickets-client";
 
-interface OnlineTicketsPageProps {
+interface PrintOnlineTicketsPageProps {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }
 
-const OnlineTicketsPage = async ({ searchParams }: OnlineTicketsPageProps) => {
+const PrintOnlineTicketsPage = async ({ searchParams }: PrintOnlineTicketsPageProps) => {
   const filter = await searchParams;
   const searchText = filter?.searchText;
   const page = filter?.page ? parseInt(filter.page, 10) || 1 : 1;
@@ -13,7 +13,7 @@ const OnlineTicketsPage = async ({ searchParams }: OnlineTicketsPageProps) => {
 
   const orders = await getOrders({page, pageSize, searchText});
 
-  return <OnlineTicketsClient data={orders} page={page} />;
+  return <PrintOnlineTicketsClient data={orders} page={page} />;
 };
 
-export default OnlineTicketsPage;
+export default PrintOnlineTicketsPage;

@@ -1,34 +1,96 @@
 "use client";
 
 import { OrderStatusBadge } from "@/components/order-status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { formatMoney } from "@/lib/utils";
 import { OrderDetailProps } from "@/types";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Check, MoreHorizontal, X } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 interface ColumnsProps {
   page: number;
+  onViewDetail: (item: OrderDetailProps) => void;
+  options: {
+    isRowPreselected?: (item: OrderDetailProps) => boolean;
+  };
 }
 
 export const createColumns = ({
   page,
+  onViewDetail,
+  options = {},
 }: ColumnsProps): ColumnDef<OrderDetailProps>[] => [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={(() => {
+          const selectableRows = table.getRowModel().rows;
+          if (selectableRows.length === 0) return false;
+          const allChecked = selectableRows.every(
+            (row) =>
+              options.isRowPreselected?.(row.original) || row.getIsSelected()
+          );
+          if (allChecked) return true;
+          const someChecked = selectableRows.some(
+            (row) =>
+              options.isRowPreselected?.(row.original) || row.getIsSelected()
+          );
+          return someChecked ? "indeterminate" : false;
+        })()}
+        onCheckedChange={(value) => {
+          const shouldSelect = !!value;
+          const nextSelection: RowSelectionState = {};
+          table.getRowModel().rows.forEach((row) => {
+            if (shouldSelect) {
+              nextSelection[row.id] = true;
+            }
+          });
+          table.setRowSelection(nextSelection);
+        }}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={
+          options.isRowPreselected?.(row.original) || row.getIsSelected()
+        }
+        onCheckedChange={(value) => {
+          row.toggleSelected(!!value);
+        }}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
   {
     accessorKey: "no",
     header: "STT",
     cell: ({ row }) => (page - 1) * 100 + row.index + 1,
   },
   {
+    accessorKey: "id",
+    header: "Mã đơn",
+    cell: ({ row }) => row.original.order.id,
+  },
+  {
     accessorKey: "barCode",
     header: "Mã đặt vé",
     cell: ({ row }) => row.original.order.barCode,
+  },
+  {
+    accessorKey: "orderTotal",
+    header: "Tiền thanh toán",
+    cell: ({ row }) => formatMoney(row.original.order.orderTotal || 0),
   },
   {
     accessorKey: "createdOnUtc",
@@ -88,16 +150,6 @@ export const createColumns = ({
       row.original.order.items.map((item) => item.listChairValueF1).join(", "),
   },
   {
-    accessorKey: "isPrinted",
-    header: "Đã in",
-    cell: ({ row }) =>
-      row.original.order.printedOnUtc ? (
-        <Check className="size-4 text-green-500" />
-      ) : (
-        <X className="size-4 text-red-500" />
-      ),
-  },
-  {
     accessorKey: "orderStatusId",
     header: "Trạng thái đơn",
     cell: ({ row }) => (
@@ -132,8 +184,9 @@ export const createColumns = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => {}}>Xem chi tiết</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {}}>In vé</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onViewDetail(item)}>
+              Xem chi tiết
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

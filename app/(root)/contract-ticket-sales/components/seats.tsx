@@ -1,10 +1,14 @@
 "use client";
 
 import { updateSeatContractTicketSaleAction } from "@/actions/contract-ticket-sale-actions";
-import Legend from "@/app/(root)/plan-screening/[slug]/components/legend";
 import { Button } from "@/components/ui/button";
 import { cn, formatMoney } from "@/lib/utils";
-import { ListSeat, PlanScreeningDetailProps } from "@/types";
+import {
+  ListSeat,
+  PlanScreeningDetailProps
+} from "@/types";
+import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Loader2 } from "lucide-react";
 import {
   memo,
@@ -18,6 +22,8 @@ import {
 } from "react";
 import Selecto from "react-selecto";
 import { toast } from "sonner";
+import BackButton from "../../plan-screening/[slug]/components/back-button";
+import Legend from "../../plan-screening/[slug]/components/legend";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -76,6 +82,8 @@ const Seat = memo(
         }}
         onClick={handleClick}
         data-seat-code={seat.code}
+        data-seat-floor={seat.floor}
+        data-seat-unique-key={`${seat.floor}-${seat.code}`}
       >
         <p
           className="text-xs"
@@ -90,6 +98,11 @@ const Seat = memo(
 
 Seat.displayName = "Seat";
 
+// Helper function để tạo unique key cho ghế (kết hợp floor và code)
+const getSeatUniqueKey = (seat: ListSeat): string => {
+  return `${seat.floor}-${seat.code}`;
+};
+
 const Seats = ({ data, editingItemId }: SeatsProps) => {
   const { listSeats: seats } = data;
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
@@ -102,13 +115,54 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [seatSize, setSeatSize] = useState(44);
 
-  // Tạo map để tra cứu ghế từ seat code
+  // Tính toán số tầng có sẵn
+  const availableFloors = useMemo(() => {
+    const floors = new Set<number>();
+    seats?.forEach((row) => {
+      row.forEach((seat) => {
+        if (seat.floor) {
+          floors.add(seat.floor);
+        }
+      });
+    });
+    return Array.from(floors).sort((a, b) => a - b);
+  }, [seats]);
+
+  // State cho tầng được chọn bởi người dùng
+  const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(
+    null
+  );
+
+  // Tính toán tầng được chọn: ưu tiên userSelectedFloor, nếu không hợp lệ thì dùng tầng đầu tiên
+  const selectedFloor = useMemo(() => {
+    if (availableFloors.length === 0) return 1;
+    if (userSelectedFloor && availableFloors.includes(userSelectedFloor)) {
+      return userSelectedFloor;
+    }
+    return availableFloors[0];
+  }, [availableFloors, userSelectedFloor]);
+
+  // Không filter selectedSeats khi đổi tầng - cho phép chọn ghế từ nhiều tầng cùng lúc
+
+  // Filter seats theo tầng được chọn
+  const filteredSeats = useMemo(() => {
+    if (!seats) return [];
+    return seats
+      .map((row) => row.filter((seat) => seat.floor === selectedFloor))
+      .filter((row) => row.length > 0);
+  }, [seats, selectedFloor]);
+
+  // Key prop trên Selecto component sẽ force re-mount khi selectedFloor thay đổi
+  // Điều này đảm bảo Selecto nhận biết các element mới sau khi chuyển tầng
+
+  // Tạo map để tra cứu ghế từ unique key (kết hợp floor và code để tránh trùng)
   const seatMap = useMemo(() => {
     const map: Record<string, ListSeat> = {};
     seats?.forEach((row) => {
       row.forEach((seat) => {
         if (seat.type !== 12 && seat.status !== 1) {
-          map[seat.code] = seat;
+          const uniqueKey = getSeatUniqueKey(seat);
+          map[uniqueKey] = seat;
         }
       });
     });
@@ -120,9 +174,6 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
     INITIAL_STATE
   );
   const prevPendingRef = useRef(pending);
-  const [selectoContainer, setSelectoContainer] = useState<HTMLElement | null>(
-    null
-  );
 
   useEffect(() => {
     const justCompleted = prevPendingRef.current && !pending;
@@ -138,9 +189,12 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
   // Sử dụng useCallback để tránh re-render không cần thiết
   const handleSelectSeat = useCallback((seat: ListSeat) => {
     setSelectedSeats((prev) => {
-      const isAlreadySelected = prev.find((s) => s.seat === seat.seat);
+      const seatUniqueKey = getSeatUniqueKey(seat);
+      const isAlreadySelected = prev.find(
+        (s) => getSeatUniqueKey(s) === seatUniqueKey
+      );
       if (isAlreadySelected) {
-        return prev.filter((s) => s.seat !== seat.seat);
+        return prev.filter((s) => getSeatUniqueKey(s) !== seatUniqueKey);
       } else {
         return [...prev, seat];
       }
@@ -156,27 +210,27 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
       isSelectingRef.current = true;
 
       setSelectedSeats((prev) => {
-        const newSelected = new Set(prev.map((s) => s.code));
+        const newSelected = new Set(prev.map((s) => getSeatUniqueKey(s)));
 
         // Thêm ghế mới
         e.added.forEach((el) => {
-          const seatCode = el.getAttribute("data-seat-code");
-          if (seatCode && seatMap[seatCode] && !newSelected.has(seatCode)) {
-            newSelected.add(seatCode);
+          const uniqueKey = el.getAttribute("data-seat-unique-key");
+          if (uniqueKey && seatMap[uniqueKey] && !newSelected.has(uniqueKey)) {
+            newSelected.add(uniqueKey);
           }
         });
 
         // Xóa ghế bị bỏ chọn
         e.removed.forEach((el) => {
-          const seatCode = el.getAttribute("data-seat-code");
-          if (seatCode) {
-            newSelected.delete(seatCode);
+          const uniqueKey = el.getAttribute("data-seat-unique-key");
+          if (uniqueKey) {
+            newSelected.delete(uniqueKey);
           }
         });
 
         // Convert back to array
         return Array.from(newSelected)
-          .map((code) => seatMap[code])
+          .map((uniqueKey) => seatMap[uniqueKey])
           .filter(Boolean);
       });
 
@@ -242,12 +296,8 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
     }
   }, [state.error]);
 
-  // Gắn container cho Selecto sau khi mount để tính toạ độ chính xác trong modal
-  useEffect(() => {
-    setSelectoContainer(seatContainerRef.current);
-  }, []);
-
   // Tính toán kích thước ghế tự động để fit vào màn hình
+  // Tính dựa trên tầng có nhiều ghế nhất để đảm bảo tất cả tầng đều fit và nhất quán
   useEffect(() => {
     if (!seats || seats.length === 0 || !seatContainerRef.current) return;
 
@@ -260,9 +310,36 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
       const availableHeight = containerRect.height;
       const availableWidth = containerRect.width;
 
-      // Tính số hàng và số ghế trong hàng dài nhất
-      const numRows = seats.length;
-      const maxSeatsPerRow = Math.max(...seats.map((row) => row.length));
+      // Tính toán số hàng và số ghế trong hàng dài nhất của tầng có nhiều ghế nhất
+      // Điều này đảm bảo kích thước nhất quán giữa các tầng và không bị tính lại khi đổi tầng
+      let maxRows = 0;
+      let maxSeatsPerRow = 0;
+
+      // Tìm tầng có nhiều ghế nhất
+      availableFloors.forEach((floor) => {
+        const floorSeats = seats
+          .map((row) => row.filter((seat) => seat.floor === floor))
+          .filter((row) => row.length > 0);
+
+        if (floorSeats.length > maxRows) {
+          maxRows = floorSeats.length;
+        }
+
+        const maxSeatsInFloor = Math.max(
+          ...floorSeats.map((row) => row.length)
+        );
+        if (maxSeatsInFloor > maxSeatsPerRow) {
+          maxSeatsPerRow = maxSeatsInFloor;
+        }
+      });
+
+      // Fallback nếu không tìm thấy tầng nào
+      if (maxRows === 0 || maxSeatsPerRow === 0) {
+        maxRows = seats.length;
+        maxSeatsPerRow = Math.max(...seats.map((row) => row.length));
+      }
+
+      const numRows = maxRows;
 
       // Tính gap giữa các ghế (6px) và label bên trái/phải (ước tính ban đầu)
       const gapBetweenSeats = 6;
@@ -283,8 +360,8 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
       const calculatedSize = Math.min(widthBasedSize, heightBasedSize);
 
       // Giới hạn kích thước tối thiểu và tối đa
-      const minSize = 20;
-      const maxSize = 60;
+      const minSize = 30;
+      const maxSize = 80;
       const finalSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
 
       setSeatSize(finalSize);
@@ -305,11 +382,11 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
       clearTimeout(timeoutId);
       window.removeEventListener("resize", handleResize);
     };
-  }, [seats]);
+  }, [seats, availableFloors]); // Chỉ tính lại khi seats hoặc availableFloors thay đổi, không phải khi đổi tầng
 
   // Render seats với useMemo để tránh re-render không cần thiết
   const renderedSeats = useMemo(() => {
-    return seats?.map((item, index) => (
+    return filteredSeats?.map((item, index) => (
       <div
         key={index}
         className="flex gap-[6px] items-center justify-center seat-row"
@@ -329,7 +406,9 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
           <Seat
             key={seat.seat}
             seat={seat}
-            isSelected={selectedSeats.some((s) => s.code === seat.code)}
+            isSelected={selectedSeats.some(
+              (s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat)
+            )}
             onSelect={handleSelectSeat}
             size={seatSize}
           />
@@ -346,121 +425,162 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
         </div>
       </div>
     ));
-  }, [seats, selectedSeats, handleSelectSeat, seatSize]);
+  }, [filteredSeats, selectedSeats, handleSelectSeat, seatSize]);
 
   return (
-    <div
-      className="relative flex flex-col"
-      style={{ height: "100vh", overflow: "hidden" }}
-    >
-      {pending && (
-        <div className="absolute inset-0 size-full z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Đang tải...</span>
+    <>
+      <div className="flex items-center justify-between px-4 py-2">
+        <div className="flex-1 flex items-center gap-3">
+          <BackButton />
+          <div className="flex items-center gap-4">
+            <p className="text-chichi text-sm xl:text-lg font-medium">
+              Buổi {formatInTimeZone(data.projectTime, "UTC", "HH:mm")} - Ngày{" "}
+              {format(new Date(data.projectDate), "dd/MM/yyyy")}
+            </p>
+            <p className="font-bold text-base xl:text-xl">
+              {data.filmInfo.filmName}
+            </p>
           </div>
         </div>
-      )}
-      <div
-        ref={mainContainerRef}
-        className="bg-goku p-3 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
-        style={{ marginTop: "1rem" }}
-      >
-        <div className="shrink-0">
-          <div className="w-full h-[4px] bg-jiren mx-auto"></div>
-          <p className="text-center text-sm font-bold text-trunks">Màn hình</p>
+        <div className="rounded-lg flex items-center gap-4">
+          {availableFloors.length > 1 && (
+            <div className="flex justify-center gap-2">
+              {availableFloors.map((floor) => (
+                <p
+                  key={floor}
+                  onClick={() => {
+                    setUserSelectedFloor(floor);
+                    // Không xóa ghế đã chọn - cho phép chọn ghế từ nhiều tầng cùng lúc
+                  }}
+                  className={cn(
+                    "pr-1 border-b-2 border-transparent text-sm font-bold",
+                    selectedFloor === floor && "border-primary text-primary"
+                  )}
+                >
+                  Tầng {floor}
+                </p>
+              ))}
+            </div>
+          )}
+          <p className="text-sm font-bold bg-beerus py-1 px-2 rounded-sm">
+            Phòng {data.roomInfo.name}
+          </p>
         </div>
-
-        <div
-          className="mt-4 flex-1 flex items-center justify-center min-h-0 relative"
-          ref={seatContainerRef}
-        >
-          <div className="space-y-[6px] w-full flex flex-col items-center">
-            {renderedSeats}
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs shrink-0">
-          <Legend color="bg-jiren" label="Ghế mới" />
-          <Legend color="bg-whis" label="Đang chọn" />
-          <Legend color="bg-roshi" label="Đang giữ chỗ" />
-          <Legend color="bg-trunks" label="Ghế đã bán" />
-          <Legend color="bg-krillin" label="Ghế VIP" />
-          <Legend color="bg-raditz" label="Ghế hợp đồng" />
-          <Legend color="bg-chichi" label="Ghế đôi" />
-        </div>
-
-        {/* React-Selecto với cấu hình tối ưu */}
-        <Selecto
-          ref={selectoRef}
-          container={selectoContainer ?? undefined}
-          rootContainer={selectoContainer ?? undefined}
-          dragContainer={selectoContainer ?? undefined}
-          selectableTargets={[".selectable-seat"]}
-          hitRate={0}
-          selectByClick={false}
-          selectFromInside={true}
-          toggleContinueSelect={["shift"]}
-          ratio={0}
-          onSelectStart={() => {
-            isSelectingRef.current = true;
-          }}
-          onSelect={handleSelectoSelect}
-          onSelectEnd={() => {
-            setTimeout(() => {
-              isSelectingRef.current = false;
-            }, 100);
-          }}
-        />
       </div>
-
-      {/* Footer giữ nguyên */}
       <div
-        ref={footerRef}
-        className={cn("bg-beerus border-t border-beerus shrink-0 rounded-xl")}
-        style={{ marginTop: "0.75rem" }}
+        className="relative flex flex-col"
+        style={{ height: "100vh", overflow: "hidden" }}
       >
-        <div className="p-2 flex gap-3 max-w-5xl mx-auto">
-          <div className="flex-1 rounded-lg">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 bg-white p-2 rounded-md text-xs xl:text-sm">
-              <div className="flex items-center">
-                <p className="min-w-[70px] text-trunks">Số vé:</p>
-                <p className="flex-1 text-right">{selectedSeats.length}</p>
-              </div>
-              <div className="flex items-center">
-                <p className="min-w-[70px] text-trunks">Tổng giá trị:</p>
-                <p className="text-primary font-bold flex-1 text-right">
-                  {formatMoney(totalPrice)}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <p className="min-w-[70px] text-trunks">Ghế đã chọn:</p>
-                <p className="flex-1 text-right line-clamp-1 max-w-full">
-                  {selectedSeats.map((s) => s.code).join(", ")}
-                </p>
-              </div>
-              <div className="flex items-center">
-                <p className="min-w-[70px] text-trunks">Nhân viên xử lý:</p>
-                <p className="flex-1 text-right">Admin</p>
-              </div>
+        {pending && (
+          <div className="absolute inset-0 size-full z-10 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Đang tải...</span>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button
-              className="h-full font-bold"
-              onClick={onUpdateSeat}
-              disabled={selectedSeats.length === 0}
-            >
-              Thêm vé hợp đồng
-            </Button>
+        )}
+        <div
+          ref={mainContainerRef}
+          className="bg-goku p-2 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
+        >
+          {/* Button group chọn tầng - chỉ hiển thị khi có nhiều hơn 1 tầng */}
 
-            <Button variant="destructive" className="h-full font-bold">
-              Hủy vé hợp đồng
-            </Button>
+          <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
+            <legend className="mx-auto px-3 text-sm text-trunks font-bold">
+              Màn hình
+            </legend>
+          </fieldset>
+
+          <div
+            className="mt-2 flex-1 flex items-center justify-center min-h-0"
+            ref={seatContainerRef}
+          >
+            <div className="space-y-[6px] w-full flex flex-col items-center">
+              {renderedSeats}
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs shrink-0">
+            <Legend color="bg-jiren" label="Ghế mới" />
+            <Legend color="bg-whis" label="Đang chọn" />
+            <Legend color="bg-roshi" label="Đang giữ chỗ" />
+            <Legend color="bg-trunks" label="Ghế đã bán" />
+            <Legend color="bg-krillin" label="Ghế VIP" />
+            <Legend color="bg-raditz" label="Ghế hợp đồng" />
+            <Legend color="bg-chichi" label="Ghế đôi" />
+          </div>
+
+          {/* React-Selecto với cấu hình tối ưu */}
+          <Selecto
+            key={`selecto-${selectedFloor}`}
+            ref={selectoRef}
+            dragContainer=".seat-row"
+            selectableTargets={[".selectable-seat"]}
+            hitRate={0}
+            selectByClick={false}
+            selectFromInside={true}
+            toggleContinueSelect={["shift"]}
+            ratio={0}
+            onSelectStart={() => {
+              isSelectingRef.current = true;
+            }}
+            onSelect={handleSelectoSelect}
+            onSelectEnd={() => {
+              setTimeout(() => {
+                isSelectingRef.current = false;
+              }, 100);
+            }}
+          />
+        </div>
+
+        {/* Footer giữ nguyên */}
+        <div
+          ref={footerRef}
+          className={cn("bg-beerus border-t border-beerus shrink-0 rounded-xl")}
+          style={{ marginTop: "0.75rem" }}
+        >
+          <div className="p-2 flex gap-3 max-w-5xl mx-auto">
+            <div className="flex-1 rounded-lg">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1 bg-white p-2 rounded-md text-xs xl:text-sm">
+                <div className="flex items-center">
+                  <p className="min-w-[70px] text-trunks">Số vé:</p>
+                  <p className="flex-1 text-right">{selectedSeats.length}</p>
+                </div>
+                <div className="flex items-center">
+                  <p className="min-w-[70px] text-trunks">Tổng giá trị:</p>
+                  <p className="text-primary font-bold flex-1 text-right">
+                    {formatMoney(totalPrice)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <p className="min-w-[70px] text-trunks">Ghế đã chọn:</p>
+                  <p className="flex-1 text-right line-clamp-1 max-w-full">
+                    {selectedSeats.map((s) => s.code).join(", ")}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  <p className="min-w-[70px] text-trunks">Nhân viên xử lý:</p>
+                  <p className="flex-1 text-right">Admin</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                className="h-full font-bold"
+                onClick={onUpdateSeat}
+                disabled={selectedSeats.length === 0}
+              >
+                Thêm vé hợp đồng
+              </Button>
+
+              <Button variant="destructive" className="h-full font-bold">
+                Hủy vé hợp đồng
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

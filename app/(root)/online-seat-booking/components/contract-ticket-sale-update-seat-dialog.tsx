@@ -25,6 +25,7 @@ import {
 import { ContractTicketSaleProps } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { ChevronDownIcon, Loader2 } from "lucide-react";
 import { useState } from "react";
 import Seats from "./seats";
@@ -67,7 +68,7 @@ const ContractTicketSaleUpdateSeatDialog = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[876px]">
           <DialogHeader className="border-b">
-            <DialogTitle>Thiết lập ghế ngồi</DialogTitle>
+            <DialogTitle>Danh sách phim đang chiếu</DialogTitle>
           </DialogHeader>
           <div className="max-h-[75vh] overflow-y-auto">
             <div className="px-6 py-5 max-w-[876px]">
@@ -164,8 +165,29 @@ const ContractTicketSaleUpdateSeatDialog = ({
 
       {openSelectSeat && dataPlan && (
         <Dialog open={openSelectSeat} onOpenChange={setOpenSelectSeat}>
-          <DialogContent className="sm:max-w-screen">
-            <div className="p-6 flex flex-col h-screen overflow-hidden">
+          <DialogContent className="sm:max-w-[95vw]">
+            <div className="p-6 flex flex-col h-[95vh] overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 flex items-center gap-3">
+                  <div>
+                    <p className="text-chichi text-sm xl:text-lg font-medium">
+                      Buổi{" "}
+                      {formatInTimeZone(dataPlan.projectTime, "UTC", "HH:mm")} -
+                      Ngày{" "}
+                      {format(new Date(dataPlan.projectDate), "dd/MM/yyyy")}
+                    </p>
+                    <p className="font-bold mt-1 text-base xl:text-xl">
+                      {dataPlan.filmInfo.filmName}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-goku py-1 px-2 rounded-lg mr-4 mt-4">
+                  <p className="text-sm xl:text-base font-bold">
+                    Phòng {dataPlan.roomInfo.name}
+                  </p>
+                </div>
+              </div>
+
               <Seats
                 data={dataPlan}
                 editingItemId={editingContractTicketSale?.id.toString()}

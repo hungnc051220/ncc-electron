@@ -47,7 +47,7 @@ export const updateSeatContractTicketSaleService = async (
   const url = new URL(`/api/pos/order-contract/${id}/set-seats`, BASE_URL);
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
-
+  
   return await fetch(url.toString(), {
     method: "POST",
     headers: {
