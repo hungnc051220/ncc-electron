@@ -56,7 +56,7 @@ export const createColumns = ({
     header: "Số vé",
     cell: ({ row }) => {
       const tickets = row.original.items;
-      const totalQuantity = tickets.reduce((acc, cur) => acc + cur.quantity, 0);
+      const totalQuantity = tickets?.reduce((acc, cur) => acc + cur.quantity, 0);
       return totalQuantity;
     },
   },

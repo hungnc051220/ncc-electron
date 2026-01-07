@@ -3,6 +3,7 @@
 import { getApiBaseUrl } from "@/lib/env";
 import {
   ApiResponse,
+  BackgroundProps,
   CancellationReasonProps,
   CancellationTicketProps,
   ContractTicketSaleProps,
@@ -159,6 +160,7 @@ export const getOrders = async ({
   email,
   fromDate,
   toDate,
+  isInvitation,
 }: {
   isOnline?: string;
   searchText?: string;
@@ -170,6 +172,7 @@ export const getOrders = async ({
   email?: string;
   fromDate?: string;
   toDate?: string;
+  isInvitation?: boolean;
 }): Promise<ApiResponse<OrderDetailProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -206,6 +209,10 @@ export const getOrders = async ({
 
   if (fromDate && toDate) {
     filter.createdOnUtc = { between: [fromDate, toDate] };
+  }
+
+  if (isInvitation !== undefined) {
+    filter.isInvitation = isInvitation;
   }
 
   const queryObject: Record<string, unknown> = {
@@ -719,5 +726,15 @@ export const getCancellationTickets = async ({
     skipNull: true,
     encode: false,
   });
+  return fetchAPI(url.href, { method: "GET", authToken: accessToken });
+};
+
+export const getBackgrounds = async (): Promise<BackgroundProps[]> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL(
+    `/api/pos/invitation-ticket-histories/background-images`,
+    BASE_URL
+  );
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };

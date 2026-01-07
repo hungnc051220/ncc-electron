@@ -33,6 +33,8 @@ export const bookingTicketAction = async (
     paymentMethodSystemName: formData.get("paymentMethodSystemName") as string,
     posName: formData.get("posName") as string,
     posShortName: formData.get("posShortName") as string,
+    isInvitation:
+      (formData.get("isInvitation") as string) === "true" ? true : false,
   };
 
   if (floorNo === 1) {

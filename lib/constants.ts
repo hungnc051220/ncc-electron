@@ -111,7 +111,7 @@ export const NAV_ITEMS = [
       },
       {
         title: "Quản lý giấy mời",
-        href: "/complimentary-tickets",
+        href: "/invitation-tickets",
       },
       {
         title: "Bán vé hợp đồng",

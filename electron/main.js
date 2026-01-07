@@ -5,8 +5,10 @@ const {
   ipcMain,
   utilityProcess,
 } = require("electron/main");
+const fs = require("fs");
 const path = require("path");
 const net = require("net");
+const { dialog } = require("electron");
 
 let mainWindow;
 let customerWindow;
@@ -18,6 +20,89 @@ const isDev = !app.isPackaged;
 const PORT = 3000;
 
 if (require("electron-squirrel-startup")) app.quit();
+
+function renderTemplate(html, data) {
+  let result = html;
+  Object.entries(data).forEach(([key, value]) => {
+    result = result.replaceAll(`{{${key}}}`, value);
+  });
+  return result;
+}
+
+const WIDTH = 2363;
+const HEIGHT = 1064;
+
+async function renderTicketImage(htmlContent, outputPath) {
+  const win = new BrowserWindow({
+    width: 800,
+    height: 600,
+    show: false,
+    useContentSize: true,
+    webPreferences: {
+      offscreen: true,
+    },
+  });
+
+  await win.loadURL(
+    "data:text/html;charset=utf-8," + encodeURIComponent(htmlContent)
+  );
+
+  // đợi font + image load
+  await new Promise((res) => setTimeout(res, 1500));
+
+  // Lấy kích thước thực
+  const actualSize = await win.webContents.executeJavaScript(`
+    (() => {
+      // Tính toán kích thước thực của content
+      const body = document.body;
+      const html = document.documentElement;
+      
+      const width = Math.max(
+        body.scrollWidth,
+        body.offsetWidth,
+        html.clientWidth,
+        html.scrollWidth,
+        html.offsetWidth
+      );
+      
+      const height = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        html.clientHeight,
+        html.scrollHeight,
+        html.offsetHeight
+      );
+      
+      return { 
+        width: Math.ceil(width), 
+        height: Math.ceil(height),
+        devicePixelRatio: window.devicePixelRatio || 1
+      };
+    })();
+  `);
+  
+  console.log('Actual size:', actualSize);
+  
+  // Resize window
+  win.setContentSize(actualSize.width, actualSize.height);
+
+   // Đợi resize
+   await new Promise((res) => setTimeout(res, 300));
+
+   // Capture với kích thước thực
+   const image = await win.webContents.capturePage({
+    x: 0,
+    y: 0,
+    width: actualSize.width,
+    height: actualSize.height,
+  });
+
+  console.log('Image size:', image.getSize());
+
+  fs.writeFileSync(outputPath, image.toPNG());
+
+  win.destroy();
+}
 
 function createIntroWindow() {
   introWindow = new BrowserWindow({
@@ -246,10 +331,15 @@ app.whenReady().then(async () => {
               if (!isResolved) {
                 isResolved = true;
                 if (success) {
-                  console.log(`PRINT RESULT: Success for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`);
+                  console.log(
+                    `PRINT RESULT: Success for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`
+                  );
                   resolve();
                 } else {
-                  console.error(`PRINT RESULT: Error for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`, error);
+                  console.error(
+                    `PRINT RESULT: Error for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`,
+                    error
+                  );
                   reject(error);
                 }
               }
@@ -309,25 +399,40 @@ app.whenReady().then(async () => {
       if (!ticketsToPrint || ticketsToPrint.length === 0) {
         const response = await fetch(`${baseURL}/api/order-items/${orderId}`);
         if (!response.ok) {
-          throw new Error(`Failed to fetch order items: ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch order items: ${response.statusText}`
+          );
         }
         const orderData = await response.json();
 
         // Tạo danh sách vé cần in
         ticketsToPrint = [];
-        for (let itemIndex = 0; itemIndex < orderData.items.length; itemIndex++) {
+        for (
+          let itemIndex = 0;
+          itemIndex < orderData.items.length;
+          itemIndex++
+        ) {
           const item = orderData.items[itemIndex];
 
           // Tách từng ghế từ listChairValueF1, F2, F3
           const getSeatsList = (item) => {
             const seatsF1 = item.listChairValueF1
-              ? item.listChairValueF1.split(",").map((s) => s.trim()).filter(Boolean)
+              ? item.listChairValueF1
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
               : [];
             const seatsF2 = item.listChairValueF2
-              ? item.listChairValueF2.split(",").map((s) => s.trim()).filter(Boolean)
+              ? item.listChairValueF2
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
               : [];
             const seatsF3 = item.listChairValueF3
-              ? item.listChairValueF3.split(",").map((s) => s.trim()).filter(Boolean)
+              ? item.listChairValueF3
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
               : [];
             return [...seatsF1, ...seatsF2, ...seatsF3];
           };
@@ -358,6 +463,65 @@ app.whenReady().then(async () => {
     } catch (error) {
       console.error("Print tickets error:", error);
     }
+  });
+
+  function getAppRootDir() {
+    if (!app.isPackaged) {
+      // Dev: dùng thư mục project
+      return path.join(process.cwd(), "dev-data");
+    }
+
+    // Prod: thư mục cài app
+    return path.dirname(app.getPath("exe"));
+  }
+
+  ipcMain.handle("get-default-export-folder", () => {
+    const appRoot = getAppRootDir();
+
+    const tempDir = path.join(appRoot, "temp");
+
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    return tempDir;
+  });
+
+  ipcMain.handle("select-folder", async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ["openDirectory"],
+    });
+
+    if (result.canceled) return null;
+
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle("export-ticket", async (_, payload) => {
+    const templatePath = path.join(__dirname, "ticket-template.html");
+    console.log(templatePath);
+    const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+
+    const html = renderTemplate(htmlTemplate, {
+      filmName: payload.filmName,
+      filmNameEn: payload.filmNameEn,
+      countryName: payload.countryName,
+      duration: payload.duration,
+      date: payload.date,
+      datetime: payload.datetime,
+      room: payload.room,
+      seat: payload.seat,
+      imageSource: payload.imageSource,
+      qrImage: payload.qrImage,
+      barCode: payload.barCode,
+    });
+
+    const outputPath = path.join(payload.folder, "ticket.png");
+    console.log("output Path", outputPath);
+
+    await renderTicketImage(html, outputPath);
+
+    return outputPath;
   });
 
   app.on("activate", () => {

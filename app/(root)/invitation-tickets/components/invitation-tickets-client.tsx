@@ -10,51 +10,49 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { ApiResponse, ContractTicketSaleProps } from "@/types";
-import { PlusIcon } from "lucide-react";
+import { ApiResponse, BackgroundProps, OrderDetailProps } from "@/types";
 import { useCallback, useMemo, useState } from "react";
 import { useMediaQuery } from "react-responsive";
+import AddInvitationTicketDialog from "./add-invitation-ticket-dialog";
 import { createColumns } from "./columns";
-import ContractTicketSaleDialog from "./contract-ticket-sale-dialog";
-import DeleteContractTicketSaleDialog from "./delete-contract-ticket-sale-dialog";
-import ContractTicketSaleUpdateSeatDialog from "./contract-ticket-sale-update-seat-dialog";
+import DeleteContractTicketSaleDialog from "./delete-invitation-ticket-dialog";
+import PrintInvitationTicketDialog from "./print-invitation-ticket-dialog";
 
-interface ContractTicketSalesClientProps {
-  data: ApiResponse<ContractTicketSaleProps>;
+interface InvitationTicketsClientProps {
+  data: ApiResponse<OrderDetailProps>;
   page: number;
+  backgrounds: BackgroundProps[];
 }
 
-const ContractTicketSalesClient = ({
+const InvitationTicketsClient = ({
   data,
   page,
-}: ContractTicketSalesClientProps) => {
+  backgrounds,
+}: InvitationTicketsClientProps) => {
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogUpdateSeatOpen, setDialogUpdateSeatOpen] = useState(false);
+  const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] =
-    useState<ContractTicketSaleProps | null>(null);
+  const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(
+    null
+  );
 
   const handleAdd = useCallback(() => {
     setSelectedItem(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((item: ContractTicketSaleProps) => {
+  const handleEdit = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
     setDialogOpen(true);
   }, []);
 
-  const handleUpdateSeat = useCallback((item: ContractTicketSaleProps) => {
+  const handlePrint = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
-    setDialogUpdateSeatOpen(true);
+    setDialogPrintOpen(true);
   }, []);
 
-  const handlePrint = useCallback((item: ContractTicketSaleProps) => {
-    console.log(item);
-  }, []);
-
-  const handleDelete = useCallback((item: ContractTicketSaleProps) => {
+  const handleDelete = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
     setDeleteDialogOpen(true);
   }, []);
@@ -66,8 +64,8 @@ const ContractTicketSalesClient = ({
     }
   }, []);
 
-  const handleDialogUpdateSeatClose = useCallback((open: boolean) => {
-    setDialogUpdateSeatOpen(open);
+  const handleDialogPrintClose = useCallback((open: boolean) => {
+    setDialogPrintOpen(open);
     if (!open) {
       setSelectedItem(null);
     }
@@ -83,13 +81,12 @@ const ContractTicketSalesClient = ({
   const columns = useMemo(
     () =>
       createColumns({
-        onEdit: handleEdit,
+        onViewDetail: handleEdit,
         onDelete: handleDelete,
-        onUpdateSeat: handleUpdateSeat,
         onPrint: handlePrint,
         page,
       }),
-    [handleEdit, handleDelete, page, handleUpdateSeat, handlePrint]
+    [handleEdit, handleDelete, page, handlePrint]
   );
 
   return (
@@ -108,7 +105,7 @@ const ContractTicketSalesClient = ({
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-bold">
-                  Danh sách vé bán hợp đồng
+                  Quản lý giấy mời
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
@@ -120,8 +117,7 @@ const ContractTicketSalesClient = ({
             onClick={handleAdd}
             size={isTabletOrMobile ? "sm" : "default"}
           >
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm mới
+            Xem sơ đồ vé
           </Button>
         </div>
       </div>
@@ -132,19 +128,19 @@ const ContractTicketSalesClient = ({
         total={data.total}
         className="max-h-[calc(100vh-200px)]"
       />
+
       {dialogOpen && (
-        <ContractTicketSaleDialog
+        <AddInvitationTicketDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingContractTicketSale={selectedItem}
         />
       )}
 
-      {dialogUpdateSeatOpen && (
-        <ContractTicketSaleUpdateSeatDialog
-          open={dialogUpdateSeatOpen}
-          onOpenChange={handleDialogUpdateSeatClose}
-          editingContractTicketSale={selectedItem}
+      {dialogPrintOpen && (
+        <PrintInvitationTicketDialog
+          open={dialogPrintOpen}
+          onOpenChange={handleDialogPrintClose}
+          backgrounds={backgrounds}
         />
       )}
 
@@ -152,12 +148,12 @@ const ContractTicketSalesClient = ({
         <DeleteContractTicketSaleDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          id={selectedItem.id}
-          name={selectedItem.customerLastName}
+          id={selectedItem.order.id}
+          name={selectedItem.order.barCode}
         />
       )}
     </div>
   );
 };
 
-export default ContractTicketSalesClient;
+export default InvitationTicketsClient;

@@ -184,6 +184,7 @@ export interface BookingTicketBodyProps {
   listChairValueF2?: string;
   listChairIndexF3?: string;
   listChairValueF3?: string;
+  isInvitation?: boolean;
 }
 
 export interface UpdateSeatContractTicketSaleBodyProps {
@@ -828,4 +829,10 @@ export enum PaymentStatus {
   REFUNDED = 40,
   VOIDED = 50,
   FAIL = 60,
+}
+
+export interface BackgroundProps {
+  id: string;
+  name: string;
+  urlImage: string;
 }

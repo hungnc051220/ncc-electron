@@ -17,4 +17,7 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.send("print-ticket", orderId, itemIndex, seatIndex),
   printTickets: (orderId, ticketsData) =>
     ipcRenderer.send("print-tickets", orderId, ticketsData),
+  getDefaultExportFolder: () => ipcRenderer.invoke("get-default-export-folder"),
+  selectFolder: () => ipcRenderer.invoke("select-folder"),
+  exportTicket: (payload) => ipcRenderer.invoke("export-ticket", payload),
 });

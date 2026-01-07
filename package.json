@@ -81,6 +81,7 @@
     "react-hook-form": "^7.65.0",
     "react-number-format": "^5.4.4",
     "react-qr-code": "^2.0.18",
+    "react-quill-new": "^3.7.0",
     "react-resizable-panels": "^3.0.6",
     "react-responsive": "^10.0.1",
     "react-select": "^5.10.2",

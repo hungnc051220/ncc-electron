@@ -34,6 +34,9 @@ declare global {
         orderId: number,
         ticketsData?: Array<{ itemIndex: number; seatIndex: number }>
       ) => void;
+      selectFolder: () => Promise<string | null>;
+      getDefaultExportFolder: () => Promise<string>;
+      exportTicket: (payload) => void;
     };
   }
 }
