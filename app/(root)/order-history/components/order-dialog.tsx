@@ -17,7 +17,7 @@ import {
   TableBody,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
 import { formatMoney } from "@/lib/utils";
 import { OrderDetailProps } from "@/types";
@@ -110,11 +110,17 @@ const OrderDialog = ({
             </div>
             <div className="py-3 px-4">
               <p className="text-sm text-trunks">Số lượng vé</p>
-              <p>{selectedItem?.order.customerPhone}</p>
+              <p>
+                {selectedItem?.order.items.reduce((a, b) => a + b.quantity, 0)}
+              </p>
             </div>
             <div className="py-3 px-4">
               <p className="text-sm text-trunks">Vị trí ghế</p>
-              <p>{selectedItem?.order.customerPhone}</p>
+              <p>
+                {selectedItem?.order.items
+                  .map((item) => item.listChairValueF1)
+                  .join(", ")}
+              </p>
             </div>
             <div className="py-3 px-4">
               <p className="text-sm text-trunks">Tiền thanh toán</p>
@@ -145,8 +151,7 @@ const OrderDialog = ({
                   <TableHead>Ghi chú</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-              </TableBody>
+              <TableBody></TableBody>
             </Table>
           </div>
         </div>

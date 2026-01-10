@@ -161,6 +161,7 @@ export const getOrders = async ({
   fromDate,
   toDate,
   isInvitation,
+  orderStatusId,
 }: {
   isOnline?: string;
   searchText?: string;
@@ -173,6 +174,7 @@ export const getOrders = async ({
   fromDate?: string;
   toDate?: string;
   isInvitation?: boolean;
+  orderStatusId?: number;
 }): Promise<ApiResponse<OrderDetailProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -213,6 +215,10 @@ export const getOrders = async ({
 
   if (isInvitation !== undefined) {
     filter.isInvitation = isInvitation;
+  }
+
+  if (orderStatusId) {
+    filter.orderStatusId = orderStatusId;
   }
 
   const queryObject: Record<string, unknown> = {

@@ -1,5 +1,5 @@
 import { getBackgrounds, getOrders } from "@/data/loaders";
-import { format } from "date-fns";
+import { OrderStatus } from "@/types";
 import InvitationTicketsClient from "./components/invitation-tickets-client";
 
 interface InvitationTicketsPageProps {
@@ -19,6 +19,7 @@ const InvitationTicketsPage = async ({
     page,
     pageSize,
     isInvitation: true,
+    orderStatusId: OrderStatus.COMPLETED,
   });
 
   const backgrounds = await getBackgrounds();

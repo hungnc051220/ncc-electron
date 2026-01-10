@@ -17,13 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import { BackgroundProps, OrderDetailProps } from "@/types";
+import { useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
 import dynamic from "next/dynamic";
-
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+import Image from "next/image";
+import QRCode from "qrcode";
+import { useEffect, useState, useTransition } from "react";
 import "react-quill-new/dist/quill.snow.css";
-import { BackgroundProps } from "@/types";
+import { toast } from "sonner";
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 const templateHtml = `<!DOCTYPE html>
 <html>
@@ -43,22 +46,33 @@ const templateHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
+interface InvitationTicketPayloadProps {
+  orderId: number;
+  receivedEmail: string;
+  status: string;
+  urlTicket: string;
+  title: string;
+}
+
 interface PrintInvitationTicketDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   backgrounds: BackgroundProps[];
+  selectedItem?: OrderDetailProps | null;
 }
 
 const PrintInvitationTicketDialog = ({
   open,
   onOpenChange,
   backgrounds,
+  selectedItem,
 }: PrintInvitationTicketDialogProps) => {
   const [selected, setSelected] = useState<string>("");
   const [email, setEmail] = useState("");
   const [emailTitle, setEmailTitle] = useState("");
   const [saveLocation, setSaveLocation] = useState("");
   const [emailContent, setEmailContent] = useState(templateHtml);
+  const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     window.electron?.getDefaultExportFolder().then(setSaveLocation);
@@ -69,22 +83,145 @@ const PrintInvitationTicketDialog = ({
     if (path) setSaveLocation(path);
   };
 
-  const handleExport = async () => {
-    await window.electron?.exportTicket({
-      filmName: "BỐ GIÀ",
-      filmNameEn: "Dad, I'm Sorry",
-      countryName: "Vietnam",
-      duration: "120",
-      date: "20/01/2026",
-      datetime: "20:00",
-      room: "01",
-      seat: "A12",
-      imageSource: backgrounds[0].urlImage,
-      qrImage: `<img src="data:image/png;base64,${123}" />`,
-      barCode: "123456789",
-      folder: saveLocation,
+  const generateQrCode = async (barCode: string) => {
+    const qrBase64 = await QRCode.toDataURL(barCode, {
+      errorCorrectionLevel: "H",
+      margin: 0,
+      width: 160,
+    });
+
+    return qrBase64;
+  };
+
+  const filePathToFile = async (
+    filePath: string,
+    fileName: string
+  ): Promise<File> => {
+    const data = await window.electron?.readFile(filePath);
+
+    if (!data) {
+      throw new Error("Failed to read file");
+    }
+
+    // Đảm bảo chuyển đổi thành ArrayBuffer thông thường
+    let arrayBuffer: ArrayBuffer;
+
+    if (data.buffer instanceof ArrayBuffer) {
+      // Nếu buffer là ArrayBuffer thông thường
+      arrayBuffer = data.buffer;
+    } else {
+      // Tạo ArrayBuffer mới từ dữ liệu
+      arrayBuffer = data.slice().buffer;
+    }
+
+    // Sử dụng ArrayBuffer để tạo File
+    return new File([arrayBuffer], `${fileName}.png`, {
+      type: "image/png",
     });
   };
+
+  const uploadImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Tải ảnh thất bại");
+      }
+
+      return response.json();
+    },
+    onError: (error) => {
+      console.error("Lỗi khi upload ảnh:", error);
+      toast.error(`Lỗi khi upload ảnh: ${error.message}`);
+    },
+  });
+
+  const invitationTicketHistory = useMutation({
+    mutationFn: async (data: InvitationTicketPayloadProps) => {
+      const response = await fetch("/api/invitation-ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success("Đã gửi mail thành công");
+    },
+    onError: (error) => {
+      console.error("Invitation ticket history error:", error);
+      toast.error("Gửi mail thất bại");
+    },
+  });
+
+  const handleExport = async () => {
+    if (!selectedItem) return;
+    const qrBase64 = await generateQrCode(selectedItem.order.barCode);
+    startTransition(async () => {
+      try {
+        const outputPath = await window.electron?.exportTicket({
+          filmName: selectedItem.film?.filmName,
+          filmNameEn: selectedItem.film?.filmNameEn,
+          duration: selectedItem.film?.duration,
+          date: format(selectedItem?.planScreening?.projectDate, "dd/MM/yyyy"),
+          datetime: format(selectedItem?.planScreening?.projectTime, "HH:mm"),
+          room: selectedItem.room?.name,
+          seat: selectedItem.order.items[0].listChairValueF1,
+          imageSource: selected,
+          qrImage: qrBase64,
+          barCode: selectedItem.order.barCode,
+          folder: saveLocation,
+          floor: selectedItem.room.floor,
+          categories:
+            selectedItem.film?.categories
+              ?.map((category) => category.name)
+              .join(", ") || "",
+          countryName: selectedItem.film.country.name,
+        });
+        if (outputPath && emailTitle && email) {
+          const file = await filePathToFile(
+            outputPath,
+            selectedItem.order.barCode
+          );
+          if (file) {
+            const imageUrl = await uploadImageMutation.mutateAsync(file);
+            invitationTicketHistory.mutate({
+              orderId: selectedItem.order.id,
+              receivedEmail: email,
+              status: "sent",
+              urlTicket: imageUrl.imageUrl,
+              title: emailTitle,
+            });
+          }
+        }
+        toast.success("Xuất vé thành công");
+        onOpenChange(false);
+      } catch (error) {
+        console.error(error);
+        toast.error("Xuất vé thất bại");
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (open && backgrounds.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelected(backgrounds[0].urlImage);
+    }
+  }, [open, backgrounds]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -176,11 +313,11 @@ const PrintInvitationTicketDialog = ({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline" type="button">
+            <Button variant="outline" type="button" disabled={pending}>
               Đóng
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleExport}>
+          <Button type="button" onClick={handleExport} disabled={pending}>
             Xuất vé
           </Button>
         </DialogFooter>

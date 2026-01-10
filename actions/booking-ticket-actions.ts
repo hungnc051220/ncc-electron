@@ -48,6 +48,7 @@ export const bookingTicketAction = async (
     dataToSend.listChairValueF3 = formData.get("listChairValueF3") as string;
   }
 
+  console.log(JSON.stringify(dataToSend, null, 2));
   const res = await bookingTicketService(dataToSend);
   const data = await res.json();
 

@@ -80,24 +80,24 @@ async function renderTicketImage(htmlContent, outputPath) {
       };
     })();
   `);
-  
-  console.log('Actual size:', actualSize);
-  
+
+  console.log("Actual size:", actualSize);
+
   // Resize window
   win.setContentSize(actualSize.width, actualSize.height);
 
-   // Đợi resize
-   await new Promise((res) => setTimeout(res, 300));
+  // Đợi resize
+  await new Promise((res) => setTimeout(res, 300));
 
-   // Capture với kích thước thực
-   const image = await win.webContents.capturePage({
+  // Capture với kích thước thực
+  const image = await win.webContents.capturePage({
     x: 0,
     y: 0,
     width: actualSize.width,
     height: actualSize.height,
   });
 
-  console.log('Image size:', image.getSize());
+  console.log("Image size:", image.getSize());
 
   fs.writeFileSync(outputPath, image.toPNG());
 
@@ -499,7 +499,6 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("export-ticket", async (_, payload) => {
     const templatePath = path.join(__dirname, "ticket-template.html");
-    console.log(templatePath);
     const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
 
     const html = renderTemplate(htmlTemplate, {
@@ -514,14 +513,21 @@ app.whenReady().then(async () => {
       imageSource: payload.imageSource,
       qrImage: payload.qrImage,
       barCode: payload.barCode,
+      categories: payload.categories,
+      floor: payload.floor,
     });
 
-    const outputPath = path.join(payload.folder, "ticket.png");
+    const outputPath = path.join(payload.folder, `${payload.barCode}.png`);
     console.log("output Path", outputPath);
 
     await renderTicketImage(html, outputPath);
 
     return outputPath;
+  });
+
+  ipcMain.handle("read-file", async (_, filePath) => {
+    const data = await fs.promises.readFile(filePath);
+    return new Uint8Array(data.buffer);
   });
 
   app.on("activate", () => {

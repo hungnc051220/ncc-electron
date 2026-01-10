@@ -15,8 +15,9 @@ import { useCallback, useMemo, useState } from "react";
 import { useMediaQuery } from "react-responsive";
 import AddInvitationTicketDialog from "./add-invitation-ticket-dialog";
 import { createColumns } from "./columns";
-import DeleteContractTicketSaleDialog from "./delete-invitation-ticket-dialog";
+import DeleteInvitationTicketDialog from "./delete-invitation-ticket-dialog";
 import PrintInvitationTicketDialog from "./print-invitation-ticket-dialog";
+import OrderDialog from "../../order-history/components/order-dialog";
 
 interface InvitationTicketsClientProps {
   data: ApiResponse<OrderDetailProps>;
@@ -32,6 +33,7 @@ const InvitationTicketsClient = ({
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
+  const [dialogViewDetailOpen, setDialogViewDetailOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(
     null
@@ -42,9 +44,9 @@ const InvitationTicketsClient = ({
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((item: OrderDetailProps) => {
+  const handeViewDetail = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
-    setDialogOpen(true);
+    setDialogViewDetailOpen(true);
   }, []);
 
   const handlePrint = useCallback((item: OrderDetailProps) => {
@@ -59,6 +61,13 @@ const InvitationTicketsClient = ({
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
+    if (!open) {
+      setSelectedItem(null);
+    }
+  }, []);
+
+  const handleDialogViewDetailClose = useCallback((open: boolean) => {
+    setDialogViewDetailOpen(open);
     if (!open) {
       setSelectedItem(null);
     }
@@ -81,12 +90,12 @@ const InvitationTicketsClient = ({
   const columns = useMemo(
     () =>
       createColumns({
-        onViewDetail: handleEdit,
+        onViewDetail: handeViewDetail,
         onDelete: handleDelete,
         onPrint: handlePrint,
         page,
       }),
-    [handleEdit, handleDelete, page, handlePrint]
+    [handeViewDetail, handleDelete, page, handlePrint]
   );
 
   return (
@@ -136,20 +145,30 @@ const InvitationTicketsClient = ({
         />
       )}
 
-      {dialogPrintOpen && (
+      {dialogViewDetailOpen && selectedItem && (
+        <OrderDialog
+          open={dialogViewDetailOpen}
+          onOpenChange={handleDialogViewDetailClose}
+          selectedItem={selectedItem}
+        />
+      )}
+
+      {dialogPrintOpen && selectedItem && (
         <PrintInvitationTicketDialog
           open={dialogPrintOpen}
           onOpenChange={handleDialogPrintClose}
           backgrounds={backgrounds}
+          selectedItem={selectedItem}
         />
       )}
 
       {deleteDialogOpen && selectedItem && (
-        <DeleteContractTicketSaleDialog
+        <DeleteInvitationTicketDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
           id={selectedItem.order.id}
           name={selectedItem.order.barCode}
+          planScreenId={selectedItem.planScreening.id}
         />
       )}
     </div>

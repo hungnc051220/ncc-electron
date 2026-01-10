@@ -36,7 +36,8 @@ declare global {
       ) => void;
       selectFolder: () => Promise<string | null>;
       getDefaultExportFolder: () => Promise<string>;
-      exportTicket: (payload) => void;
+      exportTicket: (payload) => Promise<string>;
+      readFile(filePath: string): Promise<Uint8Array>;
     };
   }
 }

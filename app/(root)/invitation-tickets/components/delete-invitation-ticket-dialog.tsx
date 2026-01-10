@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteTicketPriceAction } from "@/actions/ticket-price-actions";
+import { cancelOrderAction } from "@/actions/order-actions";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -25,6 +25,7 @@ const INITIAL_STATE = {
 interface DeleteInvitationTicketDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  planScreenId: number;
   id: number;
   name: string;
 }
@@ -32,17 +33,21 @@ interface DeleteInvitationTicketDialogProps {
 const DeleteInvitationTicketDialog = ({
   open,
   onOpenChange,
+  planScreenId,
   id,
   name,
 }: DeleteInvitationTicketDialogProps) => {
   const [state, action, pending] = useActionState(
-    deleteTicketPriceAction,
+    cancelOrderAction,
     INITIAL_STATE
   );
 
   const handleDelete = () => {
     const formData = new FormData();
-    formData.append("id", id.toString());
+    formData.append("orderIds", JSON.stringify([id]));
+    formData.append("planScreenId", planScreenId.toString());
+    formData.append("cancelReasonId", "1");
+    formData.append("notes", "Hủy giấy mời");
     startTransition(() => action(formData));
   };
 

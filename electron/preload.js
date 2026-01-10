@@ -20,4 +20,17 @@ contextBridge.exposeInMainWorld("electron", {
   getDefaultExportFolder: () => ipcRenderer.invoke("get-default-export-folder"),
   selectFolder: () => ipcRenderer.invoke("select-folder"),
   exportTicket: (payload) => ipcRenderer.invoke("export-ticket", payload),
+  readFile: (path) =>
+    ipcRenderer.invoke("read-file", path).then((buffer) => {
+      // Chắc chắn trả về Uint8Array
+      if (buffer instanceof Uint8Array) {
+        return buffer;
+      }
+      // Hoặc chuyển đổi từ ArrayBuffer
+      if (buffer instanceof ArrayBuffer) {
+        return new Uint8Array(buffer);
+      }
+      // Fallback
+      return new Uint8Array(buffer);
+    }),
 });

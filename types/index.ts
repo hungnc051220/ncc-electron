@@ -246,6 +246,10 @@ export interface FilmProps {
   filmNameEn: string;
   filmName: string;
   countryId: number;
+  country: {
+    id: number;
+    name: string;
+  };
   duration: number;
   director: string;
   actors: string;
@@ -296,6 +300,7 @@ export interface FilmProps {
 
 export interface Category {
   id: number;
+  name: string;
   filmId: number;
   categoryId: number;
   createdOnUtc: string;
