@@ -13,59 +13,32 @@ import {
 import { getUsers } from "@/data/loaders";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import qs from "query-string";
 import { useMemo, useState } from "react";
 import ReactSelect from "react-select";
 import { createColumns } from "./columns";
 
 const dataTypes = [
   {
-    value: "Film",
+    value: "1",
     label: "Danh mục phim",
   },
   {
-    value: "Category",
-    label: "Danh mục phân loại phim",
-  },
-  {
-    value: "Manufacturer",
-    label: "Danh mục hãng phim",
-  },
-  {
-    value: "PlanCinema",
+    value: "2",
     label: "Kế hoạch chiếu phim",
   },
   {
-    value: "PlanScreenings",
+    value: "3",
     label: "Lịch chiếu phim",
   },
   {
-    value: "DayPart",
+    value: "4",
     label: "Khung giờ chiếu",
-  },
-  {
-    value: "Room",
-    label: "Phòng chiếu",
-  },
-  {
-    value: "Position",
-    label: "Sơ đồ ghế ngồi",
-  },
-  {
-    value: "CancelReason",
-    label: "Lý do hủy vé",
-  },
-  {
-    value: "Customer",
-    label: "Tài khoản người dùng",
   },
 ];
 
-const TabActivityLog = () => {
+const TabActivityLogDetail = () => {
   const [page, setPage] = useState(1);
   const [searchText, setSearchText] = useState("");
-  const [userId, setUserId] = useState<number | undefined>(undefined);
-  const [model, setModel] = useState<string | undefined>(undefined);
   const [fromDate, setFromDate] = useState<Date | null>(new Date());
   const [toDate, setToDate] = useState<Date | null>(new Date());
 
@@ -102,48 +75,8 @@ const TabActivityLog = () => {
     );
   }, [users]);
 
-  const {
-    data,
-    refetch,
-    isFetching: isFetchingData,
-  } = useQuery({
+  const { data } = useQuery({
     queryKey: ["access-history", { page }],
-    queryFn: () => {
-      const filter: Record<string, unknown> = {};
-      if (userId) {
-        filter.userId = userId;
-      }
-
-      if (model) {
-        filter.model = model;
-      }
-
-      if (fromDate && toDate) {
-        filter.timestamp = { between: [fromDate, toDate] };
-      }
-
-      const queryObject: Record<string, unknown> = {
-        current: page,
-        pageSize: 100,
-        sort: "timestamp.desc",
-      };
-
-      if (Object.keys(filter).length > 0) {
-        queryObject.filter = JSON.stringify(filter);
-      }
-
-      const body = qs.stringify(queryObject, {
-        skipEmptyString: true,
-        skipNull: true,
-        encode: true,
-      });
-
-      return fetch("/api/audit-log", {
-        method: "POST",
-        body,
-      }).then((res) => res.json());
-    },
-    enabled: false,
   });
 
   const columns = useMemo(
@@ -159,7 +92,7 @@ const TabActivityLog = () => {
       <div className="flex items-center gap-x-4 gap-y-2 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <p className="text-sm">Loại dữ liệu</p>
-          <Select value={model} onValueChange={setModel}>
+          <Select>
             <SelectTrigger className="w-[250px]">
               <SelectValue placeholder="Chọn loại dữ liệu" />
             </SelectTrigger>
@@ -175,7 +108,6 @@ const TabActivityLog = () => {
         <div className="flex items-center gap-2">
           <p className="text-sm">Người thao tác</p>
           <ReactSelect
-            onChange={(newValue) => setUserId(newValue?.value)}
             options={options}
             isLoading={isFetching}
             onInputChange={(value, action) => {
@@ -229,23 +161,16 @@ const TabActivityLog = () => {
             isClearable={false}
           />
         </div>
-        <Button
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isFetchingData}
-        >
-          Lọc dữ liệu
-        </Button>
+        <Button variant="outline">Lọc dữ liệu</Button>
       </div>
       <DataTable
         columns={columns}
-        data={data?.data || []}
-        total={data?.total || 0}
-        className="max-h-[calc(100vh-300px)]"
-        loading={isFetchingData}
+        data={[]}
+        total={0}
+        className="max-h-[calc(100vh-260px)]"
       />
     </div>
   );
 };
 
-export default TabActivityLog;
+export default TabActivityLogDetail;

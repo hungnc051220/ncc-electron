@@ -54,6 +54,7 @@ const DashboardPage = async () => {
             description="Tra cứu và in lại vé đã đặt online cho khách hàng"
             color="blue"
             icon={PrinterIcon}
+            href="print-online-tickets"
           />
           <MainCard
             title="In voucher quà tặng"

@@ -1,7 +1,8 @@
 "use client";
 
-import { UserProps } from "@/types";
+import { AuditLogProps } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 
 interface ColumnsProps {
   page: number;
@@ -9,30 +10,56 @@ interface ColumnsProps {
 
 export const createColumns = ({
   page,
-}: ColumnsProps): ColumnDef<UserProps>[] => [
+}: ColumnsProps): ColumnDef<AuditLogProps>[] => [
   {
     accessorKey: "no",
     header: "STT",
     cell: ({ row }) => (page - 1) * 10 + row.index + 1,
   },
   {
-    accessorKey: "id",
-    header: "Dữ liệu",
+    accessorKey: "entityId",
+    header: "Id",
   },
   {
-    accessorKey: "username",
-    header: "Người tạo",
+    accessorKey: "model",
+    header: "Tên trường",
   },
   {
-    accessorKey: "email",
-    header: "Ngày tạo",
+    accessorKey: "action",
+    header: "Thao tác",
+    cell: ({ row }) => {
+      const action = row.original.action;
+      const actionMap: Record<string, string> = {
+        CREATE: "Tạo",
+        UPDATE: "Cập nhật",
+        DELETE: "Xóa",
+      };
+      return actionMap[action] || action;
+    },
   },
   {
-    accessorKey: "email",
-    header: "Người cập nhật",
+    accessorKey: "oldValues",
+    header: "Giá trị cũ",
+    cell: ({ row }) => {
+      const oldValues = row.original.oldValues;
+      return <div className="max-w-[500px] whitespace-normal wrap-break-word">{oldValues}</div>;
+    },
   },
   {
-    accessorKey: "createdOnUtc",
-    header: "Ngày cập nhật",
+    accessorKey: "newValues",
+    header: "Giá trị mới",
+    cell: ({ row }) => {
+      const newValues = row.original.newValues;
+      return <div className="max-w-[500px] whitespace-normal wrap-break-word">{newValues}</div>;
+    },
+  },
+  {
+    accessorKey: "timestamp",
+    header: "Ngày thực hiện",
+    cell: ({ row }) => format(new Date(row.original.timestamp), "dd/MM/yyyy HH:mm:ss"),
+  },
+  {
+    accessorKey: "userId",
+    header: "Người thực hiện",
   },
 ];

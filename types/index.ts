@@ -841,3 +841,15 @@ export interface BackgroundProps {
   name: string;
   urlImage: string;
 }
+
+export interface AuditLogProps {
+  id: number;
+  userId: number;
+  model: string;
+  entityId: string;
+  action: string;
+  oldValues: string;
+  newValues: string;
+  changedFields: string;
+  timestamp: string;
+}
