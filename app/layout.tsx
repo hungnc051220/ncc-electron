@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
-import QueryProvider from "@/providers/query-provider";
 import "./globals.css";
 import "react-datepicker/dist/react-datepicker.css";
+import AntdProvider from "@/components/providers/antd-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <QueryProvider>{children}</QueryProvider>
+        <AntdProvider>{children}</AntdProvider>
         <Toaster richColors position="top-center" />
       </body>
     </html>

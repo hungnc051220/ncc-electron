@@ -7,14 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { createColumns } from "./columns";
 import { endOfDay, startOfDay } from "date-fns";
-import { useSearchParams } from "next/navigation";
 
 const TabActivityLog = () => {
-  const searchParams = useSearchParams();
-  const currentPage = Math.max(
-    parseInt(searchParams.get("page") || "1", 10),
-    1
-  );
   const [fromDate, setFromDate] = useState<Date | null>(new Date());
   const [toDate, setToDate] = useState<Date | null>(new Date());
 

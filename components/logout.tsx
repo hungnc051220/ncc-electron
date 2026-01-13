@@ -1,9 +1,9 @@
 "use client";
 
 import { startTransition, useActionState, useEffect } from "react";
-import { Button } from "./ui/button";
 import { logoutAction } from "@/actions/user-actions";
 import { toast } from "sonner";
+import { Button } from "antd";
 
 const INITIAL_STATE = {
   success: false,
@@ -27,7 +27,7 @@ const Logout = () => {
 
   return (
     <>
-      <Button variant="outline" disabled={pending} onClick={onLogout}>
+      <Button disabled={pending} onClick={onLogout}>
         Đăng xuất
       </Button>
     </>
