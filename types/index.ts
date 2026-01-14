@@ -853,3 +853,47 @@ export interface AuditLogProps {
   changedFields: string;
   timestamp: string;
 }
+
+export interface RevenueByEmployeeProps {
+  userId: number;
+  userName: string;
+  onQuantity: number | null;
+  offQuantity: number | null;
+  totalQuantity: number | null;
+  offSaleVietQr: number | null;
+  offSaleVnPayQr: number | null;
+  actualOffSale: number | null;
+  totalSale: number | null;
+}
+
+export interface RevenueByFilmProps {
+  filmId: number;
+  filmName: string;
+  onQuantity: number | null;
+  offQuantity: number | null;
+  totalQuantity: number | null;
+  offSaleVietQr: number | null;
+  offSaleVnPayQr: number | null;
+  actualOffSale: number | null;
+  totalSale: number | null;
+}
+
+export interface TotalRevenueProps {
+  onQuantity: number;
+  offQuantity: number;
+  totalQuantity: number;
+  offSaleVietQr: number;
+  offSaleVnPayQr: number;
+  actualOffSale: number;
+  totalSale: number;
+}
+
+export interface ReportRevenueStaffProps {
+  revenueByEmployee: RevenueByEmployeeProps[];
+  totalByEmployee: TotalRevenueProps;
+}
+
+export interface ReportRevenueFilmProps {
+  revenueByFilm: RevenueByFilmProps[];
+  totalByFilm: TotalRevenueProps;
+}

@@ -116,6 +116,9 @@ importers:
       antd:
         specifier: ^6.2.0
         version: 6.2.0(date-fns@4.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      antd-style:
+        specifier: ^4.1.0
+        version: 4.1.0(@types/react@19.2.2)(antd@6.2.0(date-fns@4.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -631,6 +634,9 @@ packages:
 
   '@emotion/cache@11.14.0':
     resolution: {integrity: sha512-L/B1lc/TViYk4DcpGxtAVbx0ZyiKM5ktoIyafGkH6zg/tj+mA+NE//aPYKG0k8kCHSHVJrpLpcAlOBEXQ3SavA==}
+
+  '@emotion/css@11.13.5':
+    resolution: {integrity: sha512-wQdD0Xhkn3Qy2VNcIzbLP9MR8TafI0MJb7BEAXKp+w4+XqErksWR4OXomuDzPsN4InLdGhVe6EYcn2ZIUCpB8w==}
 
   '@emotion/hash@0.8.0':
     resolution: {integrity: sha512-kBJtf7PH6aWwZ6fka3zQ0p6SBYzx4fl1LoZXE2RrnYST9Xljm7WfKJrU4g/Xr3Beg72MLrp1AWNUmuYJTL7Cow==}
@@ -2718,6 +2724,12 @@ packages:
   ansi-styles@6.2.3:
     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
+
+  antd-style@4.1.0:
+    resolution: {integrity: sha512-vnPBGg0OVlSz90KRYZhxd89aZiOImTiesF+9MQqN8jsLGZUQTjbP04X9jTdEfsztKUuMbBWg/RmB/wHTakbtMQ==}
+    peerDependencies:
+      antd: '>=6.0.0'
+      react: '>=18'
 
   antd@6.2.0:
     resolution: {integrity: sha512-fwETatwHYExjfzKcV41fBtgPo4kp+g+9gp5YOSSGxwnJHljps8TbXef8WP7ZnaOn5dkcA9xIC0TyUecIybBG7w==}
@@ -5568,6 +5580,11 @@ packages:
       '@types/react':
         optional: true
 
+  use-merge-value@1.2.0:
+    resolution: {integrity: sha512-DXgG0kkgJN45TcyoXL49vJnn55LehnrmoHc7MbKi+QDBvr8dsesqws8UlyIWGHMR+JXgxc1nvY+jDGMlycsUcw==}
+    peerDependencies:
+      react: '>= 16.x'
+
   use-sidecar@1.1.3:
     resolution: {integrity: sha512-Fedw0aZvkhynoPYlA5WXrMCAMm+nSWdZt6lzJQ7Ok8S6Q+VsHmHpRWndVRJ8Be0ZbkfPc5LRYH+5XrzXcEeLRQ==}
     engines: {node: '>=10'}
@@ -6410,6 +6427,16 @@ snapshots:
       '@emotion/utils': 1.4.2
       '@emotion/weak-memoize': 0.4.0
       stylis: 4.2.0
+
+  '@emotion/css@11.13.5':
+    dependencies:
+      '@emotion/babel-plugin': 11.13.5
+      '@emotion/cache': 11.14.0
+      '@emotion/serialize': 1.3.3
+      '@emotion/sheet': 1.4.0
+      '@emotion/utils': 1.4.2
+    transitivePeerDependencies:
+      - supports-color
 
   '@emotion/hash@0.8.0': {}
 
@@ -8581,6 +8608,23 @@ snapshots:
       color-convert: 2.0.1
 
   ansi-styles@6.2.3: {}
+
+  antd-style@4.1.0(@types/react@19.2.2)(antd@6.2.0(date-fns@4.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+    dependencies:
+      '@ant-design/cssinjs': 2.0.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@babel/runtime': 7.28.4
+      '@emotion/cache': 11.14.0
+      '@emotion/css': 11.13.5
+      '@emotion/react': 11.14.0(@types/react@19.2.2)(react@19.2.1)
+      '@emotion/serialize': 1.3.3
+      '@emotion/utils': 1.4.2
+      antd: 6.2.0(date-fns@4.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react: 19.2.1
+      use-merge-value: 1.2.0(react@19.2.1)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react-dom
+      - supports-color
 
   antd@6.2.0(date-fns@4.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
     dependencies:
@@ -11872,6 +11916,10 @@ snapshots:
       react: 19.2.1
     optionalDependencies:
       '@types/react': 19.2.2
+
+  use-merge-value@1.2.0(react@19.2.1):
+    dependencies:
+      react: 19.2.1
 
   use-sidecar@1.1.3(@types/react@19.2.2)(react@19.2.1):
     dependencies:

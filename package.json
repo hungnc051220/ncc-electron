@@ -59,6 +59,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.13",
     "antd": "^6.2.0",
+    "antd-style": "^4.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
