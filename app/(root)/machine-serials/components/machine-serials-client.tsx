@@ -1,58 +1,111 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { ApiResponse, MachineSerialProps } from "@/types";
-import { useMemo, useState } from "react";
-import { createColumns } from "./columns";
+import { Breadcrumb, Table } from "antd";
+import { useState } from "react";
 import Filter from "./filter";
+import type { TableProps } from "antd";
+import { MachineSerialProps } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { filterEmptyValues, formatNumber } from "@/lib/utils";
+import { getMachineSerials } from "@/data/loaders";
 
-interface MachineSerialsClientProps {
-  data: ApiResponse<MachineSerialProps>;
-  page: number;
+export interface ValuesProps {
+  year?: number;
 }
 
-const MachineSerialsClient = ({ data, page }: MachineSerialsClientProps) => {
-  const [isSearching, setIsSearching] = useState(false);
+const MachineSerialsClient = () => {
+  const [current, setCurrent] = useState(1);
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
-  const columns = useMemo(() => createColumns({ page }), [page]);
+  const columns: TableProps<MachineSerialProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Năm",
+      key: "activeYear",
+      dataIndex: "activeYear",
+    },
+    {
+      title: "Ký hiệu",
+      key: "shortName",
+      dataIndex: "shortName",
+    },
+    {
+      title: "Vé đã in",
+      key: "printTimes",
+      dataIndex: "printTimes",
+      render: (_, { printTimes }) => formatNumber(printTimes),
+    },
+    {
+      title: "Vé đã hủy",
+      key: "cancelTimes",
+      dataIndex: "cancelTimes",
+      render: (_, { cancelTimes }) => formatNumber(cancelTimes),
+    },
+  ];
+
+  const { data: machineSerials, isFetching } = useQuery({
+    queryKey: ["machine-serials", { current, filterValues }],
+    queryFn: () => {
+      const filtered = filterEmptyValues(
+        filterValues as Record<string, unknown>
+      );
+      return getMachineSerials({ page: current, pageSize: 100, ...filtered });
+    },
+  });
+
+  const onSearch = (values: ValuesProps) => {
+      setFilterValues(values);
+    };
+  
+    const onChange = (page: number) => {
+      setCurrent(page);
+    };
+  
 
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Hệ thống</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">Danh sách seri các máy bán vé</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+            },
+            {
+              title: "Hệ thống",
+            },
+            {
+              title: "Danh sách seri các máy bán vé",
+            },
+          ]}
+        />
       </div>
 
-      <Filter onSearchingChange={setIsSearching} />
-      <DataTable
+       <Filter isFetching={isFetching} onSearch={onSearch} setCurrent={setCurrent}/>
+
+      <Table
+        dataSource={machineSerials?.data || []}
         columns={columns}
-        data={data.data || []}
-        total={data.total}
-        loading={isSearching}
-        className="max-h-[calc(100vh-240px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 230px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: machineSerials?.total || 0,
+          size: "middle",
+          showSizeChanger: false,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+          pageSize: 100,
+          hideOnSinglePage: true,
+        }}
       />
     </div>
   );
