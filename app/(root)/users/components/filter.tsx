@@ -1,146 +1,85 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CustomerRoleProps } from "@/types";
-import { useRouter, useSearchParams } from "next/navigation";
-import qs from "query-string";
-import { useEffect, useState, useTransition } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import Icon from "@ant-design/icons";
+import { Button, Form, Input, Modal, Select } from "antd";
 import { FilterIcon } from "lucide-react";
+import { useState } from "react";
+import { ValuesProps } from "./users-client";
 
 interface FilterProps {
-  customerRoles: CustomerRoleProps[];
-  onSearchingChange?: (pending: boolean) => void;
-  isTabletOrMobile: boolean;
+  onSearch: (values: ValuesProps) => void;
+  filterValues: ValuesProps;
+  setCurrent: (page: number) => void;
 }
 
-const Filter = ({
-  customerRoles,
-  onSearchingChange,
-  isTabletOrMobile,
-}: FilterProps) => {
+const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
+  const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const searchParams = useSearchParams();
-  const router = useRouter();
 
-  const [roleId, setRoleId] = useState<string | undefined>(
-    searchParams.get("roleId") || "all"
-  );
-  const [searchText, setSearchText] = useState<string | null>(
-    searchParams.get("searchText")
-  );
-
-  const handleSearch = (clear?: boolean) => {
-    const current = qs.parse(searchParams.toString());
-    const query = {
-      ...current,
-      roleId: !clear ? roleId : undefined,
-      searchText: !clear ? searchText : undefined,
-      page: 1,
-    };
-    const url = qs.stringifyUrl(
-      {
-        url: window.location.href,
-        query,
-      },
-      { skipEmptyString: true, skipNull: true }
-    );
-
-    startTransition(() => {
-      if (clear) {
-        setRoleId("all");
-        setSearchText("");
-      }
-      onSearchingChange?.(true);
-      router.push(url);
-      setOpen(false);
-    });
+  const onClear = () => {
+    setOpen(false);
+    setCurrent(1);
+    form.resetFields();
+    onSearch({});
   };
 
-  useEffect(() => {
-    if (onSearchingChange) {
-      onSearchingChange(isPending);
-    }
-  }, [isPending, onSearchingChange]);
+  const isEmptyFilter = Object.keys(filterValues).length === 0;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size={isTabletOrMobile ? "sm" : "default"} variant="outline">
-          <FilterIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
+      <div className="relative">
+        <Button
+          variant="outlined"
+          icon={<Icon component={FilterIcon} />}
+          onClick={() => setOpen(true)}
+        >
           Bộ lọc
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>Bộ lọc</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 p-5">
-          <div className="flex-1">
-            <p className="text-sm mb-1">Nhóm người dùng</p>
-            <Select value={roleId} onValueChange={setRoleId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn nhóm người dùng" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {customerRoles?.map((role) => (
-                  <SelectItem key={role.id} value={role.id.toString()}>
-                    {role.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {!isEmptyFilter && (
+          <div className="absolute size-3 -right-1 -top-1">
+            <span className="relative flex size-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex size-3 rounded-full bg-primary"></span>
+            </span>
           </div>
-          <div className="flex-1">
-            <p className="text-sm mb-1">Tên/ Email</p>
-            <Input
-              type="text"
-              placeholder="Nhập tên hoặc Email"
-              value={searchText ?? ""}
-              onChange={(e) => setSearchText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearch();
-                }
-              }}
-            />
-          </div>
-        </div>
-        <DialogFooter className="flex">
-          <Button
-            disabled={isPending}
-            onClick={() => handleSearch(true)}
-            className="flex-1"
-            variant="outline"
+        )}
+      </div>
+      <Modal
+        title="Bộ lọc"
+        open={open}
+        okText="Tìm kiếm"
+        okButtonProps={{ htmlType: "submit", autoFocus: true }}
+        onCancel={() => setOpen(false)}
+        modalRender={(dom) => (
+          <Form
+            layout="vertical"
+            form={form}
+            name="filter-form"
+            onFinish={(values) => {
+              setOpen(false);
+              setCurrent(1);
+              onSearch(values);
+            }}
           >
-            Xóa bộ lọc
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={() => handleSearch()}
-            className="flex-1"
-          >
-            Tìm kiếm
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+            {dom}
+          </Form>
+        )}
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <>
+            <CancelBtn />
+            <Button onClick={onClear}>Xóa bộ lọc</Button>
+            <OkBtn />
+          </>
+        )}
+      >
+        <Form.Item name="roleId" label="Nhóm người dùng">
+          <Select options={[]} placeholder="Chọn nhóm người dùng" />
+        </Form.Item>
+        <Form.Item name="searchText" label="Tên/Email">
+          <Input placeholder="Nhập tên/email" />
+        </Form.Item>
+      </Modal>
     </Dialog>
   );
 };

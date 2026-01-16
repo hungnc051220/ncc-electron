@@ -1,12 +1,9 @@
 "use client";
 
 import { formatMoney, formatNumber } from "@/lib/utils";
-import {
-  ReportRevenueFilmProps,
-  RevenueByFilmProps
-} from "@/types";
+import { ReportRevenueFilmProps, RevenueByFilmProps } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import type { PaginationProps, TableProps, TimeRangePickerProps  } from "antd";
+import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Table, Typography } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
@@ -15,11 +12,11 @@ import { useState } from "react";
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
-const rangePresets: TimeRangePickerProps['presets'] = [
-  { label: '7 ngày trước', value: [dayjs().add(-7, 'd'), dayjs()] },
-  { label: '14 ngày trước', value: [dayjs().add(-14, 'd'), dayjs()] },
-  { label: '30 ngày trước', value: [dayjs().add(-30, 'd'), dayjs()] },
-  { label: '90 ngày trước', value: [dayjs().add(-90, 'd'), dayjs()] },
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] },
 ];
 
 const TabRevenueByFilm = () => {
@@ -169,54 +166,56 @@ const TabRevenueByFilm = () => {
           pageSize: 100,
           hideOnSinglePage: true,
         }}
-        summary={() => (
-          <Table.Summary fixed>
-            <Table.Summary.Row>
-              <Table.Summary.Cell
-                index={0}
-                colSpan={2}
-                className="font-bold text-center"
-              >
-                Tổng
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={2} align="right">
-                <Text className="font-bold">
-                  {formatNumber(data?.totalByFilm?.onQuantity || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={3} align="right">
-                <Text className="font-bold">
-                  {formatNumber(data?.totalByFilm?.offQuantity || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={4} align="right">
-                <Text className="font-bold">
-                  {formatNumber(data?.totalByFilm?.totalQuantity || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={5} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByFilm?.offSaleVietQr || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={6} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByFilm?.offSaleVnPayQr || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={7} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByFilm?.actualOffSale || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={8} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByFilm?.totalSale || 0)}
-                </Text>
-              </Table.Summary.Cell>
-            </Table.Summary.Row>
-          </Table.Summary>
-        )}
+        summary={() =>
+          data?.revenueByFilm && data?.revenueByFilm?.length > 0 ? (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                <Table.Summary.Cell
+                  index={0}
+                  colSpan={2}
+                  className="font-bold text-center"
+                >
+                  Tổng
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="right">
+                  <Text className="font-bold">
+                    {formatNumber(data?.totalByFilm?.onQuantity || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="right">
+                  <Text className="font-bold">
+                    {formatNumber(data?.totalByFilm?.offQuantity || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={4} align="right">
+                  <Text className="font-bold">
+                    {formatNumber(data?.totalByFilm?.totalQuantity || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByFilm?.offSaleVietQr || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={6} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByFilm?.offSaleVnPayQr || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={7} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByFilm?.actualOffSale || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={8} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByFilm?.totalSale || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            </Table.Summary>
+          ) : null
+        }
       />
     </div>
   );

@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@ant-design/cssinjs": "^2.0.2",
+    "@ant-design/icons": "~6.1.0",
     "@ant-design/nextjs-registry": "^1.3.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -60,6 +61,7 @@
     "@tanstack/react-virtual": "^3.13.13",
     "antd": "^6.2.0",
     "antd-style": "^4.1.0",
+    "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -67,6 +69,7 @@
     "cookies-next": "^6.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "dayjs": "^1.11.19",
     "electron-squirrel-startup": "^1.0.1",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",

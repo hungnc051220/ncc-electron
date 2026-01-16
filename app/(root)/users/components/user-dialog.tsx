@@ -1,119 +1,178 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import UserForm from "./user-form";
-import { startTransition, useActionState, useEffect } from "react";
-import { Spinner } from "@/components/ui/spinner";
-import { createUserAction, updateUserAction } from "@/actions/user-actions";
-import { UserFormInput } from "@/lib/schemas/user-schema";
+import { CustomerRoleProps, ManufacturerProps, UserProps } from "@/types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Form, Input, Modal, Select } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-import { CustomerRoleProps, UserProps } from "@/types";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+type FieldType = {
+  roleIds: number[];
+  customerFirstName: string;
+  manufacturerId: number;
+  address?: string;
+  email: string;
+  mobile: string;
+  username: string;
+  password?: string;
 };
 
 interface UserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  customerRoles: CustomerRoleProps[];
   editingUser?: UserProps | null;
+  customerRoles: CustomerRoleProps[];
+  isFetchingCustomerRoles: boolean;
+  manufactureres: ManufacturerProps[];
+  isFetchingManufactureres: boolean;
 }
 
 const UserDialog = ({
   open,
   onOpenChange,
-  customerRoles,
   editingUser,
+  customerRoles,
+  isFetchingCustomerRoles,
+  manufactureres,
+  isFetchingManufactureres,
 }: UserDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
   const isEdit = !!editingUser;
-  const [state, action, pending] = useActionState(
-    isEdit ? updateUserAction : createUserAction,
-    INITIAL_STATE
-  );
 
-  const onSubmit = (values: UserFormInput) => {
-    const formData = new FormData();
-    if (isEdit && editingUser) {
-      formData.append("userId", editingUser.id.toString());
-    }
-    Object.entries(values).forEach(([key, value]) => {
-      if (isEdit && key === "password" && !value) {
-        return;
+  const userMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      if (!isEdit) {
+        return axios.post("/api/user/create", {
+          ...data,
+          confirmPassword: data.password,
+        });
+      } else {
+        return axios.post("/api/user/update", { ...data, id: editingUser.id });
       }
-      formData.append(key, value as string);
-    });
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
-
-    if (state.success) {
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast.success(
-        isEdit ? "Cập nhật người dùng thành công" : "Thêm người dùng thành công"
+        `${isEdit ? "Cập nhật thông tin" : "Thêm"} người dùng thành công`
       );
       onOpenChange(false);
-    }
-  }, [state, isEdit, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
-  const getDefaultValues = (): Partial<UserFormInput> | undefined => {
+  const onOk = () => form.submit();
+
+  const getInitialValues = (): FieldType | undefined => {
     if (!editingUser) return undefined;
     return {
       roleIds: editingUser.roleIds.split(",").map(Number) || [],
-      username: editingUser.username || "",
-      email: editingUser.email || "",
-      manufacturerId: editingUser.manufacturerId || 0,
-      customerFirstName: editingUser.customerFirstName || "",
-      customerLastName: editingUser.customerLastName || "",
-      address: editingUser.address || "",
-      mobile: editingUser.mobile || "",
-      password: "",
+      username: editingUser.username,
+      email: editingUser.email,
+      manufacturerId: editingUser.manufacturerId,
+      customerFirstName: editingUser.customerFirstName,
+      address: editingUser.address,
+      mobile: editingUser.mobile,
     };
   };
 
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    userMutation.mutate(values);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[876px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            {isEdit ? "Cập nhật người dùng" : "Thêm mới người dùng"}
-          </DialogTitle>
-        </DialogHeader>
-        <div>
-          <UserForm
-            onSubmit={onSubmit}
-            customerRoles={customerRoles}
-            defaultValues={getDefaultValues()}
-            isEdit={isEdit}
-          />
+    <Modal
+      open={open}
+      title={isEdit ? "Cập nhật người dùng" : "Thêm mới người dùng"}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: userMutation.isPending,
+      }}
+      width={876}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={getInitialValues()}
+      >
+        <div className="grid grid-cols-2 gap-x-4 mt-4">
+          <Form.Item<FieldType>
+            name="roleIds"
+            label="Nhóm người dùng"
+            rules={[{ required: true, message: "Hãy chọn nhóm người dùng" }]}
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              className="w-full"
+              placeholder="Chọn nhóm người dùng"
+              options={customerRoles?.map((item) => ({
+                value: item.id,
+                label: item.name,
+              }))}
+              loading={isFetchingCustomerRoles}
+            />
+          </Form.Item>
+
+          <Form.Item<FieldType>
+            name="customerFirstName"
+            label="Họ và tên"
+            rules={[{ required: true, message: "Hãy nhập họ và tên" }]}
+          >
+            <Input placeholder="Nhập họ và tên" />
+          </Form.Item>
+
+          <Form.Item name="manufacturerId" label="Hãng phát hành">
+            <Select
+              allowClear
+              className="w-full"
+              placeholder="Chọn hãng phát hành"
+              options={manufactureres?.map((item) => ({
+                value: item.id,
+                label: item.fullName,
+              }))}
+              loading={isFetchingManufactureres}
+            />
+          </Form.Item>
+          <Form.Item name="address" label="Địa chỉ">
+            <Input placeholder="Nhập địa chỉ" />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="email"
+            label="Email"
+            rules={[{ required: true, message: "Hãy nhập email" }]}
+          >
+            <Input placeholder="Nhập email" />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="mobile"
+            label="Số điện thoại"
+            rules={[{ required: true, message: "Hãy nhập số điện thoại" }]}
+          >
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="username"
+            label="Tên đăng nhập"
+            rules={[{ required: true, message: "Hãy nhập tên đăng nhập" }]}
+          >
+            <Input placeholder="Nhập tên đăng nhập" />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="password"
+            label="Mật khẩu"
+            rules={[{ required: !isEdit, message: "Hãy nhập tên đăng nhập" }]}
+          >
+            <Input.Password placeholder="Nhập mật khẩu" />
+          </Form.Item>
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button type="submit" form="user-form" disabled={pending}>
-            {pending && <Spinner />}
-            {isEdit ? "Cập nhật" : "Xác nhận"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Form>
+    </Modal>
   );
 };
 

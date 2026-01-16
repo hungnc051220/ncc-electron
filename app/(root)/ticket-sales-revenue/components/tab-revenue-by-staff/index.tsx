@@ -164,7 +164,7 @@ const TabActivityLog = () => {
           pageSize: 100,
           hideOnSinglePage: true,
         }}
-        summary={() => (
+        summary={() => data?.revenueByEmployee && data?.revenueByEmployee.length > 0 ? (
           <Table.Summary fixed>
             <Table.Summary.Row>
               <Table.Summary.Cell
@@ -211,7 +211,7 @@ const TabActivityLog = () => {
               </Table.Summary.Cell>
             </Table.Summary.Row>
           </Table.Summary>
-        )}
+        ) : null}
       />
     </div>
   );

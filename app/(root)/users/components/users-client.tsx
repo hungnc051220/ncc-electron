@@ -1,161 +1,277 @@
 "use client";
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { ApiResponse, CustomerRoleProps, UserProps } from "@/types";
-import { PlusIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { createColumns } from "./columns";
+import { getCustomerRoles, getManufacturers, getUsers } from "@/data/loaders";
+import { filterEmptyValues, formatNumber } from "@/lib/utils";
+import { UserProps } from "@/types";
+import Icon, { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { Check, PlusIcon, X } from "lucide-react";
+import { useCallback, useState } from "react";
+import ChangeHiddenUserDialog from "./change-hidden-user-dialog";
 import DeleteUserDialog from "./delete-user-dialog";
 import Filter from "./filter";
 import UserDialog from "./user-dialog";
-import { DataTable } from "@/components/data-table";
-import { useMediaQuery } from "react-responsive";
-import ChangeHiddenUserDialog from "./change-hidden-user-dialog";
 
-interface UsersClientProps {
-  data: ApiResponse<UserProps>;
-  customerRoles: CustomerRoleProps[];
-  page: number;
+const items = [
+  { key: "1", label: "Ẩn/hiện" },
+  { key: "2", label: "Cập nhật" },
+  { key: "3", label: <p className="text-red-500">Xóa</p> },
+];
+
+export interface ValuesProps {
+  roleId?: number;
+  searchText?: string;
 }
 
-const UsersClient = ({ data, customerRoles, page }: UsersClientProps) => {
-  const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
+const UsersClient = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [changeHiddenDialogOpen, setChangeHiddenDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProps | null>(null);
-  const [deletingUser, setDeletingUser] = useState<UserProps | null>(null);
-  const [editingHidden, setEditingHidden] = useState<UserProps | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProps | null>(null);
+  const [current, setCurrent] = useState(1);
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+
+  const { data: users, isFetching } = useQuery({
+    queryKey: ["users", { current, filterValues }],
+    queryFn: () => {
+      const filtered = filterEmptyValues(
+        filterValues as Record<string, unknown>
+      );
+
+      return getUsers({ page: current, pageSize: 100, ...filtered });
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  const { data: manufactureres, isFetching: isFetchingManufacturers } =
+    useQuery({
+      queryKey: ["manufacturers"],
+      queryFn: () => {
+        return getManufacturers({ page: current, pageSize: 100 });
+      },
+    });
+
+  const { data: customerRoles, isFetching: isFetchingCustomerRoles } = useQuery(
+    {
+      queryKey: ["customer-roles"],
+      queryFn: () => {
+        return getCustomerRoles();
+      },
+    }
+  );
 
   const handleAdd = useCallback(() => {
-    setEditingUser(null);
+    setSelectedUser(null);
     setDialogOpen(true);
   }, []);
 
   const handleEdit = useCallback((user: UserProps) => {
-    setEditingUser(user);
+    setSelectedUser(user);
     setDialogOpen(true);
   }, []);
 
   const handleDelete = useCallback((user: UserProps) => {
-    setDeletingUser(user);
+    setSelectedUser(user);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleChangeHidden = useCallback((user: UserProps) => {
-    setEditingHidden(user);
+    setSelectedUser(user);
     setChangeHiddenDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingUser(null);
+      setSelectedUser(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingUser(null);
+      setSelectedUser(null);
     }
   }, []);
 
   const handleChangeHiddenDialogClose = useCallback((open: boolean) => {
     setChangeHiddenDialogOpen(open);
     if (!open) {
-      setEditingHidden(null);
+      setSelectedUser(null);
     }
   }, []);
 
-  const columns = useMemo(
-    () =>
-      createColumns({
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-        page,
-        onChangeHidden: handleChangeHidden,
-      }),
-    [handleEdit, handleDelete, page, handleChangeHidden]
-  );
+  const onSearch = (values: ValuesProps) => {
+    setFilterValues(values);
+  };
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const columns: TableProps<UserProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Mã người dùng",
+      key: "id",
+      dataIndex: "id",
+      fixed: "left",
+    },
+    {
+      title: "Họ và tên",
+      key: "customerFirstName",
+      dataIndex: "customerFirstName",
+    },
+    {
+      title: "Tên đăng nhập",
+      key: "username",
+      dataIndex: "username",
+    },
+    {
+      title: "Số điện thoại",
+      key: "mobile",
+      dataIndex: "mobile",
+    },
+    {
+      title: "Email",
+      key: "email",
+      dataIndex: "email",
+    },
+    {
+      title: "Hiển thị",
+      key: "isHidden",
+      dataIndex: "isHidden",
+      render: (isHidden) => {
+        return (
+          <div className="flex items-center justify-center">
+            {!isHidden ? (
+              <Check className="size-4 text-green-500" />
+            ) : (
+              <X className="size-4 text-red-500" />
+            )}
+          </div>
+        );
+      },
+      width: 80,
+      align: "center",
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleChangeHidden(record);
+              }
+              if (e.key === "2") {
+                handleEdit(record);
+              }
+              if (e.key === "3") {
+                handleDelete(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
 
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Hệ thống</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Quản lý người dùng
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+            },
+            {
+              title: "Hệ thống",
+            },
+            {
+              title: "Quản lý người dùng",
+            },
+          ]}
+        />
 
         <div className="flex gap-2 items-center">
           <Filter
-            customerRoles={customerRoles}
-            onSearchingChange={setIsSearching}
-            isTabletOrMobile={isTabletOrMobile}
+            onSearch={onSearch}
+            filterValues={filterValues}
+            setCurrent={setCurrent}
           />
           <Button
+            type="primary"
             onClick={handleAdd}
-            size={isTabletOrMobile ? "sm" : "default"}
+            icon={<Icon component={PlusIcon} />}
           >
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
             Thêm người dùng
           </Button>
         </div>
       </div>
 
-      <DataTable
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={users?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        loading={isSearching}
-        className="max-h-[calc(100vh-200px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 230px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: users?.total || 0,
+          size: "middle",
+          showSizeChanger: false,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+          pageSize: 100,
+          hideOnSinglePage: true,
+        }}
       />
       {dialogOpen && (
         <UserDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          customerRoles={customerRoles}
-          editingUser={editingUser}
+          editingUser={selectedUser}
+          customerRoles={customerRoles || []}
+          isFetchingCustomerRoles={isFetchingCustomerRoles}
+          manufactureres={manufactureres?.data || []}
+          isFetchingManufactureres={isFetchingManufacturers}
         />
       )}
-      {deletingUser && (
+      {selectedUser && (
         <DeleteUserDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          userId={deletingUser.id}
-          username={deletingUser.username}
+          id={selectedUser.id}
+          username={selectedUser.username}
         />
       )}
-      {editingHidden && (
+      {selectedUser && (
         <ChangeHiddenUserDialog
           open={changeHiddenDialogOpen}
           onOpenChange={handleChangeHiddenDialogClose}
-          user={editingHidden}
-          username={editingHidden.username}
+          user={selectedUser}
+          username={selectedUser.username}
         />
       )}
     </div>

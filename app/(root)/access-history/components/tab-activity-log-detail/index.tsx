@@ -1,48 +1,81 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
-import CustomDatePicker from "@/components/ui/custom-date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { getUsers } from "@/data/loaders";
 import { useDebounce } from "@/hooks/use-debounce";
+import { AuditLogProps } from "@/types";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
+import { Button, DatePicker, Select, Table, Tag } from "antd";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
+import qs from "query-string";
 import { useMemo, useState } from "react";
-import ReactSelect from "react-select";
-import { createColumns } from "./columns";
+
+const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] },
+];
 
 const dataTypes = [
   {
-    value: "1",
+    value: "Order",
+    label: "Đơn hàng",
+  },
+  {
+    value: "Film",
     label: "Danh mục phim",
   },
   {
-    value: "2",
+    value: "Category",
+    label: "Danh mục phân loại phim",
+  },
+  {
+    value: "Manufacturer",
+    label: "Danh mục hãng phim",
+  },
+  {
+    value: "PlanCinema",
     label: "Kế hoạch chiếu phim",
   },
   {
-    value: "3",
+    value: "PlanScreenings",
     label: "Lịch chiếu phim",
   },
   {
-    value: "4",
+    value: "DayPart",
     label: "Khung giờ chiếu",
+  },
+  {
+    value: "Room",
+    label: "Phòng chiếu",
+  },
+  {
+    value: "Position",
+    label: "Sơ đồ ghế ngồi",
+  },
+  {
+    value: "CancelReason",
+    label: "Lý do hủy vé",
+  },
+  {
+    value: "Customer",
+    label: "Tài khoản người dùng",
   },
 ];
 
 const TabActivityLogDetail = () => {
-  const [page, setPage] = useState(1);
+  const [current, setCurrent] = useState(1);
   const [searchText, setSearchText] = useState("");
-  const [fromDate, setFromDate] = useState<Date | null>(new Date());
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [userId, setUserId] = useState<number | undefined>(undefined);
+  const [model, setModel] = useState<string | undefined>(undefined);
+  const [fromDate, setFromDate] = useState<Dayjs | null>(dayjs().add(-30, "d"));
+  const [toDate, setToDate] = useState<Dayjs | null>(dayjs());
 
-  const debouncedSearch = useDebounce(searchText, 300);
+  const debouncedSearch = useDebounce(searchText, 500);
 
   const {
     data: users,
@@ -75,99 +108,234 @@ const TabActivityLogDetail = () => {
     );
   }, [users]);
 
-  const { data } = useQuery({
-    queryKey: ["access-history", { page }],
+  const {
+    data,
+    refetch,
+    isFetching: isFetchingData,
+  } = useQuery({
+    queryKey: ["access-history", { current }],
+    queryFn: () => {
+      const filter: Record<string, unknown> = {};
+      if (userId) {
+        filter.userId = userId;
+      }
+
+      if (model) {
+        filter.model = model;
+      }
+
+      if (fromDate && toDate) {
+        filter.timestamp = {
+          between: [fromDate.startOf("day"), toDate.endOf("day")],
+        };
+      }
+
+      const queryObject: Record<string, unknown> = {
+        current,
+        pageSize: 100,
+        sort: "timestamp.desc",
+      };
+
+      if (Object.keys(filter).length > 0) {
+        queryObject.filter = JSON.stringify(filter);
+      }
+
+      const body = qs.stringify(queryObject, {
+        skipEmptyString: true,
+        skipNull: true,
+        encode: true,
+      });
+
+      return fetch("/api/audit-log", {
+        method: "POST",
+        body,
+      }).then((res) => res.json());
+    },
+    enabled: false,
   });
 
-  const columns = useMemo(
-    () =>
-      createColumns({
-        page,
-      }),
-    [page]
-  );
+  const columns: TableProps<AuditLogProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      width: 50,
+    },
+    {
+      title: "Loại dữ liệu",
+      dataIndex: "model",
+      key: "model",
+      render: (model) =>
+        dataTypes.find((item) => item.value === model)?.label || model,
+      width: 150,
+    },
+    {
+      title: "Thao tác",
+      dataIndex: "action",
+      key: "action",
+      width: 120,
+      render: (action) => {
+        if (!action) return "-";
+        const map: Record<string, { color: string; text: string }> = {
+          CREATE: { color: "green", text: "Tạo mới" },
+          UPDATE: { color: "blue", text: "Sửa" },
+          DELETE: { color: "red", text: "Xóa" },
+        };
+        const cfg = map[action] || { color: "default", text: String(action) };
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
+      title: "Giá trị cũ",
+      dataIndex: "oldValues",
+      key: "oldValues",
+      render: (value) => {
+        if (!value) return "";
+        try {
+          const parsed = typeof value === "string" ? JSON.parse(value) : value;
+          return (
+            <pre className="text-xs overflow-auto max-w-sm">
+              {JSON.stringify(parsed, null, 2)}
+            </pre>
+          );
+        } catch {
+          return <span>{value}</span>;
+        }
+      },
+      width: 384,
+    },
+    {
+      title: "Giá trị mới",
+      dataIndex: "newValues",
+      key: "newValues",
+      render: (value) => {
+        if (!value) return "";
+        try {
+          const parsed = typeof value === "string" ? JSON.parse(value) : value;
+          return (
+            <pre className="text-xs overflow-auto">
+              {JSON.stringify(parsed, null, 2)}
+            </pre>
+          );
+        } catch {
+          return <span>{value}</span>;
+        }
+      },
+    },
+    {
+      title: "Người cập nhật",
+      dataIndex: "user",
+      key: "user",
+      render: (_, { user }) => {
+        const fullName = [user?.customerFirstName, user?.customerLastName]
+          .filter(Boolean)
+          .join(" ");
+        return fullName || user?.username || "";
+      },
+      width: 200,
+    },
+    {
+      title: "Ngày cập nhật",
+      dataIndex: "timestamp",
+      key: "timestamp",
+      render: (_, { timestamp }) => dayjs(timestamp).format("DD/MM/YYYY HH:mm"),
+      width: 160,
+    },
+  ];
+
+  const onChange: PaginationProps["onChange"] = (page) => {
+    setCurrent(page);
+  };
+
+  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
+    if (dates) {
+      setFromDate(dates[0]);
+      setToDate(dates[1]);
+    } else {
+      setFromDate(null);
+      setToDate(null);
+    }
+  };
 
   return (
     <div>
       <div className="flex items-center gap-x-4 gap-y-2 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <p className="text-sm">Loại dữ liệu</p>
-          <Select>
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Chọn loại dữ liệu" />
-            </SelectTrigger>
-            <SelectContent>
-              {dataTypes.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            style={{ width: 220 }}
+            value={model}
+            onChange={setModel}
+            options={dataTypes}
+            placeholder="Chọn loại dữ liệu"
+            allowClear
+          />
         </div>
         <div className="flex items-center gap-2">
           <p className="text-sm">Người thao tác</p>
-          <ReactSelect
-            options={options}
-            isLoading={isFetching}
-            onInputChange={(value, action) => {
-              if (
-                action.action === "input-change" ||
-                action.action === "menu-close"
-              ) {
-                setSearchText(value);
-              }
+          <Select
+            showSearch={{
+              filterOption: false,
+              onSearch: (value) => setSearchText(value),
             }}
-            onMenuScrollToBottom={() => {
-              if (hasNextPage && !isFetchingNextPage) {
+            loading={isFetching || isFetchingNextPage}
+            style={{ width: 220 }}
+            value={userId}
+            onChange={setUserId}
+            options={options}
+            placeholder="Chọn người thao tác"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <=
+                  target.clientHeight + 50
+              ) {
                 fetchNextPage();
               }
             }}
-            filterOption={null}
-            loadingMessage={() => "Đang tải dữ liệu..."}
-            noOptionsMessage={() => "Không có kết quả"}
-            placeholder="Nhập tên người dùng"
-            className="z-20 w-[250px] text-sm"
-            isClearable
+            allowClear
           />
         </div>
 
         <div className="flex items-center gap-2 z-20">
           <p className="text-sm whitespace-nowrap">Từ ngày</p>
-          <CustomDatePicker
-            selectedDate={fromDate}
-            onChangeDate={(date) => {
-              setFromDate(date);
-              setToDate(null);
-            }}
-            className="w-[150px]"
-            selectsStart
-            startDate={fromDate}
-            endDate={toDate}
-            isClearable={false}
+          <RangePicker
+            defaultValue={[fromDate, toDate]}
+            format="DD/MM/YYYY"
+            onChange={onRangeChange}
+            presets={rangePresets}
           />
         </div>
 
-        <div className="flex items-center gap-2 z-20">
-          <p className="text-sm whitespace-nowrap">Đến ngày</p>
-          <CustomDatePicker
-            selectedDate={toDate}
-            onChangeDate={(date) => setToDate(date)}
-            className="w-[150px]"
-            selectsEnd
-            startDate={fromDate}
-            endDate={toDate}
-            minDate={fromDate || undefined}
-            isClearable={false}
-          />
-        </div>
-        <Button variant="outline">Lọc dữ liệu</Button>
+        <Button
+          color="primary"
+          variant="outlined"
+          onClick={() => refetch()}
+          disabled={isFetchingData}
+        >
+          Lọc dữ liệu
+        </Button>
       </div>
-      <DataTable
+      <Table
+        dataSource={data?.data || []}
         columns={columns}
-        data={[]}
-        total={0}
-        className="max-h-[calc(100vh-260px)]"
+        bordered
+        size="small"
+        scroll={{ y: "calc(100vh - 360px)" }}
+        loading={isFetchingData}
+        pagination={{
+          current,
+          onChange,
+          total: data?.total || 0,
+          size: "middle",
+          showSizeChanger: false,
+          showTotal: (total) => `Tổng ${total} bản ghi`,
+          pageSize: 100,
+          hideOnSinglePage: true,
+        }}
       />
     </div>
   );

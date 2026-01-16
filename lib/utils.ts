@@ -26,3 +26,13 @@ export const formatMoney = (price: number) =>
 export function formatNumber(x: number) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+
+export function filterEmptyValues<T extends Record<string, unknown>>(
+  obj: T
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(
+      ([_, value]) => value !== null && value !== "" && value !== undefined
+    )
+  );
+}

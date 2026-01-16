@@ -1,3 +1,4 @@
+import { Tag } from "antd"
 import { OrderStatus, PaymentStatus } from "@/types"
 
 interface OrderStatusBadgeProps {
@@ -8,78 +9,54 @@ interface OrderStatusBadgeProps {
 const orderStatusConfig = {
   [OrderStatus.PENDING]: {
     label: "Đang chờ",
-    bgColor: "bg-yellow-100",
-    textColor: "text-yellow-800",
-    dotColor: "bg-yellow-500",
+    color: "warning",
   },
   [OrderStatus.PROCESSING]: {
     label: "Đang xử lý",
-    bgColor: "bg-blue-100",
-    textColor: "text-blue-800",
-    dotColor: "bg-blue-500",
+    color: "processing",
   },
   [OrderStatus.COMPLETED]: {
     label: "Hoàn thành",
-    bgColor: "bg-green-100",
-    textColor: "text-green-800",
-    dotColor: "bg-green-500",
+    color: "success",
   },
   [OrderStatus.CANCELLED]: {
     label: "Hủy bỏ",
-    bgColor: "bg-orange-100",
-    textColor: "text-orange-800",
-    dotColor: "bg-orange-500",
+    color: "orange",
   },
   [OrderStatus.FAIL]: {
     label: "Thất bại",
-    bgColor: "bg-red-100",
-    textColor: "text-red-800",
-    dotColor: "bg-red-500",
+    color: "error",
   },
 }
 
 const paymentStatusConfig = {
   [PaymentStatus.PENDING]: {
     label: "Đang chờ",
-    bgColor: "bg-slate-100",
-    textColor: "text-slate-800",
-    dotColor: "bg-slate-500",
+    color: "default",
   },
   [PaymentStatus.AUTHORIZED]: {
     label: "Được ủy quyền",
-    bgColor: "bg-indigo-100",
-    textColor: "text-indigo-800",
-    dotColor: "bg-indigo-500",
+    color: "blue",
   },
   [PaymentStatus.PAID]: {
     label: "Đã thanh toán",
-    bgColor: "bg-emerald-100",
-    textColor: "text-emerald-800",
-    dotColor: "bg-emerald-500",
+    color: "success",
   },
   [PaymentStatus.PARTIALLY_REFUNDED]: {
     label: "Hoàn tiền 1 phần",
-    bgColor: "bg-cyan-100",
-    textColor: "text-cyan-800",
-    dotColor: "bg-cyan-500",
+    color: "cyan",
   },
   [PaymentStatus.REFUNDED]: {
     label: "Đã hoàn tiền",
-    bgColor: "bg-purple-100",
-    textColor: "text-purple-800",
-    dotColor: "bg-purple-500",
+    color: "purple",
   },
   [PaymentStatus.VOIDED]: {
     label: "Đã hủy",
-    bgColor: "bg-fuchsia-100",
-    textColor: "text-fuchsia-800",
-    dotColor: "bg-fuchsia-500",
+    color: "magenta",
   },
   [PaymentStatus.FAIL]: {
     label: "Thất bại",
-    bgColor: "bg-rose-100",
-    textColor: "text-rose-800",
-    dotColor: "bg-rose-500",
+    color: "red",
   },
 }
 
@@ -91,12 +68,5 @@ export function OrderStatusBadge({ status, type = "order" }: OrderStatusBadgePro
     return null
   }
 
-  return (
-    <span
-      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${config.bgColor} ${config.textColor}`}
-    >
-      <span className={`w-2 h-2 rounded-full ${config.dotColor}`}></span>
-      {config.label}
-    </span>
-  )
+  return <Tag color={config.color}>{config.label}</Tag>
 }

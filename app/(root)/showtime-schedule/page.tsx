@@ -7,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import ShowtimeScheduleClient from "./components/showtime-schedule-client";
+import { Suspense } from "react";
 
 const ShowtimeSchedulePage = () => {
   return (
@@ -31,7 +32,9 @@ const ShowtimeSchedulePage = () => {
         </Breadcrumb>
       </div>
 
-      <ShowtimeScheduleClient />
+      <Suspense>
+        <ShowtimeScheduleClient />
+      </Suspense>
     </div>
   );
 };

@@ -6,11 +6,11 @@ import CustomDatePicker from "@/components/ui/custom-date-picker";
 import { getFilmScheduling } from "@/data/loaders";
 import { PlanCinemaProps } from "@/types";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import qs from "query-string";
 import { useCallback, useMemo, useState } from "react";
 import { createColumns } from "./columns";
 import ShowtimeScheduleDetailDialog from "./discount-settings-dialog";
-import { useSearchParams } from "next/navigation";
 
 const ShowtimeScheduleClient = () => {
   const searchParams = useSearchParams();

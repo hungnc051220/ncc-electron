@@ -7,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import OnlineShowtimeBookingClient from "./components/online-showtime-booking-client";
+import { Suspense } from "react";
 
 const FilmSalesDetailReportPage = () => {
   return (
@@ -31,7 +32,9 @@ const FilmSalesDetailReportPage = () => {
         </Breadcrumb>
       </div>
 
-      <OnlineShowtimeBookingClient />
+      <Suspense>
+        <OnlineShowtimeBookingClient />
+      </Suspense>
     </div>
   );
 };

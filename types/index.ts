@@ -846,6 +846,7 @@ export interface AuditLogProps {
   id: number;
   userId: number;
   model: string;
+  user: UserProps;
   entityId: string;
   action: string;
   oldValues: string;
