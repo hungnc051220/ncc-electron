@@ -898,3 +898,67 @@ export interface ReportRevenueFilmProps {
   revenueByFilm: RevenueByFilmProps[];
   totalByFilm: TotalRevenueProps;
 }
+
+export interface ReportRevenueFilmByStaffProps {
+  revenuesByFilm: RevenuesByFilmProps[];
+  priceHeaders: number[];
+  totalRevenue: TotalRevenueProps;
+  totalRevenueOnline: TotalRevenueOnlineProps;
+  totalRevenueOffline: TotalRevenueOnlineProps;
+}
+
+export interface RevenuesByFilmProps {
+  filmId: number;
+  filmName: string;
+  filmOrderNo: number;
+  planScreens: PlanScreen[];
+  actualSale: number;
+  totalSale: number;
+  totalContractQuantity: number;
+  totalInvitationQuantity: number;
+  totalQuantity: number;
+  saleVietQr: number;
+  saleVnPayQr: number;
+}
+
+export interface PlanScreen {
+  planScreenId: number;
+  projectDate: string;
+  projectTime: string;
+  roomName: string;
+  isOnline: boolean;
+  totalInvitationQuantity: number;
+  totalContractQuantity: number;
+  totalQuantity: number;
+  totalSale: number;
+  saleVnPayQr: number;
+  saleVietQr: number;
+  actualSale: number;
+  prices: PriceProps[];
+}
+
+export interface PriceProps {
+  price: number;
+  totalQuantity: number;
+}
+
+export interface TotalRevenueProps {
+  totalInvitationQuantity: number;
+  totalContractQuantity: number;
+  totalQuantity: number;
+  totalSale: number;
+  saleVnPayQr: number;
+  saleVietQr: number;
+  actualSale: number;
+}
+
+export interface TotalRevenueOnlineProps {
+  isOnline: boolean;
+  totalInvitationQuantity: number;
+  totalContractQuantity: number;
+  totalQuantity: number;
+  totalSale: number;
+  saleVnPayQr: number;
+  saleVietQr: number;
+  actualSale: number;
+}
