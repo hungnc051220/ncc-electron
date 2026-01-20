@@ -3,23 +3,31 @@
 import { getReportRevenueByFilm } from "@/data/loaders";
 import { formatMoney, formatNumber } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import type { TableProps } from "antd";
-import { Table } from "antd";
+import type { TabsProps } from "antd";
+import { Tabs } from "antd";
+import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import React, { useState } from "react";
-import Filter from "./filter";
+import { useState } from "react";
 import ExportRevenueExcelButton from "./export-excel";
+import Filter from "./filter";
+import { buildPriceColumns } from "./price-columns";
+import TabRevenue from "./tab-revenue";
+import TabSummary, { SummaryRow } from "./tab-summary";
 
 export interface ValuesProps {
-  roleId?: number;
-  searchText?: string;
+  userId?: number;
+  userName?: string;
+  manufacturerId?: number;
+  filmId?: number;
+  fromDate?: string;
+  toDate?: string;
 }
-type SummaryGroup = {
+export type SummaryGroup = {
   off: Row[];
   on: Row[];
 };
 
-type Row = {
+export type Row = {
   key: string;
   filmName: string;
   projectDate: string;
@@ -55,9 +63,9 @@ const RevenueByFilm = () => {
   const allPrices = Array.from(
     new Set(
       data?.revenuesByFilm.flatMap((f) =>
-        f.planScreens.flatMap((p) => p.prices.map((x) => x.price))
-      )
-    )
+        f.planScreens.flatMap((p) => p.prices.map((x) => x.price)),
+      ),
+    ),
   ).sort((a, b) => b - a);
 
   const tableData: Row[] = [];
@@ -76,7 +84,7 @@ const RevenueByFilm = () => {
         (acc[cur.projectDate] ||= []).push(cur);
         return acc;
       },
-      {}
+      {},
     );
 
     const totalFilmRows = sortedScreens.length;
@@ -139,45 +147,8 @@ const RevenueByFilm = () => {
         : acc[row.projectDate].off.push(row);
       return acc;
     },
-    {}
+    {},
   );
-
-  const sumGroup = (rows: Row[]) => {
-    const prices: Record<number, number> = {};
-    let totalQuantity = 0;
-    let totalInvitationQuantity = 0;
-    let totalContractQuantity = 0;
-    let totalSale = 0;
-    let saleVnPayQr = 0;
-    let saleVietQr = 0;
-    let actualSale = 0;
-
-    rows.forEach((r) => {
-      totalQuantity += r.totalQuantity;
-      totalInvitationQuantity += r.totalInvitationQuantity;
-      totalContractQuantity += r.totalContractQuantity;
-      totalSale += r.totalSale;
-      saleVnPayQr += r.saleVnPayQr;
-      saleVietQr += r.saleVietQr;
-      actualSale += r.actualSale;
-
-      Object.entries(r.pricesMap).forEach(([price, qty]) => {
-        const p = Number(price);
-        prices[p] = (prices[p] ?? 0) + qty;
-      });
-    });
-
-    return {
-      prices,
-      totalQuantity,
-      totalInvitationQuantity,
-      totalContractQuantity,
-      totalSale,
-      saleVnPayQr,
-      saleVietQr,
-      actualSale,
-    };
-  };
 
   const filmColumn = {
     title: "Phim",
@@ -189,15 +160,15 @@ const RevenueByFilm = () => {
     }),
   };
 
-  const priceColumns = allPrices.map((price) => ({
-    title: (price / 1000).toString(), // hiển thị 150, 140...
-    dataIndex: price,
-    width: 60,
-    align: "center" as const,
-    render: (_: unknown, row: Row) => row.pricesMap[price] ?? "",
-  }));
+  // const priceColumns = allPrices.map((price) => ({
+  //   title: (price / 1000).toString(), // hiển thị 150, 140...
+  //   dataIndex: price,
+  //   width: 60,
+  //   align: "center" as const,
+  //   render: (_: unknown, row: Row) => row.pricesMap[price] ?? "",
+  // }));
 
-  const columns: TableProps<Row>["columns"] = [
+  const columns: ColumnsType<Row> = [
     filmColumn,
     {
       title: "Nội dung chi tiết",
@@ -235,8 +206,8 @@ const RevenueByFilm = () => {
       fixed: "left",
     },
     {
-      title: "Loại giá vé (Đơn vị tính: 1000 đồng)",
-      children: priceColumns,
+      title: "Loại giá vé (Đơn vị tính: 1.000 đồng)",
+      children: buildPriceColumns<Row>(allPrices),
     },
     {
       title: "Tổng",
@@ -293,119 +264,55 @@ const RevenueByFilm = () => {
     },
   ];
 
+  const items: TabsProps["items"] = [
+    {
+      key: "1",
+      label: "Doanh thu theo phim",
+      children: (
+        <TabRevenue
+          tableData={tableData}
+          columns={columns}
+          isFetching={isFetching}
+        />
+      ),
+    },
+    {
+      key: "2",
+      label: "Tổng hợp theo ngày",
+      children: (
+        <TabSummary
+          summaryByDate={summaryByDate}
+          isFetching={isFetching}
+          priceColumns={buildPriceColumns<SummaryRow>(allPrices)}
+        />
+      ),
+    },
+  ];
+
   const onSearch = (values: ValuesProps) => {
     setFilterValues(values);
   };
 
   return (
     <div className="pb-6">
-      <div className="flex justify-end mb-4">
-        <Filter filterValues={filterValues} onSearch={onSearch} />
-        <ExportRevenueExcelButton
-          tableData={tableData}
-          allPrices={allPrices}
-          summaryByDate={summaryByDate}
-          // fromDate={fromDate}
-          // toDate={toDate}
-          // employeeName={selectedEmployee?.name}
-        />
-      </div>
-      <Table
-        dataSource={tableData}
-        columns={columns}
-        bordered
+      <Tabs
+        items={items}
+        defaultActiveKey="1"
+        type="card"
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 260px)" }}
-        loading={isFetching}
-        pagination={false}
-        summary={() => (
-          <Table.Summary fixed>
-            {Object.entries(summaryByDate).map(([date, group]) => {
-              const offSum = sumGroup(group.off);
-              const onSum = sumGroup(group.on);
-
-              return (
-                <React.Fragment key={date}>
-                  {/* ===== OFF ===== */}
-                  <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={4}>
-                      {dayjs(date).format("DD/MM/YYYY")}
-                    </Table.Summary.Cell>
-
-                    {/* bỏ cột Giờ + Phòng */}
-                    <Table.Summary.Cell index={4}>Off</Table.Summary.Cell>
-
-                    {/* cột giá vé */}
-                    {allPrices.map((p, i) => (
-                      <Table.Summary.Cell key={p} index={5 + i} align="center">
-                        {offSum.prices[p] ?? ""}
-                      </Table.Summary.Cell>
-                    ))}
-
-                    <Table.Summary.Cell index={100} align="right">
-                      {formatNumber(offSum.totalQuantity)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={101} align="right">
-                      {formatNumber(offSum.totalInvitationQuantity)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={102} align="right">
-                      {formatNumber(offSum.totalContractQuantity)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={103} align="right">
-                      {formatMoney(offSum.totalSale)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={104} align="right">
-                      {formatMoney(offSum.saleVnPayQr)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={105} align="right">
-                      {formatMoney(offSum.saleVietQr)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={106} align="right">
-                      {formatMoney(offSum.actualSale)}
-                    </Table.Summary.Cell>
-                  </Table.Summary.Row>
-
-                  {/* ===== ON ===== */}
-                  <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={4}>
-                      {dayjs(date).format("DD/MM/YYYY")}
-                    </Table.Summary.Cell>
-
-                    <Table.Summary.Cell index={4}>On</Table.Summary.Cell>
-
-                    {allPrices.map((p, i) => (
-                      <Table.Summary.Cell key={p} index={5 + i} align="center">
-                        {onSum.prices[p] ?? ""}
-                      </Table.Summary.Cell>
-                    ))}
-
-                    <Table.Summary.Cell index={200} align="right">
-                      {formatNumber(onSum.totalQuantity)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={201} align="right">
-                      {formatNumber(onSum.totalInvitationQuantity)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={202} align="right">
-                      {formatNumber(onSum.totalContractQuantity)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={203} align="right">
-                      {formatMoney(onSum.totalSale)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={204} align="right">
-                      {formatMoney(onSum.saleVnPayQr)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={205} align="right">
-                      {formatMoney(onSum.saleVietQr)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={206} align="right">
-                      {formatMoney(onSum.actualSale)}
-                    </Table.Summary.Cell>
-                  </Table.Summary.Row>
-                </React.Fragment>
-              );
-            })}
-          </Table.Summary>
-        )}
+        tabBarExtraContent={
+          <div className="flex justify-end mb-2 gap-3">
+            <Filter filterValues={filterValues} onSearch={onSearch} />
+            <ExportRevenueExcelButton
+              tableData={tableData}
+              allPrices={allPrices}
+              summaryByDate={summaryByDate}
+              fromDate={filterValues.fromDate!}
+              toDate={filterValues.toDate!}
+              employeeName={filterValues?.userName}
+            />
+          </div>
+        }
       />
     </div>
   );
