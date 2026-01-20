@@ -5,7 +5,7 @@ import Icon from "@ant-design/icons";
 import { Button, Form, Modal, Select } from "antd";
 import { FilterIcon } from "lucide-react";
 import { useState } from "react";
-import { ValuesProps } from "./revenue-by-film";
+import { ValuesProps } from ".";
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;

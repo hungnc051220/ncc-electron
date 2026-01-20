@@ -8,6 +8,7 @@ import { Table } from "antd";
 import dayjs from "dayjs";
 import React, { useState } from "react";
 import Filter from "./filter";
+import ExportRevenueExcelButton from "./export-excel";
 
 export interface ValuesProps {
   roleId?: number;
@@ -300,6 +301,14 @@ const RevenueByFilm = () => {
     <div className="pb-6">
       <div className="flex justify-end mb-4">
         <Filter filterValues={filterValues} onSearch={onSearch} />
+        <ExportRevenueExcelButton
+          tableData={tableData}
+          allPrices={allPrices}
+          summaryByDate={summaryByDate}
+          // fromDate={fromDate}
+          // toDate={toDate}
+          // employeeName={selectedEmployee?.name}
+        />
       </div>
       <Table
         dataSource={tableData}
