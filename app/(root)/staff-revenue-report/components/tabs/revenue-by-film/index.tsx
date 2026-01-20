@@ -48,7 +48,10 @@ export type Row = {
 };
 
 const RevenueByFilm = () => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [filterValues, setFilterValues] = useState<ValuesProps>({
+    fromDate: dayjs().format(),
+    toDate: dayjs().format(),
+  });
 
   const { data, isFetching } = useQuery({
     queryKey: ["revenues-by-film"],
@@ -159,14 +162,6 @@ const RevenueByFilm = () => {
       rowSpan: row.filmRowSpan,
     }),
   };
-
-  // const priceColumns = allPrices.map((price) => ({
-  //   title: (price / 1000).toString(), // hiển thị 150, 140...
-  //   dataIndex: price,
-  //   width: 60,
-  //   align: "center" as const,
-  //   render: (_: unknown, row: Row) => row.pricesMap[price] ?? "",
-  // }));
 
   const columns: ColumnsType<Row> = [
     filmColumn,

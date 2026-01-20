@@ -24,7 +24,6 @@ export const useInfiniteUsers = (searchText?: string) => {
       return lastPage.current + 1;
     },
     initialPageParam: 1,
-    enabled: true,
   });
 };
 
@@ -53,7 +52,6 @@ export const useInfiniteFilms = (manufacturerId?: number) => {
     queryKey: ["films", "infinite", manufacturerId],
     queryFn: async ({ pageParam = 1 }) => {
       const response: ApiResponse<FilmProps> = await getFilmsList({
-        manufacturerId,
         page: pageParam,
         pageSize: ITEMS_PER_PAGE,
         tabCode: "ALL",
@@ -69,4 +67,3 @@ export const useInfiniteFilms = (manufacturerId?: number) => {
     initialPageParam: 1,
   });
 };
-

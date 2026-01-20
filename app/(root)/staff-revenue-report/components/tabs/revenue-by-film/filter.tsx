@@ -1,22 +1,22 @@
 "use client";
 
-import { Dialog } from "@/components/ui/dialog";
-import Icon from "@ant-design/icons";
-import { Button, Form, Modal, DatePicker } from "antd";
-import { FilterIcon } from "lucide-react";
-import { startTransition, useState, useEffect } from "react";
-import { ValuesProps } from ".";
-import dayjs from "dayjs";
-import type { TimeRangePickerProps } from "antd";
-import { useQueryClient } from "@tanstack/react-query";
 import { InfiniteSelect } from "@/components/infinite-select";
-import {
-  useInfiniteUsers,
-  useInfiniteManufacturers,
-  useInfiniteFilms,
-} from "@/hooks/use-infinite-query";
+import { Dialog } from "@/components/ui/dialog";
 import { useDebounce } from "@/hooks/use-debounce";
-import { UserProps, ManufacturerProps, FilmProps } from "@/types";
+import {
+  useInfiniteFilms,
+  useInfiniteManufacturers,
+  useInfiniteUsers,
+} from "@/hooks/use-infinite-query";
+import { FilmProps, ManufacturerProps, UserProps } from "@/types";
+import Icon from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
+import type { TimeRangePickerProps } from "antd";
+import { Button, DatePicker, Form, Modal } from "antd";
+import dayjs from "dayjs";
+import { FilterIcon } from "lucide-react";
+import { startTransition, useState } from "react";
+import { ValuesProps } from ".";
 
 const { RangePicker } = DatePicker;
 
@@ -41,15 +41,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const usersQuery = useInfiniteUsers(debouncedSearchText);
   const manufacturersQuery = useInfiniteManufacturers();
   const filmsQuery = useInfiniteFilms();
-
-  // Reset users query when search is cleared
-  useEffect(() => {
-    if (debouncedSearchText === "") {
-      queryClient.removeQueries({
-        queryKey: ["users", "infinite", ""],
-      });
-    }
-  }, [debouncedSearchText, queryClient]);
 
   const onClear = () => {
     setOpen(false);
