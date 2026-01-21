@@ -23,7 +23,7 @@ import {
   RoomProps,
   SeatTypeProps,
   TicketPriceProps,
-  UserProps
+  UserProps,
 } from "@/types";
 import { endOfYear, format, startOfYear } from "date-fns";
 import { cookies } from "next/headers";
@@ -64,7 +64,7 @@ export const getUsers = async ({
       current: page,
       pageSize,
     },
-    { skipEmptyString: true, skipNull: true, encode: false }
+    { skipEmptyString: true, skipNull: true, encode: false },
   );
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
@@ -84,7 +84,7 @@ export const getCustomerRoles = async (): Promise<CustomerRoleProps[]> => {
 };
 
 export const getPlanScreenings = async (
-  query?: string
+  query?: string,
 ): Promise<ApiResponse<PlanScreeningDetailProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -96,7 +96,7 @@ export const getPlanScreenings = async (
 };
 
 export const getPlanScreeningsByDate = async (
-  date?: string
+  date?: string,
 ): Promise<PlanScreeningProps[]> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -106,7 +106,7 @@ export const getPlanScreeningsByDate = async (
 };
 
 export const getPlanScreeningDetail = async (
-  id: string
+  id: string,
 ): Promise<PlanScreeningDetailProps> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -115,7 +115,7 @@ export const getPlanScreeningDetail = async (
 };
 
 export const getFilmScheduling = async (
-  query?: string
+  query?: string,
 ): Promise<ApiResponse<PlanCinemaProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -127,7 +127,7 @@ export const getFilmScheduling = async (
 };
 
 export const getPlanFilms = async (
-  query?: string
+  query?: string,
 ): Promise<ApiResponse<PlanFilmProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -139,7 +139,7 @@ export const getPlanFilms = async (
 };
 
 export const getFilms = async (
-  query?: string
+  query?: string,
 ): Promise<ApiResponse<FilmProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -262,7 +262,7 @@ export const onSelectingChairs = async (
     selectingChairIndexF1?: string;
     selectingChairIndexF2?: string;
     selectingChairIndexF3?: string;
-  }
+  },
 ): Promise<ApiResponse<FilmProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
@@ -741,7 +741,7 @@ export const getBackgrounds = async (): Promise<BackgroundProps[]> => {
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL(
     `/api/pos/invitation-ticket-histories/background-images`,
-    BASE_URL
+    BASE_URL,
   );
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
@@ -753,8 +753,8 @@ export const getReportRevenueByFilm = async ({
   manufacturerId,
   filmId,
 }: {
-  fromDate: string;
-  toDate: string;
+  fromDate?: string;
+  toDate?: string;
   userId?: number;
   manufacturerId?: number;
   filmId?: number;

@@ -47,7 +47,7 @@ const DashboardPage = async () => {
             description="Tạo và bán vé xem phim cho khách lẻ tại quầy"
             color="red"
             icon={TicketIcon}
-            href="retail-ticket-sales"
+            href="showtimes"
           />
           <MainCard
             title="In vé online"
@@ -76,6 +76,7 @@ const DashboardPage = async () => {
             description="Theo dõi doanh thu bán vé theo ca, ngày hoặc khoảng thời gian"
             icon={TicketIcon}
             color="text-red-500"
+            href="ticket-sales-revenue"
           />
           <SecondaryCard
             title="Báo cáo bán vé"

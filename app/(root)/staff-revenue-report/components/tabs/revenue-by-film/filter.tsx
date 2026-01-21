@@ -50,7 +50,12 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       queryClient.removeQueries({
         queryKey: ["users", "infinite"],
       });
-      onSearch({});
+      onSearch({
+        dateRange: [
+          dayjs().startOf("day").format("YYYY-MM-DDTHH:mm:ssZ"),
+          dayjs().endOf("day").format("YYYY-MM-DDTHH:mm:ssZ"),
+        ],
+      });
     });
   };
 
@@ -142,6 +147,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             className="w-full"
             presets={rangePresets}
             format="DD/MM/YYYY"
+            defaultValue={[dayjs(), dayjs()]}
           />
         </Form.Item>
       </Modal>

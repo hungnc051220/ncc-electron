@@ -91,7 +91,7 @@ export const NAV_ITEMS = [
     children: [
       {
         title: "Bán vé khách lẻ",
-        href: "/retail-ticket-sales",
+        href: "/showtimes",
       },
       {
         title: "In vé online",

@@ -1,21 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { getPlanScreeningsByDate } from "@/data/loaders";
+import { DetailPlanScreeningProps, PlanScreeningProps } from "@/types";
 import { useQuery } from "@tanstack/react-query";
+import { Button, Space, Table, type TableProps } from "antd";
 import { format } from "date-fns";
-import { ChevronDownIcon, Loader2 } from "lucide-react";
+import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Checkbox } from "../ui/checkbox";
-import { Table, TableBody, TableCell, TableRow } from "../ui/table";
 
 const RetailTicketSaleCard = () => {
   const router = useRouter();
@@ -28,9 +20,45 @@ const RetailTicketSaleCard = () => {
     enabled: !!date,
   });
 
+  const columns: TableProps<PlanScreeningProps>["columns"] = [
+    {
+      title: "STT",
+      width: 50,
+      render: (_, __, index) => index + 1,
+      fixed: "left",
+      align: "center",
+    },
+    {
+      title: "Phim",
+      dataIndex: "filmName",
+      fixed: "left",
+    },
+    {
+      title: "Suất chiếu",
+      dataIndex: "details",
+      render: (showtimes: DetailPlanScreeningProps[]) => (
+        <Space wrap={false} size={[8, 8]}>
+          {showtimes.map((s) => (
+            <Button
+              key={s.planScreeningsId}
+              type="default"
+              className="w-15"
+              size="small"
+              onClick={() => {
+                router.push(`/plan-screenings/${s.planScreeningsId}`); // hoặc open tab bán vé
+              }}
+            >
+              {dayjs(s.projectTime).format("HH:mm")}
+            </Button>
+          ))}
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <div className="px-6 py-5 max-w-[876px]">
-      <div className="flex gap-8 items-end">
+      {/* <div className="flex gap-8 items-end">
         <div className="flex flex-col gap-3">
           <Label htmlFor="date" className="px-1">
             Ngày chiếu
@@ -68,16 +96,18 @@ const RetailTicketSaleCard = () => {
           <Checkbox id="terms" />
           <Label htmlFor="terms">Hiện lịch đã chiếu</Label>
         </div>
-      </div>
+      </div> */}
 
-      {isLoading && (
-        <div className="mt-10 w-full flex flex-col gap-2 items-center justify-center text-muted-foreground">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          Đang tải...
-        </div>
-      )}
+      <Table
+        bordered
+        size="small"
+        dataSource={data}
+        columns={columns}
+        scroll={{ x: "max-content", y: 400 }}
+        pagination={false}
+      />
 
-      {!isLoading && data && data?.length > 0 && (
+      {/* {!isLoading && data && data?.length > 0 && (
         <div className="mt-5 border rounded-sm overflow-x-auto">
           <Table>
             <TableBody>
@@ -105,7 +135,7 @@ const RetailTicketSaleCard = () => {
             </TableBody>
           </Table>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

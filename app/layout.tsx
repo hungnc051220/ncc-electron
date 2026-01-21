@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import "react-datepicker/dist/react-datepicker.css";
 import AntdProvider from "@/components/providers/antd-provider";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AntdProvider>{children}</AntdProvider>
+        <AntdProvider>
+          <NuqsAdapter>{children}</NuqsAdapter>
+        </AntdProvider>
         <Toaster richColors position="top-center" />
       </body>
     </html>

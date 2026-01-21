@@ -21,7 +21,7 @@ const SignInPage = () => {
                 alt="logo"
                 width={144}
                 height={44}
-                className="w-auto h-[44px] cursor-pointer"
+                className="w-auto h-11 cursor-pointer"
               />
             </div>
             <h1 className="text-3xl font-bold text-foreground">Đăng nhập</h1>
@@ -38,12 +38,6 @@ const SignInPage = () => {
           </div>
         </div>
       </div>
-
-      {/* <div className="fixed bottom-0 left-0 right-0 bg-white z-50">
-        <div className="mx-auto">
-          <Keyboard />
-        </div>
-      </div> */}
     </div>
   );
 };

@@ -9,13 +9,15 @@ import { Suspense } from "react";
 
 const HeaderContent = () => {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const isCustomerView = searchParams.get("view") === "customer";
+  const isShowtimePage = pathname.includes("/showtimes");
 
   return (
     <header
       className={cn(
         "sticky top-0 z-50 bg-white w-full h-14",
-        isCustomerView && "hidden"
+        (isCustomerView || isShowtimePage) && "hidden",
       )}
     >
       <div className="h-full">

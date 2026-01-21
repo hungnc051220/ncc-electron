@@ -1,7 +1,7 @@
 "use client";
 
 import { getReportRevenueByFilm } from "@/data/loaders";
-import { formatMoney, formatNumber } from "@/lib/utils";
+import { filterEmptyValues, formatMoney, formatNumber } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
@@ -19,8 +19,7 @@ export interface ValuesProps {
   userName?: string;
   manufacturerId?: number;
   filmId?: number;
-  fromDate?: string;
-  toDate?: string;
+  dateRange: [string, string];
 }
 export type SummaryGroup = {
   off: Row[];
@@ -49,17 +48,19 @@ export type Row = {
 
 const RevenueByFilm = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
-    fromDate: dayjs().format(),
-    toDate: dayjs().format(),
+    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()],
   });
 
   const { data, isFetching } = useQuery({
-    queryKey: ["revenues-by-film"],
+    queryKey: ["revenues-by-film", filterValues],
     queryFn: () => {
-      return getReportRevenueByFilm({
-        fromDate: "2026-01-01T00:00:00+07:00",
-        toDate: "2026-01-01T23:59:59+07:00",
-      });
+      const { dateRange, ...rest } = filterValues;
+      const filtered = filterEmptyValues(rest as Record<string, unknown>);
+      if (dateRange && dateRange.length === 2) {
+        filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
+        filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
+      }
+      return getReportRevenueByFilm({ ...filtered });
     },
   });
 
@@ -302,8 +303,8 @@ const RevenueByFilm = () => {
               tableData={tableData}
               allPrices={allPrices}
               summaryByDate={summaryByDate}
-              fromDate={filterValues.fromDate!}
-              toDate={filterValues.toDate!}
+              fromDate={filterValues.dateRange[0]!}
+              toDate={filterValues.dateRange[1]!}
               employeeName={filterValues?.userName}
             />
           </div>
