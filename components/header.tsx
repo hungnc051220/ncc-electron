@@ -16,12 +16,12 @@ const HeaderContent = () => {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 bg-white w-full h-14",
+        "sticky top-0 z-50 bg-white w-full h-[46px]",
         (isCustomerView || isShowtimePage) && "hidden",
       )}
     >
       <div className="h-full">
-        <div className="flex items-center justify-between border-b h-full px-4 shadow-sm">
+        <div className="flex items-center justify-between h-full px-4 border-b">
           <Link href="/">
             <Image
               src="/images/logo-text.png"

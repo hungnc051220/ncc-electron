@@ -1,148 +1,102 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import CustomDatePicker from "@/components/ui/custom-date-picker";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import useGeneralData from "@/hooks/use-general-data";
-import { format } from "date-fns";
-import { FilterIcon } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import qs from "query-string";
-import { useState, useTransition } from "react";
+import { FilterOutlined } from "@ant-design/icons";
+import { Button, DatePicker, Form, Input, Modal, Select } from "antd";
+import { useState } from "react";
+import { ValuesProps } from "./films-client";
+import { ManufacturerProps } from "@/types";
+import { filterEmptyValues } from "@/lib/utils";
 
-const Filter = ({ isTabletOrMobile }: { isTabletOrMobile: boolean }) => {
+interface FilterProps {
+  onSearch: (values: ValuesProps) => void;
+  filterValues: ValuesProps;
+  setCurrent: (page: number) => void;
+  manufacturers: ManufacturerProps[];
+}
+
+const Filter = ({
+  onSearch,
+  filterValues,
+  setCurrent,
+  manufacturers,
+}: FilterProps) => {
+  const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const data = useGeneralData((state) => state.data);
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
 
-  const [filmName, setFilmName] = useState<string | null>(
-    searchParams.get("filmName")
-  );
-  const [manufacturerId, setManufacturerId] = useState<string | undefined>(
-    searchParams.get("manufacturerId") || "all"
-  );
-  const [date, setDate] = useState<Date | null>(null);
-
-  const handleSearch = (clear?: boolean) => {
-    const current = qs.parse(searchParams.toString());
-    const query = {
-      ...current,
-      filmName: !clear ? filmName : undefined,
-      manufacturerId: !clear ? manufacturerId : undefined,
-      premieredDay: !clear && date ? format(date, "yyyy-MM-dd") : undefined,
-      page: 1,
-    };
-
-    const url = qs.stringifyUrl(
-      {
-        url: window.location.href,
-        query,
-      },
-      { skipEmptyString: true, skipNull: true }
-    );
-
-    startTransition(() => {
-      if (clear) {
-        setFilmName("");
-        setManufacturerId("all");
-        setDate(null);
-      }
-      router.push(url);
-      setOpen(false);
-    });
+  const onClear = () => {
+    setOpen(false);
+    setCurrent(1);
+    form.resetFields();
+    onSearch({});
   };
 
+  const isEmptyFilter =
+    Object.keys(filterEmptyValues(filterValues as Record<string, unknown>))
+      .length === 0;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size={isTabletOrMobile ? "sm" : "default"} variant="outline">
-          <FilterIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
+    <>
+      <div className="relative">
+        <Button
+          variant="outlined"
+          icon={<FilterOutlined />}
+          onClick={() => setOpen(true)}
+        >
           Bộ lọc
         </Button>
-      </DialogTrigger>
-
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>Bộ lọc</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col p-5 gap-4">
-          <div className="flex-1">
-            <p className="text-sm mb-1">Tên phim</p>
-            <Input
-              type="text"
-              placeholder="Nhập tên phim"
-              value={filmName ?? ""}
-              onChange={(e) => setFilmName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearch();
-                }
-              }}
-            />
+        {!isEmptyFilter && (
+          <div className="absolute size-3 -right-1 -top-1">
+            <span className="relative flex size-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex size-3 rounded-full bg-primary"></span>
+            </span>
           </div>
-          <div className="flex-1">
-            <p className="text-sm mb-1">Hãng phát hành</p>
-            <Select value={manufacturerId} onValueChange={setManufacturerId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn hãng phát hành" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {data?.manufacturers?.map((item) => (
-                  <SelectItem key={item.id} value={item.id.toString()}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <p className="text-sm mb-1">Ngày khởi chiếu</p>
-            <CustomDatePicker
-              selectedDate={date}
-              onChangeDate={(date) => setDate(date)}
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        <DialogFooter className="flex">
-          <Button
-            disabled={isPending}
-            onClick={() => handleSearch(true)}
-            className="flex-1"
-            variant="outline"
+        )}
+      </div>
+      <Modal
+        title="Bộ lọc"
+        open={open}
+        okText="Tìm kiếm"
+        okButtonProps={{ htmlType: "submit", autoFocus: true }}
+        onCancel={() => setOpen(false)}
+        modalRender={(dom) => (
+          <Form
+            layout="vertical"
+            form={form}
+            name="filter-form"
+            onFinish={(values) => {
+              console.log(values);
+              setOpen(false);
+              setCurrent(1);
+              onSearch(values);
+            }}
           >
-            Xóa bộ lọc
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={() => handleSearch()}
-            className="flex-1"
-          >
-            Tìm kiếm
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {dom}
+          </Form>
+        )}
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <>
+            <CancelBtn />
+            <Button onClick={onClear}>Xóa bộ lọc</Button>
+            <OkBtn />
+          </>
+        )}
+      >
+        <Form.Item name="filmName" label="Tên phim">
+          <Input placeholder="Nhập tên phim" />
+        </Form.Item>
+        <Form.Item name="manufacturerId" label="Hãng phát hành">
+          <Select
+            options={manufacturers.map((m) => ({ label: m.name, value: m.id }))}
+            placeholder="Chọn hãng phát hành"
+            allowClear
+          />
+        </Form.Item>
+        <Form.Item name="premieredDay" label="Ngày khởi chiếu">
+          <DatePicker className="w-full" format="DD/MM/YYYY" />
+        </Form.Item>
+      </Modal>
+    </>
   );
 };
 

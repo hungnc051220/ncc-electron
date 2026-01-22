@@ -1,9 +1,7 @@
 "use client";
 
-import { Dialog } from "@/components/ui/dialog";
-import Icon from "@ant-design/icons";
+import { FilterOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Select } from "antd";
-import { FilterIcon } from "lucide-react";
 import { useState } from "react";
 import { ValuesProps } from "./users-client";
 
@@ -27,11 +25,11 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
   const isEmptyFilter = Object.keys(filterValues).length === 0;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
       <div className="relative">
         <Button
           variant="outlined"
-          icon={<Icon component={FilterIcon} />}
+          icon={<FilterOutlined />}
           onClick={() => setOpen(true)}
         >
           Bộ lọc
@@ -80,7 +78,7 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
           <Input placeholder="Nhập tên/email" />
         </Form.Item>
       </Modal>
-    </Dialog>
+    </>
   );
 };
 

@@ -37,7 +37,7 @@ const UsersClient = () => {
     queryKey: ["users", { current, filterValues }],
     queryFn: () => {
       const filtered = filterEmptyValues(
-        filterValues as Record<string, unknown>
+        filterValues as Record<string, unknown>,
       );
 
       return getUsers({ page: current, pageSize: 100, ...filtered });
@@ -59,7 +59,7 @@ const UsersClient = () => {
       queryFn: () => {
         return getCustomerRoles();
       },
-    }
+    },
   );
 
   const handleAdd = useCallback(() => {
@@ -202,6 +202,7 @@ const UsersClient = () => {
           items={[
             {
               title: "Trang chủ",
+              href: "/",
             },
             {
               title: "Hệ thống",

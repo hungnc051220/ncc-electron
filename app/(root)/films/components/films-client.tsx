@@ -1,58 +1,80 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
+import { getFilmsList } from "@/data/loaders";
 import useGeneralData from "@/hooks/use-general-data";
-import { cn } from "@/lib/utils";
-import { ApiResponse, FilmProps } from "@/types";
-import { PlusIcon } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import qs from "query-string";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
-import { createColumns } from "./columns";
+import { filterEmptyValues, formatMoney, formatNumber } from "@/lib/utils";
+import { FilmProps } from "@/types";
+import Icon, { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { TableProps, TabsProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table, Tabs } from "antd";
+import dayjs from "dayjs";
+import { Check, PlusIcon, X } from "lucide-react";
+import { useCallback, useState } from "react";
 import DeleteFilmDialog from "./delete-film-dialog";
 import FilmDialog from "./film-dialog";
 import Filter from "./filter";
-import { useMediaQuery } from "react-responsive";
+import type { Dayjs } from "dayjs";
 
-enum TabCode {
-  ALL = "ALL",
-  FILM_HOME_PAGE = "FILM_HOME_PAGE",
-  FILM_ON_PLAN = "FILM_ON_PLAN",
-}
-interface FilmsClientProps {
-  data: ApiResponse<FilmProps>;
-  page: number;
+const items: TabsProps["items"] = [
+  {
+    key: "ALL",
+    label: "Danh sách phim",
+  },
+  {
+    key: "FILM_HOME_PAGE",
+    label: "Phim trên trang chủ",
+  },
+  {
+    key: "FILM_ON_PLAN",
+    label: "Phim trên kế hoạch",
+  },
+];
+
+const actionItems = [
+  { key: "1", label: "Cập nhật" },
+  { key: "2", label: <p className="text-red-500">Xóa</p> },
+];
+
+export interface ValuesProps {
+  filmName?: string;
+  manufacturerId?: number;
+  premieredDay?: Dayjs | null;
 }
 
-const FilmsClient = ({ data, page }: FilmsClientProps) => {
-  const isTabletOrMobile = useMediaQuery({query: '(max-width: 1024px)'});
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+const FilmsClient = () => {
   const generalData = useGeneralData((state) => state.data);
+  const [activeKey, setActiveKey] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingFilm, setEditingFilm] = useState<FilmProps | null>(null);
   const [deletingFilm, setDeletingFilm] = useState<FilmProps | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [tabCode, setTabCode] = useState<TabCode>(
-    (searchParams.get("tabCode") as TabCode) || TabCode.ALL
-  );
+
+  const [current, setCurrent] = useState(1);
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+
+  const { data: films, isFetching } = useQuery({
+    queryKey: ["films", { current, filterValues, activeKey }],
+    queryFn: () => {
+      const filtered = filterEmptyValues(
+        filterValues as Record<string, unknown>,
+      );
+
+      if (filtered.premieredDay) {
+        filtered.premieredDay = dayjs(filtered.premieredDay as Dayjs).format(
+          "YYYY-MM-DD",
+        );
+      }
+
+      return getFilmsList({
+        page: current,
+        pageSize: 100,
+        tabCode: activeKey,
+        ...filtered,
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
 
   const handleAdd = useCallback(() => {
     setEditingFilm(null);
@@ -83,114 +105,179 @@ const FilmsClient = ({ data, page }: FilmsClientProps) => {
     }
   }, []);
 
-  const columns = useMemo(
-    () =>
-      createColumns({
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-        page,
-        manufactures: generalData?.manufacturers || [],
-      }),
-    [handleEdit, handleDelete, page, generalData]
-  );
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
 
-  const onChangeTabCode = useCallback(
-    (newTabCode: TabCode) => {
-      setTabCode(newTabCode);
-      const current = qs.parse(searchParams.toString());
-      const query = { ...current, tabCode: newTabCode, page: 1 };
-      const url = qs.stringifyUrl(
-        { url: window.location.href, query },
-        { skipEmptyString: true, skipNull: true }
-      );
-      startTransition(() => {
-        setIsSearching(true);
-        router.push(url);
-      });
+  const columns: TableProps<FilmProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      width: 50,
+      fixed: "left",
     },
-    [setIsSearching, router, searchParams]
-  );
+    {
+      title: "Tên phim",
+      key: "filmName",
+      dataIndex: "filmName",
+      fixed: "left",
+      width: "40%",
+    },
+    {
+      title: "Phiên bản",
+      key: "versionCode",
+      dataIndex: "versionCode",
+      width: 90,
+      align: "center",
+    },
+    {
+      title: "Hãng phát hành",
+      key: "manufacturerId",
+      dataIndex: "manufacturerId",
+      render: (value: number) =>
+        generalData?.manufacturers.find((m) => m.id === value)?.name || "",
+    },
+    {
+      title: "Ngày khởi chiếu",
+      key: "premieredDay",
+      dataIndex: "premieredDay",
+      render: (value: string) =>
+        dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
+      width: 130,
+    },
+    {
+      title: "Thời lượng",
+      key: "duration",
+      dataIndex: "duration",
+      render: (value: number) => `${value} phút`,
+      align: "right",
+      width: 100,
+    },
+    {
+      title: "Nước sản xuất",
+      key: "countryName",
+      dataIndex: "countryName",
+    },
+    {
+      title: "Giá cộng thêm",
+      key: "proposedPrice",
+      dataIndex: "proposedPrice",
+      render: (value: number) => formatMoney(value || 0),
+      align: "right",
+    },
+    {
+      title: "Bán online",
+      key: "sellOnline",
+      dataIndex: "sellOnline",
+      render: (value: boolean) => (
+        <div className="flex items-center justify-center">
+          {value ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <X className="size-4 text-red-500" />
+          )}
+        </div>
+      ),
+      align: "center",
+      width: 100,
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleEdit(record);
+              }
+              if (e.key === "2") {
+                handleDelete(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
 
-  useEffect(() => {
-    if (setIsSearching) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsSearching(isPending);
-    }
-  }, [isPending, setIsSearching]);
+  const onSearch = (values: ValuesProps) => {
+    setFilterValues(values);
+  };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
+    <div className="mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Quản lý danh sách</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Danh sách phim
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+              href: "/",
+            },
+            {
+              title: "Quản lý danh sách",
+            },
+            {
+              title: "Danh sách phim",
+            },
+          ]}
+        />
 
         <div className="flex gap-2 items-center">
-          <Filter isTabletOrMobile={isTabletOrMobile}/>
-          <Button onClick={handleAdd} size={isTabletOrMobile ? "sm" : "default"}>
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm phim mới
+          <Filter
+            onSearch={onSearch}
+            filterValues={filterValues}
+            setCurrent={setCurrent}
+            manufacturers={generalData?.manufacturers || []}
+          />
+          <Button
+            type="primary"
+            onClick={handleAdd}
+            icon={<Icon component={PlusIcon} />}
+          >
+            Thêm phim
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center mb-5 gap-2 border-b">
-        <div
-          className={cn(
-            "p-2 text-sm font-bold border-b-3 cursor-pointer hover:text-primary transition-colors",
-            tabCode === TabCode.ALL
-              ? "border-primary text-primary"
-              : "border-transparent"
-          )}
-          onClick={() => onChangeTabCode(TabCode.ALL)}
-        >
-          Danh sách phim
-        </div>
-        <div
-          className={cn(
-            "p-2 text-sm font-bold border-b-3 cursor-pointer hover:text-primary",
-            tabCode === TabCode.FILM_HOME_PAGE
-              ? "border-primary text-primary"
-              : "border-transparent"
-          )}
-          onClick={() => onChangeTabCode(TabCode.FILM_HOME_PAGE)}
-        >
-          Phim trên trang chủ
-        </div>
-        <div
-          className={cn(
-            "p-2 text-sm font-bold border-b-3 cursor-pointer hover:text-primary",
-            tabCode === TabCode.FILM_ON_PLAN
-              ? "border-primary text-primary"
-              : "border-transparent"
-          )}
-          onClick={() => onChangeTabCode(TabCode.FILM_ON_PLAN)}
-        >
-          Phim trên kế hoạch
-        </div>
-      </div>
-      <DataTable
+      <Tabs
+        defaultActiveKey="ALL"
+        activeKey={activeKey}
+        onChange={(newActiveKey) => {
+          setActiveKey(newActiveKey);
+          setCurrent(1);
+        }}
+        items={items}
+      />
+
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={films?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        loading={isSearching}
-        className="max-h-[calc(100vh-260px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 270px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: films?.total || 0,
+          size: "middle",
+          showSizeChanger: false,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+          pageSize: 100,
+          hideOnSinglePage: true,
+        }}
       />
       {dialogOpen && (
         <FilmDialog

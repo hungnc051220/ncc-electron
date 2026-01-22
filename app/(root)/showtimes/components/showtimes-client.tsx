@@ -8,7 +8,7 @@ import { Button, DatePicker, Table, type TableProps } from "antd";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
-import { startTransition, Suspense } from "react";
+import { startTransition } from "react";
 
 const ShowtimesClient = () => {
   const router = useRouter();
@@ -63,38 +63,36 @@ const ShowtimesClient = () => {
   ];
 
   return (
-    <Suspense>
-      <div className="space-y-3 mt-4 px-4 flex-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              size="small"
-              icon={<LeftOutlined />}
-              onClick={() => router.replace("/")}
-            />
-            <h2 className="font-bold text-lg">Danh sách phim đang chiếu</h2>
-          </div>
-          <DatePicker
-            defaultValue={dayjs(date, "YYYY-MM-DD")}
-            format="DD/MM/YYYY"
-            onChange={(date) => setDate(dayjs(date).format("YYYY-MM-DD"))}
-            allowClear={false}
+    <div className="space-y-3 mt-4 px-4 flex-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            size="small"
+            icon={<LeftOutlined />}
+            onClick={() => router.replace("/")}
           />
+          <h2 className="font-bold text-lg">Danh sách phim đang chiếu</h2>
         </div>
-
-        <Table
-          bordered
-          size="small"
-          dataSource={data}
-          columns={columns}
-          scroll={{ x: "max-content", y: "calc(100vh - 80px)" }}
-          loading={isFetching}
-          pagination={false}
-          tableLayout="auto"
-          showHeader={false}
+        <DatePicker
+          defaultValue={dayjs(date, "YYYY-MM-DD")}
+          format="DD/MM/YYYY"
+          onChange={(date) => setDate(dayjs(date).format("YYYY-MM-DD"))}
+          allowClear={false}
         />
       </div>
-    </Suspense>
+
+      <Table
+        bordered
+        size="small"
+        dataSource={data}
+        columns={columns}
+        scroll={{ x: "max-content", y: "calc(100vh - 80px)" }}
+        loading={isFetching}
+        pagination={false}
+        tableLayout="auto"
+        showHeader={false}
+      />
+    </div>
   );
 };
 

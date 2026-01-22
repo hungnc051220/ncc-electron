@@ -1,8 +1,6 @@
 "use client";
 
-import { Button, DatePicker } from "antd";
-import type { Dayjs } from "dayjs";
-import { useState } from "react";
+import { DatePicker } from "antd";
 import { ValuesProps } from "./machine-serials-client";
 
 interface FilterProps {
@@ -11,27 +9,19 @@ interface FilterProps {
   setCurrent: (page: number) => void;
 }
 
-const Filter = ({ onSearch, setCurrent, isFetching }: FilterProps) => {
-  const [year, setYear] = useState<Dayjs | null>(null);
-
+const Filter = ({ onSearch, setCurrent }: FilterProps) => {
   return (
     <div className="flex gap-4">
       <div className="w-[150px]">
         <DatePicker
           picker="year"
           className="w-full"
-          onChange={(value) => setYear(value)}
+          onChange={(value) => {
+            onSearch({ year: value?.year() });
+            setCurrent(1);
+          }}
         />
       </div>
-      <Button
-        disabled={isFetching}
-        onClick={() => {
-          onSearch({ year: year?.year() });
-          setCurrent(1);
-        }}
-      >
-        Tìm kiếm
-      </Button>
     </div>
   );
 };

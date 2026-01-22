@@ -167,6 +167,7 @@ const FindOnlineTicketsClient = () => {
           items={[
             {
               title: "Trang chủ",
+              href: "/"
             },
             {
               title: "Bán vé",

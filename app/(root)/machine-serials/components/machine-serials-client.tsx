@@ -54,20 +54,19 @@ const MachineSerialsClient = () => {
     queryKey: ["machine-serials", { current, filterValues }],
     queryFn: () => {
       const filtered = filterEmptyValues(
-        filterValues as Record<string, unknown>
+        filterValues as Record<string, unknown>,
       );
       return getMachineSerials({ page: current, pageSize: 100, ...filtered });
     },
   });
 
   const onSearch = (values: ValuesProps) => {
-      setFilterValues(values);
-    };
-  
-    const onChange = (page: number) => {
-      setCurrent(page);
-    };
-  
+    setFilterValues(values);
+  };
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
 
   return (
     <div className="space-y-3 mt-4 px-4">
@@ -76,6 +75,7 @@ const MachineSerialsClient = () => {
           items={[
             {
               title: "Trang chủ",
+              href: "/",
             },
             {
               title: "Hệ thống",
@@ -85,9 +85,12 @@ const MachineSerialsClient = () => {
             },
           ]}
         />
+        <Filter
+          isFetching={isFetching}
+          onSearch={onSearch}
+          setCurrent={setCurrent}
+        />
       </div>
-
-       <Filter isFetching={isFetching} onSearch={onSearch} setCurrent={setCurrent}/>
 
       <Table
         dataSource={machineSerials?.data || []}
