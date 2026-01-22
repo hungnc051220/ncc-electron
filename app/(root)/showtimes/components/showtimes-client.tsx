@@ -70,7 +70,7 @@ const ShowtimesClient = () => {
             <Button
               size="small"
               icon={<LeftOutlined />}
-              onClick={() => router.back()}
+              onClick={() => router.replace("/")}
             />
             <h2 className="font-bold text-lg">Danh sách phim đang chiếu</h2>
           </div>

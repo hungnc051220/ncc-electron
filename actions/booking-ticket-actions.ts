@@ -23,7 +23,7 @@ type ActionStateProps = {
 
 export const bookingTicketAction = async (
   prevState: ActionStateProps,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionStateProps> => {
   const floorNo = Number(formData.get("floorNo") as string);
 
@@ -35,6 +35,7 @@ export const bookingTicketAction = async (
     posShortName: formData.get("posShortName") as string,
     isInvitation:
       (formData.get("isInvitation") as string) === "true" ? true : false,
+    discountId: Number(formData.get("discountId") as string),
   };
 
   if (floorNo === 1) {
@@ -48,7 +49,6 @@ export const bookingTicketAction = async (
     dataToSend.listChairValueF3 = formData.get("listChairValueF3") as string;
   }
 
-  console.log(JSON.stringify(dataToSend, null, 2));
   const res = await bookingTicketService(dataToSend);
   const data = await res.json();
 

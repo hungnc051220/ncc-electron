@@ -1,17 +1,24 @@
 "use client";
 
 import { bookingTicketAction } from "@/actions/booking-ticket-actions";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { getDiscounts } from "@/data/loaders";
 import { cn, formatMoney } from "@/lib/utils";
 import { useSocketContext } from "@/providers/socket-provider";
 import {
+  DiscountProps,
   ListSeat,
   PaymentType,
   PlanScreeningDetailProps,
   QrCodeResponseProps,
 } from "@/types";
+import { EditOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import type { DescriptionsProps } from "antd";
+import { Button, Descriptions } from "antd";
+import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -27,11 +34,10 @@ import {
 } from "react";
 import Selecto from "react-selecto";
 import { toast } from "sonner";
+import BackButton from "./back-button";
+import DiscountPopup from "./discount-popup";
 import Legend from "./legend";
 import QrCodeDialog from "./qr-code-dialog";
-import BackButton from "./back-button";
-import { formatInTimeZone } from "date-fns-tz";
-import { format } from "date-fns";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -83,7 +89,7 @@ const Seat = memo(
           isSelected && "bg-whis text-white",
           seat.isContract && "bg-raditz text-white",
           seat.isHold && "bg-roshi text-white",
-          seat.status === 1 && "bg-trunks text-white cursor-not-allowed"
+          seat.status === 1 && "bg-trunks text-white cursor-not-allowed",
         )}
         style={{
           width: `${size * 1.1}px`,
@@ -102,7 +108,7 @@ const Seat = memo(
         </p>
       </div>
     );
-  }
+  },
 );
 
 Seat.displayName = "Seat";
@@ -132,6 +138,10 @@ const Seats = ({ data }: SeatsProps) => {
     orderDiscount?: number;
     orderCreatedAt?: string;
   } | null>(null);
+  const [openDiscount, setOpenDiscount] = useState(false);
+  const [selectedDiscount, setSelectedDiscount] = useState<
+    DiscountProps | undefined
+  >(undefined);
 
   // Refs cho react-selecto
   const seatContainerRef = useRef<HTMLDivElement>(null);
@@ -140,6 +150,11 @@ const Seats = ({ data }: SeatsProps) => {
   const footerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [seatSize, setSeatSize] = useState(44);
+
+  const { data: discounts } = useQuery({
+    queryKey: ["discounts"],
+    queryFn: () => getDiscounts({ page: 1, pageSize: 100 }),
+  });
 
   // Tính toán số tầng có sẵn
   const availableFloors = useMemo(() => {
@@ -156,7 +171,7 @@ const Seats = ({ data }: SeatsProps) => {
 
   // State cho tầng được chọn bởi người dùng
   const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(
-    null
+    null,
   );
 
   // Tính toán tầng được chọn: ưu tiên userSelectedFloor, nếu không hợp lệ thì dùng tầng đầu tiên
@@ -227,7 +242,7 @@ const Seats = ({ data }: SeatsProps) => {
 
   const [state, action, pending] = useActionState(
     bookingTicketAction,
-    INITIAL_STATE
+    INITIAL_STATE,
   );
   const prevPendingRef = useRef(pending);
   const lastQrCodeRef = useRef<string | null>(null);
@@ -363,7 +378,7 @@ const Seats = ({ data }: SeatsProps) => {
     setSelectedSeats((prev) => {
       const seatUniqueKey = getSeatUniqueKey(seat);
       const isAlreadySelected = prev.find(
-        (s) => getSeatUniqueKey(s) === seatUniqueKey
+        (s) => getSeatUniqueKey(s) === seatUniqueKey,
       );
       if (isAlreadySelected) {
         return prev.filter((s) => getSeatUniqueKey(s) !== seatUniqueKey);
@@ -410,10 +425,9 @@ const Seats = ({ data }: SeatsProps) => {
         isSelectingRef.current = false;
       }, 100);
     },
-    [seatMap]
+    [seatMap],
   );
 
-  
   // Các effects cho electron
   useEffect(() => {
     if (isCustomerView) {
@@ -430,8 +444,6 @@ const Seats = ({ data }: SeatsProps) => {
     }
   }, [isCustomerView]);
 
-  console.log("selectedSeats", selectedSeats);
-
   useEffect(() => {
     if (!isCustomerView && selectedSeats.length >= 0) {
       window.electron?.sendSeatUpdate(selectedSeats);
@@ -440,7 +452,7 @@ const Seats = ({ data }: SeatsProps) => {
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
-    [selectedSeats]
+    [selectedSeats],
   );
 
   const onBooking = useCallback(() => {
@@ -461,6 +473,7 @@ const Seats = ({ data }: SeatsProps) => {
       listChairValueF2?: string;
       listChairIndexF3?: string;
       listChairValueF3?: string;
+      discountId?: number;
     };
 
     const body: BodyType = {
@@ -469,6 +482,7 @@ const Seats = ({ data }: SeatsProps) => {
       paymentMethodSystemName: paymentType,
       posName: "POS Machine 1",
       posShortName: "M111",
+      discountId: selectedDiscount?.id,
     };
 
     if (floorNo === 1) {
@@ -489,7 +503,7 @@ const Seats = ({ data }: SeatsProps) => {
     });
 
     startTransition(() => action(formData));
-  }, [selectedSeats, data.id, paymentType, action]);
+  }, [selectedSeats, data.id, paymentType, action, selectedDiscount]);
 
   useEffect(() => {
     if (state.error) {
@@ -527,7 +541,7 @@ const Seats = ({ data }: SeatsProps) => {
         }
 
         const maxSeatsInFloor = Math.max(
-          ...floorSeats.map((row) => row.length)
+          ...floorSeats.map((row) => row.length),
         );
         if (maxSeatsInFloor > maxSeatsPerRow) {
           maxSeatsPerRow = maxSeatsInFloor;
@@ -551,10 +565,10 @@ const Seats = ({ data }: SeatsProps) => {
       // Tính kích thước ghế dựa trên width và height, lấy giá trị nhỏ hơn để đảm bảo fit
       const widthBasedSize = Math.floor(
         (availableWidth - estimatedLabelWidth * 2 - totalGapWidth) /
-          maxSeatsPerRow
+          maxSeatsPerRow,
       );
       const heightBasedSize = Math.floor(
-        (availableHeight - totalGapHeight) / numRows
+        (availableHeight - totalGapHeight) / numRows,
       );
 
       // Chọn giá trị nhỏ hơn và đảm bảo tỉ lệ vuông
@@ -590,7 +604,7 @@ const Seats = ({ data }: SeatsProps) => {
     return filteredSeats?.map((item, index) => (
       <div
         key={index}
-        className="flex gap-[6px] items-center justify-center seat-row"
+        className="flex gap-1.5 items-center justify-center seat-row"
         style={{ height: `${seatSize}px` }}
       >
         <div
@@ -608,7 +622,7 @@ const Seats = ({ data }: SeatsProps) => {
             key={seat.seat}
             seat={seat}
             isSelected={selectedSeats.some(
-              (s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat)
+              (s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat),
             )}
             onSelect={handleSelectSeat}
             size={seatSize}
@@ -627,6 +641,63 @@ const Seats = ({ data }: SeatsProps) => {
       </div>
     ));
   }, [filteredSeats, selectedSeats, handleSelectSeat, seatSize]);
+
+  const priceDiscount = useMemo(() => {
+    if (!selectedDiscount || selectedSeats.length === 0) return 0;
+    if (selectedDiscount.discountRate) {
+      // Tính giảm giá theo phần trăm cho từng ghế
+      return selectedSeats.reduce((total, seat) => {
+        return total + (seat.price * selectedDiscount.discountRate) / 100;
+      }, 0);
+    }
+
+    // Tính giảm giá theo số tiền cố định cho từng ghế
+    return selectedSeats.reduce((total) => {
+      return total + (selectedDiscount.discountAmount || 0);
+    }, 0);
+  }, [selectedDiscount, selectedSeats]);
+
+  const items: DescriptionsProps["items"] = [
+    {
+      key: "1",
+      label: "Số vé",
+      children: (
+        <p className="text-right flex-1 font-bold">{selectedSeats.length}</p>
+      ),
+    },
+    {
+      key: "2",
+      label: "Tiền vé",
+      children: (
+        <p className="text-right flex-1 font-bold">{formatMoney(totalPrice)}</p>
+      ),
+    },
+    {
+      key: "3",
+      label: "Giảm giá",
+      children: (
+        <div className="flex items-center justify-end flex-1 gap-2">
+          <p className="text-right flex-1 font-bold">
+            {formatMoney(priceDiscount)}
+          </p>
+          <Button
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => setOpenDiscount(true)}
+          />
+        </div>
+      ),
+    },
+    {
+      key: "4",
+      label: "Thành tiền",
+      children: (
+        <p className="text-right flex-1 font-bold text-blue-600">
+          {formatMoney(totalPrice - priceDiscount)}
+        </p>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -655,8 +726,7 @@ const Seats = ({ data }: SeatsProps) => {
                   }}
                   className={cn(
                     "pr-1 border-b-2 border-transparent text-sm font-bold",
-                    selectedFloor === floor &&
-                      "border-primary text-primary"
+                    selectedFloor === floor && "border-primary text-primary",
                   )}
                 >
                   Tầng {floor}
@@ -697,7 +767,7 @@ const Seats = ({ data }: SeatsProps) => {
             className="mt-2 flex-1 flex items-center justify-center min-h-0"
             ref={seatContainerRef}
           >
-            <div className="space-y-[6px] w-full flex flex-col items-center">
+            <div className="space-y-1.5 w-full flex flex-col items-center">
               {renderedSeats}
             </div>
           </div>
@@ -740,78 +810,26 @@ const Seats = ({ data }: SeatsProps) => {
           ref={footerRef}
           className={cn(
             "bg-beerus border-t border-gray-300 shrink-0 px-4",
-            isCustomerView && "hidden"
+            isCustomerView && "hidden",
           )}
         >
-          <div className="p-2 flex gap-3">
-            <div className="flex-1">
-              <div className="flex gap-4 bg-white p-2">
-                <div className="text-sm">
-                  <div className="flex items-center">
-                    <p className="min-w-[70px] text-trunks">Số vé:</p>
-                    <p className="text-whis font-bold flex-1 text-right">
-                      {selectedSeats.length}
-                    </p>
-                  </div>
-                  <div className="flex items-center mt-1">
-                    <p className="min-w-[70px] text-trunks">Giảm giá:</p>
-                    <p className="text-hit font-bold flex-1 text-right">
-                      {formatMoney(0)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-sm">
-                  <div className="flex items-center">
-                    <p className="min-w-[60px] text-trunks">Tiền vé:</p>
-                    <p className="font-bold text-right flex-1">
-                      {formatMoney(totalPrice)}
-                    </p>
-                  </div>
-                  <div className="flex items-center mt-1">
-                    <p className="min-w-[60px] text-trunks">Còn lại:</p>
-                    <p className="font-bold text-right flex-1">
-                      {formatMoney(0)}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-trunks text-sm whitespace-nowrap">
-                    Thanh toán:
-                  </p>
-                  <p className="font-bold flex-1 text-primary text-xl">
-                    {formatMoney(totalPrice)}
-                  </p>
-                </div>
-              </div>
+          <div className="p-2 flex gap-6 items-center justify-center">
+            <div className="w-[500px] bg-white py-2 px-4 rounded-md">
+              <Descriptions size="small" items={items} column={2} />
             </div>
-            <div className="flex-1">
-              <div className="flex items-center text-xs">
-                <p className="mr-1 whitespace-nowrap">Ghế đã chọn:</p>
-                <div className="flex items-center gap-1 max-w-[250px] overflow-hidden">
-                  {selectedSeats?.map((item) => (
-                    <span
-                      className="bg-zeno/56 rounded-sm text-white py-px text-xs px-1"
-                      key={item.code}
-                    >
-                      {item.code}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-1 flex gap-1">
-                <button className="h-10 flex-1 bg-white border border-dodoria/60 text-dodoria px-2 text-xs rounded-md font-bold">
-                  Hủy chỗ
-                </button>
-                <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
-                  Giữ chỗ
-                </button>
-                <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
-                  Đổi vé
-                </button>
-                <button className="h-10 flex-1 bg-white border px-2 text-xs rounded-md font-bold">
-                  Đổi quà
-                </button>
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outlined" color="cyan">
+                Đổi vé
+              </Button>
+              <Button variant="outlined" color="pink">
+                Đổi quà
+              </Button>
+              <Button variant="outlined" color="green">
+                Giữ chỗ
+              </Button>
+              <Button variant="outlined" danger>
+                Hủy chỗ
+              </Button>
             </div>
             <div className="flex gap-3">
               <RadioGroup
@@ -839,7 +857,11 @@ const Seats = ({ data }: SeatsProps) => {
                   </Label>
                 </div>
               </RadioGroup>
-              <Button className="flex flex-col h-16" onClick={onBooking}>
+              <Button
+                type="primary"
+                className="flex flex-col h-[72px]"
+                onClick={onBooking}
+              >
                 <Image
                   src="/images/ticket.svg"
                   width={24}
@@ -873,6 +895,12 @@ const Seats = ({ data }: SeatsProps) => {
           />
         )}
       </div>
+      <DiscountPopup
+        data={discounts?.data}
+        openDiscount={openDiscount}
+        setOpenDiscount={setOpenDiscount}
+        setSelectedDiscount={setSelectedDiscount}
+      />
     </>
   );
 };

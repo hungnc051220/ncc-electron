@@ -1,8 +1,5 @@
 import { getPlanScreeningDetail } from "@/data/loaders";
-import { format } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
 import { notFound } from "next/navigation";
-import BackButton from "./components/back-button";
 import CustomerView from "./components/customer-view";
 import Seats from "./components/seats";
 

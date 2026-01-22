@@ -185,6 +185,7 @@ export interface BookingTicketBodyProps {
   listChairIndexF3?: string;
   listChairValueF3?: string;
   isInvitation?: boolean;
+  discountId?: number;
 }
 
 export interface UpdateSeatContractTicketSaleBodyProps {

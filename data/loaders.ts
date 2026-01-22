@@ -726,7 +726,6 @@ export const getCancellationTickets = async ({
   if (Object.keys(filter).length > 0) {
     queryObject.filter = JSON.stringify(filter);
   }
-  console.log(queryObject.filter);
 
   url.search = qs.stringify(queryObject, {
     skipEmptyString: true,
