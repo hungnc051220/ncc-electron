@@ -218,15 +218,14 @@ const NavItems = () => {
   };
 
   return (
-    <>
-      <Menu
-        onClick={onClick}
-        selectedKeys={[current]}
-        mode="horizontal"
-        items={items}
-        triggerSubMenuAction="click"
-      />
-    </>
+    <Menu
+      onClick={onClick}
+      selectedKeys={[current]}
+      mode="horizontal"
+      items={items}
+      triggerSubMenuAction="click"
+      style={{ minWidth: 0, flex: "auto", justifyContent: "center" }}
+    />
   );
 };
 

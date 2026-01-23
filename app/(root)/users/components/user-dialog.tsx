@@ -25,7 +25,6 @@ interface UserDialogProps {
   customerRoles: CustomerRoleProps[];
   isFetchingCustomerRoles: boolean;
   manufactureres: ManufacturerProps[];
-  isFetchingManufactureres: boolean;
 }
 
 const UserDialog = ({
@@ -35,7 +34,6 @@ const UserDialog = ({
   customerRoles,
   isFetchingCustomerRoles,
   manufactureres,
-  isFetchingManufactureres,
 }: UserDialogProps) => {
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
@@ -136,7 +134,6 @@ const UserDialog = ({
                 value: item.id,
                 label: item.fullName,
               }))}
-              loading={isFetchingManufactureres}
             />
           </Form.Item>
           <Form.Item name="address" label="Địa chỉ">

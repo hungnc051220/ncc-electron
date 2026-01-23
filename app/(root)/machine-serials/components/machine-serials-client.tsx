@@ -3,9 +3,9 @@
 import { Breadcrumb, Table } from "antd";
 import { useState } from "react";
 import Filter from "./filter";
-import type { TableProps } from "antd";
+import type { TableProps, PaginationProps } from "antd";
 import { MachineSerialProps } from "@/types";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { filterEmptyValues, formatNumber } from "@/lib/utils";
 import { getMachineSerials } from "@/data/loaders";
 
@@ -15,6 +15,7 @@ export interface ValuesProps {
 
 const MachineSerialsClient = () => {
   const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
   const columns: TableProps<MachineSerialProps>["columns"] = [
@@ -51,13 +52,14 @@ const MachineSerialsClient = () => {
   ];
 
   const { data: machineSerials, isFetching } = useQuery({
-    queryKey: ["machine-serials", { current, filterValues }],
+    queryKey: ["machine-serials", { current, pageSize, filterValues }],
     queryFn: () => {
       const filtered = filterEmptyValues(
         filterValues as Record<string, unknown>,
       );
-      return getMachineSerials({ page: current, pageSize: 100, ...filtered });
+      return getMachineSerials({ page: current, pageSize, ...filtered });
     },
+    placeholderData: keepPreviousData,
   });
 
   const onSearch = (values: ValuesProps) => {
@@ -66,6 +68,11 @@ const MachineSerialsClient = () => {
 
   const onChange = (page: number) => {
     setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps['onShowSizeChange'] = (current, pageSize) => {
+    setCurrent(current);
+    setPageSize(pageSize);
   };
 
   return (
@@ -104,9 +111,11 @@ const MachineSerialsClient = () => {
           onChange,
           total: machineSerials?.total || 0,
           size: "middle",
-          showSizeChanger: false,
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
-          pageSize: 100,
           hideOnSinglePage: true,
         }}
       />

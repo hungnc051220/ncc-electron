@@ -6,13 +6,13 @@ import { filterEmptyValues, formatMoney, formatNumber } from "@/lib/utils";
 import { FilmProps } from "@/types";
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { TableProps, TabsProps } from "antd";
+import type { TableProps, TabsProps, PaginationProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table, Tabs } from "antd";
 import dayjs from "dayjs";
 import { Check, PlusIcon, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import DeleteFilmDialog from "./delete-film-dialog";
-import FilmDialog from "./film-dialog";
+import FilmDialog from "./film-dialog2";
 import Filter from "./filter";
 import type { Dayjs } from "dayjs";
 
@@ -47,14 +47,13 @@ const FilmsClient = () => {
   const [activeKey, setActiveKey] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingFilm, setEditingFilm] = useState<FilmProps | null>(null);
-  const [deletingFilm, setDeletingFilm] = useState<FilmProps | null>(null);
-
+  const [selectedFilm, setSelectedFilm] = useState<FilmProps | null>(null);
   const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
   const { data: films, isFetching } = useQuery({
-    queryKey: ["films", { current, filterValues, activeKey }],
+    queryKey: ["films", { current, pageSize, filterValues, activeKey }],
     queryFn: () => {
       const filtered = filterEmptyValues(
         filterValues as Record<string, unknown>,
@@ -68,7 +67,7 @@ const FilmsClient = () => {
 
       return getFilmsList({
         page: current,
-        pageSize: 100,
+        pageSize,
         tabCode: activeKey,
         ...filtered,
       });
@@ -77,31 +76,31 @@ const FilmsClient = () => {
   });
 
   const handleAdd = useCallback(() => {
-    setEditingFilm(null);
+    setSelectedFilm(null);
     setDialogOpen(true);
   }, []);
 
   const handleEdit = useCallback((film: FilmProps) => {
-    setEditingFilm(film);
+    setSelectedFilm(film);
     setDialogOpen(true);
   }, []);
 
   const handleDelete = useCallback((film: FilmProps) => {
-    setDeletingFilm(film);
+    setSelectedFilm(film);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingFilm(null);
+      setSelectedFilm(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingFilm(null);
+      setSelectedFilm(null);
     }
   }, []);
 
@@ -215,6 +214,11 @@ const FilmsClient = () => {
     setFilterValues(values);
   };
 
+  const onShowSizeChange: PaginationProps['onShowSizeChange'] = (current, pageSize) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
+
   return (
     <div className="mt-4 px-4">
       <div className="flex items-center justify-between">
@@ -273,9 +277,11 @@ const FilmsClient = () => {
           onChange,
           total: films?.total || 0,
           size: "middle",
-          showSizeChanger: false,
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
-          pageSize: 100,
           hideOnSinglePage: true,
         }}
       />
@@ -283,15 +289,20 @@ const FilmsClient = () => {
         <FilmDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingFilm={editingFilm}
+          editingFilm={selectedFilm}
+          versions={generalData?.filmVersions || []}
+          manufactureres={generalData?.manufacturers || []}
+          countries={generalData?.countries || []}
+          languages={generalData?.languages || []}
+          filmStatuses={generalData?.filmStatuses || []}
         />
       )}
-      {deletingFilm && (
+      {selectedFilm && (
         <DeleteFilmDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          filmId={deletingFilm.id}
-          filmName={deletingFilm.filmName}
+          id={selectedFilm.id}
+          filmName={selectedFilm.filmName}
         />
       )}
     </div>

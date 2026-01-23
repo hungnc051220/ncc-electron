@@ -4,14 +4,21 @@ import { FilterOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Select } from "antd";
 import { useState } from "react";
 import { ValuesProps } from "./users-client";
+import { CustomerRoleProps } from "@/types";
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
   filterValues: ValuesProps;
   setCurrent: (page: number) => void;
+  customerRoles: CustomerRoleProps[];
 }
 
-const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
+const Filter = ({
+  onSearch,
+  filterValues,
+  setCurrent,
+  customerRoles,
+}: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
 
@@ -72,7 +79,13 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
         )}
       >
         <Form.Item name="roleId" label="Nhóm người dùng">
-          <Select options={[]} placeholder="Chọn nhóm người dùng" />
+          <Select
+            options={customerRoles.map((role) => ({
+              value: role.id,
+              label: role.name,
+            }))}
+            placeholder="Chọn nhóm người dùng"
+          />
         </Form.Item>
         <Form.Item name="searchText" label="Tên/Email">
           <Input placeholder="Nhập tên/email" />

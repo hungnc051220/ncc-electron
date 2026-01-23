@@ -1,3 +1,4 @@
+import type { InputNumberProps } from "antd";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -9,7 +10,7 @@ export const decodeToken = (token: string) => {
   try {
     const payload = token.split(".")[1];
     const decodedPayload = JSON.parse(
-      Buffer.from(payload, "base64").toString("utf-8")
+      Buffer.from(payload, "base64").toString("utf-8"),
     );
     return decodedPayload;
   } catch {
@@ -20,7 +21,7 @@ export const decodeToken = (token: string) => {
 
 export const formatMoney = (price: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-    price
+    price,
   );
 
 export function formatNumber(x: number) {
@@ -28,11 +29,17 @@ export function formatNumber(x: number) {
 }
 
 export function filterEmptyValues<T extends Record<string, unknown>>(
-  obj: T
+  obj: T,
 ): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(obj).filter(
-      ([_, value]) => value !== null && value !== "" && value !== undefined
-    )
+      ([_, value]) => value !== null && value !== "" && value !== undefined,
+    ),
   );
 }
+
+export const formatter: InputNumberProps<number>["formatter"] = (value) => {
+  const [start, end] = `${value}`.split(".") || [];
+  const v = `${start}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${end ? `${v}.${end}` : `${v}`}`;
+};

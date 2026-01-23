@@ -362,7 +362,7 @@ export const getMachineSerials = async ({
   const queryObject: Record<string, unknown> = {
     current: page,
     pageSize,
-    order: "activeYear.desc",
+    sort: "activeYear.desc",
   };
 
   if (Object.keys(filter).length > 0) {

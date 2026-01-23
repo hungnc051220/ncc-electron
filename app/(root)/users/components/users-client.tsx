@@ -1,11 +1,12 @@
 "use client";
 
-import { getCustomerRoles, getManufacturers, getUsers } from "@/data/loaders";
+import { getCustomerRoles, getUsers } from "@/data/loaders";
+import useGeneralData from "@/hooks/use-general-data";
 import { filterEmptyValues, formatNumber } from "@/lib/utils";
 import { UserProps } from "@/types";
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { TableProps } from "antd";
+import type { TableProps, PaginationProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { Check, PlusIcon, X } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -31,27 +32,21 @@ const UsersClient = () => {
   const [changeHiddenDialogOpen, setChangeHiddenDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProps | null>(null);
   const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const data = useGeneralData((state) => state.data);
 
   const { data: users, isFetching } = useQuery({
-    queryKey: ["users", { current, filterValues }],
+    queryKey: ["users", { current, pageSize, filterValues }],
     queryFn: () => {
       const filtered = filterEmptyValues(
         filterValues as Record<string, unknown>,
       );
 
-      return getUsers({ page: current, pageSize: 100, ...filtered });
+      return getUsers({ page: current, pageSize, ...filtered });
     },
     placeholderData: keepPreviousData,
   });
-
-  const { data: manufactureres, isFetching: isFetchingManufacturers } =
-    useQuery({
-      queryKey: ["manufacturers"],
-      queryFn: () => {
-        return getManufacturers({ page: current, pageSize: 100 });
-      },
-    });
 
   const { data: customerRoles, isFetching: isFetchingCustomerRoles } = useQuery(
     {
@@ -195,6 +190,11 @@ const UsersClient = () => {
     },
   ];
 
+  const onShowSizeChange: PaginationProps['onShowSizeChange'] = (current, pageSize) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
+
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
@@ -218,6 +218,7 @@ const UsersClient = () => {
             onSearch={onSearch}
             filterValues={filterValues}
             setCurrent={setCurrent}
+            customerRoles={customerRoles || []}
           />
           <Button
             type="primary"
@@ -242,9 +243,11 @@ const UsersClient = () => {
           onChange,
           total: users?.total || 0,
           size: "middle",
-          showSizeChanger: false,
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
-          pageSize: 100,
           hideOnSinglePage: true,
         }}
       />
@@ -255,8 +258,7 @@ const UsersClient = () => {
           editingUser={selectedUser}
           customerRoles={customerRoles || []}
           isFetchingCustomerRoles={isFetchingCustomerRoles}
-          manufactureres={manufactureres?.data || []}
-          isFetchingManufactureres={isFetchingManufacturers}
+          manufactureres={data?.manufacturers || []}
         />
       )}
       {selectedUser && (

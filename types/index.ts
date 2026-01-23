@@ -292,9 +292,9 @@ export interface FilmProps {
   sellOnlineBefore: number;
   createdUser: string;
   updatedUser: string;
-  isFree: string;
+  isFree: boolean;
   categories: Category[];
-  filmStatus: FilmStatus;
+  filmStatus: FilmStatusProps;
   filmVersion: FilmVersion;
   filmLanguage: FilmLanguage;
 }
@@ -306,13 +306,6 @@ export interface Category {
   categoryId: number;
   createdOnUtc: string;
   createdUser: string;
-}
-
-export interface FilmStatus {
-  id: number;
-  statusCode: string;
-  statusName: string;
-  deleted: boolean;
 }
 
 export interface FilmVersion {
