@@ -1,22 +1,19 @@
 "use client";
 
-import { bookingTicketAction } from "@/actions/booking-ticket-actions";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { getDiscounts } from "@/data/loaders";
+import { getDiscounts, getPlanScreeningDetail } from "@/data/loaders";
 import { cn, formatMoney } from "@/lib/utils";
 import { useSocketContext } from "@/providers/socket-provider";
 import {
+  BookingTicketBodyProps,
   DiscountProps,
   ListSeat,
   PaymentType,
-  PlanScreeningDetailProps,
-  QrCodeResponseProps,
+  QrCodeResponseProps
 } from "@/types";
 import { EditOutlined } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions } from "antd";
+import { Button, Descriptions, Radio } from "antd";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { Loader2 } from "lucide-react";
@@ -25,7 +22,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   memo,
   startTransition,
-  useActionState,
   useCallback,
   useEffect,
   useMemo,
@@ -46,17 +42,43 @@ const colorMap: { [key: string]: string } = {
   12: "bg-transparent",
 };
 
-const INITIAL_STATE = {
+const paymentTypes = [
+  {
+    value: PaymentType.POS,
+    label: "Tiền mặt",
+  },
+  {
+    value: PaymentType.VNPAY,
+    label: "Quét VietQR",
+  },
+  {
+    value: PaymentType.VIETQR,
+    label: "Quét VNPayQR",
+  },
+];
+
+type ActionStateProps = {
+  success: boolean;
+  error: string | null;
+  data?: QrCodeResponseProps;
+  orderId?: number;
+  orderTotal?: number;
+  orderDiscount?: number;
+  orderCreatedAt?: string;
+};
+
+const INITIAL_STATE: ActionStateProps = {
   success: false,
   error: null,
   data: undefined,
+  orderId: undefined,
   orderTotal: 0,
-  orderDisccount: 0,
+  orderDiscount: 0,
   orderCreatedAt: undefined,
 };
 
 interface SeatsProps {
-  data: PlanScreeningDetailProps;
+  slug: string;
 }
 
 // Tách component Seat riêng để tối ưu render
@@ -118,10 +140,10 @@ const getSeatUniqueKey = (seat: ListSeat): string => {
   return `${seat.floor}-${seat.code}`;
 };
 
-const Seats = ({ data }: SeatsProps) => {
+const Seats = ({ slug }: SeatsProps) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const socketRef = useSocketContext();
-  const { listSeats: seats } = data;
   const searchParams = useSearchParams();
   const isCustomerView = searchParams.get("view") === "customer";
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
@@ -155,6 +177,13 @@ const Seats = ({ data }: SeatsProps) => {
     queryKey: ["discounts"],
     queryFn: () => getDiscounts({ page: 1, pageSize: 100 }),
   });
+
+  const { data } = useQuery({
+    queryKey: ["plan-screening-detail", slug],
+    queryFn: () => getPlanScreeningDetail(slug),
+  });
+
+  const seats = data?.listSeats;
 
   // Tính toán số tầng có sẵn
   const availableFloors = useMemo(() => {
@@ -240,10 +269,43 @@ const Seats = ({ data }: SeatsProps) => {
     };
   }, [socketRef, router, isCustomerView]);
 
-  const [state, action, pending] = useActionState(
-    bookingTicketAction,
-    INITIAL_STATE,
-  );
+  const [state, setState] = useState<ActionStateProps>(INITIAL_STATE);
+
+  const bookingMutation = useMutation({
+    mutationFn: async (body: BookingTicketBodyProps): Promise<ActionStateProps> => {
+      const res = await fetch("/api/booking-ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || result?.success === false) {
+        throw new Error(result?.error || result?.message || "Tạo đơn thất bại");
+      }
+
+      return result as ActionStateProps;
+    },
+    onSuccess: async (result) => {
+      setState(result);
+      // Làm tươi lại thông tin suất chiếu
+      await queryClient.invalidateQueries({
+        queryKey: ["plan-screening-detail", slug],
+      });
+    },
+    onError: (error: Error) => {
+      setState((prev) => ({
+        ...prev,
+        success: false,
+        error: error.message,
+      }));
+    },
+  });
+
+  const pending = bookingMutation.isPending;
   const prevPendingRef = useRef(pending);
   const lastQrCodeRef = useRef<string | null>(null);
 
@@ -259,7 +321,7 @@ const Seats = ({ data }: SeatsProps) => {
       });
       lastQrCodeRef.current = currentQrCode;
 
-      if (!isCustomerView && state.data) {
+      if (!isCustomerView && state.data && data) {
         window.electron?.sendQrDialogOpen({
           dataQr: state.data,
           filmName: data.filmInfo.filmName,
@@ -328,21 +390,21 @@ const Seats = ({ data }: SeatsProps) => {
                 // Tách từng ghế từ listChairValueF1, F2, F3
                 const seatsF1 = item.listChairValueF1
                   ? item.listChairValueF1
-                      .split(",")
-                      .map((s: string) => s.trim())
-                      .filter(Boolean)
+                    .split(",")
+                    .map((s: string) => s.trim())
+                    .filter(Boolean)
                   : [];
                 const seatsF2 = item.listChairValueF2
                   ? item.listChairValueF2
-                      .split(",")
-                      .map((s: string) => s.trim())
-                      .filter(Boolean)
+                    .split(",")
+                    .map((s: string) => s.trim())
+                    .filter(Boolean)
                   : [];
                 const seatsF3 = item.listChairValueF3
                   ? item.listChairValueF3
-                      .split(",")
-                      .map((s: string) => s.trim())
-                      .filter(Boolean)
+                    .split(",")
+                    .map((s: string) => s.trim())
+                    .filter(Boolean)
                   : [];
                 const seatsList = [...seatsF1, ...seatsF2, ...seatsF3];
 
@@ -457,32 +519,18 @@ const Seats = ({ data }: SeatsProps) => {
 
   const onBooking = useCallback(() => {
     if (selectedSeats.length === 0) return;
+    if (!data) return;
 
-    const formData = new FormData();
     const floorNo = selectedSeats[0]?.floor || 1;
 
-    type BodyType = {
-      planScreenId: number;
-      floorNo: number;
-      paymentMethodSystemName: string;
-      posName: string;
-      posShortName: string;
-      listChairIndexF1?: string;
-      listChairValueF1?: string;
-      listChairIndexF2?: string;
-      listChairValueF2?: string;
-      listChairIndexF3?: string;
-      listChairValueF3?: string;
-      discountId?: number;
-    };
-
-    const body: BodyType = {
+    const body: BookingTicketBodyProps = {
       planScreenId: data.id,
       floorNo,
       paymentMethodSystemName: paymentType,
       posName: "POS Machine 1",
-      posShortName: "M111",
+      posShortName: "M11",
       discountId: selectedDiscount?.id,
+      isInvitation: false,
     };
 
     if (floorNo === 1) {
@@ -496,14 +544,8 @@ const Seats = ({ data }: SeatsProps) => {
       body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
     }
 
-    Object.entries(body).forEach(([key, value]) => {
-      if (value !== undefined) {
-        formData.append(key, value as string);
-      }
-    });
-
-    startTransition(() => action(formData));
-  }, [selectedSeats, data.id, paymentType, action, selectedDiscount]);
+    startTransition(() => bookingMutation.mutate(body));
+  }, [selectedSeats, data, paymentType, bookingMutation, selectedDiscount]);
 
   useEffect(() => {
     if (state.error) {
@@ -565,7 +607,7 @@ const Seats = ({ data }: SeatsProps) => {
       // Tính kích thước ghế dựa trên width và height, lấy giá trị nhỏ hơn để đảm bảo fit
       const widthBasedSize = Math.floor(
         (availableWidth - estimatedLabelWidth * 2 - totalGapWidth) /
-          maxSeatsPerRow,
+        maxSeatsPerRow,
       );
       const heightBasedSize = Math.floor(
         (availableHeight - totalGapHeight) / numRows,
@@ -698,6 +740,8 @@ const Seats = ({ data }: SeatsProps) => {
       ),
     },
   ];
+
+  if (!data) return null;
 
   return (
     <>
@@ -832,31 +876,13 @@ const Seats = ({ data }: SeatsProps) => {
               </Button>
             </div>
             <div className="flex gap-3">
-              <RadioGroup
-                defaultValue={PaymentType.POS}
+              <Radio.Group
+                vertical
+                onChange={(e) => setPaymentType(e.target.value)}
                 value={paymentType}
-                onValueChange={(value) => setPaymentType(value as PaymentType)}
+                options={paymentTypes}
                 className="gap-1"
-              >
-                <div className="flex items-center gap-3">
-                  <RadioGroupItem value={PaymentType.POS} id="pos" />
-                  <Label htmlFor="pos" className="text-xs">
-                    Tiền mặt
-                  </Label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <RadioGroupItem value={PaymentType.VNPAY} id="vnpay" />
-                  <Label htmlFor="vnpay" className="text-xs">
-                    Quét VNpayQR
-                  </Label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <RadioGroupItem value={PaymentType.VIETQR} id="vietqr" />
-                  <Label htmlFor="vietqr" className="text-xs">
-                    Quét VietQR
-                  </Label>
-                </div>
-              </RadioGroup>
+              />
               <Button
                 type="primary"
                 className="flex flex-col h-[72px]"

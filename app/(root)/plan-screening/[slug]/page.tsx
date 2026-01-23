@@ -1,4 +1,3 @@
-import { getPlanScreeningDetail } from "@/data/loaders";
 import { notFound } from "next/navigation";
 import CustomerView from "./components/customer-view";
 import Seats from "./components/seats";
@@ -13,14 +12,9 @@ const PlanScreeningPage = async ({ params }: PlanScreeningPageProps) => {
   if (!slug) {
     notFound();
   }
-
-  const data = await getPlanScreeningDetail(slug);
-
-  if (!data) return null;
-
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Seats data={data} />
+      <Seats slug={slug} />
       <CustomerView planScreeningsId={Number(slug)} />
     </div>
   );

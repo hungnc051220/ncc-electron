@@ -269,7 +269,7 @@ const Seats = ({ data, onClose }: SeatsProps) => {
       isInvitation: true,
       paymentMethodSystemName: "POS",
       posName: "POS Machine 1",
-      posShortName: "M111",
+      posShortName: "M11",
     };
 
     if (floorNo === 1) {
