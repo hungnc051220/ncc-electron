@@ -1,30 +1,14 @@
 "use client";
 
-import {
-  createCancellationReasonAction,
-  updateCancellationReasonAction,
-} from "@/actions/cancellation-reason-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { CancellationReasonFormInput } from "@/lib/schemas/cancellation-reason-schema";
 import { CancellationReasonProps } from "@/types";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Form, Input, Modal } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-import CancellationReasonForm from "./cancellation-reason-form";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+type FieldType = {
+  reason: string;
 };
 
 interface CancellationReasonDialogProps {
@@ -38,74 +22,76 @@ const CancellationReasonDialog = ({
   onOpenChange,
   editingCancellationReason,
 }: CancellationReasonDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
   const isEdit = !!editingCancellationReason;
-  const [state, action, pending] = useActionState(
-    isEdit ? updateCancellationReasonAction : createCancellationReasonAction,
-    INITIAL_STATE
-  );
 
-  const onSubmit = (values: CancellationReasonFormInput) => {
-    const formData = new FormData();
-    if (isEdit && editingCancellationReason) {
-      formData.append("id", editingCancellationReason.id.toString());
-    }
-    Object.entries(values).forEach(([key, value]) => {
-      formData.append(key, value as string);
-    });
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
-
-    if (state.success) {
-      toast.success(
-        isEdit ? "Cập nhật lý do hủy thành công" : "Thêm lý do hủy thành công"
-      );
+  const cancellationReasonMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      if (!isEdit) {
+        return axios.post("/api/cancellation-reasons/create", {
+          ...data,
+        });
+      } else {
+        return axios.post("/api/cancellation-reasons/update", {
+          ...data,
+          id: editingCancellationReason.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cancellation-reasons"] });
+      toast.success(`${isEdit ? "Cập nhật" : "Thêm"} lý do hủy vé thành công`);
       onOpenChange(false);
-    }
-  }, [state, isEdit, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
-  const getDefaultValues = (): Partial<CancellationReasonFormInput> | undefined => {
-    if (!editingCancellationReason) return undefined;
+  const onOk = () => form.submit();
+
+  const getInitialValues = (): FieldType | undefined => {
+    if (!editingCancellationReason) {
+      return {
+        reason: "",
+      };
+    }
     return {
       reason: editingCancellationReason.reason,
     };
   };
 
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    cancellationReasonMutation.mutate(values);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[476px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            {isEdit ? "Cập nhật lý do hủy" : "Thêm mới lý do hủy"}
-          </DialogTitle>
-        </DialogHeader>
-        <div>
-          <CancellationReasonForm
-            onSubmit={onSubmit}
-            defaultValues={getDefaultValues()}
-          />
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button
-            type="submit"
-            form="cancellation-reason-form"
-            disabled={pending}
-          >
-            {pending && <Spinner />}
-            {isEdit ? "Cập nhật" : "Xác nhận"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Modal
+      open={open}
+      title={isEdit ? "Cập nhật lý do hủy" : "Thêm mới lý do hủy"}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: cancellationReasonMutation.isPending,
+      }}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={getInitialValues()}
+      >
+        <Form.Item<FieldType>
+          name="reason"
+          label="Lý do hủy"
+          rules={[{ required: true, message: "Nhập tên lý do hủy" }]}
+        >
+          <Input placeholder="Nhập tên lý do hủy" />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 

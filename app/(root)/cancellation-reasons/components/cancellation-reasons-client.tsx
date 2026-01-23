@@ -1,124 +1,187 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { ApiResponse, CancellationReasonProps } from "@/types";
+import { getCancellationReasons } from "@/data/loaders";
+import { formatNumber } from "@/lib/utils";
+import { CancellationReasonProps } from "@/types";
+import Icon, { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { useMediaQuery } from "react-responsive";
-import { createColumns } from "./columns";
-import DeleteCancellationReasonDialog from "./delete-cancellation-reason-dialog";
+import { useCallback, useState } from "react";
 import CancellationReasonDialog from "./cancellation-reason-dialog";
+import DeleteCancellationReasonDialog from "./delete-cancellation-reason-dialog";
 
-interface CancellationReasonsClientProps {
-  data: ApiResponse<CancellationReasonProps>;
-  page: number;
-}
+const actionItems = [
+  { key: "1", label: "Cập nhật" },
+  { key: "2", label: <p className="text-red-500">Xóa</p> },
+];
 
-const CancellationReasonsClient = ({
-  data,
-  page,
-}: CancellationReasonsClientProps) => {
-  const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
+const CancellationReasonsClient = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(true);
-  const [editingCancellationReason, setEditingCancellationReason] = useState<CancellationReasonProps | null>(
-    null
-  );
-  const [deletingCancellationReason, setDeletingCancellationReason] =
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [selectedCancellationReason, setSelectedCancellationReason] =
     useState<CancellationReasonProps | null>(null);
 
+  const { data: cancellationReasons, isFetching } = useQuery({
+    queryKey: ["cancellation-reasons", { current, pageSize }],
+    queryFn: () => {
+      return getCancellationReasons({
+        page: current,
+        pageSize,
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
+
   const handleAdd = useCallback(() => {
-    setEditingCancellationReason(null);
+    setSelectedCancellationReason(null);
     setDialogOpen(true);
   }, []);
 
   const handleEdit = useCallback((item: CancellationReasonProps) => {
-    setEditingCancellationReason(item);
+    setSelectedCancellationReason(item);
     setDialogOpen(true);
   }, []);
 
   const handleDelete = useCallback((item: CancellationReasonProps) => {
-    setDeletingCancellationReason(item);
+    setSelectedCancellationReason(item);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingCancellationReason(null);
+      setSelectedCancellationReason(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingCancellationReason(null);
+      setSelectedCancellationReason(null);
     }
   }, []);
 
-  const columns = useMemo(
-    () => createColumns({ onEdit: handleEdit, onDelete: handleDelete, page }),
-    [handleEdit, handleDelete, page]
-  );
+  const columns: TableProps<CancellationReasonProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Lý do hủy",
+      key: "reason",
+      dataIndex: "reason",
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleEdit(record);
+              }
+              if (e.key === "2") {
+                handleDelete(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
 
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Lý do hủy
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+              href: "/",
+            },
+            {
+              title: "Quản lý danh sách",
+            },
+            {
+              title: "Danh sách lý do hủy vé",
+            },
+          ]}
+        />
 
         <div className="flex gap-2 items-center">
           <Button
+            type="primary"
             onClick={handleAdd}
-            size={isTabletOrMobile ? "sm" : "default"}
+            icon={<Icon component={PlusIcon} />}
           >
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm mới
+            Thêm lý do hủy vé
           </Button>
         </div>
       </div>
 
-      <DataTable
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={cancellationReasons?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        className="max-h-[calc(100vh-200px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 220px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: cancellationReasons?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+          hideOnSinglePage: true,
+        }}
       />
+
       {dialogOpen && (
         <CancellationReasonDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingCancellationReason={editingCancellationReason}
+          editingCancellationReason={selectedCancellationReason}
         />
       )}
-      {deletingCancellationReason && (
+      {selectedCancellationReason && (
         <DeleteCancellationReasonDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          id={deletingCancellationReason.id}
-          name={deletingCancellationReason.reason}
+          id={selectedCancellationReason.id}
+          name={selectedCancellationReason.reason}
         />
       )}
     </div>

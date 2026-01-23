@@ -393,6 +393,7 @@ export const getManufacturers = async ({
   const queryObject: Record<string, unknown> = {
     current: page,
     pageSize,
+    sort: "createdOnUtc.desc",
   };
 
   if (Object.keys(filter).length > 0) {
@@ -481,6 +482,7 @@ export const getCancellationReasons = async ({
   const url = new URL("/api/pos/order/cancel-reason", BASE_URL);
 
   const filter: Record<string, unknown> = {};
+  filter.Deleted = false;
 
   const queryObject: Record<string, unknown> = {
     current: page,

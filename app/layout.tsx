@@ -27,7 +27,11 @@ export default function RootLayout({
         <AntdProvider>
           <NuqsAdapter>{children}</NuqsAdapter>
         </AntdProvider>
-        <Toaster richColors position="top-center" />
+        <Toaster
+          richColors
+          position="top-center"
+          style={{ fontFamily: "inherit" }}
+        />
       </body>
     </html>
   );

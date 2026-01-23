@@ -1,30 +1,23 @@
 "use client";
 
-import {
-  createManufacturerAction,
-  updateManufacturerAction,
-} from "@/actions/manufacturer-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { ManufacturerFormInput } from "@/lib/schemas/manufacturer-schema";
 import { ManufacturerProps } from "@/types";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Form, Input, Modal } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-import ManufacturerForm from "./manufacturer-form";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+type FieldType = {
+  name: string;
+  fullName: string;
+  manufacturerTemplateId?: number;
+  bankName?: string;
+  phoneNumber?: string;
+  acountBank?: string;
+  addressBank?: string;
+  address?: string;
+  fax?: string;
+  url?: string;
 };
 
 interface ManufacturerDialogProps {
@@ -38,38 +31,43 @@ const ManufacturerDialog = ({
   onOpenChange,
   editingManufacturer,
 }: ManufacturerDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
   const isEdit = !!editingManufacturer;
-  const [state, action, pending] = useActionState(
-    isEdit ? updateManufacturerAction : createManufacturerAction,
-    INITIAL_STATE
-  );
 
-  const onSubmit = (values: ManufacturerFormInput) => {
-    const formData = new FormData();
-    if (isEdit && editingManufacturer) {
-      formData.append("id", editingManufacturer.id.toString());
-    }
-    Object.entries(values).forEach(([key, value]) => {
-      formData.append(key, value as string);
-    });
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
-
-    if (state.success) {
-      toast.success(
-        isEdit ? "Cập nhật hãng phim thành công" : "Thêm hãng phim thành công"
-      );
+  const manufacturerMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      if (!isEdit) {
+        return axios.post("/api/manufacturer/create", {
+          ...data,
+        });
+      } else {
+        return axios.post("/api/manufacturer/update", {
+          ...data,
+          id: editingManufacturer.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manufacturers"] });
+      toast.success(`${isEdit ? "Cập nhật" : "Thêm"} hãng phim thành công`);
       onOpenChange(false);
-    }
-  }, [state, isEdit, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
-  const getDefaultValues = (): Partial<ManufacturerFormInput> | undefined => {
-    if (!editingManufacturer) return undefined;
+  const onOk = () => form.submit();
+
+  const getInitialValues = (): FieldType | undefined => {
+    if (!editingManufacturer) {
+      return {
+        name: "",
+        fullName: "",
+        manufacturerTemplateId: 1,
+      };
+    }
     return {
       name: editingManufacturer.name,
       fullName: editingManufacturer.fullName,
@@ -80,36 +78,80 @@ const ManufacturerDialog = ({
       address: editingManufacturer.address,
       fax: editingManufacturer.fax,
       url: editingManufacturer.url,
+      manufacturerTemplateId: 1,
     };
   };
 
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    manufacturerMutation.mutate(values);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[612px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            {isEdit ? "Cập nhật hãng phim" : "Thêm mới hãng phim"}
-          </DialogTitle>
-        </DialogHeader>
-        <div>
-          <ManufacturerForm
-            onSubmit={onSubmit}
-            defaultValues={getDefaultValues()}
-          />
+    <Modal
+      open={open}
+      title={isEdit ? "Cập nhật hãng phim" : "Thêm mới hãng phim"}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: manufacturerMutation.isPending,
+      }}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={getInitialValues()}
+      >
+        <div className="grid grid-cols-2 gap-x-4 mt-4">
+          <Form.Item<FieldType>
+            name="name"
+            label="Tên hãng phim"
+            rules={[{ required: true, message: "Nhập tên hãng phim" }]}
+          >
+            <Input placeholder="Nhập tên hãng phim" />
+          </Form.Item>
+          <Form.Item<FieldType> name="acountBank" label="Tài khoản ngân hàng">
+            <Input placeholder="Nhập tài khoản ngân hàng" />
+          </Form.Item>
+
+          <Form.Item<FieldType>
+            name="fullName"
+            label="Tên công ty"
+            rules={[{ required: true, message: "Nhập tên công ty" }]}
+          >
+            <Input placeholder="Nhập tên công ty" />
+          </Form.Item>
+          <Form.Item<FieldType> name="bankName" label="Tên ngân hàng">
+            <Input placeholder="Nhập tên ngân hàng" />
+          </Form.Item>
+          <Form.Item<FieldType> name="phoneNumber" label="Số điện thoại">
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+          <Form.Item<FieldType> name="addressBank" label="Địa chỉ ngân hàng">
+            <Input placeholder="Nhập địa chỉ ngân hàng" />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="address"
+            label="Địa chỉ"
+            className="col-span-2"
+          >
+            <Input placeholder="Nhập địa chỉ" />
+          </Form.Item>
+          <Form.Item<FieldType> name="fax" label="Fax" className="col-span-2">
+            <Input placeholder="Nhập fax" />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="url"
+            label="Website"
+            className="col-span-2"
+          >
+            <Input placeholder="Nhập website" />
+          </Form.Item>
+          <Form.Item<FieldType> name="manufacturerTemplateId" hidden />
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button type="submit" form="manufacturer-form" disabled={pending}>
-            {pending && <Spinner />}
-            {isEdit ? "Cập nhật" : "Xác nhận"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Form>
+    </Modal>
   );
 };
 

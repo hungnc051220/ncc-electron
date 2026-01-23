@@ -12,7 +12,7 @@ import dayjs from "dayjs";
 import { Check, PlusIcon, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import DeleteFilmDialog from "./delete-film-dialog";
-import FilmDialog from "./film-dialog2";
+import FilmDialog from "./film-dialog";
 import Filter from "./filter";
 import type { Dayjs } from "dayjs";
 
