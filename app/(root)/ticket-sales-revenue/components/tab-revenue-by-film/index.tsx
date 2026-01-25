@@ -53,8 +53,6 @@ const TabRevenueByFilm = () => {
     enabled: false,
   });
 
-  console.log(data);
-
   const columns: TableProps<RevenueByFilmProps>["columns"] = [
     {
       title: "STT",
@@ -125,9 +123,7 @@ const TabRevenueByFilm = () => {
   const onRangeChange = (dates: null | (Dayjs | null)[]) => {
     if (dates) {
       setFromDate(dates[0]);
-      setToDate(dates[0]);
-    } else {
-      console.log("Clear");
+      setToDate(dates[1]);
     }
   };
 
@@ -139,6 +135,7 @@ const TabRevenueByFilm = () => {
           format="DD/MM/YYYY"
           onChange={onRangeChange}
           presets={rangePresets}
+          allowClear={false}
         />
         <Button
           color="primary"

@@ -29,8 +29,6 @@ export const cancelOrderAction = async (
   };
 
   const res = await cancelOrderService(formatData);
-  const data = await res.json();
-  console.log(data);
 
   if (!res.ok) {
     return {

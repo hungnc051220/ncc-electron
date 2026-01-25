@@ -12,11 +12,11 @@ import { useState } from "react";
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
-const rangePresets: TimeRangePickerProps['presets'] = [
-  { label: '7 ngày trước', value: [dayjs().add(-7, 'd'), dayjs()] },
-  { label: '14 ngày trước', value: [dayjs().add(-14, 'd'), dayjs()] },
-  { label: '30 ngày trước', value: [dayjs().add(-30, 'd'), dayjs()] },
-  { label: '90 ngày trước', value: [dayjs().add(-90, 'd'), dayjs()] },
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] },
 ];
 
 const TabActivityLog = () => {
@@ -123,9 +123,7 @@ const TabActivityLog = () => {
   const onRangeChange = (dates: null | (Dayjs | null)[]) => {
     if (dates) {
       setFromDate(dates[0]);
-      setToDate(dates[0]);
-    } else {
-      console.log("Clear");
+      setToDate(dates[1]);
     }
   };
 
@@ -137,6 +135,7 @@ const TabActivityLog = () => {
           format="DD/MM/YYYY"
           onChange={onRangeChange}
           presets={rangePresets}
+          allowClear={false}
         />
         <Button
           color="primary"
@@ -164,54 +163,56 @@ const TabActivityLog = () => {
           pageSize: 100,
           hideOnSinglePage: true,
         }}
-        summary={() => data?.revenueByEmployee && data?.revenueByEmployee.length > 0 ? (
-          <Table.Summary fixed>
-            <Table.Summary.Row>
-              <Table.Summary.Cell
-                index={0}
-                colSpan={2}
-                className="font-bold text-center"
-              >
-                Tổng
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={2} align="right">
-                <Text className="font-bold">
-                  {formatNumber(data?.totalByEmployee?.onQuantity || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={3} align="right">
-                <Text className="font-bold">
-                  {formatNumber(data?.totalByEmployee?.offQuantity || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={4} align="right">
-                <Text className="font-bold">
-                  {formatNumber(data?.totalByEmployee?.totalQuantity || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={5} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByEmployee?.offSaleVietQr || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={6} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByEmployee?.offSaleVnPayQr || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={7} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByEmployee?.actualOffSale || 0)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={8} align="right">
-                <Text className="font-bold">
-                  {formatMoney(data?.totalByEmployee?.totalSale || 0)}
-                </Text>
-              </Table.Summary.Cell>
-            </Table.Summary.Row>
-          </Table.Summary>
-        ) : null}
+        summary={() =>
+          data?.revenueByEmployee && data?.revenueByEmployee.length > 0 ? (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                <Table.Summary.Cell
+                  index={0}
+                  colSpan={2}
+                  className="font-bold text-center"
+                >
+                  Tổng
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="right">
+                  <Text className="font-bold">
+                    {formatNumber(data?.totalByEmployee?.onQuantity || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="right">
+                  <Text className="font-bold">
+                    {formatNumber(data?.totalByEmployee?.offQuantity || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={4} align="right">
+                  <Text className="font-bold">
+                    {formatNumber(data?.totalByEmployee?.totalQuantity || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByEmployee?.offSaleVietQr || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={6} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByEmployee?.offSaleVnPayQr || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={7} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByEmployee?.actualOffSale || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={8} align="right">
+                  <Text className="font-bold">
+                    {formatMoney(data?.totalByEmployee?.totalSale || 0)}
+                  </Text>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            </Table.Summary>
+          ) : null
+        }
       />
     </div>
   );

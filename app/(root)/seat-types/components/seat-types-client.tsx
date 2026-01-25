@@ -1,125 +1,237 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { ApiResponse, SeatTypeProps } from "@/types";
-import { PlusIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { useMediaQuery } from "react-responsive";
-import SeatTypesDialog from "./seat-type-dialog";
-import { createColumns } from "./columns";
+import { getSeatTypes } from "@/data/loaders";
+import { formatNumber } from "@/lib/utils";
+import { SeatTypeProps } from "@/types";
+import Icon, { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps } from "antd";
+import { Breadcrumb, Button, ColorPicker, Dropdown, Table } from "antd";
+import { Check, PlusIcon, X } from "lucide-react";
+import { useCallback, useState } from "react";
 import DeleteSeatTypeDialog from "./delete-seat-type-dialog";
+import SeatTypesDialog from "./seat-type-dialog";
+import Image from "next/image";
 
-interface SeatTypesClientProps {
-  data: ApiResponse<SeatTypeProps>;
-  page: number;
-}
+const actionItems = [
+  { key: "1", label: "Cập nhật" },
+  { key: "2", label: <p className="text-red-500">Xóa</p> },
+];
 
-const SeatTypesClient = ({ data, page }: SeatTypesClientProps) => {
-  const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
+const SeatTypesClient = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(true);
-  const [editingSeatType, setEditingSeatType] = useState<SeatTypeProps | null>(
-    null
-  );
-  const [deletingSeatType, setDeletingSeatType] =
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedSeatType, setSelectedSeatType] =
     useState<SeatTypeProps | null>(null);
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  const { data: seatTypes, isFetching } = useQuery({
+    queryKey: ["seat-types", { current, pageSize }],
+    queryFn: () => {
+      return getSeatTypes({
+        page: current,
+        pageSize,
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
 
   const handleAdd = useCallback(() => {
-    setEditingSeatType(null);
+    setSelectedSeatType(null);
     setDialogOpen(true);
   }, []);
 
   const handleEdit = useCallback((item: SeatTypeProps) => {
-    setEditingSeatType(item);
+    setSelectedSeatType(item);
     setDialogOpen(true);
   }, []);
 
   const handleDelete = useCallback((item: SeatTypeProps) => {
-    setDeletingSeatType(item);
+    setSelectedSeatType(item);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingSeatType(null);
+      setSelectedSeatType(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingSeatType(null);
+      setSelectedSeatType(null);
     }
   }, []);
 
-  const columns = useMemo(
-    () => createColumns({ onEdit: handleEdit, onDelete: handleDelete, page }),
-    [handleEdit, handleDelete, page]
-  );
+  const columns: TableProps<SeatTypeProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Mã",
+      key: "positionCode",
+      dataIndex: "positionCode",
+    },
+    {
+      title: "Loại ghế, vị trí",
+      key: "name",
+      dataIndex: "name",
+    },
+    {
+      title: "Là ghế ngồi",
+      key: "isSeat",
+      dataIndex: "isSeat",
+      render: (value: boolean) =>
+        value ? (
+          <Check className="size-4 text-green-500" />
+        ) : (
+          <X className="size-4 text-red-500" />
+        ),
+    },
+    {
+      title: "Mặc định",
+      key: "isDefault",
+      dataIndex: "isDefault",
+      render: (value: boolean) =>
+        value ? (
+          <Check className="size-4 text-green-500" />
+        ) : (
+          <X className="size-4 text-red-500" />
+        ),
+    },
+    {
+      title: "Màu ghế",
+      key: "color",
+      dataIndex: "color",
+      render: (value: string) => (value ? <ColorPicker value={value} disabled/> : null),
+    },
+    {
+      title: "Ảnh",
+      key: "pictureUrl",
+      dataIndex: "pictureUrl",
+      render: (value: string) =>
+        value ? (
+          <Image
+            src={value}
+            alt="seat"
+            width={80}
+            height={80}
+            className="object-cover object-center rounded-md"
+          />
+        ) : null,
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleEdit(record);
+              }
+              if (e.key === "2") {
+                handleDelete(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
 
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Quản lý danh sách</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Danh sách loại ghế, vị trí
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+              href: "/",
+            },
+            {
+              title: "Quản lý danh sách",
+            },
+            {
+              title: "Danh sách loại ghế, vị trí",
+            },
+          ]}
+        />
 
         <div className="flex gap-2 items-center">
           <Button
+            type="primary"
             onClick={handleAdd}
-            size={isTabletOrMobile ? "sm" : "default"}
+            icon={<Icon component={PlusIcon} />}
           >
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm mới
+            Thêm loại ghế, vị trí
           </Button>
         </div>
       </div>
 
-      <DataTable
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={seatTypes?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        className="max-h-[calc(100vh-200px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 220px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: seatTypes?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+          hideOnSinglePage: true,
+        }}
       />
+
       {dialogOpen && (
         <SeatTypesDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingSeatType={editingSeatType}
+          editingSeatType={selectedSeatType}
         />
       )}
-      {deletingSeatType && (
+      {selectedSeatType && deleteDialogOpen && (
         <DeleteSeatTypeDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          id={deletingSeatType.id}
-          name={deletingSeatType.name}
+          id={selectedSeatType.id}
+          name={selectedSeatType.name}
         />
       )}
     </div>

@@ -113,11 +113,12 @@ const CancellationReasonsClient = () => {
 
   const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
     current,
-    pageSize,
+    pageSize
   ) => {
     setCurrent(current);
     setPageSize(pageSize);
   };
+
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
@@ -176,7 +177,7 @@ const CancellationReasonsClient = () => {
           editingCancellationReason={selectedCancellationReason}
         />
       )}
-      {selectedCancellationReason && (
+      {selectedCancellationReason && deleteDialogOpen && (
         <DeleteCancellationReasonDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
