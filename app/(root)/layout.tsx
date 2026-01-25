@@ -5,6 +5,8 @@ import { SocketProvider } from "@/providers/socket-provider";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import dayjs from "dayjs";
+import "dayjs/locale/vi";
+dayjs.locale("vi");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);

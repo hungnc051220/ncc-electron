@@ -4,6 +4,9 @@ import { StyleProvider } from "@ant-design/cssinjs";
 import { ConfigProvider } from "antd";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import viVN from "antd/locale/vi_VN";
+import "dayjs/locale/vi";
+import dayjs from "dayjs";
+dayjs.locale("vi");
 
 const AntdProvider = ({ children }: { children: React.ReactNode }) => {
   return (
