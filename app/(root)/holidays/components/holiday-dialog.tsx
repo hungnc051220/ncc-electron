@@ -18,12 +18,12 @@ const DAYS_OF_WEEK = [
 ];
 
 const SPECIAL_DAYS = [
-  { label: "Ngày 14/2", value: "14/2" },
-  { label: "Ngày 8/3", value: "8/3" },
-  { label: "Ngày 30/4", value: "30/4" },
-  { label: "Ngày 1/5", value: "1/5" },
-  { label: "Ngày 2/9", value: "2/9" },
-  { label: "Ngày 24/12", value: "24/12" },
+  { label: "Ngày 14/2", value: "02-14" },
+  { label: "Ngày 8/3", value: "03-08" },
+  { label: "Ngày 30/4", value: "04-30" },
+  { label: "Ngày 1/5", value: "05-01" },
+  { label: "Ngày 2/9", value: "09-02" },
+  { label: "Ngày 24/12", value: "12-24" },
 ];
 
 type FieldType = {

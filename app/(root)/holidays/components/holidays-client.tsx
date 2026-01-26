@@ -149,7 +149,7 @@ const HolidaysClient = () => {
               title: "Quản lý danh sách",
             },
             {
-              title: "Danh sách lý do hủy vé",
+              title: "Danh sách ngày lễ",
             },
           ]}
         />
@@ -213,8 +213,7 @@ const HolidaysClient = () => {
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
           id={editingItem.dateValue}
-          name={editingItem.dateValue}
-          dateType={activeKey == "1" ? "Ngày thường" : "Ngày lễ"}
+          date={editingItem.dateValue}
         />
       )}
     </div>
