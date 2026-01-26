@@ -161,7 +161,6 @@ const TabActivityLog = () => {
           showSizeChanger: false,
           showTotal: (total) => `Tổng ${total} bản ghi`,
           pageSize: 100,
-          hideOnSinglePage: true,
         }}
         summary={() =>
           data?.revenueByEmployee && data?.revenueByEmployee.length > 0 ? (

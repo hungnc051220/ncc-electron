@@ -389,7 +389,7 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
     return filteredSeats?.map((item, index) => (
       <div
         key={index}
-        className="flex gap-[6px] items-center justify-center seat-row"
+        className="flex gap-1.5 items-center justify-center seat-row"
         style={{ height: `${seatSize}px` }}
       >
         <div
@@ -495,7 +495,7 @@ const Seats = ({ data, editingItemId }: SeatsProps) => {
             className="mt-2 flex-1 flex items-center justify-center min-h-0"
             ref={seatContainerRef}
           >
-            <div className="space-y-[6px] w-full flex flex-col items-center">
+            <div className="space-y-1.5 w-full flex flex-col items-center">
               {renderedSeats}
             </div>
           </div>

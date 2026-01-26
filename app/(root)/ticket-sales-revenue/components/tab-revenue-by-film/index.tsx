@@ -161,7 +161,6 @@ const TabRevenueByFilm = () => {
           showSizeChanger: false,
           showTotal: (total) => `Tổng ${total} bản ghi`,
           pageSize: 100,
-          hideOnSinglePage: true,
         }}
         summary={() =>
           data?.revenueByFilm && data?.revenueByFilm?.length > 0 ? (

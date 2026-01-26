@@ -113,7 +113,7 @@ const FilmsClient = () => {
       title: "STT",
       key: "no",
       align: "center",
-      render: (_, __, index) => (current - 1) * 20 + index + 1,
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
       width: 50,
       fixed: "left",
     },
@@ -282,7 +282,6 @@ const FilmsClient = () => {
           showSizeChanger: true,
           onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
-          hideOnSinglePage: true,
         }}
       />
       {dialogOpen && (

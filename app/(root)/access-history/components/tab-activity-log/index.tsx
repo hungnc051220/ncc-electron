@@ -2,6 +2,7 @@
 
 import { getUsers } from "@/data/loaders";
 import { useDebounce } from "@/hooks/use-debounce";
+import { formatNumber } from "@/lib/utils";
 import { AuditLogProps } from "@/types";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
@@ -69,6 +70,7 @@ const dataTypes = [
 
 const TabActivityLog = () => {
   const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [searchText, setSearchText] = useState("");
   const [userId, setUserId] = useState<number | undefined>(undefined);
   const [model, setModel] = useState<string | undefined>(undefined);
@@ -103,7 +105,7 @@ const TabActivityLog = () => {
             user.customerFirstName && user.customerLastName
               ? `${user.customerFirstName} ${user.customerLastName}`
               : user.username,
-        }))
+        })),
       ) ?? []
     );
   }, [users]);
@@ -160,7 +162,7 @@ const TabActivityLog = () => {
       key: "no",
       width: 50,
       align: "center",
-      render: (_, __, index) => (current - 1) * 20 + index + 1,
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
     },
     {
       title: "Dữ liệu",
@@ -210,6 +212,14 @@ const TabActivityLog = () => {
       setFromDate(null);
       setToDate(null);
     }
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
   };
 
   return (
@@ -285,10 +295,11 @@ const TabActivityLog = () => {
           onChange,
           total: data?.total || 0,
           size: "middle",
-          showSizeChanger: false,
-          showTotal: (total) => `Tổng ${total} bản ghi`,
-          pageSize: 100,
-          hideOnSinglePage: true,
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
         }}
       />
     </div>

@@ -1,47 +1,55 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
-import CustomDatePicker from "@/components/ui/custom-date-picker";
 import { getPlanScreenings } from "@/data/loaders";
+import { formatNumber } from "@/lib/utils";
 import { PlanScreeningDetailProps } from "@/types";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { endOfDay, format, parse, startOfDay } from "date-fns";
-import { useRouter, useSearchParams } from "next/navigation";
-import { default as qs, default as queryString } from "query-string";
-import { useCallback, useMemo, useState } from "react";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
+import { Breadcrumb, DatePicker, Switch, Table } from "antd";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
+import { default as qs } from "query-string";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { createColumns } from "./columns";
+
+const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] },
+];
 
 const OnlineShowtimeBookingClient = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const searchParamPage = searchParams.get("page");
-  const searchParamFromDate = searchParams.get("fromDate");
-  const searchParamToDate = searchParams.get("toDate");
-  const parsedFromDate = searchParamFromDate
-    ? startOfDay(parse(searchParamFromDate, "yyyy-MM-dd", new Date()))
-    : startOfDay(new Date());
-  const parsedToDate = searchParamToDate
-    ? endOfDay(parse(searchParamToDate, "yyyy-MM-dd", new Date()))
-    : endOfDay(new Date());
-  const page = searchParamPage ? parseInt(searchParamPage, 10) || 1 : 1;
-  const [fromDate, setFromDate] = useState<Date | null>(parsedFromDate);
-  const [toDate, setToDate] = useState<Date | null>(parsedToDate);
+  const queryClient = useQueryClient();
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [fromDate, setFromDate] = useState<Dayjs | null>(
+    dayjs().startOf("day"),
+  );
+  const [toDate, setToDate] = useState<Dayjs | null>(dayjs().endOf("day"));
 
-  const { data, refetch, isFetching } = useQuery({
-    queryKey: ["plan-screenings", page, fromDate, toDate],
+  const { data, isFetching } = useQuery({
+    queryKey: ["plan-screenings", current, pageSize, fromDate, toDate],
     queryFn: () =>
       getPlanScreenings(
         qs.stringify({
-          page,
-          pageSize: 100,
+          page: current,
+          pageSize,
           filter: JSON.stringify({
-            projectDate: { between: [fromDate, toDate] },
+            projectDate: {
+              between: [fromDate?.startOf("day"), toDate?.endOf("day")],
+            },
           }),
-        })
+        }),
       ),
-    enabled: false,
+    placeholderData: keepPreviousData,
   });
 
   const changeSellOnline = useMutation({
@@ -57,7 +65,7 @@ const OnlineShowtimeBookingClient = () => {
       return response.json();
     },
     onSuccess: () => {
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["plan-screenings"] });
       toast.success("Cập nhật trạng thái bán online thành công");
     },
     onError: (error) => {
@@ -73,75 +81,123 @@ const OnlineShowtimeBookingClient = () => {
         isOnlineSelling: item.isOnlineSelling === 1 ? 0 : 1,
       });
     },
-    [changeSellOnline]
+    [changeSellOnline],
   );
 
-  const columns = useMemo(
-    () => createColumns({ onChangeSellOnline: onChangeSellOnline, page }),
-    [onChangeSellOnline, page]
-  );
+  const columns: TableProps<PlanScreeningDetailProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Ngày chiếu",
+      key: "projectDate",
+      dataIndex: "projectDate",
+      render: (value) => dayjs(value).format("DD/MM/YYYY"),
+      width: 120,
+    },
+    {
+      title: "Ngày chiếu",
+      key: "projectTime",
+      dataIndex: "projectTime",
+      render: (value) => dayjs(value).format("HH:mm"),
+      width: 100,
+    },
+    {
+      title: "Tên phim",
+      key: "filmName",
+      dataIndex: "filmName",
+      render: (_, reccord) => reccord.filmInfo.filmName,
+    },
+    {
+      title: "Bán online",
+      key: "isSellingOnline",
+      dataIndex: "isSellingOnline",
+      render: (_, record) => {
+        return (
+          <Switch
+            checked={record.isOnlineSelling === 1 ? true : false}
+            onChange={() => onChangeSellOnline(record)}
+            size="default"
+          />
+        );
+      },
+    },
+  ];
 
-  const handleFilter = useCallback(() => {
-    const current = queryString.parse(searchParams.toString());
-    const query = {
-      ...current,
-      fromDate: fromDate ? format(fromDate, "yyyy-MM-dd") : undefined,
-      toDate: toDate ? format(toDate, "yyyy-MM-dd") : undefined,
-      page: 1,
-    };
-    const url = queryString.stringifyUrl({ url: window.location.href, query });
-    router.push(url);
-    refetch();
-  }, [refetch, fromDate, toDate, searchParams, router]);
+  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
+    if (dates) {
+      setFromDate(dates[0]);
+      setToDate(dates[1]);
+    }
+  };
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
 
   return (
-    <>
+    <div className="space-y-3 mt-4 px-4">
+      <Breadcrumb
+        items={[
+          {
+            title: "Trang chủ",
+            href: "/",
+          },
+          {
+            title: "Kế hoạch chiếu phim",
+          },
+          {
+            title: "Thiết lập bán online theo ca chiếu",
+          },
+        ]}
+      />
+
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 z-20">
-          <p className="text-sm whitespace-nowrap">Từ ngày</p>
-          <CustomDatePicker
-            selectedDate={fromDate}
-            onChangeDate={(date) => {
-              setFromDate(date);
-              setToDate(null);
-            }}
-            className="w-[150px]"
-            selectsStart
-            startDate={fromDate}
-            endDate={toDate}
-            isClearable={false}
+          <RangePicker
+            defaultValue={[fromDate, toDate]}
+            format="DD/MM/YYYY"
+            onChange={onRangeChange}
+            presets={rangePresets}
+            allowClear={false}
           />
-          <div className="flex items-center gap-2 z-20">
-            <p className="text-sm whitespace-nowrap">Đến ngày</p>
-            <CustomDatePicker
-              selectedDate={toDate}
-              onChangeDate={(date) => setToDate(date)}
-              className="w-[150px]"
-              selectsEnd
-              startDate={fromDate}
-              endDate={toDate}
-              minDate={fromDate || undefined}
-              isClearable={false}
-            />
-          </div>
-          <div className="flex items-center gap-4"></div>
         </div>
-        <Button
-          disabled={isFetching || !fromDate || !toDate}
-          className="h-9"
-          onClick={handleFilter}
-        >
-          Lọc dữ liệu
-        </Button>
       </div>
-      <DataTable
+
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={data?.data || []}
         columns={columns}
-        data={data?.data || []}
-        total={data?.total || 0}
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 260px)" }}
         loading={isFetching}
-        className="max-h-[calc(100vh-230px)]"
+        pagination={{
+          current,
+          onChange,
+          total: data?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+        }}
       />
-    </>
+    </div>
   );
 };
 

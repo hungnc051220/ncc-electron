@@ -334,7 +334,6 @@ const TabActivityLogDetail = () => {
           showSizeChanger: false,
           showTotal: (total) => `Tổng ${total} bản ghi`,
           pageSize: 100,
-          hideOnSinglePage: true,
         }}
       />
     </div>

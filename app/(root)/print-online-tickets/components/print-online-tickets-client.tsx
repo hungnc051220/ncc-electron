@@ -164,7 +164,6 @@ const PrintOnlineTicketsClient = ({
           showSizeChanger: false,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
           pageSize: 100,
-          hideOnSinglePage: true,
         }}
       />
     </div>
