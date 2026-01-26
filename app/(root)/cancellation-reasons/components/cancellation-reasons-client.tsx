@@ -19,7 +19,7 @@ const actionItems = [
 
 const CancellationReasonsClient = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedCancellationReason, setSelectedCancellationReason] =

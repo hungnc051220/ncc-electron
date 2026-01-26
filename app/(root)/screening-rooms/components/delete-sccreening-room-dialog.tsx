@@ -1,26 +1,9 @@
 "use client";
 
-import { deleteDiscountAction } from "@/actions/discount-actions";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Modal } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
-};
 
 interface DeleteScreeningRoomDialogProps {
   open: boolean;
@@ -35,49 +18,38 @@ const DeleteScreeningRoomDialog = ({
   id,
   name,
 }: DeleteScreeningRoomDialogProps) => {
-  const [state, action, pending] = useActionState(
-    deleteDiscountAction,
-    INITIAL_STATE
-  );
-
-  const handleDelete = () => {
-    const formData = new FormData();
-    formData.append("id", id.toString());
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    } else if (state.success) {
+  const queryClient = useQueryClient();
+  const deleteScreeningRoomMutation = useMutation({
+    mutationFn: () => {
+      return axios.post("/api/screening-rooms/delete", {
+        id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["screening-rooms"] });
       toast.success("Xóa phòng chiếu thành công");
       onOpenChange(false);
-    }
-  }, [state, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Xác nhận xóa phòng chiếu</AlertDialogTitle>
-          <AlertDialogDescription>
-            Bạn có chắc chắn muốn xóa phòng chiếu <strong>{name}</strong>?
-            Hành động này không thể hoàn tác.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Hủy</AlertDialogCancel>
-          <Button
-            onClick={handleDelete}
-            disabled={pending}
-            className="bg-dodoria hover:bg-dodoria/90 text-white"
-          >
-            {pending && <Spinner className="mr-2" />}
-            Xóa
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Modal
+      open={open}
+      title="Xác nhận xóa phòng chiếu"
+      onOk={() => deleteScreeningRoomMutation.mutate()}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        danger: true,
+      }}
+      confirmLoading={deleteScreeningRoomMutation.isPending}
+      destroyOnHidden
+    >
+      Bạn có chắc chắn muốn xóa phòng chiếu <strong>{name}</strong>? Thao tác
+      không thể thu hồi.
+    </Modal>
   );
 };
 

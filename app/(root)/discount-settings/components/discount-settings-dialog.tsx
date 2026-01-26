@@ -1,30 +1,18 @@
 "use client";
 
-import {
-  createDiscountAction,
-  updateDiscountAction,
-} from "@/actions/discount-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { DiscountFormInput } from "@/lib/schemas/discount-schema";
+import { formatter } from "@/lib/utils";
 import { DiscountProps } from "@/types";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Form, Input, InputNumber, Modal, Select } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-import DiscountSettingsForm from "./discount-settings-form";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+type FieldType = {
+  discountName: string;
+  discountType: string;
+  discountAmount?: number;
+  discountRate?: number;
 };
 
 interface DiscountSettingsDialogProps {
@@ -38,77 +26,132 @@ const DiscountSettingsDialog = ({
   onOpenChange,
   editingDiscount,
 }: DiscountSettingsDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
   const isEdit = !!editingDiscount;
-  const [state, action, pending] = useActionState(
-    isEdit ? updateDiscountAction : createDiscountAction,
-    INITIAL_STATE
-  );
 
-  const onSubmit = (values: DiscountFormInput) => {
-    const formData = new FormData();
-    if (isEdit && editingDiscount) {
-      formData.append("id", editingDiscount.id.toString());
+  const discountTypeValue = Form.useWatch("discountType", form);
+
+  const discountMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      if (!isEdit) {
+        return axios.post("/api/discounts/create", {
+          ...data,
+        });
+      } else {
+        return axios.post("/api/discounts/update", {
+          ...data,
+          id: editingDiscount.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discounts"] });
+      toast.success(`${isEdit ? "Cập nhật" : "Thêm"} giảm giá thành công`);
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
+
+  const onOk = () => form.submit();
+
+  const getInitialValues = (): FieldType | undefined => {
+    if (!editingDiscount) {
+      return {
+        discountName: "",
+        discountType: "amount",
+      };
     }
-    Object.entries(values).forEach(([key, value]) => {
-      formData.append(key, value as string);
-    });
-    startTransition(() => action(formData));
+    return editingDiscount;
   };
 
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
-
-    if (state.success) {
-      toast.success(
-        isEdit ? "Cập nhật giảm giá thành công" : "Thêm giảm giá thành công"
-      );
-      onOpenChange(false);
-    }
-  }, [state, isEdit, onOpenChange]);
-
-  const getDefaultValues = (): Partial<DiscountFormInput> | undefined => {
-    if (!editingDiscount) return undefined;
-    return {
-      discountName: editingDiscount.discountName,
-      discountAmount: editingDiscount.discountAmount,
-      discountRate: editingDiscount.discountRate,
-      discountType: !editingDiscount.discountAmount ? "rate" : "amount",
-    };
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    discountMutation.mutate(values);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[476px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            {isEdit ? "Cập nhật giảm giá" : "Thêm mới giảm giá"}
-          </DialogTitle>
-        </DialogHeader>
-        <div>
-          <DiscountSettingsForm
-            onSubmit={onSubmit}
-            defaultValues={getDefaultValues()}
-          />
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button
-            type="submit"
-            form="discount-settings-form"
-            disabled={pending}
+    <Modal
+      open={open}
+      title={isEdit ? "Cập nhật giảm giá" : "Thêm mới giảm giá"}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: discountMutation.isPending,
+      }}
+      width={500}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={getInitialValues()}
+      >
+        <Form.Item<FieldType>
+          name="discountName"
+          label="Tên khuyến mại, giảm giá"
+          rules={[{ required: true, message: "Nhập tên khuyến mại, giảm giá" }]}
+        >
+          <Input placeholder="Nhập tên khuyến mại, giảm giá" />
+        </Form.Item>
+        <div className="grid grid-cols-2 gap-x-4">
+          <Form.Item<FieldType>
+            name="discountType"
+            label="Hình thức"
+            rules={[
+              { required: true, message: "Nhập tên khuyến mại, giảm giá" },
+            ]}
           >
-            {pending && <Spinner />}
-            {isEdit ? "Cập nhật" : "Xác nhận"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <Select
+              placeholder="Chọn hình thức"
+              options={[
+                {
+                  label: "Theo giá trị",
+                  value: "amount",
+                },
+                {
+                  label: "Theo tỷ lệ (%)",
+                  value: "rate",
+                },
+              ]}
+            />
+          </Form.Item>
+          {discountTypeValue === "amount" ? (
+            <Form.Item<FieldType>
+              name="discountAmount"
+              label="Giá trị"
+              rules={[{ required: true, message: "Nhập giá trị" }]}
+            >
+              <InputNumber
+                placeholder="Nhập giá trị"
+                min={0}
+                className="w-full"
+                suffix="đ"
+                formatter={formatter}
+                parser={(value) =>
+                  value?.replace(/\$\s?|(,*)/g, "") as unknown as number
+                }
+              />
+            </Form.Item>
+          ) : (
+            <Form.Item<FieldType>
+              name="discountRate"
+              label="Giá trị"
+              rules={[{ required: true, message: "Nhập giá trị" }]}
+            >
+              <InputNumber
+                placeholder="Nhập giá trị"
+                min={0}
+                max={100}
+                className="w-full"
+                suffix="%"
+              />
+            </Form.Item>
+          )}
+        </div>
+      </Form>
+    </Modal>
   );
 };
 
