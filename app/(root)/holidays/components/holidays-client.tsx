@@ -203,8 +203,8 @@ const HolidaysClient = () => {
         <HolidayDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          year={year.year().toString()}
-          dayTypeId={Number(activeKey)}
+          year={year.year()}
+          dateTypeId={Number(activeKey)}
         />
       )}
 
@@ -214,7 +214,7 @@ const HolidaysClient = () => {
           onOpenChange={handleDeleteDialogClose}
           id={editingItem.dateValue}
           name={editingItem.dateValue}
-          dayType={activeKey == "1" ? "Ngày thường" : "Ngày lễ"}
+          dateType={activeKey == "1" ? "Ngày thường" : "Ngày lễ"}
         />
       )}
     </div>

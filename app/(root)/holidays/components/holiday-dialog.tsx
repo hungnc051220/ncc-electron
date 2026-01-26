@@ -1,99 +1,122 @@
 "use client";
 
-import { createHolidayAction } from "@/actions/holiday-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { HolidayFormInput } from "@/lib/schemas/holiday-schema";
-import { format } from "date-fns";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Checkbox, Col, DatePicker, Form, Modal, Row } from "antd";
+import axios from "axios";
+import dayjs from "dayjs";
 import { toast } from "sonner";
-import HolidayForm from "./holiday-form";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+const DAYS_OF_WEEK = [
+  { label: "Thứ 2", value: 1 },
+  { label: "Thứ 3", value: 2 },
+  { label: "Thứ 4", value: 3 },
+  { label: "Thứ 5", value: 4 },
+  { label: "Thứ 6", value: 5 },
+  { label: "Thứ 7", value: 6 },
+  { label: "Chủ nhật", value: 0 },
+];
+
+const SPECIAL_DAYS = [
+  { label: "Ngày 14/2", value: "14/2" },
+  { label: "Ngày 8/3", value: "8/3" },
+  { label: "Ngày 30/4", value: "30/4" },
+  { label: "Ngày 1/5", value: "1/5" },
+  { label: "Ngày 2/9", value: "2/9" },
+  { label: "Ngày 24/12", value: "24/12" },
+];
+
+type FieldType = {
+  daysInWeek: string[];
+  specialDates: string[];
+  specificDate: string | null;
 };
 
 interface HolidayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  year: string;
-  dayTypeId: number;
+  year: number;
+  dateTypeId: number;
 }
 
-const HolidayDialog = ({
-  open,
-  onOpenChange,
-  year,
-  dayTypeId,
-}: HolidayDialogProps) => {
-  const [state, action, pending] = useActionState(
-    createHolidayAction,
-    INITIAL_STATE
-  );
+const HolidayDialog = ({ open, onOpenChange, dateTypeId, year }: HolidayDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
 
-  const onSubmit = (values: HolidayFormInput) => {
-    const formData = new FormData();
-    formData.append("year", year);
-    formData.append("dateTypeId", dayTypeId.toString());
-    formData.append("daysInWeek", JSON.stringify(values.daysInWeek));
-    formData.append("specialDates", JSON.stringify(values.specialDates));
-    if (values.specificDate) {
-      formData.append(
-        "specificDate",
-        format(values.specificDate, "yyyy-MM-dd")
-      );
-    }
-    startTransition(() => action(formData));
+  const updateHolidayMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      return axios.post("/api/holidays/create", {
+        ...data,
+        year,
+        dateTypeId,
+        specificDate: data.specificDate ? dayjs(data.specificDate).format("MM-DD") : undefined
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["holidays"] });
+      toast.success(`Cập nhật danh sách ngày thành công`);
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
+
+  const onOk = () => form.submit();
+
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    updateHolidayMutation.mutate(values);
   };
 
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
-
-    if (state.success) {
-      toast.success(
-        `Cập nhật danh sách ${dayTypeId === 1 ? "Ngày thường" : "Ngày lễ"} thành công`
-      );
-      onOpenChange(false);
-    }
-  }, [state, onOpenChange, dayTypeId]);
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[612px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            Cập nhật lại {dayTypeId === 1 ? "Ngày thường" : "Ngày lễ"}
-          </DialogTitle>
-        </DialogHeader>
-        <div>
-          <HolidayForm onSubmit={onSubmit} />
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button type="submit" form="holiday-form" disabled={pending}>
-            {pending && <Spinner />}
-            Xác nhận
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Modal
+      open={open}
+      title={`Cập nhật ngày ${dateTypeId === 1 ? "thường" : "lễ"} năm ${year}`}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: updateHolidayMutation.isPending,
+      }}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={{
+          daysInWeek: [],
+          specialDates: [],
+          specificDate: null,
+        }}
+      >
+        <Form.Item<FieldType> name="daysInWeek" label="Ngày trong tuần">
+          <Checkbox.Group style={{ width: "100%" }}>
+            <Row>
+              {DAYS_OF_WEEK.map((day) => (
+                <Col span={8} key={day.value}>
+                  <Checkbox value={day.value}>{day.label}</Checkbox>
+                </Col>
+              ))}
+            </Row>
+          </Checkbox.Group>
+        </Form.Item>
+        <Form.Item<FieldType> name="specialDates" label="Ngày đặc biệt">
+          <Checkbox.Group style={{ width: "100%" }}>
+            <Row>
+              {SPECIAL_DAYS.map((day) => (
+                <Col span={8} key={day.value}>
+                  <Checkbox value={day.value}>{day.label}</Checkbox>
+                </Col>
+              ))}
+            </Row>
+          </Checkbox.Group>
+        </Form.Item>
+
+        <Form.Item<FieldType> name="specificDate" label="Ngày cụ thể khác">
+          <DatePicker format="DD/MM/YYYY" />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 
