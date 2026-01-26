@@ -1,26 +1,9 @@
 "use client";
 
-import { deleteShowtimeSlotAction } from "@/actions/showtime-slot-actions";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Modal } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
-};
 
 interface DeleteShowtimeSlotDialogProps {
   open: boolean;
@@ -35,51 +18,39 @@ const DeleteShowtimeSlotDialog = ({
   id,
   name,
 }: DeleteShowtimeSlotDialogProps) => {
-  const [state, action, pending] = useActionState(
-    deleteShowtimeSlotAction,
-    INITIAL_STATE
-  );
-
-  const handleDelete = () => {
-    const formData = new FormData();
-    formData.append("id", id.toString());
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    } else if (state.success) {
-      toast.success("Xóa ca chiếu thành công");
+  const queryClient = useQueryClient();
+  const deleteShowtimeSlotMutation = useMutation({
+    mutationFn: () => {
+      return axios.post("/api/showtime-slots/delete", {
+        id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["showtime-slots"] });
+      toast.success("Xóa khung giờ chiếu thành công");
       onOpenChange(false);
-    }
-  }, [state, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Xác nhận xóa ca chiếu</AlertDialogTitle>
-          <AlertDialogDescription>
-            Bạn có chắc chắn muốn xóa ca chiếu <strong>{name}</strong>?
-            Hành động này không thể hoàn tác.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Hủy</AlertDialogCancel>
-          <Button
-            onClick={handleDelete}
-            disabled={pending}
-            className="bg-dodoria hover:bg-dodoria/90 text-white"
-          >
-            {pending && <Spinner className="mr-2" />}
-            Xóa
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Modal
+      open={open}
+      title="Xác nhận xóa khung giờ chiếu"
+      onOk={() => deleteShowtimeSlotMutation.mutate()}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        danger: true,
+      }}
+      confirmLoading={deleteShowtimeSlotMutation.isPending}
+      destroyOnHidden
+    >
+      Bạn có chắc chắn muốn xóa khung giờ chiếu <strong>{name}</strong>? Thao
+      tác không thể thu hồi.
+    </Modal>
   );
 };
 
 export default DeleteShowtimeSlotDialog;
-

@@ -1,30 +1,21 @@
 "use client";
 
-import {
-  createShowtimeSlotAction,
-  updateShowtimeSlotAction,
-} from "@/actions/showtime-slot-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { ShowtimeSlotFormInput } from "@/lib/schemas/showtime-slot-schema";
 import { DayPartProps } from "@/types";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Form, Input, Modal, Select } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-import ShowtimeSlotForm from "./showtime-slot-form";
+import { TimePicker } from "antd";
+import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+const format = "HH:mm";
+
+type FieldType = {
+  dateTypeId: number;
+  name: string;
+  rangeTime?: [Dayjs, Dayjs];
 };
 
 interface ShowtimeSlotDialogProps {
@@ -38,76 +29,115 @@ const ShowtimeSlotDialog = ({
   onOpenChange,
   editingShowtimeSlot,
 }: ShowtimeSlotDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
   const isEdit = !!editingShowtimeSlot;
-  const [state, action, pending] = useActionState(
-    isEdit ? updateShowtimeSlotAction : createShowtimeSlotAction,
-    INITIAL_STATE
-  );
 
-  const onSubmit = (values: ShowtimeSlotFormInput) => {
-    const formData = new FormData();
-    if (isEdit && editingShowtimeSlot) {
-      formData.append("id", editingShowtimeSlot.id.toString());
-    }
-    formData.append("dateTypeId", values.dateTypeId.toString());
-    formData.append("name", values.name);
-    formData.append("fromTime", values.fromTime);
-    formData.append("toTime", values.toTime);
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
-
-    if (state.success) {
+  const showtimeSlotsMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      if (!isEdit) {
+        return axios.post("/api/showtime-slots/create", {
+          dateTypeId: data.dateTypeId,
+          name: data.name,
+          fromTime: data.rangeTime?.[0].format(format),
+          toTime: data.rangeTime?.[1].format(format),
+        });
+      } else {
+        return axios.post("/api/showtime-slots/update", {
+          ...data,
+          id: editingShowtimeSlot.id,
+          fromTime: data.rangeTime?.[0].format(format),
+          toTime: data.rangeTime?.[1].format(format),
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["showtime-slots"] });
       toast.success(
-        isEdit ? "Cập nhật khung giờ chiếu thành công" : "Thêm khung giờ chiếu thành công"
+        `${isEdit ? "Cập nhật" : "Thêm"} khung giờ chiếu hủy vé thành công`,
       );
       onOpenChange(false);
-    }
-  }, [state, isEdit, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
-  const getDefaultValues = (): Partial<ShowtimeSlotFormInput> | undefined => {
-    if (!editingShowtimeSlot) return undefined;
+  const onOk = () => form.submit();
+
+  const getInitialValues = (): FieldType | undefined => {
+    if (!editingShowtimeSlot)
+      return {
+        dateTypeId: 1,
+        name: "",
+      };
+
     return {
       dateTypeId: editingShowtimeSlot.dateTypeId,
       name: editingShowtimeSlot.name,
-      fromTime: editingShowtimeSlot.fromTime,
-      toTime: editingShowtimeSlot.toTime,
+      rangeTime: [
+        dayjs(editingShowtimeSlot.fromTime, "HH:mm"),
+        dayjs(editingShowtimeSlot.toTime, "HH:mm"),
+      ],
     };
   };
 
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    console.log(values);
+    showtimeSlotsMutation.mutate(values);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[612px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            {isEdit ? "Cập nhật khung giờ chiếu" : "Thêm mới khung giờ chiếu"}
-          </DialogTitle>
-        </DialogHeader>
-        <div>
-          <ShowtimeSlotForm
-            onSubmit={onSubmit}
-            defaultValues={getDefaultValues()}
+    <Modal
+      open={open}
+      title={isEdit ? "Cập nhật khung giờ chiếu" : "Thêm mới khung giờ chiếu"}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: showtimeSlotsMutation.isPending,
+      }}
+      width={500}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={getInitialValues()}
+      >
+        <Form.Item<FieldType>
+          name="dateTypeId"
+          label="Ngày áp dụng"
+          rules={[{ required: true, message: "Chọn ngày áp dụng" }]}
+        >
+          <Select
+            placeholder="Chọn ngày áp dụng"
+            options={[
+              { label: "Ngày thường", value: 1 },
+              { label: "Ngày lễ", value: 2 },
+            ]}
           />
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button type="submit" form="showtime-slot-form" disabled={pending}>
-            {pending && <Spinner />}
-            {isEdit ? "Cập nhật" : "Xác nhận"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Form.Item>
+        <Form.Item<FieldType>
+          name="name"
+          label="Tên khung giờ"
+          rules={[{ required: true, message: "Chọn tên khung giờ" }]}
+        >
+          <Input placeholder="Nhập tên khung giờ" />
+        </Form.Item>
+        <Form.Item<FieldType>
+          name="rangeTime"
+          label="Khoảng thời gian"
+          rules={[{ required: true, message: "Chọn khoảng thời gian" }]}
+        >
+          <TimePicker.RangePicker
+            format={format}
+            className="w-full"
+            allowClear={false}
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 
 export default ShowtimeSlotDialog;
-

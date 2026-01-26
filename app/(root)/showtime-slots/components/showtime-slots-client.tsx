@@ -1,135 +1,204 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import {
-  ApiResponse,
-  DayPartProps,
-} from "@/types";
+import { getDayParts } from "@/data/loaders";
+import { formatNumber } from "@/lib/utils";
+import { DayPartProps } from "@/types";
+import Icon, { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { useMediaQuery } from "react-responsive";
-import { createColumns } from "./columns";
+import { useCallback, useState } from "react";
 import DeleteShowtimeSlotDialog from "./delete-showtime-slot-dialog";
 import ShowtimeSlotDialog from "./showtime-slot-dialog";
 
-interface ShowtimeSlotsClientProps {
-  data: ApiResponse<DayPartProps>;
-  page: number;
-}
+const actionItems = [
+  { key: "1", label: "Cập nhật" },
+  { key: "2", label: <p className="text-red-500">Xóa</p> },
+];
 
-const ShowtimeSlotsClient = ({
-  data,
-  page,
-}: ShowtimeSlotsClientProps) => {
-  const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
+const ShowtimeSlotsClient = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingShowtimeSlot, setEditingShowtimeSlot] =
-    useState<DayPartProps | null>(null);
-  const [deletingShowtimeSlot, setDeletingShowtimeSlot] =
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [selectedShowtimeSlot, setSelectedShowtimeSlot] =
     useState<DayPartProps | null>(null);
 
+  const { data: showTimeSlots, isFetching } = useQuery({
+    queryKey: ["showtime-slots", { current, pageSize }],
+    queryFn: () => {
+      return getDayParts({
+        page: current,
+        pageSize,
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
+
   const handleAdd = useCallback(() => {
-    setEditingShowtimeSlot(null);
+    setSelectedShowtimeSlot(null);
     setDialogOpen(true);
   }, []);
 
   const handleEdit = useCallback((item: DayPartProps) => {
-    setEditingShowtimeSlot(item);
+    setSelectedShowtimeSlot(item);
     setDialogOpen(true);
   }, []);
 
   const handleDelete = useCallback((item: DayPartProps) => {
-    setDeletingShowtimeSlot(item);
+    setSelectedShowtimeSlot(item);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingShowtimeSlot(null);
+      setSelectedShowtimeSlot(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingShowtimeSlot(null);
+      setSelectedShowtimeSlot(null);
     }
   }, []);
 
-  const columns = useMemo(
-    () =>
-      createColumns({
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-        page,
-      }),
-    [handleEdit, handleDelete, page]
-  );
+  const columns: TableProps<DayPartProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 20 + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Tên khung giờ",
+      key: "name",
+      dataIndex: "name",
+    },
+    {
+      title: "Loại ngày",
+      key: "dateTypeId",
+      dataIndex: "dateTypeId",
+      render: (value: number) => (value === 1 ? "Ngày thường" : "Ngày lễ"),
+    },
+    {
+      title: "Thời gian bắt đầu",
+      key: "fromTime",
+      dataIndex: "fromTime",
+    },
+    {
+      title: "Thời gian kết thúc",
+      key: "toTime",
+      dataIndex: "toTime",
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleEdit(record);
+              }
+              if (e.key === "2") {
+                handleDelete(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
 
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Quản lý danh sách</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Danh sách khung giờ chiếu
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+              href: "/",
+            },
+            {
+              title: "Quản lý danh sách",
+            },
+            {
+              title: "Danh sách khung giờ chiếu",
+            },
+          ]}
+        />
 
         <div className="flex gap-2 items-center">
           <Button
+            type="primary"
             onClick={handleAdd}
-            size={isTabletOrMobile ? "sm" : "default"}
+            icon={<Icon component={PlusIcon} />}
           >
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm mới
+            Thêm khung giờ chiếu
           </Button>
         </div>
       </div>
 
-      <DataTable
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={showTimeSlots?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        className="max-h-[calc(100vh-200px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 220px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: showTimeSlots?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+          hideOnSinglePage: true,
+        }}
       />
+
       {dialogOpen && (
         <ShowtimeSlotDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingShowtimeSlot={editingShowtimeSlot}
+          editingShowtimeSlot={selectedShowtimeSlot}
         />
       )}
-      {deletingShowtimeSlot && (
+      {selectedShowtimeSlot && deleteDialogOpen && (
         <DeleteShowtimeSlotDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          id={deletingShowtimeSlot.id}
-          name={deletingShowtimeSlot.name}
+          id={selectedShowtimeSlot.id}
+          name={selectedShowtimeSlot.name}
         />
       )}
     </div>
@@ -137,4 +206,3 @@ const ShowtimeSlotsClient = ({
 };
 
 export default ShowtimeSlotsClient;
-

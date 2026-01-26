@@ -86,9 +86,9 @@ const CancellationReasonDialog = ({
         <Form.Item<FieldType>
           name="reason"
           label="Lý do hủy"
-          rules={[{ required: true, message: "Nhập tên lý do hủy" }]}
+          rules={[{ required: true, message: "Nhập lý do hủy" }]}
         >
-          <Input placeholder="Nhập tên lý do hủy" />
+          <Input placeholder="Nhập lý do hủy" />
         </Form.Item>
       </Form>
     </Modal>

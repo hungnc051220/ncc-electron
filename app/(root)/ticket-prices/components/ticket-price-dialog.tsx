@@ -1,79 +1,123 @@
 "use client";
 
+import { getDayParts, getSeatTypes } from "@/data/loaders";
+import { formatter } from "@/lib/utils";
+import { TicketPriceProps } from "@/types";
 import {
-  createTicketPriceAction,
-  updateTicketPriceAction,
-} from "@/actions/ticket-price-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { TicketPriceFormInput } from "@/lib/schemas/ticket-price-schema";
-import { DayPartProps, SeatTypeProps, TicketPriceProps } from "@/types";
-import { startTransition, useActionState, useEffect } from "react";
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Form, Input, InputNumber, Modal, Select } from "antd";
+import axios from "axios";
+import { useMemo } from "react";
 import { toast } from "sonner";
-import TicketPriceForm from "./ticket-price-form";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+type FieldType = {
+  versionCode: string;
+  daypartId: number;
+  positionId: number;
+  price: number;
 };
 
 interface TicketPriceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingTicketPrice?: TicketPriceProps | null;
-  positions?: SeatTypeProps[];
-  dayparts?: DayPartProps[];
 }
 
 const TicketPriceDialog = ({
   open,
   onOpenChange,
   editingTicketPrice,
-  positions = [],
-  dayparts = [],
 }: TicketPriceDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
   const isEdit = !!editingTicketPrice;
-  const [state, action, pending] = useActionState(
-    isEdit ? updateTicketPriceAction : createTicketPriceAction,
-    INITIAL_STATE
-  );
 
-  const onSubmit = (values: TicketPriceFormInput) => {
-    const formData = new FormData();
-    if (isEdit && editingTicketPrice) {
-      formData.append("id", editingTicketPrice.id.toString());
-    }
-    formData.append("versionCode", values.versionCode);
-    formData.append("daypartId", values.daypartId.toString());
-    formData.append("positionId", values.positionId.toString());
-    formData.append("price", values.price.toString());
-    startTransition(() => action(formData));
-  };
+  const {
+    data: dayparts,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["dayparts"],
+    queryFn: ({ pageParam = 1 }) =>
+      getDayParts({ page: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    },
+  });
 
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
+  const {
+    data: seatTypes,
+    fetchNextPage: fetchNextPageSeatTypes,
+    hasNextPage: hasNextPageSeatTypes,
+    isFetching: isFetchingSeatTypes,
+    isFetchingNextPage: isFetchingNextPageSeatTypes,
+  } = useInfiniteQuery({
+    queryKey: ["seat-types"],
+    queryFn: ({ pageParam = 1 }) =>
+      getSeatTypes({ page: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    },
+  });
 
-    if (state.success) {
-      toast.success(
-        isEdit ? "Cập nhật giá vé thành công" : "Thêm giá vé thành công"
-      );
+  const daypartOptions = useMemo(() => {
+    return (
+      dayparts?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.name,
+        })),
+      ) ?? []
+    );
+  }, [dayparts]);
+
+  const seatTypesOptions = useMemo(() => {
+    return (
+      seatTypes?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.name,
+        })),
+      ) ?? []
+    );
+  }, [seatTypes]);
+
+  const ticketPriceMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      if (!isEdit) {
+        return axios.post("/api/ticket-prices/create", {
+          ...data,
+        });
+      } else {
+        return axios.post("/api/ticket-prices/update", {
+          ...data,
+          id: editingTicketPrice.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-prices"] });
+      toast.success(`${isEdit ? "Cập nhật" : "Thêm"} giá vé thành công`);
       onOpenChange(false);
-    }
-  }, [state, isEdit, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
-  const getDefaultValues = (): Partial<TicketPriceFormInput> | undefined => {
+  const onOk = () => form.submit();
+
+  const getInitialValues = (): FieldType | undefined => {
     if (!editingTicketPrice) return undefined;
     return {
       versionCode: editingTicketPrice.versionCode,
@@ -83,35 +127,100 @@ const TicketPriceDialog = ({
     };
   };
 
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    ticketPriceMutation.mutate(values);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[612px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            {isEdit ? "Cập nhật giá vé" : "Thêm mới giá vé"}
-          </DialogTitle>
-        </DialogHeader>
-        <div>
-          <TicketPriceForm
-            onSubmit={onSubmit}
-            defaultValues={getDefaultValues()}
-            positions={positions}
-            dayparts={dayparts}
-          />
+    <Modal
+      open={open}
+      title={isEdit ? "Cập nhật giá vé" : "Thêm mới giá vé"}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: ticketPriceMutation.isPending,
+      }}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={getInitialValues()}
+      >
+        <div className="grid grid-cols-2 gap-x-4 mt-4">
+          <Form.Item<FieldType>
+            name="versionCode"
+            label="Mã phiên bản"
+            rules={[{ required: true, message: "Nhập tên mã phiên bản" }]}
+          >
+            <Input placeholder="Nhập mã phiên bản" />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="positionId"
+            label="Loại ghế"
+            rules={[{ required: true, message: "Chọn loại ghế" }]}
+          >
+            <Select
+              className="w-full"
+              placeholder="Chọn loại ghế"
+              options={seatTypesOptions}
+              loading={isFetchingSeatTypes || isFetchingNextPageSeatTypes}
+              onPopupScroll={(e) => {
+                const target = e.target as HTMLElement;
+                if (
+                  hasNextPageSeatTypes &&
+                  !isFetchingNextPageSeatTypes &&
+                  target.scrollHeight - target.scrollTop <=
+                    target.clientHeight + 50
+                ) {
+                  fetchNextPageSeatTypes();
+                }
+              }}
+            />
+          </Form.Item>
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button type="submit" form="ticket-price-form" disabled={pending}>
-            {pending && <Spinner />}
-            {isEdit ? "Cập nhật" : "Xác nhận"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <Form.Item<FieldType>
+          name="daypartId"
+          label="Khung giờ"
+          rules={[{ required: true, message: "Chọn khung giờ" }]}
+        >
+          <Select
+            className="w-full"
+            placeholder="Chọn khung giờ"
+            options={daypartOptions}
+            loading={isFetching || isFetchingNextPage}
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <=
+                  target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
+          />
+        </Form.Item>
+        <Form.Item<FieldType>
+          name="price"
+          label="Giá vé"
+          rules={[{ required: true, message: "Nhập giá vé" }]}
+        >
+          <InputNumber
+            className="w-full"
+            min={0}
+            placeholder="Nhập giá vé"
+            formatter={formatter}
+            parser={(value) =>
+              value?.replace(/\$\s?|(,*)/g, "") as unknown as number
+            }
+            suffix="đ"
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 

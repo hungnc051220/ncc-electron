@@ -160,7 +160,7 @@ const TabActivityLog = () => {
       key: "no",
       width: 50,
       align: "center",
-      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      render: (_, __, index) => (current - 1) * 20 + index + 1,
     },
     {
       title: "Dữ liệu",

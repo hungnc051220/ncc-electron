@@ -1,145 +1,211 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import {
-  ApiResponse,
-  DayPartProps,
-  SeatTypeProps,
-  TicketPriceProps,
-} from "@/types";
+import { getTicketPrices } from "@/data/loaders";
+import { formatMoney, formatNumber } from "@/lib/utils";
+import { TicketPriceProps } from "@/types";
+import Icon, { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { useMediaQuery } from "react-responsive";
-import { createColumns } from "./columns";
+import { useCallback, useState } from "react";
 import DeleteTicketPriceDialog from "./delete-ticket-price-dialog";
 import TicketPriceDialog from "./ticket-price-dialog";
 
-interface TicketPricesClientProps {
-  data: ApiResponse<TicketPriceProps>;
-  page: number;
-  positions: SeatTypeProps[];
-  dayParts: DayPartProps[];
-}
+const actionItems = [
+  { key: "1", label: "Cập nhật" },
+  { key: "2", label: <p className="text-red-500">Xóa</p> },
+];
 
-const TicketPricesClient = ({
-  data,
-  page,
-  positions,
-  dayParts,
-}: TicketPricesClientProps) => {
-  const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
+const TicketPricesClient = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingTicketPrice, setEditingTicketPrice] =
-    useState<TicketPriceProps | null>(null);
-  const [deletingTicketPrice, setDeletingTicketPrice] =
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [selectedTicketPrice, setSelectedTicketPrice] =
     useState<TicketPriceProps | null>(null);
 
+  const { data: ticketPrices, isFetching } = useQuery({
+    queryKey: ["ticket-prices", { current, pageSize }],
+    queryFn: () => {
+      return getTicketPrices({
+        page: current,
+        pageSize,
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  console.log(ticketPrices);
+
   const handleAdd = useCallback(() => {
-    setEditingTicketPrice(null);
+    setSelectedTicketPrice(null);
     setDialogOpen(true);
   }, []);
 
   const handleEdit = useCallback((item: TicketPriceProps) => {
-    setEditingTicketPrice(item);
+    setSelectedTicketPrice(item);
     setDialogOpen(true);
   }, []);
 
   const handleDelete = useCallback((item: TicketPriceProps) => {
-    setDeletingTicketPrice(item);
+    setSelectedTicketPrice(item);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setEditingTicketPrice(null);
+      setSelectedTicketPrice(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setDeletingTicketPrice(null);
+      setSelectedTicketPrice(null);
     }
   }, []);
 
-  const columns = useMemo(
-    () =>
-      createColumns({
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-        page,
-        positions,
-        dayParts,
-      }),
-    [handleEdit, handleDelete, page, dayParts, positions]
-  );
+  const columns: TableProps<TicketPriceProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * 20 + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Mã phiên bản",
+      key: "versionCode",
+      dataIndex: "versionCode",
+      width: 150,
+    },
+    {
+      title: "Ca chiếu",
+      key: "position",
+      dataIndex: "position",
+      render: (_, record) => record.position.name,
+    },
+    {
+      title: "Loại ghế",
+      key: "daypart",
+      dataIndex: "daypart",
+      render: (_, record) => record.daypart.name,
+    },
+    {
+      title: "Giá vé",
+      key: "price",
+      dataIndex: "price",
+      render: (price) => formatMoney(price),
+      align: "right",
+      width: 200,
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleEdit(record);
+              }
+              if (e.key === "2") {
+                handleDelete(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
 
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Quản lý danh sách</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Danh sách giá vé
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+              href: "/",
+            },
+            {
+              title: "Quản lý danh sách",
+            },
+            {
+              title: "Danh sách giá vé",
+            },
+          ]}
+        />
 
         <div className="flex gap-2 items-center">
           <Button
+            type="primary"
             onClick={handleAdd}
-            size={isTabletOrMobile ? "sm" : "default"}
+            icon={<Icon component={PlusIcon} />}
           >
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm mới
+            Thêm giá vé
           </Button>
         </div>
       </div>
 
-      <DataTable
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={ticketPrices?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        className="max-h-[calc(100vh-200px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 220px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: ticketPrices?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+          hideOnSinglePage: true,
+        }}
       />
+
       {dialogOpen && (
         <TicketPriceDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingTicketPrice={editingTicketPrice}
-          positions={positions}
-          dayparts={dayParts}
+          editingTicketPrice={selectedTicketPrice}
         />
       )}
-      {deletingTicketPrice && (
+      {selectedTicketPrice && deleteDialogOpen && (
         <DeleteTicketPriceDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          id={deletingTicketPrice.id}
-          versionCode={deletingTicketPrice.versionCode}
+          id={selectedTicketPrice.id}
+          versionCode={selectedTicketPrice.versionCode}
         />
       )}
     </div>
