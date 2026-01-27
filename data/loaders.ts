@@ -21,6 +21,7 @@ import {
   PlanScreeningDetailProps,
   PlanScreeningProps,
   ReportRevenueFilmByStaffProps,
+  ReportU22UsageProps,
   ReportVoucherUsageProps,
   RoomProps,
   SeatTypeProps,
@@ -816,6 +817,27 @@ export const getVoucherUsage = async ({
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/reports/voucher-usage", BASE_URL);
+  const body = {
+    storeId: 0,
+    fromDate,
+    toDate,
+    userId,
+  };
+  return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
+};
+
+export const getU22Usage = async ({
+  fromDate,
+  toDate,
+  userId,
+}: {
+  fromDate?: string;
+  toDate?: string;
+  userId?: number;
+}): Promise<ReportU22UsageProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/reports/u22-usage", BASE_URL);
   const body = {
     storeId: 0,
     fromDate,

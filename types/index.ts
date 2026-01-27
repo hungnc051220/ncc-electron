@@ -1038,3 +1038,19 @@ export interface VoucherUsageProps {
   voucherCode: string;
   numOrders: number;
 }
+
+export interface ReportU22UsageProps {
+  data: U22UsageProps[];
+  totalUsage: {
+    totalOrders: number;
+    totalAmount: number;
+  };
+}
+
+export interface U22UsageProps {
+  fullName: string;
+  memberCardCode: string;
+  paidDate: string;
+  numOrders: number;
+  totalAmount: number;
+}

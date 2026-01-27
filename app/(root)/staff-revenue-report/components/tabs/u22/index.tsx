@@ -1,7 +1,8 @@
 "use client";
 
-import { getVoucherUsage } from "@/data/loaders";
-import { filterEmptyValues } from "@/lib/utils";
+import { getU22Usage } from "@/data/loaders";
+import { filterEmptyValues, formatMoney } from "@/lib/utils";
+import { U22UsageProps } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
@@ -11,7 +12,6 @@ import { useState } from "react";
 import ExportRevenueExcelButton from "./export-excel";
 import Filter from "./filter";
 import TabRevenue from "./tab-revenue";
-import { VoucherUsageProps } from "@/types";
 
 export interface ValuesProps {
   userId?: number;
@@ -24,7 +24,7 @@ const U22Usage = () => {
   });
 
   const { data, isFetching } = useQuery({
-    queryKey: ["voucher-usage", filterValues],
+    queryKey: ["u22-usage", filterValues],
     queryFn: () => {
       const { dateRange, ...rest } = filterValues;
       const filtered = filterEmptyValues(rest as Record<string, unknown>);
@@ -32,11 +32,11 @@ const U22Usage = () => {
         filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
         filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
       }
-      return getVoucherUsage({ ...filtered });
+      return getU22Usage({ ...filtered });
     },
   });
 
-  const columns: ColumnsType<VoucherUsageProps> = [
+  const columns: ColumnsType<U22UsageProps> = [
     {
       title: "STT",
       key: "no",
@@ -46,20 +46,40 @@ const U22Usage = () => {
       fixed: "left",
     },
     {
-      title: "Mã voucher",
-      key: "voucherCode",
-      dataIndex: "voucherCode",
+      title: "Tên khách hàng",
+      key: "fullName",
+      dataIndex: "fullName",
     },
     {
-      title: "Số đơn hàng",
-      key: "numOrders",
-      dataIndex: "numOrders",
+      title: "Số thẻ",
+      key: "memberCardCode",
+      dataIndex: "memberCardCode",
     },
     {
-      title: "Ngày in",
-      key: "printedOnUtcDateOnly",
-      dataIndex: "printedOnUtcDateOnly",
-      render: (value) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
+      title: "Thời gian mua",
+      key: "paidDate",
+      dataIndex: "paidDate",
+      render: (value) => dayjs(value).format("HH:mm DD/MM/YYYY"),
+    },
+    {
+      title: "Mức chi tiêu",
+      children: [
+        {
+          title: "Số vé",
+          key: "numOrders",
+          dataIndex: "numOrders",
+          align: "right",
+          width: 200,
+        },
+        {
+          title: "Thành tiền",
+          key: "totalAmount",
+          dataIndex: "totalAmount",
+          align: "right",
+          width: 200,
+          render: (value) => formatMoney(value),
+        },
+      ],
     },
   ];
 
@@ -69,10 +89,11 @@ const U22Usage = () => {
       label: "Chi tiết",
       children: (
         <TabRevenue
-          tableData={data?.voucherUsages || []}
+          tableData={data?.data || []}
           columns={columns}
           isFetching={isFetching}
-          total={data?.totalOrders}
+          totalOrders={data?.totalUsage.totalOrders}
+          totalAmount={data?.totalUsage.totalAmount}
         />
       ),
     },
@@ -93,11 +114,12 @@ const U22Usage = () => {
           <div className="flex justify-end mb-2 gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
             <ExportRevenueExcelButton
-              tableData={data?.voucherUsages || []}
+              tableData={data?.data || []}
               fromDate={filterValues.dateRange[0]!}
               toDate={filterValues.dateRange[1]!}
               employeeName={filterValues?.userName}
-              total={data?.totalOrders}
+              totalOrders={data?.totalUsage.totalOrders}
+              totalAmount={data?.totalUsage.totalAmount}
             />
           </div>
         }
