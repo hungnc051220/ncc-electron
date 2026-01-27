@@ -1,7 +1,7 @@
-import UsersClient from "./components/staff-revenue-report-client";
+import StaffRevenueReportClient from "./components/staff-revenue-report-client";
 
 const StaffRevenueReport = () => {
-  return <UsersClient />;
+  return <StaffRevenueReportClient />;
 };
 
 export default StaffRevenueReport;

@@ -958,3 +958,83 @@ export interface TotalRevenueOnlineProps {
   saleVietQr: number;
   actualSale: number;
 }
+
+export interface ExamineTicketByPlanProps {
+  examineTicketsByFilm: ExamineTicketsByFilmProps[];
+  total: ExamineTicketTotalProps;
+  totalOnline: ExamineTicketTotalOnlineProps;
+  totalOffline: ExamineTicketTotalOnlineProps;
+}
+
+export interface ExamineTicketsByFilmProps {
+  filmId: number;
+  filmName: string;
+  filmOrderNo: number;
+  planScreens: PlanScreenExamineTicket[];
+  totalVipQuantity: number;
+  totalRegularQuantity: number;
+  totalContractQuantity: number;
+  totalVipCIQuantity: number;
+  totalRegularCIQuantity: number;
+  totalContractCIQuantity: number;
+  totalInvitationQuantity: number;
+  totalQuantity: number;
+  totalNotCIQuantity: number;
+  totalCIQuantity: number;
+}
+
+export interface PlanScreenExamineTicket {
+  planScreenId: number;
+  projectDate: string;
+  projectTime: string;
+  roomName: string;
+  isOnline: boolean;
+  vipQuantity: number;
+  regularQuantity: number;
+  contractQuantity: number;
+  vipCIQuantity: number;
+  regularCIQuantity: number;
+  contractCIQuantity: number;
+  invitationQuantity: number;
+  totalQuantity: number;
+  totalNotCIQuantity: number;
+  totalCIQuantity: number;
+}
+
+export interface ExamineTicketTotalProps {
+  totalVipQuantity: number;
+  totalRegularQuantity: number;
+  totalContractQuantity: number;
+  totalVipCIQuantity: number;
+  totalRegularCIQuantity: number;
+  totalContractCIQuantity: number;
+  totalInvitationQuantity: number;
+  totalQuantity: number;
+  totalNotCIQuantity: number;
+  totalCIQuantity: number;
+}
+
+export interface ExamineTicketTotalOnlineProps {
+  isOnline: boolean;
+  totalVipQuantity: number;
+  totalRegularQuantity: number;
+  totalContractQuantity: number;
+  totalVipCIQuantity: number;
+  totalRegularCIQuantity: number;
+  totalContractCIQuantity: number;
+  totalInvitationQuantity: number;
+  totalQuantity: number;
+  totalNotCIQuantity: number;
+  totalCIQuantity: number;
+}
+
+export interface ReportVoucherUsageProps {
+  voucherUsages: VoucherUsageProps[];
+  totalOrders: number;
+}
+
+export interface VoucherUsageProps {
+  printedOnUtcDateOnly: string;
+  voucherCode: string;
+  numOrders: number;
+}

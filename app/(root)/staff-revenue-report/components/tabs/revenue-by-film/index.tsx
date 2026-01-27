@@ -263,7 +263,7 @@ const RevenueByFilm = () => {
   const items: TabsProps["items"] = [
     {
       key: "1",
-      label: "Doanh thu theo phim",
+      label: "Chi tiết",
       children: (
         <TabRevenue
           tableData={tableData}
@@ -274,7 +274,7 @@ const RevenueByFilm = () => {
     },
     {
       key: "2",
-      label: "Tổng hợp theo ngày",
+      label: "Tổng hợp",
       children: (
         <TabSummary
           summaryByDate={summaryByDate}

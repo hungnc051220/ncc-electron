@@ -3,6 +3,9 @@
 import type { TabsProps } from "antd";
 import { Breadcrumb, Tabs } from "antd";
 import RevenueByFilm from "./tabs/revenue-by-film";
+import ExamineTicketByPlan from "./tabs/examine-ticket-by-plan";
+import Vouchers from "./tabs/vouchers";
+import U22Usage from "./tabs/u22";
 
 const StaffRevenueReportClient = () => {
   const items: TabsProps["items"] = [
@@ -24,17 +27,17 @@ const StaffRevenueReportClient = () => {
     {
       key: "4",
       label: "Báo cáo rà soát vé",
-      children: "Content of Tab Pane 1",
+      children: <ExamineTicketByPlan />,
     },
     {
       key: "5",
       label: "Báo cáo số lượng Voucher",
-      children: "Content of Tab Pane 2",
+      children: <Vouchers />,
     },
     {
       key: "6",
       label: "Báo cáo giao dịch mua vé thẻ U22",
-      children: "Content of Tab Pane 3",
+      children: <U22Usage />,
     },
     {
       key: "7",

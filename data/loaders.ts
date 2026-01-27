@@ -10,6 +10,7 @@ import {
   CustomerRoleProps,
   DayPartProps,
   DiscountProps,
+  ExamineTicketByPlanProps,
   FilmProps,
   HolidayProps,
   MachineSerialProps,
@@ -20,6 +21,7 @@ import {
   PlanScreeningDetailProps,
   PlanScreeningProps,
   ReportRevenueFilmByStaffProps,
+  ReportVoucherUsageProps,
   RoomProps,
   SeatTypeProps,
   TicketPriceProps,
@@ -770,6 +772,54 @@ export const getReportRevenueByFilm = async ({
     toDate,
     manufacturerId,
     filmId,
+    userId,
+  };
+  return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
+};
+
+export const getExamineTicketByPlan = async ({
+  fromDate,
+  toDate,
+  userId,
+  manufacturerId,
+  filmId,
+}: {
+  fromDate?: string;
+  toDate?: string;
+  userId?: number;
+  manufacturerId?: number;
+  filmId?: number;
+}): Promise<ExamineTicketByPlanProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/reports/examine-ticket-by-plan", BASE_URL);
+  const body = {
+    storeId: 0,
+    fromDate,
+    toDate,
+    manufacturerId,
+    filmId,
+    userId,
+  };
+  return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
+};
+
+export const getVoucherUsage = async ({
+  fromDate,
+  toDate,
+  userId,
+}: {
+  fromDate?: string;
+  toDate?: string;
+  userId?: number;
+}): Promise<ReportVoucherUsageProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/reports/voucher-usage", BASE_URL);
+  const body = {
+    storeId: 0,
+    fromDate,
+    toDate,
     userId,
   };
   return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });

@@ -1,33 +1,31 @@
 "use client";
 
-import { ApiResponse, OrderDetailProps } from "@/types";
-import type { TableProps, PaginationProps } from "antd";
-import { Breadcrumb, Button, Table } from "antd";
-import { Check, X } from "lucide-react";
-import dayjs from "dayjs";
+import { getOrders } from "@/data/loaders";
 import { formatNumber } from "@/lib/utils";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { OrderDetailProps } from "@/types";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps } from "antd";
+import { Breadcrumb, Button, Table } from "antd";
+import dayjs from "dayjs";
+import { Check, X } from "lucide-react";
+import { useState } from "react";
 
-interface PrintOnlineTicketsClientProps {
-  data: ApiResponse<OrderDetailProps>;
-  page: number;
-}
+const PrintOnlineTicketsClient = () => {
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-const PrintOnlineTicketsClient = ({
-  data,
-  page,
-}: PrintOnlineTicketsClientProps) => {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const { data, isFetching } = useQuery({
+    queryKey: ["orders", current, pageSize],
+    queryFn: () => getOrders({ page: current, pageSize, orderStatusId: 30 }),
+    placeholderData: keepPreviousData,
+  });
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
       title: "STT",
       key: "no",
       align: "center",
-      render: (_, __, index) => (page - 1) * 100 + index + 1,
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
       width: 50,
       fixed: "left",
     },
@@ -124,13 +122,16 @@ const PrintOnlineTicketsClient = ({
     },
   ];
 
-  const onChange: PaginationProps["onChange"] = (page) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", String(page));
-    const url = `${window.location.pathname}?${params.toString()}`;
-    startTransition(() => {
-      router.push(url);
-    });
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
   };
 
   return (
@@ -150,20 +151,23 @@ const PrintOnlineTicketsClient = ({
       />
 
       <Table
+        rowKey={(record) => record.order.id}
         dataSource={data?.data || []}
         columns={columns}
-        loading={pending}
         bordered
         size="small"
         scroll={{ x: "max-content", y: "calc(100vh - 220px)" }}
+        loading={isFetching}
         pagination={{
-          current: page,
+          current,
           onChange,
           total: data?.total || 0,
           size: "middle",
-          showSizeChanger: false,
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
-          pageSize: 100,
         }}
       />
     </div>
