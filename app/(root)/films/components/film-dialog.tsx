@@ -157,6 +157,8 @@ const FilmDialog = ({
         published: true,
         ageAbove: 0,
         orderNo: 0,
+        trailerOnHomePage: false,
+        categoryIds: [],
       };
     }
 
