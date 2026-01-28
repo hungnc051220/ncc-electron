@@ -15,6 +15,8 @@ import {
   HolidayProps,
   MachineSerialProps,
   ManufacturerProps,
+  MonthlyReportPlanProps,
+  MonthlyReportTicketProps,
   OrderDetailProps,
   PlanCinemaProps,
   PlanFilmProps,
@@ -843,6 +845,28 @@ export const getU22Usage = async ({
     fromDate,
     toDate,
     userId,
+  };
+  return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
+};
+
+export const getMonthlyReport = async ({
+  fromDate,
+  toDate,
+  reportType,
+}: {
+  fromDate?: string;
+  toDate?: string;
+  userId?: number;
+  reportType: string;
+}): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/reports/monthly-report", BASE_URL);
+  const body = {
+    storeId: 0,
+    fromDate,
+    toDate,
+    reportType,
   };
   return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
 };

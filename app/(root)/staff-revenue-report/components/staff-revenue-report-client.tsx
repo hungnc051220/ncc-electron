@@ -39,16 +39,16 @@ const StaffRevenueReportClient = () => {
       label: "Báo cáo giao dịch mua vé thẻ U22",
       children: <U22Usage />,
     },
-    {
-      key: "7",
-      label: "Báo cáo giao dịch mua vé thẻ thành viên",
-      children: "Content of Tab Pane 1",
-    },
-    {
-      key: "8",
-      label: "Báo cáo chương trình chăm sóc khách hàng",
-      children: "Content of Tab Pane 2",
-    },
+    // {
+    //   key: "7",
+    //   label: "Báo cáo giao dịch mua vé thẻ thành viên",
+    //   children: "Content of Tab Pane 1",
+    // },
+    // {
+    //   key: "8",
+    //   label: "Báo cáo chương trình chăm sóc khách hàng",
+    //   children: "Content of Tab Pane 2",
+    // },
   ];
 
   return (

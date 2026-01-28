@@ -180,28 +180,29 @@ const items: MenuItem[] = [
       },
       {
         label: (
-          <Link href="/showtime-revenue-statistics">
-            Thống kê buổi chiếu, doanh thu chiếu phim
-          </Link>
-        ),
-        key: "showtime-revenue-statistics",
-      },
-      {
-        label: (
-          <Link href="/quarterly-report">
-            Báo cáo quý, doanh thu, buổi chiếu, khán giả
-          </Link>
-        ),
-        key: "quarterly-report",
-      },
-      {
-        label: (
           <Link href="/film-owner-revenue-report">
             Báo cáo doanh thu chủ phim
           </Link>
         ),
         key: "film-owner-revenue-report",
       },
+      {
+        label: (
+          <Link href="/monthly-report">
+            Báo cáo tháng - Buổi chiếu, doanh thu
+          </Link>
+        ),
+        key: "monthly-report",
+      },
+      {
+        label: (
+          <Link href="/quarterly-report">
+            Báo cáo quý - Doanh thu, buổi chiếu, khán giả
+          </Link>
+        ),
+        key: "quarterly-report",
+      },
+
       {
         label: <Link href="/annual-report">Báo cáo năm</Link>,
         key: "annual-report",

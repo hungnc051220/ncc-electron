@@ -1054,3 +1054,58 @@ export interface U22UsageProps {
   numOrders: number;
   totalAmount: number;
 }
+
+export interface MonthlyReportPlanProps {
+  data: Manufacturer[];
+}
+
+export interface Manufacturer {
+  manufacturerName: string;
+  films: Film[];
+}
+
+export interface Room {
+  roomName: string;
+  total: number;
+}
+
+export interface Film {
+  filmName: string;
+  rooms: Room[];
+}
+
+export interface MonthlyReportTicketProps {
+  data: Manufacturer2[];
+}
+
+export interface Manufacturer2 {
+  manufacturerId: number;
+  manufacturerName: string;
+  films: Film2[];
+}
+
+export interface Film2 {
+  filmId: string;
+  filmName: string;
+  projects: Project[];
+}
+
+export interface Project {
+  projectDate: string;
+  projectTime: string;
+  versions: Version[];
+}
+
+export interface Version {
+  versionCode: string;
+  prices: Price[];
+}
+
+export interface Price {
+  isOnline: boolean;
+  isInvitation: boolean;
+  isContract: boolean;
+  unitPriceInclTax: number;
+  totalTickets: number;
+  totalRevenue: number;
+}
