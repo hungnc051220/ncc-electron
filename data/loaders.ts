@@ -16,6 +16,7 @@ import {
   MachineSerialProps,
   ManufacturerProps,
   MonthlyReportPlanProps,
+  MonthlyReportRoomProps,
   MonthlyReportTicketProps,
   OrderDetailProps,
   PlanCinemaProps,
@@ -28,7 +29,7 @@ import {
   RoomProps,
   SeatTypeProps,
   TicketPriceProps,
-  UserProps,
+  UserProps
 } from "@/types";
 import { endOfYear, format, startOfYear } from "date-fns";
 import { cookies } from "next/headers";
@@ -858,7 +859,7 @@ export const getMonthlyReport = async ({
   toDate?: string;
   userId?: number;
   reportType: string;
-}): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps> => {
+}): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/reports/monthly-report", BASE_URL);

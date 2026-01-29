@@ -4,6 +4,7 @@ import type { TabsProps } from "antd";
 import { Breadcrumb, Tabs } from "antd";
 import Tab1 from "./tab1";
 import Tab2 from "./tab2";
+import Tab3 from "./tab3";
 
 const MonthlyReportClient = () => {
   const items: TabsProps["items"] = [
@@ -20,7 +21,7 @@ const MonthlyReportClient = () => {
     {
       key: "3",
       label: "Thống kê doanh thu, khán giả theo phòng chiếu",
-      children: "Tab 3",
+      children: <Tab3 />,
     },
   ];
 

@@ -14,10 +14,6 @@ import ExportRevenueExcelButton from "./export-excel";
 import { formatMoney, formatNumber } from "@/lib/utils";
 
 export interface ValuesProps {
-  userId?: number;
-  userName?: string;
-  manufacturerId?: number;
-  filmId?: number;
   fromDate: string;
 }
 
@@ -42,7 +38,7 @@ export interface TreeRow {
 
 const Tab2 = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
-    fromDate: dayjs().startOf("month").format(),
+    fromDate: dayjs().startOf("month").format("YYYY-MM-DD"),
   });
 
   const { data, isFetching } = useQuery({

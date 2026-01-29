@@ -1109,3 +1109,30 @@ export interface Price {
   totalTickets: number;
   totalRevenue: number;
 }
+
+export interface Detail {
+  isOnline: boolean;
+  orderTotal: number;
+  quantityV: number;
+  quantityT: number;
+  conQuantity: number;
+}
+
+export interface ProjectTime {
+  projectTime: string;
+  details: Detail[];
+}
+
+export interface ProjectDate {
+  projectDate: string;
+  projectTimes: ProjectTime[];
+}
+
+export interface RoomReport {
+  roomName: string;
+  projectDates: ProjectDate[];
+}
+
+export interface MonthlyReportRoomProps {
+  data: RoomReport[];
+}
