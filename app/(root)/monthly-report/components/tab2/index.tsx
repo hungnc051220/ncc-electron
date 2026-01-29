@@ -1,14 +1,7 @@
 "use client";
 
 import { getMonthlyReport } from "@/data/loaders";
-import {
-  Film,
-  Film2,
-  Manufacturer,
-  Manufacturer2,
-  MonthlyReportTicketProps,
-  Price,
-} from "@/types";
+import { Manufacturer2, MonthlyReportTicketProps } from "@/types";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
@@ -30,21 +23,18 @@ export interface ValuesProps {
 
 export interface TreeRow {
   key: string;
-
   name?: string;
   date?: string;
   time?: string;
   version?: string;
-
   totalTickets?: number;
   totalRevenue?: number;
-
-  // dynamic
   [priceKey: string]:
     | {
         tickets: number;
         revenue: number;
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     | any;
 
   children?: TreeRow[];
@@ -80,61 +70,6 @@ const Tab2 = () => {
 
     return Array.from(set).sort((a, b) => a - b);
   }
-
-  function sumPrices(prices: Price[]) {
-    return prices.reduce(
-      (s, p) => {
-        s.tickets += p.totalTickets;
-        s.revenue += p.totalRevenue;
-        return s;
-      },
-      { tickets: 0, revenue: 0 },
-    );
-  }
-
-  function sumFilm(film: Film2) {
-    let tickets = 0;
-    let revenue = 0;
-
-    film.projects.forEach((p) =>
-      p.versions.forEach((v) =>
-        v.prices.forEach((pr) => {
-          tickets += pr.totalTickets;
-          revenue += pr.totalRevenue;
-        }),
-      ),
-    );
-
-    return { tickets, revenue };
-  }
-
-  const getAllPrices = (data: Manufacturer2[]) => {
-    const set = new Set<string>();
-    data.forEach((m) =>
-      m.films.forEach((f) => f.projects.forEach((r) => set.add(r.roomName))),
-    );
-    return Array.from(set).sort((a, b) => Number(a) - Number(b));
-  };
-
-  const sumByRooms = (
-    films: Film[],
-    rooms: string[],
-  ): Record<string, number> => {
-    const result: Record<string, number> = {};
-
-    rooms.forEach((r) => {
-      result[`P${r}`] = 0;
-    });
-
-    films.forEach((f) => {
-      f.rooms.forEach((r) => {
-        const key = `P${r.roomName}`;
-        result[key] += r.total;
-      });
-    });
-
-    return result;
-  };
 
   function mapApiToPivotTree(
     data: Manufacturer2[],
@@ -186,7 +121,7 @@ const Tab2 = () => {
 
   const baseColumns: ColumnsType<TreeRow> = [
     {
-      title: "Tên / Phim",
+      title: "Hãng phim / Phim",
       dataIndex: "name",
       width: 350,
       render: (v) => v && <div style={{ whiteSpace: "pre-wrap" }}>{v}</div>,
@@ -196,9 +131,23 @@ const Tab2 = () => {
       title: "Ngày",
       dataIndex: "date",
       width: 110,
+      fixed: "left",
+      align: "center",
     },
-    { title: "Giờ", dataIndex: "time", width: 90 },
-    { title: "Version", dataIndex: "version", width: 90 },
+    {
+      title: "Giờ",
+      dataIndex: "time",
+      width: 90,
+      fixed: "left",
+      align: "center",
+    },
+    {
+      title: "Version",
+      dataIndex: "version",
+      width: 70,
+      fixed: "left",
+      align: "center",
+    },
   ];
 
   function buildPriceColumns(prices: number[]): ColumnsType<TreeRow> {
@@ -268,11 +217,59 @@ const Tab2 = () => {
     },
   ];
 
+  function addRowTotal(target: TreeRow, source: TreeRow, allPrices: number[]) {
+    allPrices.forEach((price) => {
+      const onlineKey = `price_${price}_online`;
+      const offlineKey = `price_${price}_offline`;
+
+      target[onlineKey].tickets += source[onlineKey].tickets;
+      target[onlineKey].revenue += source[onlineKey].revenue;
+
+      target[offlineKey].tickets += source[offlineKey].tickets;
+      target[offlineKey].revenue += source[offlineKey].revenue;
+    });
+
+    target.totalTickets! += source.totalTickets || 0;
+    target.totalRevenue! += source.totalRevenue || 0;
+  }
+
+  function initPriceFields(row: TreeRow, allPrices: number[]) {
+    row.totalTickets = 0;
+    row.totalRevenue = 0;
+
+    allPrices.forEach((price) => {
+      row[`price_${price}_online`] = { tickets: 0, revenue: 0 };
+      row[`price_${price}_offline`] = { tickets: 0, revenue: 0 };
+    });
+  }
+
+  function calculateTreeTotals(tree: TreeRow[], allPrices: number[]) {
+    tree.forEach((m) => {
+      // init manufacturer total
+      initPriceFields(m, allPrices);
+
+      m.children?.forEach((f) => {
+        initPriceFields(f, allPrices);
+
+        f.children?.forEach((p) => {
+          // cộng project → film
+          addRowTotal(f, p, allPrices);
+        });
+
+        // cộng film → manufacturer
+        addRowTotal(m, f, allPrices);
+      });
+    });
+  }
+
   const allPrices = useMemo(() => collectAllPrices(data?.data || []), [data]);
-  const treeData = useMemo(
-    () => mapApiToPivotTree(data?.data || [], allPrices),
-    [data, allPrices],
-  );
+
+  const treeData = useMemo(() => {
+    const tree = mapApiToPivotTree(data?.data || [], allPrices);
+    calculateTreeTotals(tree, allPrices);
+    return tree;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, allPrices]);
 
   const columns = useMemo(
     () => [
@@ -283,6 +280,7 @@ const Tab2 = () => {
       },
       ...totalColumns,
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [allPrices],
   );
 
@@ -314,11 +312,11 @@ const Tab2 = () => {
         tabBarExtraContent={
           <div className="flex justify-end mb-2 gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
-            {/* <ExportRevenueExcelButton
-              treeData={dataSource}
-              rooms={rooms}
+            <ExportRevenueExcelButton
+              treeData={treeData}
+              allPrices={allPrices}
               fromDate={filterValues.fromDate!}
-            /> */}
+            />
           </div>
         }
       />
