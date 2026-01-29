@@ -1,42 +1,58 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
-import CustomDatePicker from "@/components/ui/custom-date-picker";
 import { getFilmScheduling } from "@/data/loaders";
+import { formatNumber } from "@/lib/utils";
 import { PlanCinemaProps } from "@/types";
-import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
+import { Breadcrumb, DatePicker, Dropdown, Table } from "antd";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
+import { Check } from "lucide-react";
 import qs from "query-string";
-import { useCallback, useMemo, useState } from "react";
-import { createColumns } from "./columns";
-import ShowtimeScheduleDetailDialog from "./discount-settings-dialog";
+import { useCallback, useState } from "react";
+import ShowtimeScheduleDetailDialog from "./showtime-schedule-detail-dialog";
+
+const actionItems = [{ key: "1", label: "Xem chi tiết" }];
+
+const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] },
+];
 
 const ShowtimeScheduleClient = () => {
-  const searchParams = useSearchParams();
-  const searchParamPage = searchParams.get("page");
-  const page = searchParamPage ? parseInt(searchParamPage, 10) || 1 : 1;
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PlanCinemaProps | null>(
-    null
+    null,
   );
-  const [fromDate, setFromDate] = useState<Date | null>(new Date());
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [fromDate, setFromDate] = useState<Dayjs | null>(
+    dayjs().startOf("day"),
+  );
+  const [toDate, setToDate] = useState<Dayjs | null>(dayjs().endOf("day"));
 
-  const { data, refetch, isFetching } = useQuery({
-    queryKey: ["plan-cinema", page, fromDate, toDate],
+  const { data, isFetching } = useQuery({
+    queryKey: ["plan-cinema", current, pageSize, fromDate, toDate],
     queryFn: () =>
       getFilmScheduling(
         qs.stringify({
-          page,
-          pageSize: 100,
+          page: current,
+          pageSize,
           filter: JSON.stringify({
             status: 3,
-            createdOnUtc: { between: [fromDate, toDate] },
+            createdOnUtc: {
+              between: [fromDate?.startOf("day"), toDate?.endOf("day")],
+            },
           }),
-        })
+        }),
       ),
-    enabled: false,
+    placeholderData: keepPreviousData,
   });
 
   const handleViewDetail = useCallback((item: PlanCinemaProps) => {
@@ -51,58 +67,126 @@ const ShowtimeScheduleClient = () => {
     }
   }, []);
 
-  const columns = useMemo(
-    () => createColumns({ onViewDetail: handleViewDetail, page }),
-    [handleViewDetail, page]
-  );
+  const columns: TableProps<PlanCinemaProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Tên lịch chiếu",
+      key: "name",
+      dataIndex: "name",
+    },
+    {
+      title: "Ngày lập kế hoạch",
+      key: "createdOnUtc",
+      dataIndex: "createdOnUtc",
+      render: (value) => dayjs(value).format("DD/MM/YYYY"),
+    },
+    {
+      title: "Duyệt",
+      key: "status",
+      dataIndex: "status",
+      render: () => <Check className="size-4 text-green-500" />,
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleViewDetail(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
+
+  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
+    if (dates) {
+      setFromDate(dates[0]);
+      setToDate(dates[1]);
+    }
+  };
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
 
   return (
-    <>
+    <div className="space-y-3 mt-4 px-4">
+      <Breadcrumb
+        items={[
+          {
+            title: "Trang chủ",
+            href: "/",
+          },
+          {
+            title: "Kế hoạch chiếu phim",
+          },
+          {
+            title: "Xem lịch chiếu phim",
+          },
+        ]}
+      />
+
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 z-20">
-          <p className="text-sm whitespace-nowrap">Từ ngày</p>
-          <CustomDatePicker
-            selectedDate={fromDate}
-            onChangeDate={(date) => {
-              setFromDate(date);
-              setToDate(null);
-            }}
-            className="w-[150px]"
-            selectsStart
-            startDate={fromDate}
-            endDate={toDate}
-            isClearable={false}
+          <RangePicker
+            defaultValue={[fromDate, toDate]}
+            format="DD/MM/YYYY"
+            onChange={onRangeChange}
+            presets={rangePresets}
+            allowClear={false}
           />
-          <div className="flex items-center gap-2 z-20">
-            <p className="text-sm whitespace-nowrap">Đến ngày</p>
-            <CustomDatePicker
-              selectedDate={toDate}
-              onChangeDate={(date) => setToDate(date)}
-              className="w-[150px]"
-              selectsEnd
-              startDate={fromDate}
-              endDate={toDate}
-              minDate={fromDate || undefined}
-              isClearable={false}
-            />
-          </div>
-          <div className="flex items-center gap-4"></div>
         </div>
-        <Button
-          disabled={isFetching || !fromDate || !toDate}
-          className="h-9"
-          onClick={() => refetch()}
-        >
-          Lọc dữ liệu
-        </Button>
       </div>
-      <DataTable
+
+      <Table
+        rowKey={(record) => record.id}
+        dataSource={data?.data || []}
         columns={columns}
-        data={data?.data || []}
-        total={data?.total || 0}
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 260px)" }}
         loading={isFetching}
-        className="max-h-[calc(100vh-230px)]"
+        pagination={{
+          current,
+          onChange,
+          total: data?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+        }}
       />
+
       {dialogOpen && (
         <ShowtimeScheduleDetailDialog
           open={dialogOpen}
@@ -110,7 +194,7 @@ const ShowtimeScheduleClient = () => {
           selectedItem={selectedItem}
         />
       )}
-    </>
+    </div>
   );
 };
 

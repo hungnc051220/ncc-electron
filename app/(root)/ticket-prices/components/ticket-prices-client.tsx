@@ -36,8 +36,6 @@ const TicketPricesClient = () => {
     placeholderData: keepPreviousData,
   });
 
-  console.log(ticketPrices);
-
   const handleAdd = useCallback(() => {
     setSelectedTicketPrice(null);
     setDialogOpen(true);
@@ -86,13 +84,13 @@ const TicketPricesClient = () => {
       title: "Ca chiếu",
       key: "position",
       dataIndex: "position",
-      render: (_, record) => record.position.name,
+      render: (_, record) => record.position?.name,
     },
     {
       title: "Loại ghế",
       key: "daypart",
       dataIndex: "daypart",
-      render: (_, record) => record.daypart.name,
+      render: (_, record) => record.daypart?.name,
     },
     {
       title: "Giá vé",

@@ -139,7 +139,7 @@ const FilmDialog = ({
       return {
         filmName: "",
         premieredDay: dayjs(),
-        duration: 0,
+        duration: 1,
         proposedPrice: 0,
         isFree: false,
         isHot: true,
@@ -331,7 +331,7 @@ const FilmDialog = ({
             >
               <InputNumber
                 className="w-full"
-                min={0}
+                min={1}
                 placeholder="Nhập thời lượng (phút)"
               />
             </Form.Item>
@@ -514,7 +514,7 @@ const FilmDialog = ({
             <div className="bg-goku rounded-lg py-3 px-4 mt-4">
               <p className="font-semibold mb-2 text-sm">Thể loại phim</p>
               <div className="space-y-1.5">
-                <Form.Item<FieldType> name="categoryIds" noStyle>
+                <Form.Item<FieldType> name="categoryIds" rules={[{required: true, message: "Chọn ít nhất 1 thể loại"}]}>
                   <Checkbox.Group>
                     {categories?.data?.map((category) => (
                       <div key={category.id} className="mb-1 w-full">

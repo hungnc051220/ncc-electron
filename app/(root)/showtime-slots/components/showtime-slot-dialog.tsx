@@ -54,7 +54,7 @@ const ShowtimeSlotDialog = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["showtime-slots"] });
       toast.success(
-        `${isEdit ? "Cập nhật" : "Thêm"} khung giờ chiếu hủy vé thành công`,
+        `${isEdit ? "Cập nhật" : "Thêm"} khung giờ chiếu thành công`,
       );
       onOpenChange(false);
     },

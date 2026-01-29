@@ -158,7 +158,7 @@ const ScreeningRoomsDialog = ({
                     name={`deepSizeF${floor}`}
                     rules={[{ required: true, message: "Nhập số hàng" }]}
                   >
-                    <InputNumber className="w-full" min={0} />
+                    <InputNumber className="w-full" min={1} />
                   </Form.Item>
                 </Col>
 
@@ -168,7 +168,7 @@ const ScreeningRoomsDialog = ({
                     name={`wideSizeF${floor}`}
                     rules={[{ required: true, message: "Nhập số ghế" }]}
                   >
-                    <InputNumber className="w-full" min={0} />
+                    <InputNumber className="w-full" min={1} />
                   </Form.Item>
                 </Col>
               </Row>
