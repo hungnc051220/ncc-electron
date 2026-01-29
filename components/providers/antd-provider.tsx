@@ -6,7 +6,14 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import viVN from "antd/locale/vi_VN";
 import "dayjs/locale/vi";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import quarterOfYear from "dayjs/plugin/quarterOfYear";
 dayjs.locale("vi");
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(quarterOfYear);
+dayjs.tz.setDefault("Asia/Ho_Chi_Minh");
 
 const AntdProvider = ({ children }: { children: React.ReactNode }) => {
   return (

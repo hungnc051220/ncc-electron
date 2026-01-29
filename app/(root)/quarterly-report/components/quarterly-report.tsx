@@ -6,7 +6,7 @@ import Tab1 from "./tab1";
 import Tab2 from "./tab2";
 import Tab3 from "./tab3";
 
-const MonthlyReportClient = () => {
+const QuarterlyReportClient = () => {
   const items: TabsProps["items"] = [
     {
       key: "1",
@@ -38,7 +38,7 @@ const MonthlyReportClient = () => {
               title: "Thống kê, báo cáo",
             },
             {
-              title: "Báo cáo tháng",
+              title: "Báo cáo quý",
             },
           ]}
         />
@@ -49,4 +49,4 @@ const MonthlyReportClient = () => {
   );
 };
 
-export default MonthlyReportClient;
+export default QuarterlyReportClient;

@@ -871,3 +871,24 @@ export const getMonthlyReport = async ({
   };
   return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
 };
+
+export const getQuarterlyReport = async ({
+  year,
+  quarter,
+  reportType,
+}: {
+  year: number;
+  quarter: number;
+  reportType: string;
+}): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/reports/quarterly-report", BASE_URL);
+  const body = {
+    storeId: 0,
+    year,
+    quarter,
+    reportType,
+  };
+  return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
+};

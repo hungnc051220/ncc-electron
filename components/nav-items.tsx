@@ -189,7 +189,7 @@ const items: MenuItem[] = [
       {
         label: (
           <Link href="/monthly-report">
-            Báo cáo tháng - Buổi chiếu, doanh thu
+            Báo cáo tháng
           </Link>
         ),
         key: "monthly-report",
@@ -197,7 +197,7 @@ const items: MenuItem[] = [
       {
         label: (
           <Link href="/quarterly-report">
-            Báo cáo quý - Doanh thu, buổi chiếu, khán giả
+            Báo cáo quý
           </Link>
         ),
         key: "quarterly-report",
