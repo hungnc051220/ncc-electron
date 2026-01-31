@@ -23,13 +23,14 @@ import {
   PlanFilmProps,
   PlanScreeningDetailProps,
   PlanScreeningProps,
+  ReportMonthlyRevenueTicketByStaffProps,
   ReportRevenueFilmByStaffProps,
   ReportU22UsageProps,
   ReportVoucherUsageProps,
   RoomProps,
   SeatTypeProps,
   TicketPriceProps,
-  UserProps
+  UserProps,
 } from "@/types";
 import { endOfYear, format, startOfYear } from "date-fns";
 import { cookies } from "next/headers";
@@ -781,6 +782,33 @@ export const getReportRevenueByFilm = async ({
   return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
 };
 
+export const getMonthlyReportRevenueByTicket = async ({
+  fromDate,
+  toDate,
+  userId,
+  manufacturerId,
+  filmId,
+}: {
+  fromDate?: string;
+  toDate?: string;
+  userId?: number;
+  manufacturerId?: number;
+  filmId?: number;
+}): Promise<ReportMonthlyRevenueTicketByStaffProps> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+  const url = new URL("/api/reports/revenue-day-in-month", BASE_URL);
+  const body = {
+    storeId: 0,
+    fromDate,
+    toDate,
+    manufacturerId,
+    filmId,
+    userId,
+  };
+  return fetchAPI(url.href, { method: "POST", authToken: accessToken, body });
+};
+
 export const getExamineTicketByPlan = async ({
   fromDate,
   toDate,
@@ -859,7 +887,9 @@ export const getMonthlyReport = async ({
   toDate?: string;
   userId?: number;
   reportType: string;
-}): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps> => {
+}): Promise<
+  MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps
+> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/reports/monthly-report", BASE_URL);
@@ -880,7 +910,9 @@ export const getQuarterlyReport = async ({
   year: number;
   quarter: number;
   reportType: string;
-}): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps> => {
+}): Promise<
+  MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps
+> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/reports/quarterly-report", BASE_URL);

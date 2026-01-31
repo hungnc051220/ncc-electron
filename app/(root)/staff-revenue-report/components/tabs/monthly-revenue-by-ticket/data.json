@@ -1,0 +1,423 @@
+{
+    "revenuesByDay": [
+        {
+            "projectDate": "2026-01-25",
+            "isOnline": false,
+            "totalInvitationQuantity": 4,
+            "totalContractQuantity": 0,
+            "totalQuantity": 423,
+            "totalSale": 39006000,
+            "actualSale": 39006000,
+            "prices": [
+                {
+                    "price": 150000,
+                    "totalQuantity": 4
+                },
+                {
+                    "price": 140000,
+                    "totalQuantity": 1
+                },
+                {
+                    "price": 120000,
+                    "totalQuantity": 3
+                },
+                {
+                    "price": 105000,
+                    "totalQuantity": 8
+                },
+                {
+                    "price": 100000,
+                    "totalQuantity": 35
+                },
+                {
+                    "price": 95000,
+                    "totalQuantity": 241
+                },
+                {
+                    "price": 90000,
+                    "totalQuantity": 55
+                },
+                {
+                    "price": 80000,
+                    "totalQuantity": 16
+                },
+                {
+                    "price": 76000,
+                    "totalQuantity": 42
+                },
+                {
+                    "price": 75000,
+                    "totalQuantity": 15
+                },
+                {
+                    "price": 72000,
+                    "totalQuantity": 7
+                },
+                {
+                    "price": 50000,
+                    "totalQuantity": 3
+                }
+            ]
+        },
+        {
+            "projectDate": "2026-01-25",
+            "isOnline": true,
+            "totalInvitationQuantity": 0,
+            "totalContractQuantity": 0,
+            "totalQuantity": 574,
+            "totalSale": 54980000,
+            "actualSale": 54980000,
+            "prices": [
+                {
+                    "price": 150000,
+                    "totalQuantity": 12
+                },
+                {
+                    "price": 120000,
+                    "totalQuantity": 4
+                },
+                {
+                    "price": 110000,
+                    "totalQuantity": 2
+                },
+                {
+                    "price": 105000,
+                    "totalQuantity": 23
+                },
+                {
+                    "price": 100000,
+                    "totalQuantity": 105
+                },
+                {
+                    "price": 95000,
+                    "totalQuantity": 321
+                },
+                {
+                    "price": 90000,
+                    "totalQuantity": 66
+                },
+                {
+                    "price": 85000,
+                    "totalQuantity": 10
+                },
+                {
+                    "price": 80000,
+                    "totalQuantity": 33
+                },
+                {
+                    "price": 75000,
+                    "totalQuantity": 4
+                },
+                {
+                    "price": 60000,
+                    "totalQuantity": 11
+                },
+                {
+                    "price": 50000,
+                    "totalQuantity": 168
+                }
+            ]
+        },
+        {
+            "projectDate": "2026-01-26",
+            "isOnline": false,
+            "totalInvitationQuantity": 0,
+            "totalContractQuantity": 0,
+            "totalQuantity": 214,
+            "totalSale": 11600000,
+            "actualSale": 11600000,
+            "prices": [
+                {
+                    "price": 100000,
+                    "totalQuantity": 8
+                },
+                {
+                    "price": 90000,
+                    "totalQuantity": 4
+                },
+                {
+                    "price": 70000,
+                    "totalQuantity": 1
+                },
+                {
+                    "price": 60000,
+                    "totalQuantity": 32
+                },
+                {
+                    "price": 50000,
+                    "totalQuantity": 169
+                }
+            ]
+        },
+        {
+            "projectDate": "2026-01-26",
+            "isOnline": true,
+            "totalInvitationQuantity": 0,
+            "totalContractQuantity": 0,
+            "totalQuantity": 702,
+            "totalSale": 37200000,
+            "actualSale": 37200000,
+            "prices": [
+                {
+                    "price": 120000,
+                    "totalQuantity": 21
+                },
+                {
+                    "price": 110000,
+                    "totalQuantity": 2
+                },
+                {
+                    "price": 100000,
+                    "totalQuantity": 6
+                },
+                {
+                    "price": 90000,
+                    "totalQuantity": 11
+                },
+                {
+                    "price": 85000,
+                    "totalQuantity": 8
+                },
+                {
+                    "price": 80000,
+                    "totalQuantity": 2
+                },
+                {
+                    "price": 75000,
+                    "totalQuantity": 4
+                },
+                {
+                    "price": 70000,
+                    "totalQuantity": 2
+                },
+                {
+                    "price": 60000,
+                    "totalQuantity": 23
+                },
+                {
+                    "price": 50000,
+                    "totalQuantity": 649
+                }
+            ]
+        }
+    ],
+    "priceHeaders": [
+        150000,
+        140000,
+        120000,
+        110000,
+        105000,
+        100000,
+        95000,
+        90000,
+        85000,
+        80000,
+        76000,
+        75000,
+        72000,
+        70000,
+        60000,
+        50000
+    ],
+    "totalRevenue": {
+        "totalInvitationQuantity": 4,
+        "totalContractQuantity": 0,
+        "totalQuantity": 1913,
+        "totalSale": 142786000,
+        "actualSale": 142786000,
+        "prices": [
+            {
+                "price": 150000,
+                "totalQuantity": 16
+            },
+            {
+                "price": 140000,
+                "totalQuantity": 1
+            },
+            {
+                "price": 120000,
+                "totalQuantity": 28
+            },
+            {
+                "price": 110000,
+                "totalQuantity": 4
+            },
+            {
+                "price": 105000,
+                "totalQuantity": 31
+            },
+            {
+                "price": 100000,
+                "totalQuantity": 154
+            },
+            {
+                "price": 95000,
+                "totalQuantity": 562
+            },
+            {
+                "price": 90000,
+                "totalQuantity": 136
+            },
+            {
+                "price": 85000,
+                "totalQuantity": 18
+            },
+            {
+                "price": 80000,
+                "totalQuantity": 51
+            },
+            {
+                "price": 76000,
+                "totalQuantity": 42
+            },
+            {
+                "price": 75000,
+                "totalQuantity": 23
+            },
+            {
+                "price": 72000,
+                "totalQuantity": 7
+            },
+            {
+                "price": 70000,
+                "totalQuantity": 3
+            },
+            {
+                "price": 60000,
+                "totalQuantity": 66
+            },
+            {
+                "price": 50000,
+                "totalQuantity": 989
+            }
+        ]
+    },
+    "totalRevenueOnline": {
+        "isOnline": true,
+        "totalInvitationQuantity": 0,
+        "totalContractQuantity": 0,
+        "totalQuantity": 1276,
+        "totalSale": 92180000,
+        "actualSale": 92180000,
+        "prices": [
+            {
+                "price": 150000,
+                "totalQuantity": 12
+            },
+            {
+                "price": 120000,
+                "totalQuantity": 25
+            },
+            {
+                "price": 110000,
+                "totalQuantity": 4
+            },
+            {
+                "price": 105000,
+                "totalQuantity": 23
+            },
+            {
+                "price": 100000,
+                "totalQuantity": 111
+            },
+            {
+                "price": 95000,
+                "totalQuantity": 321
+            },
+            {
+                "price": 90000,
+                "totalQuantity": 77
+            },
+            {
+                "price": 85000,
+                "totalQuantity": 18
+            },
+            {
+                "price": 80000,
+                "totalQuantity": 35
+            },
+            {
+                "price": 75000,
+                "totalQuantity": 8
+            },
+            {
+                "price": 70000,
+                "totalQuantity": 2
+            },
+            {
+                "price": 60000,
+                "totalQuantity": 34
+            },
+            {
+                "price": 50000,
+                "totalQuantity": 817
+            }
+        ]
+    },
+    "totalRevenueOffline": {
+        "isOnline": false,
+        "totalInvitationQuantity": 4,
+        "totalContractQuantity": 0,
+        "totalQuantity": 637,
+        "totalSale": 50606000,
+        "actualSale": 50606000,
+        "prices": [
+            {
+                "price": 150000,
+                "totalQuantity": 4
+            },
+            {
+                "price": 140000,
+                "totalQuantity": 1
+            },
+            {
+                "price": 120000,
+                "totalQuantity": 3
+            },
+            {
+                "price": 105000,
+                "totalQuantity": 8
+            },
+            {
+                "price": 100000,
+                "totalQuantity": 43
+            },
+            {
+                "price": 95000,
+                "totalQuantity": 241
+            },
+            {
+                "price": 90000,
+                "totalQuantity": 59
+            },
+            {
+                "price": 80000,
+                "totalQuantity": 16
+            },
+            {
+                "price": 76000,
+                "totalQuantity": 42
+            },
+            {
+                "price": 75000,
+                "totalQuantity": 15
+            },
+            {
+                "price": 72000,
+                "totalQuantity": 7
+            },
+            {
+                "price": 70000,
+                "totalQuantity": 1
+            },
+            {
+                "price": 60000,
+                "totalQuantity": 32
+            },
+            {
+                "price": 50000,
+                "totalQuantity": 172
+            }
+        ]
+    }
+}

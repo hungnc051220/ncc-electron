@@ -885,6 +885,15 @@ export interface TotalRevenueProps {
   totalSale: number;
 }
 
+export interface TotalRevenue2Props {
+  totalInvitationQuantity: number;
+  totalContractQuantity: number;
+  totalQuantity: number;
+  totalSale: number;
+  actualSale: number;
+  prices: Price2[];
+}
+
 export interface ReportRevenueStaffProps {
   revenueByEmployee: RevenueByEmployeeProps[];
   totalByEmployee: TotalRevenueProps;
@@ -901,6 +910,30 @@ export interface ReportRevenueFilmByStaffProps {
   totalRevenue: TotalRevenueProps;
   totalRevenueOnline: TotalRevenueOnlineProps;
   totalRevenueOffline: TotalRevenueOnlineProps;
+}
+
+export interface ReportMonthlyRevenueTicketByStaffProps {
+  revenuesByDay: RevenuesByDayProps[];
+  priceHeaders: number[];
+  totalRevenue: TotalRevenue2Props;
+  totalRevenueOnline: TotalRevenueOnlineProps;
+  totalRevenueOffline: TotalRevenueOnlineProps;
+}
+
+export interface RevenuesByDayProps {
+  projectDate: string;
+  isOnline: boolean;
+  totalInvitationQuantity: number;
+  totalContractQuantity: number;
+  totalQuantity: number;
+  totalSale: number;
+  actualSale: number;
+  prices: Price2[];
+}
+
+export interface Price2 {
+  price: number;
+  totalQuantity: number;
 }
 
 export interface RevenuesByFilmProps {

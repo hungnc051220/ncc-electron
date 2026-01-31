@@ -6,6 +6,7 @@ import RevenueByFilm from "./tabs/revenue-by-film";
 import ExamineTicketByPlan from "./tabs/examine-ticket-by-plan";
 import Vouchers from "./tabs/vouchers";
 import U22Usage from "./tabs/u22";
+import MonthlyRevenueByTicket from "./tabs/monthly-revenue-by-ticket";
 
 const StaffRevenueReportClient = () => {
   const items: TabsProps["items"] = [
@@ -22,7 +23,7 @@ const StaffRevenueReportClient = () => {
     {
       key: "3",
       label: "Báo cáo tháng của nhân viên",
-      children: "Content of Tab Pane 3",
+      children: <MonthlyRevenueByTicket />,
     },
     {
       key: "4",
