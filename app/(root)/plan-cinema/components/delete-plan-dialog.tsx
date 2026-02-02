@@ -5,29 +5,29 @@ import { Modal } from "antd";
 import axios from "axios";
 import { toast } from "sonner";
 
-interface DeleteTicketPriceDialogProps {
+interface DeletePlanCinemaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   id: number;
   name: string;
 }
 
-const DeleteTicketPriceDialog = ({
+const DeletePlanCinemaDialog = ({
   open,
   onOpenChange,
   id,
   name,
-}: DeleteTicketPriceDialogProps) => {
+}: DeletePlanCinemaDialogProps) => {
   const queryClient = useQueryClient();
-  const deleteCancellationReasonMutation = useMutation({
+  const deletePlanCinemaMutation = useMutation({
     mutationFn: () => {
-      return axios.post("/api/ticket-prices/delete", {
+      return axios.post("/api/plan-cinema/delete", {
         id,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket-prices"] });
-      toast.success("Xóa giá vé thành công");
+      queryClient.invalidateQueries({ queryKey: ["plan-cinema"] });
+      toast.success("Xóa kế hoạch chiếu phim thành công");
       onOpenChange(false);
     },
     onError: (error) => {
@@ -38,19 +38,19 @@ const DeleteTicketPriceDialog = ({
   return (
     <Modal
       open={open}
-      title="Xác nhận xóa giá vé"
-      onOk={() => deleteCancellationReasonMutation.mutate()}
+      title="Xác nhận xóa kế hoạch chiếu phim"
+      onOk={() => deletePlanCinemaMutation.mutate()}
       onCancel={() => onOpenChange(false)}
       okButtonProps={{
         danger: true,
       }}
-      confirmLoading={deleteCancellationReasonMutation.isPending}
+      confirmLoading={deletePlanCinemaMutation.isPending}
       destroyOnHidden
     >
-      Bạn có chắc chắn muốn xóa giá vé <strong>{name}</strong>? Thao tác không
+      Bạn có chắc chắn muốn xóa kế hoạch <strong>{name}</strong>? Thao tác không
       thể thu hồi.
     </Modal>
   );
 };
 
-export default DeleteTicketPriceDialog;
+export default DeletePlanCinemaDialog;

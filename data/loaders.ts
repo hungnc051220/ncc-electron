@@ -130,6 +130,7 @@ export const getFilmScheduling = async (
   if (query) {
     url.search = query;
   }
+  console.log(url.href);
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };
 

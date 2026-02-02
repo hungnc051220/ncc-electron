@@ -81,13 +81,13 @@ const TicketPricesClient = () => {
       width: 150,
     },
     {
-      title: "Ca chiếu",
+      title: "Loại ghế",
       key: "position",
       dataIndex: "position",
       render: (_, record) => record.position?.name,
     },
     {
-      title: "Loại ghế",
+      title: "Ca chiếu",
       key: "daypart",
       dataIndex: "daypart",
       render: (_, record) => record.daypart?.name,
@@ -202,7 +202,7 @@ const TicketPricesClient = () => {
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
           id={selectedTicketPrice.id}
-          versionCode={selectedTicketPrice.versionCode}
+          name={selectedTicketPrice.versionCode}
         />
       )}
     </div>
