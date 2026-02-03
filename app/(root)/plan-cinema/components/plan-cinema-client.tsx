@@ -207,7 +207,10 @@ const PlanCinemaClient = () => {
                     </Button>
                     {([0, 2].includes(selectedPlan.status) ||
                       selectedPlan.status === null) && (
-                      <SendForApproveActions planCinemaId={selectedPlan.id} />
+                      <SendForApproveActions
+                        planCinemaId={selectedPlan.id}
+                        clearSelectedPlan={clearSelectedPlan}
+                      />
                     )}
                     {selectedPlan.status === 3 && (
                       <ArchivedActions
@@ -216,7 +219,10 @@ const PlanCinemaClient = () => {
                       />
                     )}
                     {selectedPlan.status === 1 && (
-                      <ApproveRejectActions planCinemaId={selectedPlan.id} />
+                      <ApproveRejectActions
+                        planCinemaId={selectedPlan.id}
+                        clearSelectedPlan={clearSelectedPlan}
+                      />
                     )}
                   </div>
                 </div>

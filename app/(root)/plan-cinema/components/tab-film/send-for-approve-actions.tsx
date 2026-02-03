@@ -5,7 +5,13 @@ import { Button } from "antd";
 import axios from "axios";
 import { toast } from "sonner";
 
-const SendForApproveActions = ({ planCinemaId }: { planCinemaId: number }) => {
+const SendForApproveActions = ({
+  planCinemaId,
+  clearSelectedPlan,
+}: {
+  planCinemaId: number;
+  clearSelectedPlan: () => void;
+}) => {
   const queryClient = useQueryClient();
 
   const approvePlanMutation = useMutation({
@@ -17,6 +23,7 @@ const SendForApproveActions = ({ planCinemaId }: { planCinemaId: number }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plan-cinema"] });
+      clearSelectedPlan();
       toast.success("Cập nhật trạng thái kế hoạch thành công");
     },
     onError: (error) => {
