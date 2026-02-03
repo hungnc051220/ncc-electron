@@ -65,6 +65,7 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plan-films"] });
+      setPickedFilmIds([]);
       toast.success("Thêm phim cho kế hoạch thành công");
       setOpen(false);
     },
@@ -147,6 +148,12 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
     }),
   };
 
+  const onCancel = () => {
+    setPickedFilmIds([]);
+    setSearchValue("");
+    setOpen(false);
+  };
+
   return (
     <>
       <Button variant="outlined" color="primary" onClick={() => setOpen(true)}>
@@ -155,12 +162,12 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
       <Modal
         title="Thêm phim cho kế hoạch"
         open={open}
-        onCancel={() => setOpen(false)}
+        onCancel={onCancel}
         width={1000}
         centered
         onOk={() => {
           if (pickedFilmIds.length > 0) {
-            planFilmMutation.mutate([...pickedFilmIds, ...selectedFilmIds]);
+            planFilmMutation.mutate([...selectedFilmIds, ...pickedFilmIds]);
           }
         }}
         okButtonProps={{

@@ -83,7 +83,6 @@ const ShowtimeSlotDialog = ({
   };
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
-    console.log(values);
     showtimeSlotsMutation.mutate(values);
   };
 

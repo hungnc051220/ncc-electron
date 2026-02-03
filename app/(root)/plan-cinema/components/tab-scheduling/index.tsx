@@ -1,21 +1,14 @@
-import { deleteMultiPlanScreeningAction } from "@/actions/plan-screening-actions";
-import { Button } from "@/components/ui/button";
 import { getPlanScreenings } from "@/data/loaders";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RowSelectionState } from "@tanstack/react-table";
+import { PlanScreeningDetailProps } from "@/types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TableColumnsType, TableProps } from "antd";
+import { Button, Table } from "antd";
+import axios from "axios";
+import dayjs from "dayjs";
 import queryString from "query-string";
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import AddScreenings from "./add-scheduling-dialog";
-import { columns } from "./columns";
-import { DataTable } from "./data-table";
-
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
-};
 
 interface TabSchedulingProps {
   planCinemaId?: number;
@@ -23,86 +16,135 @@ interface TabSchedulingProps {
 
 const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const queryClient = useQueryClient();
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const [deleteState, deleteAction, pendingDelete] = useActionState(
-    deleteMultiPlanScreeningAction,
-    INITIAL_STATE
-  );
-
-  const { isPending, data } = useQuery({
+  const { data, isFetching } = useQuery({
     queryKey: ["plan-screenings", planCinemaId],
     queryFn: () => {
       const query = queryString.stringify(
         { filter: JSON.stringify({ planCinemaId }) },
-        { skipEmptyString: true, skipNull: true }
+        { skipEmptyString: true, skipNull: true },
       );
       return getPlanScreenings(query);
     },
     enabled: !!planCinemaId,
   });
 
-  useEffect(() => {
-    if (deleteState.error) {
-      toast.error(deleteState.error);
-    }
-
-    if (deleteState.success) {
-      toast.success("Xóa ca chiếu khỏi kế hoạch thành công");
+  const deleteFilmOnPlanMutation = useMutation({
+    mutationFn: (data: number[]) => {
+      return axios.post("/api/plan-screenings/delete", data);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plan-screenings"] });
-    }
-  }, [deleteState, queryClient]);
+      setSelectedRowKeys([]);
+      toast.success("Xóa ca chiếu trong kế hoạch thành công");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
-  if (!data) return null;
+  const handleDeleteFilms = () => {
+    deleteFilmOnPlanMutation.mutate(selectedRowKeys as number[]);
+  };
 
-  const handleDelete = () => {
-    const allPlans = data.data;
-    const newlySelectedPlans = Object.keys(rowSelection)
-      .filter((key) => rowSelection[key])
-      .map((rowId) => {
-        const plan = allPlans.find((item) => item.id.toString() === rowId);
-        return plan ? plan.id : null;
-      })
-      .filter(Boolean) as number[];
+  const columns: TableColumnsType<PlanScreeningDetailProps> = [
+    {
+      title: "Ngày chiếu",
+      key: "projectDate",
+      dataIndex: "projectDate",
+      render: (_, record) => dayjs(record.projectDate).format("DD/MM/YYYY"),
+    },
+    {
+      title: "Giờ chiếu",
+      key: "projectTime",
+      dataIndex: "projectTime",
+      render: (_, record) => dayjs(record.projectTime).format("HH:mm"),
+    },
+    {
+      title: "Phòng",
+      key: "roomName",
+      dataIndex: "roomName",
+      render: (_, record) => record.roomInfo?.name,
+    },
+    {
+      title: "Tên phim",
+      key: "filmName",
+      dataIndex: "filmName",
+      render: (_, record) => record.filmInfo?.filmName,
+    },
+    {
+      title: "Kết thúc",
+      key: "endTime",
+      dataIndex: "endTime",
+      render: (_, record) => {
+        const time = dayjs(record.projectTime)
+          .add(record.filmInfo.duration, "minute")
+          .format("HH:mm");
+        return time;
+      },
+    },
+    {
+      title: "Giá vé 1",
+      key: "priceOfPosition1",
+      dataIndex: "priceOfPosition1",
+    },
+    {
+      title: "Giá vé 2",
+      key: "priceOfPosition2",
+      dataIndex: "priceOfPosition2",
+    },
+    {
+      title: "Giá vé 3",
+      key: "priceOfPosition3",
+      dataIndex: "priceOfPosition3",
+    },
+    {
+      title: "Giá vé 4",
+      key: "priceOfPosition4",
+      dataIndex: "priceOfPosition4",
+    },
+  ];
 
-    const formData = new FormData();
-    formData.append("planIds", JSON.stringify(newlySelectedPlans));
-
-    startTransition(() => {
-      deleteAction(formData);
-      setRowSelection({});
-    });
+  const rowSelection: TableProps<PlanScreeningDetailProps>["rowSelection"] = {
+    selectedRowKeys,
+    onChange: (selectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(selectedRowKeys);
+    },
   };
 
   if (!data) return null;
 
   return (
-    <div className="mt-2">
-      <div className="flex items-center justify-between py-2">
+    <div>
+      <div className="flex items-center justify-between pb-2">
         <div className="flex items-center gap-3">
           <p className="text-sm">
-            Đã chọn <b>{Object.keys(rowSelection).length}</b> ca chiếu
+            Đã chọn <b>{selectedRowKeys.length}</b> ca chiếu
           </p>
           <Button
-            variant="outline"
-            size="sm"
-            disabled={pendingDelete || Object.keys(rowSelection).length === 0}
-            onClick={handleDelete}
+            size="small"
+            disabled={selectedRowKeys.length === 0}
+            onClick={handleDeleteFilms}
+            variant="outlined"
+            color="red"
+            loading={deleteFilmOnPlanMutation.isPending}
           >
-            {pendingDelete ? "Đang xóa..." : "Xóa ca chiếu"}
+            Xóa
           </Button>
         </div>
         <AddScreenings planCinemaId={planCinemaId!} />
       </div>
 
       <div className="mt-2">
-        <DataTable
+        <Table
+          rowKey="id"
           columns={columns}
-          data={data.data}
-          loading={isPending}
-          rowSelection={rowSelection}
-          onRowSelectionChange={setRowSelection}
-          getRowId={(row) => row.id.toString()}
+          dataSource={data?.data || []}
+          size="small"
+          loading={isFetching}
+          pagination={false}
+          rowSelection={{ type: "checkbox", ...rowSelection }}
         />
       </div>
     </div>
