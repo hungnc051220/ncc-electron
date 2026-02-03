@@ -5,9 +5,8 @@ import { cn } from "@/lib/utils";
 import { PlanCinemaProps } from "@/types";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { CollapseProps, PaginationProps } from "antd";
-import { Breadcrumb, Collapse, Pagination, Spin } from "antd";
+import { Breadcrumb, Button, Collapse, Empty, Pagination, Spin } from "antd";
 import { format } from "date-fns";
-import { Trash } from "lucide-react";
 import qs from "query-string";
 import { useState } from "react";
 import AddPlanDialog from "./add-plan-dialog";
@@ -79,17 +78,21 @@ const PlanCinemaClient = () => {
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-end mt-3">
-          <Pagination
-            current={data?.current || 1}
-            onChange={onChangePage}
-            pageSize={20}
-            total={data?.total || 0}
-            showSizeChanger={false}
-            simple
-            size="small"
-          />
-        </div>
+        {data && data?.total > 0 ? (
+          <div className="flex items-center justify-end mt-3">
+            <Pagination
+              current={data?.current || 1}
+              onChange={onChangePage}
+              pageSize={20}
+              total={data?.total || 0}
+              showSizeChanger={false}
+              simple
+              size="small"
+            />
+          </div>
+        ) : (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        )}
       </Spin>
     </div>
   );
@@ -195,18 +198,16 @@ const PlanCinemaClient = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      className="text-dodoria font-bold text-xs flex items-center gap-1 py-1 px-2 hover:opacity-85"
+                    <Button
+                      variant="outlined"
+                      color="danger"
                       onClick={() => setOpenDelete(true)}
                     >
-                      <Trash className="size-3" /> Xóa kế hoạch
-                    </button>
+                      Xóa kế hoạch
+                    </Button>
                     {([0, 2].includes(selectedPlan.status) ||
                       selectedPlan.status === null) && (
-                      <SendForApproveActions
-                        planCinemaId={selectedPlan.id}
-                        clearSelectedPlan={clearSelectedPlan}
-                      />
+                      <SendForApproveActions planCinemaId={selectedPlan.id} />
                     )}
                     {selectedPlan.status === 3 && (
                       <ArchivedActions
@@ -215,10 +216,7 @@ const PlanCinemaClient = () => {
                       />
                     )}
                     {selectedPlan.status === 1 && (
-                      <ApproveRejectActions
-                        planCinemaId={selectedPlan.id}
-                        clearSelectedPlan={clearSelectedPlan}
-                      />
+                      <ApproveRejectActions planCinemaId={selectedPlan.id} />
                     )}
                   </div>
                 </div>
@@ -260,6 +258,7 @@ const PlanCinemaClient = () => {
               onOpenChange={onOpenChange}
               id={selectedPlan.id}
               name={selectedPlan.name}
+              setSelectedPlan={setSelectedPlan}
             />
           )}
         </div>

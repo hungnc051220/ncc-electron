@@ -1,60 +1,47 @@
 "use client";
 
-import { approveRejectPlanCinemaAction } from "@/actions/plan-cinema-actions";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
-};
-
-const ApproveRejectActions = ({
-  planCinemaId,
-  clearSelectedPlan,
-}: {
-  planCinemaId: number;
-  clearSelectedPlan: () => void;
-}) => {
-  const [state, action, pending] = useActionState(
-    approveRejectPlanCinemaAction,
-    INITIAL_STATE
-  );
-
-  const handleApprove = (isApproved: boolean) => {
-    const formData = new FormData();
-    formData.append("planCinemaId", planCinemaId.toString());
-    formData.append("isApproved", isApproved.toString());
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    } else if (state.success) {
-      clearSelectedPlan();
-      toast.success("Cập nhật kế hoạch chiếu phim thành công");
-    }
-  }, [state, clearSelectedPlan]);
+const ApproveRejectActions = ({ planCinemaId }: { planCinemaId: number }) => {
+  const queryClient = useQueryClient();
+  
+  const approvedRejectPlanMutation = useMutation({
+    mutationFn: (isApproved: boolean) => {
+      return axios.post("/api/plan-cinema/approve-reject", {
+        id: planCinemaId,
+        isApproved,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plan-cinema"] });
+      toast.success("Cập nhật trạng thái kế hoạch thành công");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
   return (
     <>
-      <button
-        className="text-xs py-1 px-2 flex items-center gap-1 bg-chichi text-white rounded-sm font-bold hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={pending}
-        onClick={() => handleApprove(false)}
+      <Button
+        color="danger"
+        variant="solid"
+        disabled={approvedRejectPlanMutation.isPending}
+        onClick={() => approvedRejectPlanMutation.mutate(false)}
       >
         Không chấp nhận
-      </button>
-      <button
-        className="text-xs py-1 px-2 flex items-center gap-1 bg-hit text-white rounded-sm font-bold hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={pending}
-        onClick={() => handleApprove(true)}
+      </Button>
+      <Button
+        variant="solid"
+        color="cyan"
+        disabled={approvedRejectPlanMutation.isPending}
+        onClick={() => approvedRejectPlanMutation.mutate(true)}
       >
         Chấp nhận
-      </button>
+      </Button>
     </>
   );
 };

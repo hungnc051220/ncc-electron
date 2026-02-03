@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanCinemaProps } from "@/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Modal } from "antd";
 import axios from "axios";
@@ -10,6 +11,7 @@ interface DeletePlanCinemaDialogProps {
   onOpenChange: (open: boolean) => void;
   id: number;
   name: string;
+  setSelectedPlan: (plan: PlanCinemaProps | undefined) => void;
 }
 
 const DeletePlanCinemaDialog = ({
@@ -17,6 +19,7 @@ const DeletePlanCinemaDialog = ({
   onOpenChange,
   id,
   name,
+  setSelectedPlan,
 }: DeletePlanCinemaDialogProps) => {
   const queryClient = useQueryClient();
   const deletePlanCinemaMutation = useMutation({
@@ -28,6 +31,7 @@ const DeletePlanCinemaDialog = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plan-cinema"] });
       toast.success("Xóa kế hoạch chiếu phim thành công");
+      setSelectedPlan(undefined);
       onOpenChange(false);
     },
     onError: (error) => {

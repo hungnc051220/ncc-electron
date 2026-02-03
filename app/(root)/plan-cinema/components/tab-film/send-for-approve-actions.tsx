@@ -1,55 +1,37 @@
 "use client";
 
-import { updatePlanCinemaAction } from "@/actions/plan-cinema-actions";
-import { CornerUpRight } from "lucide-react";
-import { startTransition, useActionState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
-};
+const SendForApproveActions = ({ planCinemaId }: { planCinemaId: number }) => {
+  const queryClient = useQueryClient();
 
-const SendForApproveActions = ({
-  planCinemaId,
-  clearSelectedPlan,
-}: {
-  planCinemaId: number;
-  clearSelectedPlan: () => void;
-}) => {
-  const [state, action, pending] = useActionState(
-    updatePlanCinemaAction,
-    INITIAL_STATE
-  );
-
-  const handleApprove = () => {
-    const formData = new FormData();
-    formData.append("planCinemaId", planCinemaId.toString());
-    formData.append("status", "1");
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    } else if (state.success) {
-      clearSelectedPlan();
-      toast.success("Cập nhật kế hoạch chiếu phim thành công");
-    }
-  }, [state, clearSelectedPlan]);
+  const approvePlanMutation = useMutation({
+    mutationFn: () => {
+      return axios.post("/api/plan-cinema/update", {
+        id: planCinemaId,
+        status: 1,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plan-cinema"] });
+      toast.success("Cập nhật trạng thái kế hoạch thành công");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
   return (
-    <>
-      <button
-        className="text-xs py-1 px-2 flex items-center gap-1 border border-trunks rounded-sm font-bold hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={handleApprove}
-        disabled={pending}
-      >
-        <CornerUpRight className="size-3" /> Gửi duyệt
-      </button>
-    </>
+    <Button
+      variant="outlined"
+      onClick={() => approvePlanMutation.mutate()}
+      loading={approvePlanMutation.isPending}
+    >
+      Gửi duyệt
+    </Button>
   );
 };
 
