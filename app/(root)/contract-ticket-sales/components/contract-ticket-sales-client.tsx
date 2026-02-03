@@ -1,60 +1,69 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
+import { getContractTicketSales } from "@/data/loaders";
+import { formatMoney, formatNumber } from "@/lib/utils";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { ApiResponse, ContractTicketSaleProps } from "@/types";
+  OrderDetailProps,
+  OrderResponseProps
+} from "@/types";
+import Icon, { MoreOutlined } from "@ant-design/icons";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { PaginationProps, TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import dayjs from "dayjs";
 import { PlusIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { useMediaQuery } from "react-responsive";
-import { createColumns } from "./columns";
+import { useCallback, useState } from "react";
 import ContractTicketSaleDialog from "./contract-ticket-sale-dialog";
-import DeleteContractTicketSaleDialog from "./delete-contract-ticket-sale-dialog";
 import ContractTicketSaleUpdateSeatDialog from "./contract-ticket-sale-update-seat-dialog";
+import DeleteContractTicketSaleDialog from "./delete-contract-ticket-sale-dialog";
 
-interface ContractTicketSalesClientProps {
-  data: ApiResponse<ContractTicketSaleProps>;
-  page: number;
-}
+const actionItems = [
+  { key: "1", label: "Cập nhật" },
+  { key: "2", label: "Thiết lập ghế ngồi" },
+  { key: "3", label: "In vé" },
+];
 
-const ContractTicketSalesClient = ({
-  data,
-  page,
-}: ContractTicketSalesClientProps) => {
-  const isTabletOrMobile = useMediaQuery({ query: "(max-width: 1024px)" });
+const ContractTicketSalesClient = () => {
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogUpdateSeatOpen, setDialogUpdateSeatOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] =
-    useState<ContractTicketSaleProps | null>(null);
+  const [selectedItem, setSelectedItem] = useState<OrderResponseProps | null>(
+    null,
+  );
+
+  const { data: tickets, isFetching } = useQuery({
+    queryKey: ["contract-ticket-sales", { current, pageSize }],
+    queryFn: () => {
+      return getContractTicketSales({
+        page: current,
+        pageSize,
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
 
   const handleAdd = useCallback(() => {
     setSelectedItem(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((item: ContractTicketSaleProps) => {
+  const handleEdit = useCallback((item: OrderResponseProps) => {
     setSelectedItem(item);
     setDialogOpen(true);
   }, []);
 
-  const handleUpdateSeat = useCallback((item: ContractTicketSaleProps) => {
+  const handleUpdateSeat = useCallback((item: OrderResponseProps) => {
     setSelectedItem(item);
     setDialogUpdateSeatOpen(true);
   }, []);
 
-  const handlePrint = useCallback((item: ContractTicketSaleProps) => {
+  const handlePrint = useCallback((item: OrderResponseProps) => {
     console.log(item);
   }, []);
 
-  const handleDelete = useCallback((item: ContractTicketSaleProps) => {
+  const handleDelete = useCallback((item: OrderResponseProps) => {
     setSelectedItem(item);
     setDeleteDialogOpen(true);
   }, []);
@@ -80,63 +89,166 @@ const ContractTicketSalesClient = ({
     }
   }, []);
 
-  const columns = useMemo(
-    () =>
-      createColumns({
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-        onUpdateSeat: handleUpdateSeat,
-        onPrint: handlePrint,
-        page,
-      }),
-    [handleEdit, handleDelete, page, handleUpdateSeat, handlePrint]
-  );
+  const columns: TableProps<OrderDetailProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Tên khách hàng",
+      key: "customerFirstName",
+      dataIndex: "customerFirstName",
+      render: (_, record) => record.order?.customerFirstName,
+    },
+    {
+      title: "Tên phim",
+      key: "filmName",
+      dataIndex: "filmName",
+      render: (_, record) => record.film?.filmName,
+    },
+    {
+      title: "Phòng chiếu",
+      key: "roomName",
+      dataIndex: "roomName",
+      render: (_, record) => record.room?.name,
+      width: 120,
+    },
+    {
+      title: "Ngày chiếu",
+      key: "projectDate",
+      dataIndex: "projectDate",
+      render: (_, record) =>
+        record.planScreening?.projectDate
+          ? dayjs(record.planScreening.projectDate, "YYYY-MM-DD")
+              .utc()
+              .format("DD/MM/YYYY")
+          : "",
+      width: 100,
+    },
+    {
+      title: "Giờ chiếu",
+      key: "projectTime",
+      dataIndex: "projectTime",
+      render: (_, record) =>
+        record.planScreening?.projectTime
+          ? dayjs(record.planScreening.projectTime).utc().format("HH:mm")
+          : "",
+      width: 100,
+    },
+    {
+      title: "Số vé",
+      key: "ticketCount",
+      dataIndex: "ticketCount",
+      render: (_, record) =>
+        record.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0),
+      align: "right",
+    },
+    {
+      title: "Giá trị hợp đồng",
+      key: "orderTotal",
+      dataIndex: "orderTotal",
+      render: (_, record) => formatMoney(record.order?.orderTotal || 0),
+      align: "right",
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleEdit(record.order);
+              }
+              if (e.key === "2") {
+                handleDelete(record.order);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
+
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
+
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
 
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Bán vé</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Danh sách vé bán hợp đồng
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+              href: "/",
+            },
+            {
+              title: "Bán vé",
+            },
+            {
+              title: "Danh sách vé bán hợp đồng",
+            },
+          ]}
+        />
 
         <div className="flex gap-2 items-center">
           <Button
+            type="primary"
             onClick={handleAdd}
-            size={isTabletOrMobile ? "sm" : "default"}
+            icon={<Icon component={PlusIcon} />}
           >
-            <PlusIcon className={isTabletOrMobile ? "size-3" : "size-4"} />
-            Thêm mới
+            Thêm hợp đồng
           </Button>
         </div>
       </div>
 
-      <DataTable
+      <Table
+        rowKey={(record) => record.order.id}
+        dataSource={tickets?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        className="max-h-[calc(100vh-200px)]"
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 270px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: tickets?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+        }}
       />
+
       {dialogOpen && (
         <ContractTicketSaleDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingContractTicketSale={selectedItem}
+          selectedItem={selectedItem}
         />
       )}
 

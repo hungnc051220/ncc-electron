@@ -6,7 +6,6 @@ import {
   BackgroundProps,
   CancellationReasonProps,
   CancellationTicketProps,
-  ContractTicketSaleProps,
   CustomerRoleProps,
   DayPartProps,
   DiscountProps,
@@ -30,7 +29,7 @@ import {
   RoomProps,
   SeatTypeProps,
   TicketPriceProps,
-  UserProps,
+  UserProps
 } from "@/types";
 import { endOfYear, format, startOfYear } from "date-fns";
 import { cookies } from "next/headers";
@@ -605,11 +604,11 @@ export const getContractTicketSales = async ({
   page,
   pageSize,
 }: {
-  fromDate: string;
-  toDate: string;
-  page?: number;
-  pageSize?: number;
-}): Promise<ApiResponse<ContractTicketSaleProps>> => {
+  fromDate?: string;
+  toDate?: string;
+  page: number;
+  pageSize: number;
+}): Promise<ApiResponse<OrderDetailProps>> => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/order-contract", BASE_URL);

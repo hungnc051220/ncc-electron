@@ -284,6 +284,7 @@ const FilmsClient = () => {
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
         }}
       />
+      
       {dialogOpen && (
         <FilmDialog
           open={dialogOpen}

@@ -22,7 +22,7 @@ import {
   getPlanScreeningDetail,
   getPlanScreeningsByDate,
 } from "@/data/loaders";
-import { ContractTicketSaleProps } from "@/types";
+import { ContractTicketSaleProps, OrderResponseProps } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ChevronDownIcon, Loader2 } from "lucide-react";
@@ -32,7 +32,7 @@ import Seats from "./seats";
 interface ContractTicketSaleUpdateSeatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingContractTicketSale?: ContractTicketSaleProps | null;
+  editingContractTicketSale?: OrderResponseProps | null;
 }
 
 const ContractTicketSaleUpdateSeatDialog = ({
@@ -44,7 +44,7 @@ const ContractTicketSaleUpdateSeatDialog = ({
   const [openSelectSeat, setOpenSelectSeat] = useState(false);
   const [date, setDate] = useState<Date>(new Date());
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(
-    undefined
+    undefined,
   );
 
   const { data, isLoading } = useQuery({
@@ -136,7 +136,7 @@ const ContractTicketSaleUpdateSeatDialog = ({
                               className="text-center cursor-pointer hover:bg-primary hover:text-white min-w-[70px]"
                               onClick={() => {
                                 setSelectedPlanId(
-                                  plan.planScreeningsId.toString()
+                                  plan.planScreeningsId.toString(),
                                 );
                                 setOpenSelectSeat(true);
                               }}

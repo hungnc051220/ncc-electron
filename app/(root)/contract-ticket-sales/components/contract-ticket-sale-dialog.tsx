@@ -1,123 +1,127 @@
 "use client";
 
-import {
-  createContractTicketSaleAction,
-  updateContractTicketSaleAction,
-} from "@/actions/contract-ticket-sale-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { ContractTicketSaleFormInput } from "@/lib/schemas/contract-ticket-sale-schema";
-import { ContractTicketSaleProps } from "@/types";
-import { startTransition, useActionState, useEffect } from "react";
+import { formatter } from "@/lib/utils";
+import { OrderResponseProps } from "@/types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormProps } from "antd";
+import { Form, Input, InputNumber, Modal } from "antd";
+import axios from "axios";
 import { toast } from "sonner";
-import ContractTicketSaleForm from "./contract-ticket-sale-form";
 
-const INITIAL_STATE = {
-  formData: null,
-  fieldErrors: null,
-  success: false,
-  error: null,
+type FieldType = {
+  customerFirstName: string;
+  customerPhone: string;
+  orderTotal: number;
 };
 
-interface ContractTicketSaleDialogProps {
+interface CancellationReasonDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingContractTicketSale?: ContractTicketSaleProps | null;
+  selectedItem?: OrderResponseProps | null;
 }
 
-const ContractTicketSaleDialog = ({
+const CancellationReasonDialog = ({
   open,
   onOpenChange,
-  editingContractTicketSale,
-}: ContractTicketSaleDialogProps) => {
-  const isEdit = !!editingContractTicketSale;
-  const [state, action, pending] = useActionState(
-    isEdit ? updateContractTicketSaleAction : createContractTicketSaleAction,
-    INITIAL_STATE
-  );
+  selectedItem,
+}: CancellationReasonDialogProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
+  const isEdit = !!selectedItem;
 
-  const onSubmit = (values: ContractTicketSaleFormInput) => {
-    const formData = new FormData();
-    if (isEdit && editingContractTicketSale) {
-      formData.append("id", editingContractTicketSale.id.toString());
-    }
-    formData.append("customerFirstName", values.customerFirstName);
-    formData.append("customerPhone", values.customerPhone);
-    formData.append("orderTotal", values.orderTotal.toString());
-    formData.append("createdBy", values.createdBy || "");
-    startTransition(() => action(formData));
-  };
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error(state.error);
-    }
-
-    if (state.success) {
+  const contractTicketSaleMutation = useMutation({
+    mutationFn: (data: FieldType) => {
+      if (!isEdit) {
+        return axios.post("/api/contract-ticket-sales/create", {
+          ...data,
+        });
+      } else {
+        return axios.post("/api/contract-ticket-sales/update", {
+          ...data,
+          id: selectedItem.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contract-ticket-sales"] });
       toast.success(
-        isEdit ? "Cập nhật hợp đồng thành công" : "Thêm hợp đồng thành công"
+        `${isEdit ? "Cập nhật" : "Thêm"} vé bán hợp đồng thành công`,
       );
       onOpenChange(false);
-    }
-  }, [state, isEdit, onOpenChange]);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Có lỗi bất thường xảy ra");
+    },
+  });
 
-  const getDefaultValues = ():
-    | Partial<ContractTicketSaleFormInput>
-    | undefined => {
-    if (!editingContractTicketSale) return undefined;
+  const onOk = () => form.submit();
+
+  const getInitialValues = (): FieldType | undefined => {
+    if (!selectedItem) return undefined;
     return {
-      customerFirstName: editingContractTicketSale.customerFirstName,
-      customerPhone: editingContractTicketSale.customerPhone,
-      orderTotal: editingContractTicketSale.orderTotal,
-      createdBy: editingContractTicketSale.createdBy,
-      cinemaName: "Trung tâm chiếu phim quốc gia",
-      cinemaAddress: "Số 87, Láng Hạ, Quận Ba Đình, Thành phố Hà Nội",
-      cinemaPhone: "024.3514.1791",
-      cinemaFax: "024.3514.8647",
-      cinemaWebsite: "https://chieuphimquocgia.com.vn",
+      customerFirstName: selectedItem.customerFirstName,
+      customerPhone: selectedItem.customerPhone,
+      orderTotal: selectedItem.orderTotal,
     };
   };
 
+  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    contractTicketSaleMutation.mutate(values);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>
-            {isEdit ? "Cập nhật hợp đồng" : "Thêm mới hợp đồng"}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="max-h-[75vh] overflow-y-auto">
-          <ContractTicketSaleForm
-            onSubmit={onSubmit}
-            defaultValues={getDefaultValues()}
+    <Modal
+      open={open}
+      title={isEdit ? "Cập nhật vé bán hợp đồng" : "Thêm mới vé bán hợp đồng"}
+      onOk={onOk}
+      onCancel={() => onOpenChange(false)}
+      okButtonProps={{
+        loading: contractTicketSaleMutation.isPending,
+      }}
+      cancelButtonProps={{
+        disabled: contractTicketSaleMutation.isPending,
+      }}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={getInitialValues()}
+      >
+        <Form.Item<FieldType>
+          name="customerFirstName"
+          label="Tên khách hàng"
+          rules={[{ required: true, message: "Nhập tên khách hàng" }]}
+        >
+          <Input placeholder="Nhập tên khách hàng" />
+        </Form.Item>
+        <Form.Item<FieldType>
+          name="customerPhone"
+          label="Số điện thoại"
+          rules={[{ required: true, message: "Nhập số điện thoại" }]}
+        >
+          <Input placeholder="Nhập số điện thoại" />
+        </Form.Item>
+        <Form.Item<FieldType>
+          name="orderTotal"
+          label="Giá trị hợp đồng"
+          rules={[{ required: true, message: "Nhập giá trị hợp đồng" }]}
+        >
+          <InputNumber
+            min={0}
+            placeholder="Nhập giá trị hợp đồng"
+            className="w-full"
+            suffix="đ"
+            formatter={formatter}
+            parser={(value) =>
+              value?.replace(/\$\s?|(,*)/g, "") as unknown as number
+            }
           />
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Hủy
-            </Button>
-          </DialogClose>
-          <Button
-            type="submit"
-            form="contract-ticket-sale-form"
-            disabled={pending}
-          >
-            {pending && <Spinner />}
-            {isEdit ? "Cập nhật" : "Xác nhận"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 
-export default ContractTicketSaleDialog;
+export default CancellationReasonDialog;
