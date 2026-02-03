@@ -128,6 +128,7 @@ export const getFilmScheduling = async (
   const accessToken = cookieStore.get("access_token")?.value;
   const url = new URL("/api/pos/plan-cinema", BASE_URL);
   if (query) {
+    console.log(query);
     url.search = query;
   }
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
@@ -702,8 +703,8 @@ export const getCancellationTickets = async ({
   page,
   pageSize,
 }: {
-  filmId?: string;
-  userId?: string;
+  filmId?: number;
+  userId?: number;
   fromDate?: string;
   toDate?: string;
   page?: number;
@@ -716,11 +717,11 @@ export const getCancellationTickets = async ({
   const filter: Record<string, unknown> = {};
 
   if (filmId) {
-    filter.filmId = Number(filmId);
+    filter.filmId = filmId;
   }
 
   if (userId) {
-    filter.userId = Number(userId);
+    filter.userId = userId;
   }
 
   if (fromDate && toDate) {

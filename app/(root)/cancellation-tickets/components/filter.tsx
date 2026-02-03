@@ -1,47 +1,39 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import CustomDatePicker from "@/components/ui/custom-date-picker";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { getFilm, getFilms, getUser, getUsers } from "@/data/loaders";
+import { getFilms, getUsers } from "@/data/loaders";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { FilterIcon } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { default as qs, default as queryString } from "query-string";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import Select from "react-select";
+import { filterEmptyValues } from "@/lib/utils";
+import { FilterOutlined } from "@ant-design/icons";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import type { TimeRangePickerProps } from "antd";
+import { Button, DatePicker, Form, Modal, Select } from "antd";
+import dayjs from "dayjs";
+import queryString from "query-string";
+import { useMemo, useState } from "react";
+import { ValuesProps } from "./cancellation-tickets-client";
+
+const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] },
+];
 
 interface FilterProps {
-  onSearchingChange?: (pending: boolean) => void;
+  onSearch: (values: ValuesProps) => void;
+  filterValues: ValuesProps;
+  setCurrent: (page: number) => void;
 }
 
-const Filter = ({ onSearchingChange }: FilterProps) => {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
+  const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [searchText, setSearchText] = useState<string | undefined>(undefined);
   const [searchTextUser, setSearchTextUser] = useState<string | undefined>(
-    undefined
+    undefined,
   );
-  const [filmId, setFilmId] = useState<string | undefined>(
-    searchParams.get("filmId") || undefined
-  );
-  const [userId, setUserId] = useState<string | undefined>(
-    searchParams.get("userId") || undefined
-  );
-  const [fromDate, setFromDate] = useState<Date | null>(null);
-  const [toDate, setToDate] = useState<Date | null>(null);
-
   const debouncedSearch = useDebounce(searchText, 300);
   const debouncedSearchUser = useDebounce(searchTextUser, 300);
 
@@ -63,7 +55,7 @@ const Filter = ({ onSearchingChange }: FilterProps) => {
             ? JSON.stringify({ filmName: { like: `%${debouncedSearch}%` } })
             : undefined,
         },
-        { skipEmptyString: true, skipNull: true, encode: true }
+        { skipEmptyString: true, skipNull: true, encode: true },
       );
       return getFilms(query);
     },
@@ -95,108 +87,6 @@ const Filter = ({ onSearchingChange }: FilterProps) => {
     },
   });
 
-  // Kiểm tra xem filmId có trong danh sách films đã fetch không
-  const filmExistsInList = useMemo(() => {
-    if (!filmId || !films) return false;
-    return films.pages.some((page) =>
-      page.data.some((item) => item.id.toString() === filmId)
-    );
-  }, [filmId, films]);
-
-  // Kiểm tra xem userId có trong danh sách users đã fetch không
-  const userExistsInList = useMemo(() => {
-    if (!userId || !users) return false;
-    return users.pages.some((page) =>
-      page.data.some((user) => user.id.toString() === userId)
-    );
-  }, [userId, users]);
-
-  // Fetch film theo ID nếu có filmId trong URL nhưng chưa có trong danh sách
-  const { data: selectedFilm } = useQuery({
-    queryKey: ["film", filmId],
-    queryFn: () => getFilm(Number(filmId)),
-    enabled: !!filmId && !filmExistsInList,
-  });
-
-  // Fetch user theo ID nếu có userId trong URL nhưng chưa có trong danh sách
-  const { data: selectedUser } = useQuery({
-    queryKey: ["user", userId],
-    queryFn: () => getUser(Number(userId)),
-    enabled: !!userId && !userExistsInList,
-  });
-
-  const handleSearch = (clear?: boolean) => {
-    const current = qs.parse(searchParams.toString());
-    const query = {
-      ...current,
-      filmId: !clear ? filmId : undefined,
-      userId: !clear ? userId : undefined,
-      fromDate: !clear
-        ? fromDate
-          ? format(fromDate, "yyyy-MM-dd")
-          : undefined
-        : undefined,
-      toDate: !clear
-        ? toDate
-          ? format(toDate, "yyyy-MM-dd")
-          : undefined
-        : undefined,
-      page: 1,
-    };
-
-    const url = qs.stringifyUrl(
-      {
-        url: window.location.href,
-        query,
-      },
-      { skipEmptyString: true, skipNull: true }
-    );
-
-    startTransition(() => {
-      if (clear) {
-        setFilmId(undefined);
-        setUserId(undefined);
-        setFromDate(null);
-        setToDate(null);
-      }
-      onSearchingChange?.(true);
-      router.push(url);
-      setOpen(false);
-    });
-  };
-
-  useEffect(() => {
-    if (onSearchingChange) {
-      onSearchingChange(isPending);
-    }
-  }, [isPending, onSearchingChange]);
-
-  const options = useMemo(() => {
-    const filmOptions =
-      films?.pages.flatMap((page) =>
-        page.data.map((item) => ({
-          value: item.id.toString(),
-          label: item.filmName,
-        }))
-      ) ?? [];
-
-    // Thêm selectedFilm vào options nếu có và chưa có trong danh sách
-    if (
-      selectedFilm &&
-      !filmOptions.find((opt) => opt.value === selectedFilm.id.toString())
-    ) {
-      return [
-        {
-          value: selectedFilm.id.toString(),
-          label: selectedFilm.filmName,
-        },
-        ...filmOptions,
-      ];
-    }
-
-    return filmOptions;
-  }, [films, selectedFilm]);
-
   const userOptions = useMemo(() => {
     const userOpts =
       users?.pages.flatMap((page) =>
@@ -206,202 +96,137 @@ const Filter = ({ onSearchingChange }: FilterProps) => {
             user.customerFirstName && user.customerLastName
               ? `${user.customerFirstName} ${user.customerLastName}`
               : user.username,
-        }))
+        })),
       ) ?? [];
 
-    // Thêm selectedUser vào options nếu có và chưa có trong danh sách
-    if (
-      selectedUser &&
-      !userOpts.find((opt) => opt.value === selectedUser.id.toString())
-    ) {
-      return [
-        {
-          value: selectedUser.id.toString(),
-          label:
-            selectedUser.customerFirstName && selectedUser.customerLastName
-              ? `${selectedUser.customerFirstName} ${selectedUser.customerLastName}`
-              : selectedUser.username,
-        },
-        ...userOpts,
-      ];
-    }
-
     return userOpts;
-  }, [users, selectedUser]);
+  }, [users]);
 
-  // Tìm option đã chọn cho phim
-  const selectedFilmOption = useMemo(() => {
-    if (!filmId) return null;
-    return options.find((option) => option.value === filmId) || null;
-  }, [filmId, options]);
+  const filmOptions = useMemo(() => {
+    const filmOpts =
+      films?.pages.flatMap((page) =>
+        page.data.map((film) => ({
+          value: film.id,
+          label: film.filmName,
+        })),
+      ) ?? [];
 
-  // Tìm option đã chọn cho user
-  const selectedUserOption = useMemo(() => {
-    if (!userId) return null;
-    return userOptions.find((option) => option.value === userId) || null;
-  }, [userId, userOptions]);
+    return filmOpts;
+  }, [films]);
 
-  // Sync state với URL params khi component mount hoặc URL thay đổi
-  useEffect(() => {
-    const urlFilmId = searchParams.get("filmId") || undefined;
-    const urlUserId = searchParams.get("userId") || undefined;
-    const urlFromDate = searchParams.get("fromDate");
-    const urlToDate = searchParams.get("toDate");
+  const onClear = () => {
+    setOpen(false);
+    setCurrent(1);
+    form.resetFields();
+    onSearch({});
+  };
 
-    if (urlFilmId !== filmId) {
-      setFilmId(urlFilmId);
-    }
-    if (urlUserId !== userId) {
-      setUserId(urlUserId);
-    }
-
-    const parsedFromDate = urlFromDate ? new Date(urlFromDate) : null;
-    const parsedToDate = urlToDate ? new Date(urlToDate) : null;
-
-    if (
-      parsedFromDate &&
-      (!fromDate || parsedFromDate.getTime() !== fromDate.getTime())
-    ) {
-      setFromDate(parsedFromDate);
-    } else if (!urlFromDate && fromDate) {
-      setFromDate(null);
-    }
-
-    if (
-      parsedToDate &&
-      (!toDate || parsedToDate.getTime() !== toDate.getTime())
-    ) {
-      setToDate(parsedToDate);
-    } else if (!urlToDate && toDate) {
-      setToDate(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  const isEmptyFilter =
+    Object.keys(filterEmptyValues(filterValues as Record<string, unknown>))
+      .length === 0;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">
-          <FilterIcon className="size-4" />
+    <>
+      <div className="relative">
+        <Button
+          variant="outlined"
+          icon={<FilterOutlined />}
+          onClick={() => setOpen(true)}
+        >
           Bộ lọc
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>Bộ lọc</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 p-5">
-          <div className="w-full">
-            <p className="text-sm mb-1">Tên phim</p>
-            <Select
-              value={selectedFilmOption}
-              onChange={(option) => {
-                setFilmId(option ? option.value : undefined);
-              }}
-              options={options}
-              isLoading={isFetching}
-              onInputChange={(value, action) => {
-                if (
-                  action.action === "input-change" ||
-                  action.action === "menu-close"
-                ) {
-                  setSearchText(value);
-                }
-              }}
-              onMenuScrollToBottom={() => {
-                if (hasNextPage && !isFetchingNextPage) {
-                  fetchNextPage();
-                }
-              }}
-              filterOption={null}
-              loadingMessage={() => "Đang tải dữ liệu..."}
-              noOptionsMessage={() => "Không có kết quả"}
-              placeholder="Nhập tên phim"
-              className="text-sm"
-              isClearable
-            />
+        {!isEmptyFilter && (
+          <div className="absolute size-3 -right-1 -top-1">
+            <span className="relative flex size-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex size-3 rounded-full bg-primary"></span>
+            </span>
           </div>
-
-          <div className="w-full">
-            <p className="text-sm mb-1">Người hủy</p>
-            <Select
-              value={selectedUserOption}
-              onChange={(option) => {
-                setUserId(option ? option.value : undefined);
-              }}
-              options={userOptions}
-              isLoading={isFetchingUsers}
-              onInputChange={(value, action) => {
-                if (
-                  action.action === "input-change" ||
-                  action.action === "menu-close"
-                ) {
-                  setSearchTextUser(value);
-                }
-              }}
-              onMenuScrollToBottom={() => {
-                if (hasNextPageUsers && !isFetchingNextPageUsers) {
-                  fetchNextPageUsers();
-                }
-              }}
-              filterOption={null}
-              loadingMessage={() => "Đang tải dữ liệu..."}
-              noOptionsMessage={() => "Không có kết quả"}
-              placeholder="Nhập tên người hủy"
-              className="text-sm"
-              isClearable
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="flex items-center gap-2">
-              <p className="text-sm whitespace-nowrap">Từ ngày</p>
-              <CustomDatePicker
-                selectedDate={fromDate}
-                onChangeDate={(date) => {
-                  setFromDate(date);
-                  setToDate(null);
-                }}
-                className="w-[150px]"
-                selectsStart
-                startDate={fromDate}
-                endDate={toDate}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <p className="text-sm whitespace-nowrap">Đến ngày</p>
-              <CustomDatePicker
-                selectedDate={toDate}
-                onChangeDate={(date) => setToDate(date)}
-                className="w-[150px]"
-                selectsEnd
-                startDate={fromDate}
-                endDate={toDate}
-                minDate={fromDate || undefined}
-              />
-            </div>
-          </div>
-        </div>
-        <DialogFooter className="flex">
-          <Button
-            disabled={isPending}
-            onClick={() => handleSearch(true)}
-            className="flex-1"
-            variant="outline"
+        )}
+      </div>
+      <Modal
+        title="Bộ lọc"
+        open={open}
+        okText="Tìm kiếm"
+        okButtonProps={{ htmlType: "submit", autoFocus: true }}
+        onCancel={() => setOpen(false)}
+        modalRender={(dom) => (
+          <Form
+            layout="vertical"
+            form={form}
+            name="filter-form"
+            onFinish={(values) => {
+              setOpen(false);
+              setCurrent(1);
+              onSearch(values);
+            }}
           >
-            Xóa bộ lọc
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={() => handleSearch()}
-            className="flex-1"
-          >
-            Tìm kiếm
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {dom}
+          </Form>
+        )}
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <>
+            <CancelBtn />
+            <Button onClick={onClear}>Xóa bộ lọc</Button>
+            <OkBtn />
+          </>
+        )}
+      >
+        <Form.Item name="filmId" label="Phim">
+          <Select
+            showSearch={{
+              filterOption: false,
+              onSearch: (value) => setSearchText(value),
+            }}
+            options={filmOptions}
+            placeholder="Chọn phim"
+            allowClear
+            loading={isFetching}
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <=
+                  target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
+          />
+        </Form.Item>
+        <Form.Item name="userId" label="Người hủy">
+          <Select
+            options={userOptions}
+            placeholder="Chọn người hủy"
+            showSearch={{
+              filterOption: false,
+              onSearch: (value) => setSearchTextUser(value),
+            }}
+            allowClear
+            loading={isFetchingUsers}
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPageUsers &&
+                !isFetchingNextPageUsers &&
+                target.scrollHeight - target.scrollTop <=
+                  target.clientHeight + 50
+              ) {
+                fetchNextPageUsers();
+              }
+            }}
+          />
+        </Form.Item>
+        <Form.Item name="dateRange" label="Ngày hủy">
+          <RangePicker
+            format="DD/MM/YYYY"
+            presets={rangePresets}
+            className="w-full"
+          />
+        </Form.Item>
+      </Modal>
+    </>
   );
 };
 

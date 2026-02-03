@@ -44,7 +44,10 @@ const OnlineShowtimeBookingClient = () => {
           pageSize,
           filter: JSON.stringify({
             projectDate: {
-              between: [fromDate?.startOf("day"), toDate?.endOf("day")],
+              between: [
+                fromDate?.startOf("day").format(),
+                toDate?.endOf("day").format(),
+              ],
             },
           }),
         }),
