@@ -178,7 +178,7 @@ const PlanCinemaClient = () => {
               accordion
             />
           </div>
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 border p-4 rounded-lg">
             {!selectedPlan ? (
               <div className="bg-white border border-muted rounded-lg">
                 <div className="flex items-center justify-center py-20 rounded-lg">

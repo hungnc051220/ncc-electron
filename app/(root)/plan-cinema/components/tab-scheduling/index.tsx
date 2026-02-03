@@ -142,6 +142,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           columns={columns}
           dataSource={data?.data || []}
           size="small"
+          bordered
           loading={isFetching}
           pagination={false}
           rowSelection={{ type: "checkbox", ...rowSelection }}

@@ -212,7 +212,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
         />
       </div>
 
-      <div className="pt-2 pb-6 z-0">
+      <div className="pt-2 z-0">
         <DndContext
           sensors={sensors}
           modifiers={[restrictToVerticalAxis]}
@@ -230,6 +230,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
               columns={columns}
               dataSource={dataSource}
               size="small"
+              bordered
               loading={isFetching}
               pagination={false}
               rowSelection={{ type: "checkbox", ...rowSelection }}
