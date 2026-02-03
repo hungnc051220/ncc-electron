@@ -77,8 +77,8 @@ const items: MenuItem[] = [
     key: "planning",
     children: [
       {
-        label: <Link href="/film-scheduling">Lập kế hoạch chiếu phim</Link>,
-        key: "film-scheduling",
+        label: <Link href="/plan-cinema">Lập kế hoạch chiếu phim</Link>,
+        key: "plan-cinema",
       },
       {
         label: <Link href="/showtime-schedule">Xem lịch chiếu phim</Link>,
