@@ -1,24 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { BackgroundProps, OrderDetailProps } from "@/types";
 import { useMutation } from "@tanstack/react-query";
+import { Button, Form, Input, Modal, Select, Space } from "antd";
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -26,6 +10,8 @@ import QRCode from "qrcode";
 import { useEffect, useState, useTransition } from "react";
 import "react-quill-new/dist/quill.snow.css";
 import { toast } from "sonner";
+import type { FormProps } from "antd";
+
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 const templateHtml = `<!DOCTYPE html>
@@ -46,7 +32,7 @@ const templateHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
-interface InvitationTicketPayloadProps {
+interface FieldType {
   orderId: number;
   receivedEmail: string;
   status: string;
@@ -59,6 +45,7 @@ interface PrintInvitationTicketDialogProps {
   onOpenChange: (open: boolean) => void;
   backgrounds: BackgroundProps[];
   selectedItem?: OrderDetailProps | null;
+  isFetchingBackgrounds: boolean;
 }
 
 const PrintInvitationTicketDialog = ({
@@ -66,7 +53,9 @@ const PrintInvitationTicketDialog = ({
   onOpenChange,
   backgrounds,
   selectedItem,
+  isFetchingBackgrounds,
 }: PrintInvitationTicketDialogProps) => {
+  const [form] = Form.useForm();
   const [selected, setSelected] = useState<string>("");
   const [email, setEmail] = useState("");
   const [emailTitle, setEmailTitle] = useState("");
@@ -95,7 +84,7 @@ const PrintInvitationTicketDialog = ({
 
   const filePathToFile = async (
     filePath: string,
-    fileName: string
+    fileName: string,
   ): Promise<File> => {
     const data = await window.electron?.readFile(filePath);
 
@@ -144,13 +133,13 @@ const PrintInvitationTicketDialog = ({
   });
 
   const invitationTicketHistory = useMutation({
-    mutationFn: async (data: InvitationTicketPayloadProps) => {
+    mutationFn: async (data: FieldType) => {
       const response = await fetch("/api/invitation-ticket", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, status: "sent" }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -167,9 +156,13 @@ const PrintInvitationTicketDialog = ({
     },
   });
 
-  const handleExport = async () => {
+  const handleExport: FormProps<FieldType>["onFinish"] = async (
+    values: FieldType,
+  ) => {
     if (!selectedItem) return;
+
     const qrBase64 = await generateQrCode(selectedItem.order.barCode);
+
     startTransition(async () => {
       try {
         const outputPath = await window.electron?.exportTicket({
@@ -194,7 +187,7 @@ const PrintInvitationTicketDialog = ({
         if (outputPath && emailTitle && email) {
           const file = await filePathToFile(
             outputPath,
-            selectedItem.order.barCode
+            selectedItem.order.barCode,
           );
           if (file) {
             const imageUrl = await uploadImageMutation.mutateAsync(file);
@@ -223,106 +216,178 @@ const PrintInvitationTicketDialog = ({
     }
   }, [open, backgrounds]);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1200px]">
-        <DialogHeader className="border-b">
-          <DialogTitle>Xuất vé mời</DialogTitle>
-        </DialogHeader>
-        <div className="max-h-[75vh] overflow-y-auto">
-          <div className="px-6 py-5">
-            <div className="grid grid-cols-2 gap-5">
-              <div>
-                <div>
-                  <p className="text-sm font-semibold mb-1">Mẫu ảnh nền</p>
-                  <Select value={selected} onValueChange={setSelected}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Chọn mẫu ảnh nền" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {backgrounds.map((img) => (
-                        <SelectItem key={img.id} value={img.urlImage}>
-                          {img.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="mt-2">
-                  <p className="text-sm font-semibold mb-1">Thư mục lưu ảnh</p>
-                  <div className="flex items-center w-full border rounded-md text-sm h-9">
-                    <input
-                      placeholder="Chọn thư mục lưu ảnh"
-                      className="border-none outline-none flex-1 px-3 text-muted-foreground"
-                      value={saveLocation}
-                      readOnly
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleSelectFolder}
-                      className="h-9 rounded-r-0"
-                    >
-                      Chọn
-                    </Button>
-                  </div>
-                </div>
-                {selected ? (
-                  <div className="mt-5">
-                    <Image
-                      src={selected}
-                      alt="preview"
-                      width={500}
-                      height={254}
-                      className="w-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-[254px] bg-beerus mt-5" />
-                )}
-              </div>
-              <div>
-                <div>
-                  <p className="text-sm font-semibold mb-1">Email người nhận</p>
-                  <Input
-                    placeholder="Nhập email"
-                    className="w-full"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="mt-2">
-                  <p className="text-sm font-semibold mb-1">Tiêu đề email</p>
-                  <Input
-                    placeholder="Nhập tiêu đề"
-                    className="w-full"
-                    value={emailTitle}
-                    onChange={(e) => setEmailTitle(e.target.value)}
-                  />
-                </div>
+  const urlTicket = Form.useWatch("urlTicket", form);
 
-                <div className="mt-5">
-                  <ReactQuill
-                    value={emailContent}
-                    onChange={setEmailContent}
-                    readOnly
-                  />
-                </div>
-              </div>
-            </div>
+  return (
+    <Modal
+      title="Xuất vé mời"
+      open={open}
+      okButtonProps={{ htmlType: "submit", autoFocus: true }}
+      onCancel={() => onOpenChange(false)}
+      modalRender={(dom) => (
+        <Form
+          layout="vertical"
+          form={form}
+          name="filter-form"
+          onFinish={handleExport}
+        >
+          {dom}
+        </Form>
+      )}
+      width={1000}
+    >
+      <div className="grid grid-cols-2 gap-x-4">
+        <Form.Item
+          name="urlTicket"
+          label="Mẫu ảnh nền"
+          rules={[{ required: true, message: "Chọn mẫu ảnh nền" }]}
+        >
+          <Select
+            options={backgrounds.map((background) => ({
+              value: background.urlImage,
+              label: background.name,
+            }))}
+            placeholder="Chọn ảnh nền"
+            loading={isFetchingBackgrounds}
+          />
+        </Form.Item>
+        <Form.Item name="receivedEmail" label="Email người nhận">
+          <Input placeholder="Nhập email người nhận" />
+        </Form.Item>
+        <Form.Item
+          name="saveLocation"
+          label="Thư mục lưu ảnh"
+          rules={[{ required: true, message: "Chọn thư mục lưu ảnh" }]}
+        >
+          <Space.Compact style={{ width: "100%" }}>
+            <Input placeholder="Chọn thư mục lưu ảnh" readOnly />
+            <Button onClick={handleSelectFolder}>Chọn</Button>
+          </Space.Compact>
+        </Form.Item>
+        <Form.Item name="title" label="Tiêu đề email">
+          <Input placeholder="Nhập tiêu đề email" />
+        </Form.Item>
+        {urlTicket ? (
+          <div className="mt-5">
+            <Image
+              src={urlTicket}
+              alt="preview"
+              width={500}
+              height={254}
+              className="w-full object-contain rounded-md"
+            />
           </div>
+        ) : (
+          <div className="w-full h-[254px] bg-beerus mt-5 rounded-md" />
+        )}
+        <div className="mt-5">
+          <ReactQuill
+            value={emailContent}
+            onChange={setEmailContent}
+            readOnly
+          />
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              Đóng
-            </Button>
-          </DialogClose>
-          <Button type="button" onClick={handleExport} disabled={pending}>
-            Xuất vé
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
+    // <Dialog open={open} onOpenChange={onOpenChange}>
+    //   <DialogContent className="sm:max-w-[1200px]">
+    //     <DialogHeader className="border-b">
+    //       <DialogTitle>Xuất vé mời</DialogTitle>
+    //     </DialogHeader>
+    //     <div className="max-h-[75vh] overflow-y-auto">
+    //       <div className="px-6 py-5">
+    //         <div className="grid grid-cols-2 gap-5">
+    //           <div>
+    //             <div>
+    //               <p className="text-sm font-semibold mb-1">Mẫu ảnh nền</p>
+    //               <Select value={selected} onValueChange={setSelected}>
+    //                 <SelectTrigger className="w-full">
+    //                   <SelectValue placeholder="Chọn mẫu ảnh nền" />
+    //                 </SelectTrigger>
+    //                 <SelectContent>
+    //                   {backgrounds.map((img) => (
+    //                     <SelectItem key={img.id} value={img.urlImage}>
+    //                       {img.name}
+    //                     </SelectItem>
+    //                   ))}
+    //                 </SelectContent>
+    //               </Select>
+    //             </div>
+    //             <div className="mt-2">
+    //               <p className="text-sm font-semibold mb-1">Thư mục lưu ảnh</p>
+    //               <div className="flex items-center w-full border rounded-md text-sm h-9">
+    //                 <input
+    //                   placeholder="Chọn thư mục lưu ảnh"
+    //                   className="border-none outline-none flex-1 px-3 text-muted-foreground"
+    //                   value={saveLocation}
+    //                   readOnly
+    //                 />
+    //                 <Button
+    //                   variant="outline"
+    //                   onClick={handleSelectFolder}
+    //                   className="h-9 rounded-r-0"
+    //                 >
+    //                   Chọn
+    //                 </Button>
+    //               </div>
+    //             </div>
+    //             {selected ? (
+    //               <div className="mt-5">
+    //                 <Image
+    //                   src={selected}
+    //                   alt="preview"
+    //                   width={500}
+    //                   height={254}
+    //                   className="w-full object-contain"
+    //                 />
+    //               </div>
+    //             ) : (
+    //               <div className="w-full h-[254px] bg-beerus mt-5" />
+    //             )}
+    //           </div>
+    //           <div>
+    //             <div>
+    //               <p className="text-sm font-semibold mb-1">Email người nhận</p>
+    //               <Input
+    //                 placeholder="Nhập email"
+    //                 className="w-full"
+    //                 value={email}
+    //                 onChange={(e) => setEmail(e.target.value)}
+    //               />
+    //             </div>
+    //             <div className="mt-2">
+    //               <p className="text-sm font-semibold mb-1">Tiêu đề email</p>
+    //               <Input
+    //                 placeholder="Nhập tiêu đề"
+    //                 className="w-full"
+    //                 value={emailTitle}
+    //                 onChange={(e) => setEmailTitle(e.target.value)}
+    //               />
+    //             </div>
+
+    //             <div className="mt-5">
+    //               <ReactQuill
+    //                 value={emailContent}
+    //                 onChange={setEmailContent}
+    //                 readOnly
+    //               />
+    //             </div>
+    //           </div>
+    //         </div>
+    //       </div>
+    //     </div>
+    //     <DialogFooter>
+    //       <DialogClose asChild>
+    //         <Button variant="outline" type="button" disabled={pending}>
+    //           Đóng
+    //         </Button>
+    //       </DialogClose>
+    //       <Button type="button" onClick={handleExport} disabled={pending}>
+    //         Xuất vé
+    //       </Button>
+    //     </DialogFooter>
+    //   </DialogContent>
+    // </Dialog>
   );
 };
 

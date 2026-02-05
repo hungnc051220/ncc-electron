@@ -3,10 +3,10 @@
 import { filterEmptyValues } from "@/lib/utils";
 import { FilterOutlined } from "@ant-design/icons";
 import type { TimeRangePickerProps } from "antd";
-import { Button, DatePicker, Form, Input, Modal } from "antd";
+import { Button, DatePicker, Form, Modal } from "antd";
 import dayjs from "dayjs";
 import { useState } from "react";
-import { ValuesProps } from "./order-history-client";
+import { ValuesProps } from "./invitation-tickets-client";
 
 const { RangePicker } = DatePicker;
 
@@ -26,7 +26,7 @@ interface FilterProps {
 const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-
+ 
   const isEmptyFilter =
     Object.keys(filterEmptyValues(filterValues as Record<string, unknown>))
       .length === 0;
@@ -77,19 +77,7 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
           </>
         )}
       >
-        <Form.Item name="id" label="Mã đơn">
-          <Input placeholder="Nhập mã đơn" />
-        </Form.Item>
-        <Form.Item name="barCode" label="Mã barcode">
-          <Input placeholder="Nhập Mã barcode" />
-        </Form.Item>
-        <Form.Item name="phoneNumber" label="Số điện thoại">
-          <Input placeholder="Nhập số điện thoại" />
-        </Form.Item>
-        <Form.Item name="email" label="Email">
-          <Input placeholder="Nhập email" />
-        </Form.Item>
-        <Form.Item name="dateRange" label="Thời gian mua">
+        <Form.Item name="dateRange" label="Ngày tạo">
           <RangePicker
             format="DD/MM/YYYY"
             presets={rangePresets}

@@ -1,84 +1,234 @@
 "use client";
 
-import { DataTable } from "@/components/data-table";
+import { OrderStatusBadge } from "@/components/order-status-badge";
+import { getOrders } from "@/data/loaders";
+import { filterEmptyValues, formatMoney, formatNumber } from "@/lib/utils";
+import { OrderDetailProps } from "@/types";
+import { MoreOutlined } from "@ant-design/icons";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { ApiResponse, OrderDetailProps } from "@/types";
-import { useRouter, useSearchParams } from "next/navigation";
-import qs from "query-string";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
-import { createColumns } from "./columns";
+  keepPreviousData,
+  useQuery
+} from "@tanstack/react-query";
+import type { PaginationProps, TableProps, TabsProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table, Tabs } from "antd";
+import dayjs from "dayjs";
+import { useCallback, useState } from "react";
 import Filter from "./filter";
-import { cn, formatMoney } from "@/lib/utils";
 import OrderDialog from "./order-dialog";
-import { Button } from "@/components/ui/button";
-import { RowSelectionState } from "@tanstack/react-table";
 
-enum TabCode {
-  ONLINE = "ONLINE",
-  OFFLINE = "OFFLINE",
+const actionItems = [{ key: "1", label: "Xem chi tiết" }];
+
+const items: TabsProps["items"] = [
+  {
+    key: "1",
+    label: "Vé online",
+  },
+  {
+    key: "2",
+    label: "Vé offline",
+  },
+];
+
+export interface ValuesProps {
+  id?: string;
+  barCode?: string;
+  phoneNumber?: string;
+  email?: string;
+  dateRange?: [string, string];
 }
 
-interface OrderHistoryClientProps {
-  data: ApiResponse<OrderDetailProps>;
-  page: number;
-}
-
-const OrderHistoryClient = ({ data, page }: OrderHistoryClientProps) => {
-  const [isSearching, setIsSearching] = useState(false);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [isPending, startTransition] = useTransition();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [tabCode, setTabCode] = useState<TabCode>(
-    (searchParams.get("tabCode") as TabCode) || TabCode.ONLINE
-  );
+const OrderHistoryClient = () => {
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [pickedOrderIds, setPickedOrderIds] = useState<number[]>([]);
+  const [activeKey, setActiveKey] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(
-    null
+    null,
   );
+
+  const { data: orders, isFetching } = useQuery({
+    queryKey: ["orders-history", { current, pageSize, filterValues, activeKey }],
+    queryFn: () => {
+      const { dateRange, ...rest } = filterValues;
+      const filtered = filterEmptyValues(rest as Record<string, unknown>);
+      if (dateRange && dateRange.length === 2) {
+        filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
+        filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
+      }
+
+      return getOrders({
+        page: current,
+        pageSize,
+        ...filtered,
+        isOnline: activeKey === "1" ? true : false,
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  const columns: TableProps<OrderDetailProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
+      width: 50,
+      fixed: "left",
+    },
+    {
+      title: "Mã đơn",
+      key: "id",
+      dataIndex: "id",
+      render: (_, record) => record.order.id,
+      fixed: "left",
+    },
+    {
+      title: "Mã đặt vé",
+      key: "barCode",
+      dataIndex: "barCode",
+      render: (_, record) => record.order.barCode,
+      fixed: "left",
+    },
+    {
+      title: "Tiền thanh toán",
+      key: "orderTotal",
+      dataIndex: "orderTotal",
+      render: (_, record) => formatMoney(record.order.orderTotal),
+    },
+    {
+      title: "Thời gian mua",
+      key: "createdOnUtc",
+      dataIndex: "createdOnUtc",
+      render: (_, record) =>
+        dayjs(record.order.createdOnUtc).format("DD/MM/YYYY"),
+    },
+    {
+      title: "Tên khách hàng",
+      key: "customerName",
+      dataIndex: "customerName",
+      render: (_, record) => record.order.customerFirstName,
+    },
+    {
+      title: "Số điện thoại",
+      key: "customerPhone",
+      dataIndex: "customerPhone",
+      render: (_, record) => record.order.customerPhone,
+    },
+    {
+      title: "Email",
+      key: "customerEmail",
+      dataIndex: "customerEmail",
+      render: (_, record) => record.order.customerEmail,
+    },
+    {
+      title: "Tên phim",
+      key: "filmName",
+      dataIndex: "filmName",
+      render: (_, record) => record.film?.filmName,
+    },
+    {
+      title: "Ngày chiếu",
+      key: "projectDate",
+      dataIndex: "projectDate",
+      render: (_, record) =>
+        record.planScreening
+          ? dayjs(record.planScreening.projectDate, "YYYY-MM-DD").format(
+              "DD/MM/YYYY",
+            )
+          : "",
+    },
+    {
+      title: "Ngày chiếu",
+      key: "projectTime",
+      dataIndex: "projectTime",
+      render: (_, record) =>
+        record.planScreening
+          ? dayjs(record.planScreening.projectTime).format("HH:mm")
+          : "",
+    },
+    {
+      title: "Số vé",
+      key: "numberOfTickets",
+      dataIndex: "numberOfTickets",
+      render: (_, record) =>
+        record.order.items.reduce((a, b) => a + b.quantity, 0),
+    },
+    {
+      title: "Vị trí ghế",
+      key: "positions",
+      dataIndex: "positions",
+      render: (_, record) =>
+        record.order.items.map((item) => item.listChairValueF1).join(", "),
+    },
+    {
+      title: "Trạng thái đơn",
+      key: "orderStatusId",
+      dataIndex: "orderStatusId",
+      render: (_, record) => (
+        <OrderStatusBadge status={record.order.orderStatusId} type="order" />
+      ),
+      fixed: "right",
+    },
+    {
+      title: "Trạng thái thanh toán",
+      key: "paymentStatusId",
+      dataIndex: "paymentStatusId",
+      render: (_, record) => (
+        <OrderStatusBadge
+          status={record.order.paymentStatusId}
+          type="payment"
+        />
+      ),
+      fixed: "right",
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handleViewDetail(record);
+              }
+            },
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right",
+    },
+  ];
+
+  const onSearch = (values: ValuesProps) => {
+    setFilterValues(values);
+  };
 
   const handleViewDetail = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
     setDialogOpen(true);
   }, []);
 
-  const columns = useMemo(
-    () =>
-      createColumns({
-        onViewDetail: handleViewDetail,
-        page,
-        options: {
-          isRowPreselected: (item) => rowSelection[item.order.id],
-        },
-      }),
-    [page, handleViewDetail, rowSelection]
-  );
-
-  const totalPrice = useMemo(() => {
-    const selectedOrders = Object.keys(rowSelection)
-      .filter((key) => rowSelection[key])
-      .map((rowId) => {
-        const order = data.data.find(
-          (item) => item.order.id.toString() === rowId
-        );
-        return order ? order?.order?.orderTotal : null;
-      })
-      .filter(Boolean) as number[];
-    return selectedOrders.reduce((total, order) => total + order, 0);
-  }, [data.data, rowSelection]);
+  // const totalPrice = useMemo(() => {
+  //   const selectedOrders = Object.keys(rowSelection)
+  //     .filter((key) => rowSelection[key])
+  //     .map((rowId) => {
+  //       const order = orders?.data.find(
+  //         (item) => item.order.id.toString() === rowId,
+  //       );
+  //       return order ? order?.order?.orderTotal : null;
+  //     })
+  //     .filter(Boolean) as number[];
+  //   return selectedOrders.reduce((total, order) => total + order, 0);
+  // }, [orders?.data, rowSelection]);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
@@ -87,68 +237,72 @@ const OrderHistoryClient = ({ data, page }: OrderHistoryClientProps) => {
     }
   }, []);
 
-  const onChangeTabCode = useCallback(
-    (newTabCode: TabCode) => {
-      setTabCode(newTabCode);
-      const current = qs.parse(searchParams.toString());
-      const query = { ...current, isOnline: newTabCode, page: 1 };
-      const url = qs.stringifyUrl(
-        { url: window.location.href, query },
-        { skipEmptyString: true, skipNull: true }
-      );
-      startTransition(() => {
-        setIsSearching(true);
-        router.push(url);
-      });
-    },
-    [setIsSearching, router, searchParams]
-  );
+  const onChange = (page: number) => {
+    setCurrent(page);
+  };
 
-  useEffect(() => {
-    if (setIsSearching) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsSearching(isPending);
-    }
-  }, [isPending, setIsSearching]);
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
+    setCurrent(current);
+    setPageSize(pageSize);
+  };
+
+  const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
+    setPickedOrderIds((prev) => {
+      const pageFilmIds = orders?.data.map((f) => f.order.id) ?? [];
+
+      const newKeys = newSelectedRowKeys as number[];
+
+      const prevWithoutCurrentPage = prev.filter(
+        (id) => !pageFilmIds.includes(id),
+      );
+
+      return [...prevWithoutCurrentPage, ...newKeys];
+    });
+  };
+
+  const rowSelection: TableProps<OrderDetailProps>["rowSelection"] = {
+    selectedRowKeys: pickedOrderIds,
+    onChange: onSelectChange,
+  };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
+    <div className="mt-4 px-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Tra cứu</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold">
-                  Lịch sử bán vé
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb
+          items={[
+            {
+              title: "Trang chủ",
+              href: "/",
+            },
+            {
+              title: "Tra cứu",
+            },
+            {
+              title: "Lịch sử bán vé",
+            },
+          ]}
+        />
         <div className="flex items-center gap-3">
-          <div>
+          <div className="flex gap-6">
             <p className="text-xs">
               Số lượng vé xuất:{" "}
-              <span className="font-semibold">
-                {Object.keys(rowSelection).length}
-              </span>
+              <span className="font-semibold">{pickedOrderIds.length}</span>
             </p>
-            <p className="text-xs">
-              Tổng tiền:{" "}
-              <span className="font-semibold">{formatMoney(totalPrice)}</span>
-            </p>
+            {/* <p className="text-xs">
+              Tổng tiền: <span className="font-semibold">{formatMoney(0)}</span>
+            </p> */}
           </div>
-          <Filter onSearchingChange={setIsSearching} />
+          <Filter
+            filterValues={filterValues}
+            onSearch={onSearch}
+            setCurrent={setCurrent}
+          />
           <Button
-            disabled={Object.keys(rowSelection).length === 0}
+            type="primary"
+            disabled={pickedOrderIds.length === 0}
             onClick={() => {}}
           >
             Xuất vé điện tử
@@ -156,40 +310,33 @@ const OrderHistoryClient = ({ data, page }: OrderHistoryClientProps) => {
         </div>
       </div>
 
-      <div className="flex items-center mb-5 gap-2 border-b">
-        <div
-          className={cn(
-            "p-2 text-sm font-bold border-b-3 cursor-pointer hover:text-primary",
-            tabCode === TabCode.ONLINE
-              ? "border-primary text-primary"
-              : "border-transparent"
-          )}
-          onClick={() => onChangeTabCode(TabCode.ONLINE)}
-        >
-          Vé online
-        </div>
-        <div
-          className={cn(
-            "p-2 text-sm font-bold border-b-3 cursor-pointer hover:text-primary",
-            tabCode === TabCode.OFFLINE
-              ? "border-primary text-primary"
-              : "border-transparent"
-          )}
-          onClick={() => onChangeTabCode(TabCode.OFFLINE)}
-        >
-          Vé offline
-        </div>
-      </div>
+      <Tabs
+        defaultActiveKey="1"
+        items={items}
+        activeKey={activeKey}
+        onChange={setActiveKey}
+      />
 
-      <DataTable
+      <Table
+        rowKey={(record) => record.order.id}
+        dataSource={orders?.data || []}
         columns={columns}
-        data={data.data}
-        total={data.total}
-        loading={isSearching}
-        className="max-h-[calc(100vh-260px)]"
-        rowSelection={rowSelection}
-        onRowSelectionChange={setRowSelection}
-        getRowId={(row) => row.order.id.toString()}
+        bordered
+        size="small"
+        scroll={{ x: "max-content", y: "calc(100vh - 270px)" }}
+        loading={isFetching}
+        pagination={{
+          current,
+          onChange,
+          total: orders?.total || 0,
+          size: "middle",
+          pageSize,
+          pageSizeOptions: [20, 50, 100],
+          showSizeChanger: true,
+          onShowSizeChange,
+          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`,
+        }}
+        rowSelection={{ type: "checkbox", ...rowSelection }}
       />
 
       {dialogOpen && (

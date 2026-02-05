@@ -171,7 +171,7 @@ export const getOrders = async ({
   isInvitation,
   orderStatusId,
 }: {
-  isOnline?: string;
+  isOnline?: boolean;
   searchText?: string;
   barCode?: string;
   page?: number;
@@ -203,7 +203,7 @@ export const getOrders = async ({
   }
 
   if (isOnline) {
-    filter.isOnline = isOnline === "ONLINE" ? true : false;
+    filter.isOnline = isOnline;
     filter.IsInvitation = false;
     filter.IsContract = false;
     filter.Deleted = 0;

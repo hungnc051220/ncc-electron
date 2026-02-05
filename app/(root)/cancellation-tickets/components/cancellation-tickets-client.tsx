@@ -27,9 +27,10 @@ const CancellationTicketsClient = () => {
       const { dateRange, ...rest } = filterValues;
       const filtered = filterEmptyValues(rest as Record<string, unknown>);
       if (dateRange && dateRange.length === 2) {
-        filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
-        filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
+        filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
+        filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
       }
+      
       return getCancellationTickets({
         page: current,
         pageSize,
