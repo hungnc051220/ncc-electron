@@ -1,7 +1,7 @@
 "use client";
 
 import { updateSeatContractTicketSaleAction } from "@/actions/contract-ticket-sale-actions";
-import Legend from "@/app/(root)/plan-screening/[slug]/components/legend";
+import Legend from "@/components/legend";
 import { Button } from "@/components/ui/button";
 import { cn, formatMoney } from "@/lib/utils";
 import { ListSeat, PlanScreeningDetailProps } from "@/types";

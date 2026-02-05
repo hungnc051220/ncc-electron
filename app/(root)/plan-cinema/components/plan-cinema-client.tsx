@@ -249,6 +249,10 @@ const PlanCinemaClient = () => {
                       Trung tâm chiếu phim Quốc gia
                     </p>
                   </div>
+                  <div className="py-3 px-4">
+                    <p className="text-trunks text-xs">Mô tả</p>
+                    <p className="mt-1 text-base">{selectedPlan?.desciption || "-"}</p>
+                  </div>
                 </div>
 
                 <div className="flex-1 min-h-0">

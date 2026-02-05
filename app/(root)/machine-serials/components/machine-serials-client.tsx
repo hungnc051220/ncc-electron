@@ -70,7 +70,10 @@ const MachineSerialsClient = () => {
     setCurrent(page);
   };
 
-  const onShowSizeChange: PaginationProps['onShowSizeChange'] = (current, pageSize) => {
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (
+    current,
+    pageSize,
+  ) => {
     setCurrent(current);
     setPageSize(pageSize);
   };
@@ -100,6 +103,7 @@ const MachineSerialsClient = () => {
       </div>
 
       <Table
+        rowKey="id"
         dataSource={machineSerials?.data || []}
         columns={columns}
         bordered

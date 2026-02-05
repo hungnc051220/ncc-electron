@@ -629,7 +629,7 @@ export const getContractTicketSales = async ({
   url.search = qs.stringify(queryObject, {
     skipEmptyString: true,
     skipNull: true,
-    encode: false,
+    encode: true,
   });
   return fetchAPI(url.href, { method: "GET", authToken: accessToken });
 };

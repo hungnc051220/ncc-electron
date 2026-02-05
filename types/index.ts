@@ -172,6 +172,23 @@ export interface ListSeat {
   positionName: string;
 }
 
+export interface SeatProps {
+  seat: string;
+  rows: number;
+  column: number;
+  y: number;
+  code: string;
+  type: number;
+  status: number;
+  floor: number;
+  price: number;
+  checkinStatus: number;
+  isInvitation: number;
+  isContract: number;
+  isHold: number;
+  positionName: string;
+}
+
 export interface BookingTicketBodyProps {
   planScreenId: number;
   floorNo: number;

@@ -6,12 +6,15 @@ import { LeftOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { Button, DatePicker, Table, type TableProps } from "antd";
 import dayjs from "dayjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { startTransition } from "react";
 
 const ShowtimesClient = () => {
   const router = useRouter();
+  const params = useSearchParams();
+  const callbackUrl = params.get("callbackUrl");
+  const id = params.get("id");
   const [date, setDate] = useQueryState("date", {
     defaultValue: dayjs().format("YYYY-MM-DD"),
   });
@@ -50,7 +53,13 @@ const ShowtimesClient = () => {
               size="small"
               onClick={() => {
                 startTransition(() => {
-                  router.push(`/plan-screening/${s.planScreeningsId}`);
+                  if (callbackUrl && id) {
+                    router.push(
+                      `${callbackUrl}/detail/${id}?plan-screening=${s.planScreeningsId}`,
+                    );
+                  } else {
+                    router.push(`/plan-screening/${s.planScreeningsId}`);
+                  }
                 });
               }}
             >
@@ -69,7 +78,7 @@ const ShowtimesClient = () => {
           <Button
             size="small"
             icon={<LeftOutlined />}
-            onClick={() => router.replace("/")}
+            onClick={() => router.back()}
           />
           <h2 className="font-bold text-lg">Danh sách phim đang chiếu</h2>
         </div>

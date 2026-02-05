@@ -8,12 +8,12 @@ import {
   DiscountProps,
   ListSeat,
   PaymentType,
-  QrCodeResponseProps
+  QrCodeResponseProps,
 } from "@/types";
 import { EditOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Radio } from "antd";
+import { Button, Descriptions, Radio, Tag } from "antd";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { Loader2 } from "lucide-react";
@@ -30,9 +30,9 @@ import {
 } from "react";
 import Selecto from "react-selecto";
 import { toast } from "sonner";
-import BackButton from "./back-button";
+import BackButton from "../../../../../components/back-button";
 import DiscountPopup from "./discount-popup";
-import Legend from "./legend";
+import Legend from "../../../../../components/legend";
 import QrCodeDialog from "./qr-code-dialog";
 
 const colorMap: { [key: string]: string } = {
@@ -243,10 +243,6 @@ const Seats = ({ slug }: SeatsProps) => {
   useEffect(() => {
     if (!socketRef) return;
 
-    const handleSelectingUpdate = () => {
-      // Handle selecting update payload
-    };
-
     const handleOrderPaymentUpdated = (payload: { orderStatus?: number }) => {
       if (payload?.orderStatus === 30) {
         toast.success("Thanh toán thành công");
@@ -260,11 +256,9 @@ const Seats = ({ slug }: SeatsProps) => {
       }
     };
 
-    socketRef.on("selecting_chair_update", handleSelectingUpdate);
     socketRef.on("orderPaymentUpdated", handleOrderPaymentUpdated);
 
     return () => {
-      socketRef.off("selecting_chair_update", handleSelectingUpdate);
       socketRef.off("orderPaymentUpdated", handleOrderPaymentUpdated);
     };
   }, [socketRef, router, isCustomerView]);
@@ -272,7 +266,9 @@ const Seats = ({ slug }: SeatsProps) => {
   const [state, setState] = useState<ActionStateProps>(INITIAL_STATE);
 
   const bookingMutation = useMutation({
-    mutationFn: async (body: BookingTicketBodyProps): Promise<ActionStateProps> => {
+    mutationFn: async (
+      body: BookingTicketBodyProps,
+    ): Promise<ActionStateProps> => {
       const res = await fetch("/api/booking-ticket", {
         method: "POST",
         headers: {
@@ -390,21 +386,21 @@ const Seats = ({ slug }: SeatsProps) => {
                 // Tách từng ghế từ listChairValueF1, F2, F3
                 const seatsF1 = item.listChairValueF1
                   ? item.listChairValueF1
-                    .split(",")
-                    .map((s: string) => s.trim())
-                    .filter(Boolean)
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
                   : [];
                 const seatsF2 = item.listChairValueF2
                   ? item.listChairValueF2
-                    .split(",")
-                    .map((s: string) => s.trim())
-                    .filter(Boolean)
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
                   : [];
                 const seatsF3 = item.listChairValueF3
                   ? item.listChairValueF3
-                    .split(",")
-                    .map((s: string) => s.trim())
-                    .filter(Boolean)
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
                   : [];
                 const seatsList = [...seatsF1, ...seatsF2, ...seatsF3];
 
@@ -607,7 +603,7 @@ const Seats = ({ slug }: SeatsProps) => {
       // Tính kích thước ghế dựa trên width và height, lấy giá trị nhỏ hơn để đảm bảo fit
       const widthBasedSize = Math.floor(
         (availableWidth - estimatedLabelWidth * 2 - totalGapWidth) /
-        maxSeatsPerRow,
+          maxSeatsPerRow,
       );
       const heightBasedSize = Math.floor(
         (availableHeight - totalGapHeight) / numRows,
@@ -778,9 +774,9 @@ const Seats = ({ slug }: SeatsProps) => {
               ))}
             </div>
           )}
-          <p className="text-sm font-bold bg-beerus py-1 px-2 rounded-sm">
+          <Tag color="#f50" variant="outlined">
             Phòng {data.roomInfo.name}
-          </p>
+          </Tag>
         </div>
       </div>
       <div
@@ -885,7 +881,7 @@ const Seats = ({ slug }: SeatsProps) => {
               />
               <Button
                 type="primary"
-                className="flex flex-col h-[72px]"
+                className="flex flex-col h-[74px]"
                 onClick={onBooking}
               >
                 <Image

@@ -19,7 +19,7 @@ import {
 } from "react";
 import Selecto from "react-selecto";
 import { toast } from "sonner";
-import Legend from "../../plan-screening/[slug]/components/legend";
+import Legend from "../../../../components/legend";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",

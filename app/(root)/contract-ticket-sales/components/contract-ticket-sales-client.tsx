@@ -1,11 +1,8 @@
 "use client";
 
 import { getContractTicketSales } from "@/data/loaders";
-import { formatMoney, formatNumber } from "@/lib/utils";
-import {
-  OrderDetailProps,
-  OrderResponseProps
-} from "@/types";
+import { filterEmptyValues, formatMoney, formatNumber } from "@/lib/utils";
+import { OrderDetailProps, OrderResponseProps } from "@/types";
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
@@ -15,7 +12,8 @@ import { PlusIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import ContractTicketSaleDialog from "./contract-ticket-sale-dialog";
 import ContractTicketSaleUpdateSeatDialog from "./contract-ticket-sale-update-seat-dialog";
-import DeleteContractTicketSaleDialog from "./delete-contract-ticket-sale-dialog";
+import Filter from "./filter";
+import { useRouter } from "next/navigation";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
@@ -23,22 +21,36 @@ const actionItems = [
   { key: "3", label: "In vé" },
 ];
 
+export interface ValuesProps {
+  dateRange?: [string, string];
+}
+
 const ContractTicketSalesClient = () => {
+  const router = useRouter();
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogUpdateSeatOpen, setDialogUpdateSeatOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderResponseProps | null>(
     null,
   );
+  const [filterValues, setFilterValues] = useState<ValuesProps>({
+    dateRange: [dayjs().format("YYYY-MM-DD"), dayjs().format("YYYY-MM-DD")],
+  });
 
   const { data: tickets, isFetching } = useQuery({
-    queryKey: ["contract-ticket-sales", { current, pageSize }],
+    queryKey: ["contract-ticket-sales", { current, pageSize, filterValues }],
     queryFn: () => {
+      const { dateRange, ...rest } = filterValues;
+      const filtered = filterEmptyValues(rest as Record<string, unknown>);
+      if (dateRange && dateRange.length === 2) {
+        filtered.fromDate = dayjs(dateRange[0]).format("YYYY-MM-DD");
+        filtered.toDate = dayjs(dateRange[1]).format("YYYY-MM-DD");
+      }
       return getContractTicketSales({
         page: current,
         pageSize,
+        ...filtered,
       });
     },
     placeholderData: keepPreviousData,
@@ -54,18 +66,14 @@ const ContractTicketSalesClient = () => {
     setDialogOpen(true);
   }, []);
 
-  const handleUpdateSeat = useCallback((item: OrderResponseProps) => {
-    setSelectedItem(item);
-    setDialogUpdateSeatOpen(true);
-  }, []);
+  const handleUpdateSeat = (item: OrderResponseProps) => {
+    router.push(`/showtimes?callbackUrl=/contract-ticket-sales&id=${item.id}`);
+    // setSelectedItem(item);
+    // setDialogUpdateSeatOpen(true);
+  };
 
   const handlePrint = useCallback((item: OrderResponseProps) => {
     console.log(item);
-  }, []);
-
-  const handleDelete = useCallback((item: OrderResponseProps) => {
-    setSelectedItem(item);
-    setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
@@ -77,13 +85,6 @@ const ContractTicketSalesClient = () => {
 
   const handleDialogUpdateSeatClose = useCallback((open: boolean) => {
     setDialogUpdateSeatOpen(open);
-    if (!open) {
-      setSelectedItem(null);
-    }
-  }, []);
-
-  const handleDeleteDialogClose = useCallback((open: boolean) => {
-    setDeleteDialogOpen(open);
     if (!open) {
       setSelectedItem(null);
     }
@@ -155,6 +156,16 @@ const ContractTicketSalesClient = () => {
       align: "right",
     },
     {
+      title: "Ngày tạo",
+      key: "createdOnUtc",
+      dataIndex: "createdOnUtc",
+      render: (_, record) =>
+        record.order?.createdOnUtc
+          ? dayjs(record.order.createdOnUtc).utc().format("DD/MM/YYYY")
+          : "",
+      width: 100,
+    },
+    {
       title: "",
       key: "operation",
       width: 50,
@@ -167,7 +178,7 @@ const ContractTicketSalesClient = () => {
                 handleEdit(record.order);
               }
               if (e.key === "2") {
-                handleDelete(record.order);
+                handleUpdateSeat(record.order);
               }
             },
           }}
@@ -194,6 +205,10 @@ const ContractTicketSalesClient = () => {
     setPageSize(pageSize);
   };
 
+  const onSearch = (values: ValuesProps) => {
+    setFilterValues(values);
+  };
+
   return (
     <div className="space-y-3 mt-4 px-4">
       <div className="flex items-center justify-between">
@@ -213,6 +228,11 @@ const ContractTicketSalesClient = () => {
         />
 
         <div className="flex gap-2 items-center">
+          <Filter
+            filterValues={filterValues}
+            setCurrent={setCurrent}
+            onSearch={onSearch}
+          />
           <Button
             type="primary"
             onClick={handleAdd}
@@ -257,15 +277,6 @@ const ContractTicketSalesClient = () => {
           open={dialogUpdateSeatOpen}
           onOpenChange={handleDialogUpdateSeatClose}
           editingContractTicketSale={selectedItem}
-        />
-      )}
-
-      {deleteDialogOpen && selectedItem && (
-        <DeleteContractTicketSaleDialog
-          open={deleteDialogOpen}
-          onOpenChange={handleDeleteDialogClose}
-          id={selectedItem.id}
-          name={selectedItem.customerLastName}
         />
       )}
     </div>
