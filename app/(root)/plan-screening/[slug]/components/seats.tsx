@@ -12,8 +12,8 @@ import {
 } from "@/types";
 import { EditOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Radio, Tag } from "antd";
+import type { DescriptionsProps, GetProp } from "antd";
+import { Button, Checkbox, Descriptions, Tag } from "antd";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { Loader2 } from "lucide-react";
@@ -31,8 +31,8 @@ import {
 import Selecto from "react-selecto";
 import { toast } from "sonner";
 import BackButton from "../../../../../components/back-button";
-import DiscountPopup from "./discount-popup";
 import Legend from "../../../../../components/legend";
+import DiscountPopup from "./discount-popup";
 import QrCodeDialog from "./qr-code-dialog";
 
 const colorMap: { [key: string]: string } = {
@@ -43,10 +43,6 @@ const colorMap: { [key: string]: string } = {
 };
 
 const paymentTypes = [
-  {
-    value: PaymentType.POS,
-    label: "Tiền mặt",
-  },
   {
     value: PaymentType.VNPAY,
     label: "Quét VietQR",
@@ -147,6 +143,8 @@ const Seats = ({ slug }: SeatsProps) => {
   const searchParams = useSearchParams();
   const isCustomerView = searchParams.get("view") === "customer";
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
+  const [vipCard, setVipCard] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<string[]>([]);
   const [paymentType, setPaymentType] = useState<PaymentType>(PaymentType.POS);
   const [openQrDialog, setOpenQrDialog] = useState(false);
   const [qrDialogData, setQrDialogData] = useState<{
@@ -737,6 +735,13 @@ const Seats = ({ slug }: SeatsProps) => {
     },
   ];
 
+  const onChange: GetProp<typeof Checkbox.Group, "onChange"> = (
+    checkedValues,
+  ) => {
+    const last = checkedValues.slice(-1) as string[];
+    setPaymentMethod(last);
+  };
+
   if (!data) return null;
 
   return (
@@ -872,13 +877,26 @@ const Seats = ({ slug }: SeatsProps) => {
               </Button>
             </div>
             <div className="flex gap-3">
-              <Radio.Group
-                vertical
-                onChange={(e) => setPaymentType(e.target.value)}
-                value={paymentType}
-                options={paymentTypes}
-                className="gap-1"
-              />
+              <div className="flex flex-col">
+                <Checkbox
+                  value={vipCard}
+                  onChange={(e) => setVipCard(e.target.checked)}
+                >
+                  Quẹt thẻ VIP
+                </Checkbox>
+                <Checkbox.Group value={paymentMethod} onChange={onChange}>
+                  <div className="flex flex-col">
+                    {paymentTypes.map((paymentType) => (
+                      <Checkbox
+                        key={paymentType.value}
+                        value={paymentType.value}
+                      >
+                        {paymentType.label}
+                      </Checkbox>
+                    ))}
+                  </div>
+                </Checkbox.Group>
+              </div>
               <Button
                 type="primary"
                 className="flex flex-col h-[74px]"
