@@ -1,0 +1,24 @@
+@layer theme, base, antd, components, utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --color-goku: #f5f5f5;
+  --color-jiren: #e9e8f6;
+  --color-hit: #40a69f;
+  --color-beerus: #efefef;
+  --color-zeno: #707070;
+  --color-trunks: #595d62;
+  --color-roshi: #2e7d32;
+  --color-chichi: #ff4e64;
+  --color-krillin: #ffb319;
+  --color-whis: #3448f0;
+  --color-dodoria: #d33030;
+  --color-raditz: #b3804a;
+}
+
+@layer utilities {
+  .auth-bg {
+    @apply bg-[url(/images/auth-bg.png)];
+  }
+}
