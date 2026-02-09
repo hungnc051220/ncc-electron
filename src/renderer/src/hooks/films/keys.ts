@@ -1,4 +1,4 @@
-import { FilmsQuery } from "@renderer/api/films";
+import { FilmsQuery } from "@renderer/api/films.api";
 
 export const filmsKey = {
   all: ["films"] as const,

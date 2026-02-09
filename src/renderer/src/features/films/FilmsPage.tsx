@@ -14,6 +14,7 @@ import { FilmProps } from "@renderer/types";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
+import { Link } from "react-router";
 
 const items: TabsProps["items"] = [
   {
@@ -217,8 +218,7 @@ const FilmsPage = () => {
         <Breadcrumb
           items={[
             {
-              title: "Trang chủ",
-              href: "/"
+              title: <Link to="/">Trang chủ</Link>
             },
             {
               title: "Quản lý danh sách"

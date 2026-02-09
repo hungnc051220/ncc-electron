@@ -7,6 +7,7 @@ import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Table } from "antd";
 import { useMemo, useState } from "react";
 import Filter from "./components/Filter";
+import { Link } from "react-router";
 
 export interface ValuesProps {
   year?: number;
@@ -80,8 +81,7 @@ const MachineSerialsPage = () => {
         <Breadcrumb
           items={[
             {
-              title: "Trang chủ",
-              href: "/"
+              title: <Link to="/">Trang chủ</Link>
             },
             {
               title: "Hệ thống"

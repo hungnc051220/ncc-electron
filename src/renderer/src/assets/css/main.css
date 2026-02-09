@@ -21,4 +21,9 @@
   .auth-bg {
     @apply bg-[url(/images/auth-bg.png)];
   }
+
+  a {
+    color: inherit !important;
+    text-decoration: none;
+  }
 }

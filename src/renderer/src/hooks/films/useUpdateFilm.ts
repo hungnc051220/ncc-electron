@@ -1,4 +1,4 @@
-import { FilmDto, filmsApi } from "@renderer/api/films";
+import { FilmDto, filmsApi } from "@renderer/api/films.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { filmsKey } from "./keys";
 

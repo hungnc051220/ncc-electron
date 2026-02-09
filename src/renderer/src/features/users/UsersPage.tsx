@@ -14,6 +14,7 @@ import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { Check, PlusIcon, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { Link } from "react-router";
 
 export interface ValuesProps {
   roleId?: number;
@@ -193,8 +194,7 @@ const UsersPage = () => {
         <Breadcrumb
           items={[
             {
-              title: "Trang chủ",
-              href: "/"
+              title: <Link to="/">Trang chủ</Link>
             },
             {
               title: "Hệ thống"

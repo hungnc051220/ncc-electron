@@ -1,16 +1,16 @@
-import { filmsApi } from "@renderer/api/films.api";
+import { seatTypesApi } from "@renderer/api/seatTypes.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { filmsKey } from "./keys";
+import { seatTypesKeys } from "./keys";
 
-export const useDeleteFilm = () => {
+export const useDeleteSeatType = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: filmsApi.delete,
+    mutationFn: seatTypesApi.delete,
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: filmsKey.all
+        queryKey: seatTypesKeys.all
       });
     }
   });

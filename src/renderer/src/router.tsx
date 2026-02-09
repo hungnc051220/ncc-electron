@@ -1,13 +1,17 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createHashRouter, Navigate } from "react-router";
 import Dashboard from "./features/Dashboard";
+import FilmsPage from "./features/films/FilmsPage";
 import Login from "./features/Login";
 import MachineSerialsPage from "./features/machineSerials/MachineSerialsPage";
 import UsersPage from "./features/users/UsersPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedLayout from "./layouts/ProtectedLayout";
-import FilmsPage from "./features/films/FilmsPage";
+import ManufacturersPage from "./features/manufacturers/ManufacturersPage";
+import SeatTypesPage from "./features/seatTypes/SeatTypesPage";
+import ScreeningRoomsPage from "./features/screeningRooms/ScreeningRoomsPage";
+import HolidaysPage from "./features/holidays/HolidaysPage";
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/login",
     element: <Login />
@@ -34,6 +38,22 @@ export const router = createBrowserRouter([
           {
             path: "/films",
             element: <FilmsPage />
+          },
+          {
+            path: "/manufacturers",
+            element: <ManufacturersPage />
+          },
+          {
+            path: "/seat-types",
+            element: <SeatTypesPage />
+          },
+          {
+            path: "/screening-rooms",
+            element: <ScreeningRoomsPage />
+          },
+          {
+            path: "/holidays",
+            element: <HolidaysPage />
           }
         ]
       }

@@ -1,16 +1,16 @@
-import { filmsApi } from "@renderer/api/films.api";
+import { holidaysApi } from "@renderer/api/holidays.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { filmsKey } from "./keys";
+import { holidaysKeys } from "./keys";
 
-export const useDeleteFilm = () => {
+export const useCreateHoliday = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: filmsApi.delete,
+    mutationFn: holidaysApi.create,
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: filmsKey.all
+        queryKey: holidaysKeys.all
       });
     }
   });
