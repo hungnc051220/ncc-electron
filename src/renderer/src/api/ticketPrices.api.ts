@@ -15,6 +15,12 @@ export interface TicketPriceDto {
   price: number;
 }
 
+export interface TicketPriceByPlanDto {
+  roomId: number;
+  versionCode: number;
+  date?: string;
+}
+
 export const ticketPricesApi = {
   getAll: async (params: TicketPricesQuery): Promise<ApiResponse<TicketPriceProps>> => {
     const { current, pageSize } = params;
@@ -37,6 +43,10 @@ export const ticketPricesApi = {
 
     const res = await api.get(`/api/pos/pricing?${query}`);
 
+    return res.data;
+  },
+  getByPlan: async (dto: TicketPriceByPlanDto) => {
+    const res = await api.post(`/api/pos/pricing/plan-pricing`, dto);
     return res.data;
   },
   create: async (dto: TicketPriceDto) => {

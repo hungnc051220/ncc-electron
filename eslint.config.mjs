@@ -29,7 +29,8 @@ export default defineConfig(
       "@typescript-eslint/explicit-function-return-type": "off",
       semi: "off",
       "@typescript-eslint/semi": ["error", "always"],
-      quotes: ["error", "double"]
+      quotes: ["error", "double"],
+      "react/prop-types": "off"
     }
   },
   eslintConfigPrettier

@@ -3,6 +3,7 @@
 
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
+  --color-primary: #464FB4;
   --color-goku: #f5f5f5;
   --color-jiren: #e9e8f6;
   --color-hit: #40a69f;

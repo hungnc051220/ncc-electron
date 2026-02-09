@@ -13,6 +13,7 @@ import HolidaysPage from "./features/holidays/HolidaysPage";
 import CancellationReasonsPage from "./features/cancellationReasons/CancellationReasonsPage";
 import ShowTimeSlotsPage from "./features/showTimeSlots/ShowTimeSlotsPage";
 import TicketPricesPage from "./features/ticketPrices/TicketPricesPage";
+import PlanCinemaPage from "./features/planCinema/PlanCinemaPage";
 
 export const router = createHashRouter([
   {
@@ -69,6 +70,10 @@ export const router = createHashRouter([
           {
             path: "/ticket-prices",
             element: <TicketPricesPage />
+          },
+          {
+            path: "/plan-cinema",
+            element: <PlanCinemaPage />
           }
         ]
       }
