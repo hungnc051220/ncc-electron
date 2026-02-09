@@ -10,6 +10,9 @@ import ManufacturersPage from "./features/manufacturers/ManufacturersPage";
 import SeatTypesPage from "./features/seatTypes/SeatTypesPage";
 import ScreeningRoomsPage from "./features/screeningRooms/ScreeningRoomsPage";
 import HolidaysPage from "./features/holidays/HolidaysPage";
+import CancellationReasonsPage from "./features/cancellationReasons/CancellationReasonsPage";
+import ShowTimeSlotsPage from "./features/showTimeSlots/ShowTimeSlotsPage";
+import TicketPricesPage from "./features/ticketPrices/TicketPricesPage";
 
 export const router = createHashRouter([
   {
@@ -54,6 +57,18 @@ export const router = createHashRouter([
           {
             path: "/holidays",
             element: <HolidaysPage />
+          },
+          {
+            path: "/showtime-slots",
+            element: <ShowTimeSlotsPage />
+          },
+          {
+            path: "/cancellation-reasons",
+            element: <CancellationReasonsPage />
+          },
+          {
+            path: "/ticket-prices",
+            element: <TicketPricesPage />
           }
         ]
       }

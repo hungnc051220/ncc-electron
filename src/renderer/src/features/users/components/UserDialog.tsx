@@ -84,6 +84,9 @@ const UserDialog = ({
       okButtonProps={{
         loading: createUser.isPending || updateUser.isPending
       }}
+      cancelButtonProps={{
+        disabled: createUser.isPending || updateUser.isPending
+      }}
       width={876}
     >
       <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>

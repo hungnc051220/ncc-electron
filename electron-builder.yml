@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: ncc-electron
+appId: com.hungnc.app
+productName: NCCTicket
 directories:
   buildResources: build
 files:
@@ -39,7 +39,8 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: hungnc051220
+  repo: ncc-electron
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
