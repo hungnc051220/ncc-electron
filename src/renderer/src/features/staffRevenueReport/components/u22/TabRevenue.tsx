@@ -1,7 +1,7 @@
 "use client";
 
-import { formatMoney, formatNumber } from "@/lib/utils";
-import { U22UsageProps } from "@/types";
+import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { U22UsageProps } from "@renderer/types";
 import type { TableProps } from "antd";
 import { Table } from "antd";
 
@@ -18,7 +18,7 @@ const TabRevenue = ({
   columns,
   isFetching,
   totalOrders,
-  totalAmount,
+  totalAmount
 }: TabRevenueProps) => {
   return (
     <Table
@@ -26,7 +26,7 @@ const TabRevenue = ({
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 360px)" }}
+      scroll={{ x: "max-content", y: "calc(100vh - 415px)" }}
       loading={isFetching}
       pagination={false}
       summary={() =>

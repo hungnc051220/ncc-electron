@@ -20,7 +20,7 @@ const TabRevenue = ({ tableData, columns, isFetching, data }: TabRevenueProps) =
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 360px)" }}
+      scroll={{ x: "max-content", y: "calc(100vh - 410px)" }}
       loading={isFetching}
       pagination={false}
       summary={() =>

@@ -4,10 +4,7 @@ import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import dayjs from "dayjs";
-import {
-  ExamineTicketTotalOnlineProps,
-  ExamineTicketTotalProps,
-} from "@/types";
+import { ExamineTicketTotalOnlineProps, ExamineTicketTotalProps } from "@renderer/types";
 import { TableRow } from ".";
 
 type Props = {
@@ -31,7 +28,7 @@ const ExportRevenueExcelButton = ({
   fileName = "bao-cao-ra-soat-ve.xlsx",
   total,
   totalOnline,
-  totalOffline,
+  totalOffline
 }: Props) => {
   const flattenRows = (data: TableRow[]): TableRow[] => {
     const rows: TableRow[] = [];
@@ -63,7 +60,7 @@ const ExportRevenueExcelButton = ({
       "Giấy mời",
       "Tổng",
       "Chưa CI",
-      "Đã CI",
+      "Đã CI"
     ];
 
     const header2 = [
@@ -81,7 +78,7 @@ const ExportRevenueExcelButton = ({
       "",
       "",
       "",
-      "",
+      ""
     ];
 
     const totalColumns = header1.length;
@@ -101,7 +98,7 @@ const ExportRevenueExcelButton = ({
 
     ws.getRow(ws.lastRow!.number).alignment = {
       horizontal: "center",
-      vertical: "middle",
+      vertical: "middle"
     };
     ws.getRow(ws.lastRow!.number).font = { italic: true };
 
@@ -111,7 +108,7 @@ const ExportRevenueExcelButton = ({
     ws.getCell(ws.lastRow!.number, 1).value = `Nhân viên: ${employeeName}`;
     ws.getRow(ws.lastRow!.number).alignment = {
       horizontal: "center",
-      vertical: "middle",
+      vertical: "middle"
     };
     ws.getRow(ws.lastRow!.number).font = { italic: true };
 
@@ -139,7 +136,7 @@ const ExportRevenueExcelButton = ({
       ws.getRow(r).alignment = {
         horizontal: "center",
         vertical: "middle",
-        wrapText: true,
+        wrapText: true
       };
     });
 
@@ -165,7 +162,7 @@ const ExportRevenueExcelButton = ({
         r.invitation ?? "",
         r.total ?? "",
         r.notCI ?? "",
-        r.ci ?? "",
+        r.ci ?? ""
       ]);
     });
 
@@ -196,7 +193,7 @@ const ExportRevenueExcelButton = ({
         s.totalInvitationQuantity,
         s.totalQuantity,
         s.totalNotCIQuantity,
-        s.totalCIQuantity,
+        s.totalCIQuantity
       ]);
     };
 
@@ -228,7 +225,7 @@ const ExportRevenueExcelButton = ({
     for (let r = headerRow + 1; r <= ws.lastRow!.number; r++) {
       ws.getCell(r, 1).alignment = {
         wrapText: true,
-        vertical: "middle",
+        vertical: "middle"
       };
     }
 
@@ -240,7 +237,7 @@ const ExportRevenueExcelButton = ({
       for (let c = 6; c <= header1.length; c++) {
         ws.getCell(r, c).alignment = {
           horizontal: "right",
-          vertical: "middle",
+          vertical: "middle"
         };
       }
     }
@@ -256,7 +253,7 @@ const ExportRevenueExcelButton = ({
           top: { style: "thin" },
           left: { style: "thin" },
           bottom: { style: "thin" },
-          right: { style: "thin" },
+          right: { style: "thin" }
         };
       }
     }
@@ -265,8 +262,8 @@ const ExportRevenueExcelButton = ({
       {
         state: "frozen",
         ySplit: headerRow,
-        xSplit: 1, // freeze cột Phim
-      },
+        xSplit: 1 // freeze cột Phim
+      }
     ];
 
     const buf = await wb.xlsx.writeBuffer();

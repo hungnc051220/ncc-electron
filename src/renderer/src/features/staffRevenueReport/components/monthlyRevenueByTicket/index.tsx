@@ -1,7 +1,8 @@
 "use client";
 
-import { getMonthlyReportRevenueByTicket } from "@/data/loaders";
-import { useQuery } from "@tanstack/react-query";
+import { useReportRevenueDayInMonth } from "@renderer/hooks/reports/useReportRevenueDayInMonth";
+import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { RevenuesByDayProps } from "@renderer/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
@@ -9,8 +10,6 @@ import dayjs from "dayjs";
 import { useState } from "react";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
-import { RevenuesByDayProps } from "@renderer/types";
-import { formatMoney, formatNumber } from "@renderer/lib/utils";
 
 export interface ValuesProps {
   userId?: number;
@@ -34,12 +33,7 @@ const MonthlyRevenueByTicket = () => {
     fromDate: dayjs().startOf("month").format("YYYY-MM-DD")
   });
 
-  const { data, isFetching } = useQuery({
-    queryKey: ["monthly-revenues-by-ticket", filterValues],
-    queryFn: () => {
-      return getMonthlyReportRevenueByTicket({ ...filterValues });
-    }
-  });
+  const { data, isFetching } = useReportRevenueDayInMonth({ ...filterValues });
 
   const buildColumns = (priceHeaders: number[]): ColumnsType<Row> => {
     const priceColumns = priceHeaders.map((price) => ({

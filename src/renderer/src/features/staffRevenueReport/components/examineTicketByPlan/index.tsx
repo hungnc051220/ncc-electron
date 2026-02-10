@@ -1,17 +1,16 @@
 "use client";
 
-import { getExamineTicketByPlan } from "@/data/loaders";
-import { filterEmptyValues, formatNumber } from "@/lib/utils";
-import { ExamineTicketsByFilmProps } from "@/types";
-import { useQuery } from "@tanstack/react-query";
+import { useReportExamineTicketByPlan } from "@renderer/hooks/reports/useReportExamineTicketByPlan";
+import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { ExamineTicketsByFilmProps } from "@renderer/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
-import Filter from "./filter";
-import TabRevenue from "./tab-revenue";
-import ExportRevenueExcelButton from "./export-excel";
+import ExportRevenueExcelButton from "./ExportExcel";
+import Filter from "./Filter";
+import TabRevenue from "./TabRevenue";
 
 export interface ValuesProps {
   userId?: number;
@@ -46,21 +45,22 @@ export type TableRow = {
 
 const ExamineTicketByPlan = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
-    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()],
+    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
   });
 
-  const { data, isFetching } = useQuery({
-    queryKey: ["examine-ticket-by-plan", filterValues],
-    queryFn: () => {
-      const { dateRange, ...rest } = filterValues;
-      const filtered = filterEmptyValues(rest as Record<string, unknown>);
-      if (dateRange && dateRange.length === 2) {
-        filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
-        filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
-      }
-      return getExamineTicketByPlan({ ...filtered });
-    },
-  });
+  const params = useMemo(() => {
+    const { dateRange, ...rest } = filterValues;
+    const filtered = filterEmptyValues(rest as Record<string, unknown>);
+
+    if (dateRange && dateRange.length === 2) {
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
+    }
+
+    return filtered;
+  }, [filterValues]);
+
+  const { data, isFetching } = useReportExamineTicketByPlan(params);
 
   const buildTreeTable = (films: ExamineTicketsByFilmProps[]): TableRow[] => {
     return films.map((film) => {
@@ -82,7 +82,7 @@ const ExamineTicketByPlan = () => {
         invitation: p.invitationQuantity,
         total: p.totalQuantity,
         notCI: p.totalNotCIQuantity,
-        ci: p.totalCIQuantity,
+        ci: p.totalCIQuantity
       }));
 
       return {
@@ -103,15 +103,12 @@ const ExamineTicketByPlan = () => {
         notCI: film.totalNotCIQuantity,
         ci: film.totalCIQuantity,
 
-        children,
+        children
       };
     });
   };
 
-  const tableData = useMemo(
-    () => buildTreeTable(data?.examineTicketsByFilm || []),
-    [data],
-  );
+  const tableData = useMemo(() => buildTreeTable(data?.examineTicketsByFilm || []), [data]);
 
   const columns: ColumnsType<TableRow> = [
     {
@@ -120,18 +117,14 @@ const ExamineTicketByPlan = () => {
       fixed: "left",
       width: "20%",
       render: (_, row) =>
-        row.filmName ? (
-          <strong>{row.filmName}</strong>
-        ) : (
-          dayjs(row.projectDate).format("DD/MM/YYYY")
-        ),
+        row.filmName ? <strong>{row.filmName}</strong> : dayjs(row.projectDate).format("DD/MM/YYYY")
     },
     {
       title: "Giờ",
       dataIndex: "projectTime",
       width: 80,
       align: "center",
-      fixed: "left",
+      fixed: "left"
     },
     { title: "Phòng", dataIndex: "roomName", width: 60, align: "right" },
     {
@@ -139,7 +132,7 @@ const ExamineTicketByPlan = () => {
       dataIndex: "isOnline",
       width: 70,
       render: (v) => (v === undefined ? "" : v ? "On" : "Off"),
-      align: "center",
+      align: "center"
     },
 
     {
@@ -150,23 +143,23 @@ const ExamineTicketByPlan = () => {
           dataIndex: "vip",
           align: "right",
           width: 80,
-          render: (value) => formatNumber(value),
+          render: (value) => formatNumber(value)
         },
         {
           title: "Thường",
           dataIndex: "regular",
           align: "right",
           width: 90,
-          render: (value) => formatNumber(value),
+          render: (value) => formatNumber(value)
         },
         {
           title: "Hợp đồng",
           dataIndex: "contract",
           align: "right",
           width: 100,
-          render: (value) => formatNumber(value),
-        },
-      ],
+          render: (value) => formatNumber(value)
+        }
+      ]
     },
     {
       title: "Vé Checkin",
@@ -176,52 +169,52 @@ const ExamineTicketByPlan = () => {
           dataIndex: "vipCI",
           align: "right",
           width: 80,
-          render: (value) => formatNumber(value),
+          render: (value) => formatNumber(value)
         },
         {
           title: "Thường",
           dataIndex: "regularCI",
           align: "right",
           width: 90,
-          render: (value) => formatNumber(value),
+          render: (value) => formatNumber(value)
         },
         {
           title: "Hợp đồng",
           dataIndex: "contractCI",
           align: "right",
           width: 100,
-          render: (value) => formatNumber(value),
-        },
-      ],
+          render: (value) => formatNumber(value)
+        }
+      ]
     },
     {
       title: "Giấy mời",
       dataIndex: "invitation",
       align: "right",
       width: 80,
-      render: (value) => formatNumber(value),
+      render: (value) => formatNumber(value)
     },
     {
       title: "Tổng",
       dataIndex: "total",
       align: "right",
       width: 90,
-      render: (value) => formatNumber(value),
+      render: (value) => formatNumber(value)
     },
     {
       title: "Chưa Checkin",
       dataIndex: "notCI",
       align: "right",
       width: 120,
-      render: (value) => formatNumber(value),
+      render: (value) => formatNumber(value)
     },
     {
       title: "Đã Checkin",
       dataIndex: "ci",
       align: "right",
       width: 120,
-      render: (value) => formatNumber(value),
-    },
+      render: (value) => formatNumber(value)
+    }
   ];
 
   const items: TabsProps["items"] = [
@@ -237,8 +230,8 @@ const ExamineTicketByPlan = () => {
           totalOnline={data?.totalOnline}
           totalOffline={data?.totalOffline}
         />
-      ),
-    },
+      )
+    }
   ];
 
   const onSearch = (values: ValuesProps) => {

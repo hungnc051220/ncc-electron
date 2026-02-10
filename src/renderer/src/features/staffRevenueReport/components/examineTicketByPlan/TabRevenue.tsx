@@ -3,11 +3,8 @@
 import { Table } from "antd";
 import { TableRow } from ".";
 import type { TableProps } from "antd";
-import {
-  ExamineTicketTotalOnlineProps,
-  ExamineTicketTotalProps,
-} from "@/types";
-import { formatNumber } from "@/lib/utils";
+import { ExamineTicketTotalOnlineProps, ExamineTicketTotalProps } from "@renderer/types";
+import { formatNumber } from "@renderer/lib/utils";
 
 interface TabRevenueProps {
   tableData: TableRow[];
@@ -24,7 +21,7 @@ const TabRevenue = ({
   isFetching,
   total,
   totalOnline,
-  totalOffline,
+  totalOffline
 }: TabRevenueProps) => {
   return (
     <Table
@@ -32,7 +29,7 @@ const TabRevenue = ({
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 450px)" }}
+      scroll={{ x: "max-content", y: "calc(100vh - 490px)" }}
       loading={isFetching}
       pagination={false}
       rowClassName={(row) => (row.isSummary ? "bg-gray-100 font-bold" : "")}

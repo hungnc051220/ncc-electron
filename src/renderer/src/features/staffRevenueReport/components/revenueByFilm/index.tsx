@@ -64,19 +64,6 @@ const RevenueByFilm = () => {
 
   const { data, isFetching } = useReportRevenueByFilm(params);
 
-  // const { data, isFetching } = useQuery({
-  //   queryKey: ["revenues-by-film", filterValues],
-  //   queryFn: () => {
-  //     const { dateRange, ...rest } = filterValues;
-  //     const filtered = filterEmptyValues(rest as Record<string, unknown>);
-  //     if (dateRange && dateRange.length === 2) {
-  //       filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
-  //       filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
-  //     }
-  //     return getReportRevenueByFilm({ ...filtered });
-  //   }
-  // });
-
   const allPrices = Array.from(
     new Set(
       data?.revenuesByFilm.flatMap((f) =>

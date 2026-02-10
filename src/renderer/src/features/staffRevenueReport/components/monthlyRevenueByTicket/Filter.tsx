@@ -74,6 +74,9 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
               setOpen(false);
               onSearch(values);
             }}
+            initialValues={{
+              dateRange: [dayjs(), dayjs()]
+            }}
           >
             {dom}
           </Form>

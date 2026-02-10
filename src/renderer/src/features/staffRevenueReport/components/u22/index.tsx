@@ -1,17 +1,16 @@
 "use client";
 
-import { getU22Usage } from "@/data/loaders";
-import { filterEmptyValues, formatMoney } from "@/lib/utils";
-import { U22UsageProps } from "@/types";
-import { useQuery } from "@tanstack/react-query";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { useState } from "react";
-import ExportRevenueExcelButton from "./export-excel";
-import Filter from "./filter";
-import TabRevenue from "./tab-revenue";
+import { useMemo, useState } from "react";
+import ExportRevenueExcelButton from "./ExportExcel";
+import Filter from "./Filter";
+import TabRevenue from "./TabRevenue";
+import { U22UsageProps } from "@renderer/types";
+import { filterEmptyValues, formatMoney } from "@renderer/lib/utils";
+import { useReportU22Usage } from "@renderer/hooks/reports/useReportU22Usage";
 
 export interface ValuesProps {
   userId?: number;
@@ -20,21 +19,22 @@ export interface ValuesProps {
 }
 const U22Usage = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
-    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()],
+    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
   });
 
-  const { data, isFetching } = useQuery({
-    queryKey: ["u22-usage", filterValues],
-    queryFn: () => {
-      const { dateRange, ...rest } = filterValues;
-      const filtered = filterEmptyValues(rest as Record<string, unknown>);
-      if (dateRange && dateRange.length === 2) {
-        filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
-        filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
-      }
-      return getU22Usage({ ...filtered });
-    },
-  });
+  const params = useMemo(() => {
+    const { dateRange, ...rest } = filterValues;
+    const filtered = filterEmptyValues(rest as Record<string, unknown>);
+
+    if (dateRange && dateRange.length === 2) {
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
+    }
+
+    return filtered;
+  }, [filterValues]);
+
+  const { data, isFetching } = useReportU22Usage(params);
 
   const columns: ColumnsType<U22UsageProps> = [
     {
@@ -43,23 +43,23 @@ const U22Usage = () => {
       align: "center",
       render: (_, __, index) => index + 1,
       width: 50,
-      fixed: "left",
+      fixed: "left"
     },
     {
       title: "Tên khách hàng",
       key: "fullName",
-      dataIndex: "fullName",
+      dataIndex: "fullName"
     },
     {
       title: "Số thẻ",
       key: "memberCardCode",
-      dataIndex: "memberCardCode",
+      dataIndex: "memberCardCode"
     },
     {
       title: "Thời gian mua",
       key: "paidDate",
       dataIndex: "paidDate",
-      render: (value) => dayjs(value).format("HH:mm DD/MM/YYYY"),
+      render: (value) => dayjs(value).format("HH:mm DD/MM/YYYY")
     },
     {
       title: "Mức chi tiêu",
@@ -69,7 +69,7 @@ const U22Usage = () => {
           key: "numOrders",
           dataIndex: "numOrders",
           align: "right",
-          width: 200,
+          width: 200
         },
         {
           title: "Thành tiền",
@@ -77,10 +77,10 @@ const U22Usage = () => {
           dataIndex: "totalAmount",
           align: "right",
           width: 200,
-          render: (value) => formatMoney(value),
-        },
-      ],
-    },
+          render: (value) => formatMoney(value)
+        }
+      ]
+    }
   ];
 
   const items: TabsProps["items"] = [
@@ -95,8 +95,8 @@ const U22Usage = () => {
           totalOrders={data?.totalUsage.totalOrders}
           totalAmount={data?.totalUsage.totalAmount}
         />
-      ),
-    },
+      )
+    }
   ];
 
   const onSearch = (values: ValuesProps) => {

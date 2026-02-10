@@ -8,6 +8,10 @@ import RevenueByFilm from "./components/revenueByFilm";
 // import U22Usage from "./components/u22";
 // import MonthlyRevenueByTicket from "./components/monthlyRevenueByTicket";
 import { Link } from "react-router";
+import MonthlyRevenueByTicket from "./components/monthlyRevenueByTicket";
+import ExamineTicketByPlan from "./components/examineTicketByPlan";
+import U22Usage from "./components/u22";
+import Vouchers from "./components/vouchers";
 
 const StaffRevenueReportPage = () => {
   const items: TabsProps["items"] = [
@@ -20,27 +24,27 @@ const StaffRevenueReportPage = () => {
       key: "2",
       label: "Báo cáo doanh thu theo nhân viên",
       children: <RevenueByFilm />
+    },
+    {
+      key: "3",
+      label: "Báo cáo tháng của nhân viên",
+      children: <MonthlyRevenueByTicket />
+    },
+    {
+      key: "4",
+      label: "Báo cáo rà soát vé",
+      children: <ExamineTicketByPlan />
+    },
+    {
+      key: "5",
+      label: "Báo cáo số lượng Voucher",
+      children: <Vouchers />
+    },
+    {
+      key: "6",
+      label: "Báo cáo giao dịch mua vé thẻ U22",
+      children: <U22Usage />
     }
-    // {
-    //   key: "3",
-    //   label: "Báo cáo tháng của nhân viên",
-    //   children: <MonthlyRevenueByTicket />
-    // },
-    // {
-    //   key: "4",
-    //   label: "Báo cáo rà soát vé",
-    //   children: <ExamineTicketByPlan />
-    // },
-    // {
-    //   key: "5",
-    //   label: "Báo cáo số lượng Voucher",
-    //   children: <Vouchers />
-    // },
-    // {
-    //   key: "6",
-    //   label: "Báo cáo giao dịch mua vé thẻ U22",
-    //   children: <U22Usage />
-    // }
   ];
 
   return (

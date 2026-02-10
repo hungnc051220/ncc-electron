@@ -1,6 +1,6 @@
 "use client";
 
-import { U22UsageProps } from "@/types";
+import { U22UsageProps } from "@renderer/types";
 import { Button } from "antd";
 import dayjs from "dayjs";
 import ExcelJS from "exceljs";
@@ -23,20 +23,13 @@ const ExportRevenueExcelButton = ({
   employeeName = "Tất cả",
   fileName = "bao-cao-giao-dich-mua-ve-u22.xlsx",
   totalOrders,
-  totalAmount,
+  totalAmount
 }: Props) => {
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Chi tiết");
 
-    const header = [
-      "STT",
-      "Tên khách hàng",
-      "Số thẻ",
-      "Thời gian mua",
-      "Số vé",
-      "Thành tiền",
-    ];
+    const header = ["STT", "Tên khách hàng", "Số thẻ", "Thời gian mua", "Số vé", "Thành tiền"];
     const totalColumns = header.length;
 
     // ===== TITLE =====
@@ -49,7 +42,7 @@ const ExportRevenueExcelButton = ({
     ws.addRow([]);
     ws.mergeCells(2, 1, 2, totalColumns);
     ws.getCell(2, 1).value = `Từ ngày: ${dayjs(fromDate).format(
-      "DD/MM/YYYY",
+      "DD/MM/YYYY"
     )} — Đến ngày: ${dayjs(toDate).format("DD/MM/YYYY")}`;
     ws.getRow(2).font = { italic: true };
     ws.getRow(2).alignment = { horizontal: "center" };
@@ -72,7 +65,7 @@ const ExportRevenueExcelButton = ({
       "Số thẻ",
       "Thời gian mua",
       "Mức chi tiêu",
-      "",
+      ""
     ]);
 
     // Row 2 header
@@ -103,34 +96,27 @@ const ExportRevenueExcelButton = ({
         r.memberCardCode || "",
         r.paidDate ? dayjs(r.paidDate).format("HH:mm DD/MM/YYYY") : "",
         r.numOrders || 0,
-        r.totalAmount || 0,
+        r.totalAmount || 0
       ]);
     });
 
     // ===== SUMMARY =====
-    const summaryRow = ws.addRow([
-      "TỔNG CỘNG",
-      "",
-      "",
-      "",
-      totalOrders || 0,
-      totalAmount || 0,
-    ]);
+    const summaryRow = ws.addRow(["TỔNG CỘNG", "", "", "", totalOrders || 0, totalAmount || 0]);
     summaryRow.font = { bold: true };
 
     // merge label tổng cộng
     ws.mergeCells(summaryRow.number, 1, summaryRow.number, 2);
     summaryRow.getCell(1).alignment = {
       horizontal: "right",
-      vertical: "middle",
+      vertical: "middle"
     };
     summaryRow.getCell(5).alignment = {
       horizontal: "right",
-      vertical: "middle",
+      vertical: "middle"
     };
     summaryRow.getCell(6).alignment = {
       horizontal: "right",
-      vertical: "middle",
+      vertical: "middle"
     };
     summaryRow.getCell(6).numFmt = '#,##0 "đ"';
 
@@ -141,7 +127,7 @@ const ExportRevenueExcelButton = ({
       { width: 18 }, // Số thẻ
       { width: 20 }, // Thời gian
       { width: 18 }, // Số vé
-      { width: 18 }, // Thành tiền
+      { width: 18 } // Thành tiền
     ];
 
     // căn giữa STT + ngày
@@ -168,12 +154,12 @@ const ExportRevenueExcelButton = ({
           top: { style: "thin" },
           left: { style: "thin" },
           bottom: { style: "thin" },
-          right: { style: "thin" },
+          right: { style: "thin" }
         };
         ws.getCell(r, c).alignment = {
           ...ws.getCell(r, c).alignment,
           vertical: "middle",
-          wrapText: true,
+          wrapText: true
         };
       }
     }

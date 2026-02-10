@@ -1,6 +1,6 @@
 "use client";
 
-import { VoucherUsageProps } from "@/types";
+import { VoucherUsageProps } from "@renderer/types";
 import { Button } from "antd";
 import dayjs from "dayjs";
 import ExcelJS from "exceljs";
@@ -21,7 +21,7 @@ const ExportRevenueExcelButton = ({
   toDate,
   employeeName = "Tất cả",
   fileName = "bao-cao-so-luong-voucher.xlsx",
-  total,
+  total
 }: Props) => {
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
@@ -40,7 +40,7 @@ const ExportRevenueExcelButton = ({
     ws.addRow([]);
     ws.mergeCells(2, 1, 2, totalColumns);
     ws.getCell(2, 1).value = `Từ ngày: ${dayjs(fromDate).format(
-      "DD/MM/YYYY",
+      "DD/MM/YYYY"
     )} — Đến ngày: ${dayjs(toDate).format("DD/MM/YYYY")}`;
     ws.getRow(2).font = { italic: true };
     ws.getRow(2).alignment = { horizontal: "center" };
@@ -68,7 +68,7 @@ const ExportRevenueExcelButton = ({
         r.numOrders || 0,
         r.printedOnUtcDateOnly
           ? dayjs(r.printedOnUtcDateOnly, "YYYY-MM-DD").format("DD/MM/YYYY")
-          : "",
+          : ""
       ]);
     });
 
@@ -80,7 +80,7 @@ const ExportRevenueExcelButton = ({
     ws.mergeCells(summaryRow.number, 1, summaryRow.number, 2);
     summaryRow.getCell(1).alignment = {
       horizontal: "right",
-      vertical: "middle",
+      vertical: "middle"
     };
     summaryRow.getCell(3).alignment = { horizontal: "right" };
 
@@ -106,12 +106,12 @@ const ExportRevenueExcelButton = ({
           top: { style: "thin" },
           left: { style: "thin" },
           bottom: { style: "thin" },
-          right: { style: "thin" },
+          right: { style: "thin" }
         };
         ws.getCell(r, c).alignment = {
           ...ws.getCell(r, c).alignment,
           vertical: "middle",
-          wrapText: true,
+          wrapText: true
         };
       }
     }

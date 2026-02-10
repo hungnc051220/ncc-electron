@@ -1,17 +1,16 @@
 "use client";
 
-import { getVoucherUsage } from "@/data/loaders";
-import { filterEmptyValues } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useReportVoucherUsage } from "@renderer/hooks/reports/useReportVoucherUsage";
+import { filterEmptyValues } from "@renderer/lib/utils";
+import { VoucherUsageProps } from "@renderer/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { useState } from "react";
-import ExportRevenueExcelButton from "./export-excel";
-import Filter from "./filter";
-import TabRevenue from "./tab-revenue";
-import { VoucherUsageProps } from "@/types";
+import { useMemo, useState } from "react";
+import ExportRevenueExcelButton from "./ExportExcel";
+import Filter from "./Filter";
+import TabRevenue from "./TabRevenue";
 
 export interface ValuesProps {
   userId?: number;
@@ -20,21 +19,22 @@ export interface ValuesProps {
 }
 const Vouchers = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
-    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()],
+    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
   });
 
-  const { data, isFetching } = useQuery({
-    queryKey: ["voucher-usage", filterValues],
-    queryFn: () => {
-      const { dateRange, ...rest } = filterValues;
-      const filtered = filterEmptyValues(rest as Record<string, unknown>);
-      if (dateRange && dateRange.length === 2) {
-        filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
-        filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
-      }
-      return getVoucherUsage({ ...filtered });
-    },
-  });
+  const params = useMemo(() => {
+    const { dateRange, ...rest } = filterValues;
+    const filtered = filterEmptyValues(rest as Record<string, unknown>);
+
+    if (dateRange && dateRange.length === 2) {
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
+    }
+
+    return filtered;
+  }, [filterValues]);
+
+  const { data, isFetching } = useReportVoucherUsage(params);
 
   const columns: ColumnsType<VoucherUsageProps> = [
     {
@@ -43,24 +43,24 @@ const Vouchers = () => {
       align: "center",
       render: (_, __, index) => index + 1,
       width: 50,
-      fixed: "left",
+      fixed: "left"
     },
     {
       title: "Mã voucher",
       key: "voucherCode",
-      dataIndex: "voucherCode",
+      dataIndex: "voucherCode"
     },
     {
       title: "Số vé",
       key: "numOrders",
-      dataIndex: "numOrders",
+      dataIndex: "numOrders"
     },
     {
       title: "Ngày in",
       key: "printedOnUtcDateOnly",
       dataIndex: "printedOnUtcDateOnly",
-      render: (value) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
-    },
+      render: (value) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY")
+    }
   ];
 
   const items: TabsProps["items"] = [
@@ -74,8 +74,8 @@ const Vouchers = () => {
           isFetching={isFetching}
           total={data?.totalOrders}
         />
-      ),
-    },
+      )
+    }
   ];
 
   const onSearch = (values: ValuesProps) => {

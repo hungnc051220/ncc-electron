@@ -1,7 +1,7 @@
 "use client";
 
-import { formatNumber } from "@/lib/utils";
-import { VoucherUsageProps } from "@/types";
+import { formatNumber } from "@renderer/lib/utils";
+import { VoucherUsageProps } from "@renderer/types";
 import type { TableProps } from "antd";
 import { Table } from "antd";
 
@@ -12,19 +12,14 @@ interface TabRevenueProps {
   total?: number;
 }
 
-const TabRevenue = ({
-  tableData,
-  columns,
-  isFetching,
-  total,
-}: TabRevenueProps) => {
+const TabRevenue = ({ tableData, columns, isFetching, total }: TabRevenueProps) => {
   return (
     <Table
       dataSource={tableData}
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 260px)" }}
+      scroll={{ x: "max-content", y: "calc(100vh - 375px)" }}
       loading={isFetching}
       pagination={false}
       summary={() =>

@@ -90,6 +90,9 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
               setOpen(false);
               onSearch(values);
             }}
+            initialValues={{
+              dateRange: [dayjs(), dayjs()]
+            }}
           >
             {dom}
           </Form>
@@ -138,12 +141,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           />
         </Form.Item> */}
         <Form.Item name="dateRange" label="Khoảng thời gian">
-          <RangePicker
-            className="w-full"
-            presets={rangePresets}
-            format="DD/MM/YYYY"
-            defaultValue={[dayjs(), dayjs()]}
-          />
+          <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
         </Form.Item>
       </Modal>
     </>
