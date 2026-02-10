@@ -23,6 +23,9 @@ import CancellationTicketsPage from "./features/cancellationTickets/Cancellation
 import AccessHistoryPage from "./features/accessHistory/AccessHistoryPage";
 import OrderHistoryPage from "./features/orderHistory/OrderHistoryPage";
 import StaffRevenueReportPage from "./features/staffRevenueReport/StaffRevenueReportPage";
+import MonthlyReportPage from "./features/monthlyReport/MonthlyReportPage";
+import QuarterlyReportPage from "./features/quarterlyReport/QuarterlyReportPage";
+import TicketSalesRevenuePage from "./features/ticketSalesRevenue/TicketSalesRevenuePage";
 
 export const router = createHashRouter([
   {
@@ -119,6 +122,18 @@ export const router = createHashRouter([
           {
             path: "/staff-revenue-report",
             element: <StaffRevenueReportPage />
+          },
+          {
+            path: "/monthly-report",
+            element: <MonthlyReportPage />
+          },
+          {
+            path: "/quarterly-report",
+            element: <QuarterlyReportPage />
+          },
+          {
+            path: "/ticket-sales-revenue",
+            element: <TicketSalesRevenuePage />
           }
         ]
       }

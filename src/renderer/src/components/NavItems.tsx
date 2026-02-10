@@ -163,10 +163,6 @@ const items: MenuItem[] = [
         key: "film-sales-detail-report"
       },
       {
-        label: <Link to="/film-owner-revenue-report">Báo cáo doanh thu chủ phim</Link>,
-        key: "film-owner-revenue-report"
-      },
-      {
         label: <Link to="/monthly-report">Báo cáo tháng</Link>,
         key: "monthly-report"
       },

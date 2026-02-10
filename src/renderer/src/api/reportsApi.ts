@@ -1,8 +1,13 @@
 import { api } from "@renderer/api/client";
 import {
   ExamineTicketByPlanProps,
+  MonthlyReportPlanProps,
+  MonthlyReportRoomProps,
+  MonthlyReportTicketProps,
   ReportMonthlyRevenueTicketByStaffProps,
   ReportRevenueFilmByStaffProps,
+  ReportRevenueFilmProps,
+  ReportRevenueStaffProps,
   ReportU22UsageProps,
   ReportVoucherUsageProps
 } from "@renderer/types";
@@ -13,6 +18,13 @@ export interface ReportRevenueByFilmDto {
   userId?: number;
   manufacturerId?: number;
   filmId?: number;
+  reportType?: string;
+}
+
+export interface ReportQuarterlyDto {
+  year: number;
+  quarter: number;
+  reportType: string;
 }
 
 export const reportsApi = {
@@ -40,6 +52,24 @@ export const reportsApi = {
   },
   getReportVoucherUsage: async (dto: ReportRevenueByFilmDto): Promise<ReportVoucherUsageProps> => {
     const res = await api.post("/api/reports/voucher-usage", dto);
+    return res.data;
+  },
+  getReportMonthly: async (
+    dto: ReportRevenueByFilmDto
+  ): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps> => {
+    const res = await api.post("/api/reports/monthly-report", dto);
+    return res.data;
+  },
+  getReportQuarterly: async (
+    dto: ReportQuarterlyDto
+  ): Promise<MonthlyReportPlanProps | MonthlyReportTicketProps | MonthlyReportRoomProps> => {
+    const res = await api.post("/api/reports/quarterly-report", dto);
+    return res.data;
+  },
+  getReportTicketSalesRevenue: async (
+    dto: ReportRevenueByFilmDto
+  ): Promise<ReportRevenueFilmProps | ReportRevenueStaffProps> => {
+    const res = await api.post("/api/reports/revenue", dto);
     return res.data;
   }
 };

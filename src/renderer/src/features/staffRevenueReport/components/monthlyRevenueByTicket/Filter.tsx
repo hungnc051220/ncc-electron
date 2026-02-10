@@ -1,15 +1,13 @@
 "use client";
 
-// import { InfiniteSelect } from "@/components/infinite-select";
-// import { useInfiniteUsers } from "@/hooks/use-infinite-query";
-import Icon from "@ant-design/icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { Button, DatePicker, Form, Modal } from "antd";
+import { FilterOutlined } from "@ant-design/icons";
+import { usersApi } from "@renderer/api/users.api";
+import { useDebounce } from "@renderer/hooks/useDebounce";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
-import { FilterIcon } from "lucide-react";
-import { startTransition, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import { ValuesProps } from ".";
-// import { useDebounce } from "@renderer/hooks/useDebounce";
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
@@ -17,21 +15,44 @@ interface FilterProps {
 }
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
-  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  // const [searchText, setSearchText] = useState<string>("");
-  // const debouncedSearchText = useDebounce(searchText, 500);
-  // const usersQuery = useInfiniteUsers(debouncedSearchText);
+  const [searchText, setSearchText] = useState<string>("");
+  const debouncedSearch = useDebounce(searchText, 500);
+
+  const {
+    data: users,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["users", debouncedSearch],
+    queryFn: ({ pageParam = 1 }) =>
+      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: debouncedSearch }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
+
+  const options = useMemo(() => {
+    return (
+      users?.pages.flatMap((page) =>
+        page.data.map((user) => ({
+          value: user.id,
+          label: user?.customerFirstName || user.username
+        }))
+      ) ?? []
+    );
+  }, [users]);
 
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      // setSearchText("");
-      queryClient.removeQueries({
-        queryKey: ["users", "infinite"]
-      });
+      setSearchText("");
       onSearch({
         fromDate: dayjs().startOf("month").format()
       });
@@ -43,11 +64,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   return (
     <>
       <div className="relative">
-        <Button
-          variant="outlined"
-          icon={<Icon component={FilterIcon} />}
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="outlined" icon={<FilterOutlined />} onClick={() => setOpen(true)}>
           Bộ lọc
         </Button>
         {!isEmptyFilter && (
@@ -89,24 +106,28 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           </>
         )}
       >
-        {/* <Form.Item name="userId" label="Nhân viên">
-          <InfiniteSelect<UserProps>
-            query={usersQuery}
-            getLabel={(user) => user.customerFirstName}
-            getValue={(user) => user.id}
-            placeholder="Chọn nhân viên"
+        <Form.Item name="userId" label="Nhân viên">
+          <Select
             showSearch={{
+              filterOption: false,
               onSearch: (value) => setSearchText(value)
             }}
-            allowClear
-            onClear={() => {
-              setSearchText("");
-              queryClient.removeQueries({
-                queryKey: ["users", "infinite"]
-              });
+            loading={isFetching || isFetchingNextPage}
+            options={options}
+            placeholder="Chọn nhân viên"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
             }}
+            allowClear
           />
-        </Form.Item> */}
+        </Form.Item>
         <Form.Item name="fromDate" label="Khoảng thời gian">
           <DatePicker picker="month" className="w-full" format="MM/YYYY" />
         </Form.Item>
