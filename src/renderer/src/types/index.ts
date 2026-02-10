@@ -1186,3 +1186,10 @@ export interface RoomReport {
 export interface MonthlyReportRoomProps {
   data: RoomReport[];
 }
+
+export interface ApiError {
+  message: string;
+  error: string;
+  statusCode: number;
+  timestamp: string;
+}

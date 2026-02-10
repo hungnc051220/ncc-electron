@@ -10,6 +10,7 @@ import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteTicketPriceDialog from "./components/DeleteTicketPriceDialog";
 import TicketPriceDialog from "./components/TicketPriceDialog";
+import { Link } from "react-router";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
@@ -140,8 +141,7 @@ const TicketPricesPage = () => {
         <Breadcrumb
           items={[
             {
-              title: "Trang chủ",
-              href: "/"
+              title: <Link to="/">Trang chủ</Link>
             },
             {
               title: "Quản lý danh sách"

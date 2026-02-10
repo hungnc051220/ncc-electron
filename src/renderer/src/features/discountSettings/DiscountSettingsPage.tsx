@@ -1,28 +1,28 @@
 "use client";
 
 import Icon, { MoreOutlined } from "@ant-design/icons";
-import { useShowTimeSlots } from "@renderer/hooks/showTimeSlots/useShowTimeSlots";
-import { formatNumber } from "@renderer/lib/utils";
-import { DayPartProps } from "@renderer/types";
+import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
+import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { DiscountProps } from "@renderer/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import ShowTimeSlotDialog from "./components/ShowTimeSlotDialog";
-import DeleteShowTimeSlotDialog from "./components/DeleteShowTimeSlotDialog";
 import { Link } from "react-router";
+import DeleteDiscountDialog from "./components/DeleteDiscountDialog";
+import DiscountSettingsDialog from "./components/DiscountSettingsDialog";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
   { key: "2", label: <p className="text-red-500">Xóa</p> }
 ];
 
-const ShowTimeSlotsPage = () => {
+const DiscountSettingsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [selectedShowTimeSlot, setSelectedShowTimeSlot] = useState<DayPartProps | null>(null);
+  const [selectedDiscount, setSelectedDiscount] = useState<DiscountProps | null>(null);
 
   const params = useMemo(
     () => ({
@@ -32,38 +32,38 @@ const ShowTimeSlotsPage = () => {
     [current, pageSize]
   );
 
-  const { data: showTimeSlots, isFetching } = useShowTimeSlots(params);
+  const { data: discounts, isFetching } = useDiscounts(params);
 
   const handleAdd = useCallback(() => {
-    setSelectedShowTimeSlot(null);
+    setSelectedDiscount(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((item: DayPartProps) => {
-    setSelectedShowTimeSlot(item);
+  const handleEdit = useCallback((item: DiscountProps) => {
+    setSelectedDiscount(item);
     setDialogOpen(true);
   }, []);
 
-  const handleDelete = useCallback((item: DayPartProps) => {
-    setSelectedShowTimeSlot(item);
+  const handleDelete = useCallback((item: DiscountProps) => {
+    setSelectedDiscount(item);
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setSelectedShowTimeSlot(null);
+      setSelectedDiscount(null);
     }
   }, []);
 
   const handleDeleteDialogClose = useCallback((open: boolean) => {
     setDeleteDialogOpen(open);
     if (!open) {
-      setSelectedShowTimeSlot(null);
+      setSelectedDiscount(null);
     }
   }, []);
 
-  const columns: TableProps<DayPartProps>["columns"] = [
+  const columns: TableProps<DiscountProps>["columns"] = [
     {
       title: "STT",
       key: "no",
@@ -73,25 +73,28 @@ const ShowTimeSlotsPage = () => {
       fixed: "left"
     },
     {
-      title: "Tên khung giờ",
-      key: "name",
-      dataIndex: "name"
+      title: "Khuyến mại, giảm giá",
+      key: "discountName",
+      dataIndex: "discountName"
     },
     {
-      title: "Loại ngày",
-      key: "dateTypeId",
-      dataIndex: "dateTypeId",
-      render: (value: number) => (value === 1 ? "Ngày thường" : "Ngày lễ")
+      title: "Hình thức",
+      key: "discountType",
+      dataIndex: "discountType"
     },
     {
-      title: "Thời gian bắt đầu",
-      key: "fromTime",
-      dataIndex: "fromTime"
+      title: "Số tiền",
+      key: "discountAmount",
+      dataIndex: "discountAmount",
+      render: (value: number) => (value ? formatMoney(value) : ""),
+      align: "right"
     },
     {
-      title: "Thời gian kết thúc",
-      key: "toTime",
-      dataIndex: "toTime"
+      title: "Tỷ lệ",
+      key: "discountRate",
+      dataIndex: "discountRate",
+      render: (value: number) => (value ? `${formatNumber(value)}%` : ""),
+      align: "right"
     },
     {
       title: "",
@@ -139,24 +142,24 @@ const ShowTimeSlotsPage = () => {
               title: <Link to="/">Trang chủ</Link>
             },
             {
-              title: "Quản lý danh sách"
+              title: "Kế hoạch chiếu phim"
             },
             {
-              title: "Danh sách khung giờ chiếu"
+              title: "Thiết lập giảm giá"
             }
           ]}
         />
 
         <div className="flex gap-2 items-center">
           <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm khung giờ chiếu
+            Thêm giảm giá
           </Button>
         </div>
       </div>
 
       <Table
         rowKey={(record) => record.id}
-        dataSource={showTimeSlots?.data || []}
+        dataSource={discounts?.data || []}
         columns={columns}
         bordered
         size="small"
@@ -165,7 +168,7 @@ const ShowTimeSlotsPage = () => {
         pagination={{
           current,
           onChange,
-          total: showTimeSlots?.total || 0,
+          total: discounts?.total || 0,
           size: "middle",
           pageSize,
           pageSizeOptions: [20, 50, 100],
@@ -176,22 +179,22 @@ const ShowTimeSlotsPage = () => {
       />
 
       {dialogOpen && (
-        <ShowTimeSlotDialog
+        <DiscountSettingsDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingShowTimeSlot={selectedShowTimeSlot}
+          editingDiscount={selectedDiscount}
         />
       )}
-      {selectedShowTimeSlot && deleteDialogOpen && (
-        <DeleteShowTimeSlotDialog
+      {selectedDiscount && deleteDialogOpen && (
+        <DeleteDiscountDialog
           open={deleteDialogOpen}
           onOpenChange={handleDeleteDialogClose}
-          id={selectedShowTimeSlot.id}
-          name={selectedShowTimeSlot.name}
+          id={selectedDiscount.id}
+          name={selectedDiscount.discountName}
         />
       )}
     </div>
   );
 };
 
-export default ShowTimeSlotsPage;
+export default DiscountSettingsPage;

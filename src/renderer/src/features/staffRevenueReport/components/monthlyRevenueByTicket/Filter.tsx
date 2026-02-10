@@ -1,0 +1,115 @@
+"use client";
+
+// import { InfiniteSelect } from "@/components/infinite-select";
+// import { useInfiniteUsers } from "@/hooks/use-infinite-query";
+import Icon from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button, DatePicker, Form, Modal } from "antd";
+import dayjs from "dayjs";
+import { FilterIcon } from "lucide-react";
+import { startTransition, useState } from "react";
+import { ValuesProps } from ".";
+// import { useDebounce } from "@renderer/hooks/useDebounce";
+
+interface FilterProps {
+  onSearch: (values: ValuesProps) => void;
+  filterValues: ValuesProps;
+}
+
+const Filter = ({ onSearch, filterValues }: FilterProps) => {
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
+  const [open, setOpen] = useState(false);
+  // const [searchText, setSearchText] = useState<string>("");
+  // const debouncedSearchText = useDebounce(searchText, 500);
+  // const usersQuery = useInfiniteUsers(debouncedSearchText);
+
+  const onClear = () => {
+    setOpen(false);
+    startTransition(() => {
+      form.resetFields();
+      // setSearchText("");
+      queryClient.removeQueries({
+        queryKey: ["users", "infinite"]
+      });
+      onSearch({
+        fromDate: dayjs().startOf("month").format()
+      });
+    });
+  };
+
+  const isEmptyFilter = Object.keys(filterValues).length === 0;
+
+  return (
+    <>
+      <div className="relative">
+        <Button
+          variant="outlined"
+          icon={<Icon component={FilterIcon} />}
+          onClick={() => setOpen(true)}
+        >
+          Bộ lọc
+        </Button>
+        {!isEmptyFilter && (
+          <div className="absolute size-3 -right-1 -top-1">
+            <span className="relative flex size-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex size-3 rounded-full bg-primary"></span>
+            </span>
+          </div>
+        )}
+      </div>
+      <Modal
+        title="Bộ lọc"
+        open={open}
+        okText="Tìm kiếm"
+        okButtonProps={{ htmlType: "submit", autoFocus: true }}
+        onCancel={() => setOpen(false)}
+        modalRender={(dom) => (
+          <Form
+            layout="vertical"
+            form={form}
+            name="filter-form"
+            onFinish={(values) => {
+              setOpen(false);
+              onSearch(values);
+            }}
+          >
+            {dom}
+          </Form>
+        )}
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <>
+            <CancelBtn />
+            <Button onClick={onClear}>Xóa bộ lọc</Button>
+            <OkBtn />
+          </>
+        )}
+      >
+        {/* <Form.Item name="userId" label="Nhân viên">
+          <InfiniteSelect<UserProps>
+            query={usersQuery}
+            getLabel={(user) => user.customerFirstName}
+            getValue={(user) => user.id}
+            placeholder="Chọn nhân viên"
+            showSearch={{
+              onSearch: (value) => setSearchText(value)
+            }}
+            allowClear
+            onClear={() => {
+              setSearchText("");
+              queryClient.removeQueries({
+                queryKey: ["users", "infinite"]
+              });
+            }}
+          />
+        </Form.Item> */}
+        <Form.Item name="fromDate" label="Khoảng thời gian">
+          <DatePicker picker="month" className="w-full" format="MM/YYYY" />
+        </Form.Item>
+      </Modal>
+    </>
+  );
+};
+
+export default Filter;

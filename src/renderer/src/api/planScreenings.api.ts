@@ -6,6 +6,8 @@ export interface PlanScreeningsQuery {
   current?: number;
   pageSize?: number;
   planCinemaId?: number;
+  fromDate?: string;
+  toDate?: string;
 }
 
 export interface PlanScreeningDto {
@@ -17,11 +19,12 @@ export interface PlanScreeningDto {
   priceOfPosition2: string;
   priceOfPosition3: string;
   priceOfPosition4: string;
+  isOnlineSelling?: number;
 }
 
 export const planScreeningsApi = {
   getAll: async (params: PlanScreeningsQuery): Promise<ApiResponse<PlanScreeningDetailProps>> => {
-    const { current, pageSize, planCinemaId } = params;
+    const { current, pageSize, planCinemaId, fromDate, toDate } = params;
 
     const filter: Record<string, unknown> = {};
 
@@ -29,10 +32,14 @@ export const planScreeningsApi = {
       filter.planCinemaId = planCinemaId;
     }
 
+    if (fromDate && toDate) {
+      filter.projectDate = { between: [fromDate, toDate] };
+    }
+
     const queryObject: Record<string, unknown> = {
       current,
       pageSize,
-      sort: "createdOnUtc.desc"
+      sort: "projectDate.desc"
     };
 
     if (Object.keys(filter).length > 0) {

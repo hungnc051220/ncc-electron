@@ -5,7 +5,9 @@ import queryString from "query-string";
 export interface PlanCinemasQuery {
   current: number;
   pageSize: number;
-  activeKey: string | string[];
+  activeKey?: string | string[];
+  fromDate?: string;
+  toDate?: string;
 }
 
 export interface PlanCinemaDto {
@@ -24,12 +26,16 @@ export interface ApproveRejectPlanCinemaDto {
 
 export const planCinemasApi = {
   getAll: async (params: PlanCinemasQuery): Promise<ApiResponse<PlanCinemaProps>> => {
-    const { current, pageSize, activeKey } = params;
+    const { current, pageSize, activeKey, fromDate, toDate } = params;
 
     const filter: Record<string, unknown> = {};
 
     if (activeKey && activeKey !== "0") {
       filter.status = activeKey;
+    }
+
+    if (fromDate && toDate) {
+      filter.createdOnUtc = { between: [fromDate, toDate] };
     }
 
     const queryObject: Record<string, unknown> = {
@@ -42,7 +48,7 @@ export const planCinemasApi = {
       queryObject.filter = JSON.stringify(filter);
     }
 
-    if (activeKey === "0") {
+    if (activeKey && activeKey === "0") {
       queryObject.filter = JSON.stringify({ or: [{ status: { in: [0, 2] } }, { status: null }] });
     }
 

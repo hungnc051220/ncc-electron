@@ -10,6 +10,7 @@ import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import CancellationReasonDialog from "./components/CancellationReasonDialog";
 import DeleteCancellationReasonDialog from "./components/DeleteCancellationReasonDialog";
+import { Link } from "react-router";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
@@ -120,8 +121,7 @@ const CancellationReasonsPage = () => {
         <Breadcrumb
           items={[
             {
-              title: "Trang chủ",
-              href: "/"
+              title: <Link to="/">Trang chủ</Link>
             },
             {
               title: "Quản lý danh sách"
