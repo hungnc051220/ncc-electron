@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, PlanScreeningDetailProps } from "@renderer/types";
+import { ApiResponse, PlanScreeningDetailProps, PlanScreeningProps } from "@renderer/types";
 import queryString from "query-string";
 
 export interface PlanScreeningsQuery {
@@ -59,7 +59,7 @@ export const planScreeningsApi = {
     const res = await api.get(`/api/pos/plan-screenings/${id}`);
     return res.data;
   },
-  getByDate: async (date: string): Promise<PlanScreeningDetailProps> => {
+  getByDate: async (date: string): Promise<PlanScreeningProps[]> => {
     const res = await api.get(`/api/pos/plan-screenings/get-by-date?date=${date}`);
     return res.data;
   },

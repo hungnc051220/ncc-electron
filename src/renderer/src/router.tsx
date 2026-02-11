@@ -26,6 +26,8 @@ import StaffRevenueReportPage from "./features/staffRevenueReport/StaffRevenueRe
 import MonthlyReportPage from "./features/monthlyReport/MonthlyReportPage";
 import QuarterlyReportPage from "./features/quarterlyReport/QuarterlyReportPage";
 import TicketSalesRevenuePage from "./features/ticketSalesRevenue/TicketSalesRevenuePage";
+import ShowtimesPage from "./features/showtimes/ShowtimesPage";
+import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
 
 export const router = createHashRouter([
   {
@@ -136,6 +138,14 @@ export const router = createHashRouter([
             element: <TicketSalesRevenuePage />
           }
         ]
+      },
+      {
+        path: "/showtimes",
+        element: <ShowtimesPage />
+      },
+      {
+        path: "/plan-screening/:id",
+        element: <PlanScreeningPage />
       }
     ]
   },
