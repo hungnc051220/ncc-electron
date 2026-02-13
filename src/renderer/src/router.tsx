@@ -30,6 +30,8 @@ import ShowtimesPage from "./features/showtimes/ShowtimesPage";
 import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
 import ContractTicketSalesPage from "./features/contractTicketSales/ContractTicketSalesPage";
 import ContractTicketSalesDetailPage from "./features/contractTicketSales/ContractTicketSalesDetailPage";
+import InvitationTicketsPage from "./features/invitationTickets/InvitationTicketsPage";
+import InvitationTicketsDetailPage from "./features/invitationTickets/InvitationTicketsDetailPage";
 
 export const router = createHashRouter([
   {
@@ -142,6 +144,10 @@ export const router = createHashRouter([
           {
             path: "/contract-ticket-sales",
             element: <ContractTicketSalesPage />
+          },
+          {
+            path: "/invitation-tickets",
+            element: <InvitationTicketsPage />
           }
         ]
       },
@@ -156,6 +162,10 @@ export const router = createHashRouter([
       {
         path: "/contract-ticket-sales/:id",
         element: <ContractTicketSalesDetailPage />
+      },
+      {
+        path: "/invitation-tickets/create",
+        element: <InvitationTicketsDetailPage />
       }
     ]
   },
