@@ -1,9 +1,12 @@
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
+import type { UploadRequestOption } from "@rc-component/upload/lib/interface";
 import { useCreateFilm } from "@renderer/hooks/films/useCreateFilm";
 import { useUpdateFilm } from "@renderer/hooks/films/useUpdateFilm";
 import { useFilmCategories } from "@renderer/hooks/useFilmCategories";
+import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { formatter } from "@renderer/lib/utils";
 import {
+  ApiError,
   CountryProps,
   FilmProps,
   FilmStatusProps,
@@ -24,9 +27,10 @@ import {
   Select,
   Upload
 } from "antd";
+import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect } from "react";
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
@@ -91,15 +95,44 @@ const FilmDialog = ({
 }: FilmDialogProps) => {
   const [form] = Form.useForm();
   const isEdit = !!editingFilm;
-  const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string>();
 
   const { data: categories } = useFilmCategories({ current: 1, pageSize: 100 });
 
   const createFilm = useCreateFilm();
   const updateFilm = useUpdateFilm();
+  const uploadImage = useUploadImage();
+
+  const imageUrl = form.getFieldValue("imageUrl");
+  const sellOnline = Form.useWatch("sellOnline", form);
+
+  useEffect(() => {
+    if (!sellOnline) {
+      form.setFieldValue("sellOnlineBefore", 0);
+    }
+  }, [form, sellOnline]);
 
   const onOk = () => form.submit();
+
+  const handleUpload = async (options: UploadRequestOption) => {
+    const { file, onSuccess, onError } = options;
+
+    try {
+      if (!(file instanceof File)) {
+        throw new Error("File không hợp lệ");
+      }
+      const url = await uploadImage.mutateAsync(file);
+      onSuccess?.(url);
+      form.setFieldValue("imageUrl", url);
+    } catch (error: unknown) {
+      let msg = "Tải ảnh lên thất bại";
+
+      if (axios.isAxiosError<ApiError>(error)) {
+        msg = error.response?.data?.message ?? msg;
+      }
+      message.error(msg);
+      onError?.(error as Error);
+    }
+  };
 
   const getInitialValues = (): FieldValues | undefined => {
     if (!editingFilm) {
@@ -156,10 +189,11 @@ const FilmDialog = ({
     };
   };
 
-  if (editingFilm && !imageUrl && editingFilm.imageUrl) {
-    setImageUrl(editingFilm.imageUrl);
-    form.setFieldValue("imageUrl", editingFilm.imageUrl);
-  }
+  useEffect(() => {
+    if (editingFilm?.imageUrl) {
+      form.setFieldValue("imageUrl", editingFilm.imageUrl);
+    }
+  }, [editingFilm, form]);
 
   const onFinish: FormProps<FieldValues>["onFinish"] = (values: FieldValues) => {
     if (!isEdit) {
@@ -195,40 +229,22 @@ const FilmDialog = ({
     const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
     if (!isJpgOrPng) {
       message.error("Chỉ có thể tải ảnh dạng JPG/PNG!");
+      return Upload.LIST_IGNORE;
     }
-    const isLt2M = file.size / 1024 / 1024 < 5;
-    if (!isLt2M) {
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
       message.error("Ảnh phải nhỏ hơn 5MB!");
+      return Upload.LIST_IGNORE;
     }
-    return isJpgOrPng && isLt2M;
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const normFile = (e: any) => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e?.fileList;
+    return true;
   };
 
   const uploadButton = (
     <button className="border-none bg-none" type="button">
-      {loading ? <LoadingOutlined /> : <PlusOutlined />}
-      <div className="mt-2 text-gray-500">{loading ? "Đang tải" : "Chọn ảnh"}</div>
+      {uploadImage.isPending ? <LoadingOutlined /> : <PlusOutlined />}
+      <div className="mt-2 text-gray-500">{uploadImage.isPending ? "Đang tải" : "Chọn ảnh"}</div>
     </button>
   );
-
-  const handleChange: UploadProps["onChange"] = (info) => {
-    if (info.file.status === "uploading") {
-      setLoading(true);
-      return;
-    }
-    if (info.file.status === "done") {
-      form.setFieldValue("imageUrl", info.file.response.imageUrl);
-      setImageUrl(info.file.response.imageUrl);
-      setLoading(false);
-    }
-  };
 
   return (
     <Modal
@@ -237,7 +253,8 @@ const FilmDialog = ({
       onOk={onOk}
       onCancel={() => onOpenChange(false)}
       okButtonProps={{
-        loading: createFilm.isPending || updateFilm.isPending
+        loading: createFilm.isPending || updateFilm.isPending,
+        disabled: uploadImage.isPending
       }}
       cancelButtonProps={{
         disabled: createFilm.isPending || updateFilm.isPending
@@ -346,7 +363,7 @@ const FilmDialog = ({
                 min={0}
                 placeholder="Nhập giá cộng thêm"
                 formatter={formatter}
-                parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as unknown as number}
+                parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, "") || 0)}
                 suffix="đ"
               />
             </Form.Item>
@@ -379,27 +396,21 @@ const FilmDialog = ({
 
             <Form.Item<FieldValues> name="imageUrl" hidden />
 
-            <Form.Item
-              label="Ảnh"
-              valuePropName="fileList"
-              getValueFromEvent={normFile}
-              className="col-span-2"
-            >
+            <Form.Item label="Ảnh" className="col-span-2">
               <Upload
-                listType="picture-card"
                 showUploadList={false}
-                maxCount={1}
-                action="/api/upload-image"
+                accept="image/png,image/jpeg"
+                listType="picture-card"
+                customRequest={handleUpload}
                 beforeUpload={beforeUpload}
-                onChange={handleChange}
               >
-                {imageUrl && !loading ? (
+                {imageUrl ? (
                   <Image
-                    src={imageUrl}
-                    alt="avatar"
                     width={200}
-                    height={200}
-                    className="w-full rounded-md p-1 object-cover object-center"
+                    alt="film image"
+                    src={imageUrl}
+                    className="rounded-lg p-1"
+                    preview={false}
                   />
                 ) : (
                   uploadButton
@@ -436,9 +447,6 @@ const FilmDialog = ({
                 <Form.Item dependencies={["sellOnline"]} noStyle>
                   {({ getFieldValue }) => {
                     const enabled = getFieldValue("sellOnline");
-                    if (!enabled) {
-                      form.setFieldValue("sellOnlineBefore", 0);
-                    }
                     return (
                       <Form.Item<FieldValues> name="sellOnlineBefore" noStyle>
                         <InputNumber

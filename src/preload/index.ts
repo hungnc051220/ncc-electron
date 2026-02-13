@@ -1,12 +1,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
-
-export interface UpdateInfo {
-  version: string;
-}
+import { PreloadAPI } from "./api.types";
 
 // Custom APIs for renderer
-const api = {
+const api: PreloadAPI = {
   openCustomerScreen: (id: number) => ipcRenderer.send("open-customer-window", id),
   closeCustomerScreen: () => ipcRenderer.send("close-customer-window"),
   sendSeatUpdate: (data) => ipcRenderer.send("seat-update", data),
@@ -42,13 +39,11 @@ const api = {
     return new Uint8Array(buffer);
   },
   getVersion: (): Promise<string> => ipcRenderer.invoke("app:get-version"),
-  checkUpdate: (): Promise<UpdateInfo | null> => ipcRenderer.invoke("app:check-update"),
+  checkUpdate: () => ipcRenderer.invoke("app:check-update"),
   startDownload: (): Promise<void> => ipcRenderer.invoke("app:start-download"),
   install: (): Promise<void> => ipcRenderer.invoke("app:install-update"),
-  onAvailable: (cb: (info: UpdateInfo) => void) =>
-    ipcRenderer.on("update:available", (_, info) => cb(info)),
-  onProgress: (cb: (percent: number) => void) =>
-    ipcRenderer.on("update:progress", (_, percent) => cb(percent)),
+  onAvailable: (cb) => ipcRenderer.on("update:available", (_, info) => cb(info)),
+  onProgress: (cb) => ipcRenderer.on("update:progress", (_, percent) => cb(percent)),
   onReady: (cb: () => void) => ipcRenderer.on("update:ready", cb),
   onError: (cb: (msg: string) => void) => ipcRenderer.on("update:error", (_, msg) => cb(msg))
 };

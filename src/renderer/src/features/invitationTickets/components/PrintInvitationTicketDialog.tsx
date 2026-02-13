@@ -155,7 +155,7 @@ const PrintInvitationTicketDialog = ({
 
     startTransition(async () => {
       try {
-        const outputPath = await window.api?.exportTicket({
+        const outputPath = await window.api.exportTicket({
           filmName: selectedItem.film?.filmName,
           filmNameEn: selectedItem.film?.filmNameEn,
           duration: selectedItem.film?.duration,
