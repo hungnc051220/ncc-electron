@@ -1,5 +1,3 @@
-"use client";
-
 import { useReportVoucherUsage } from "@renderer/hooks/reports/useReportVoucherUsage";
 import { filterEmptyValues } from "@renderer/lib/utils";
 import { VoucherUsageProps } from "@renderer/types";

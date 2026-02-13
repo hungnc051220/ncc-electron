@@ -1,10 +1,9 @@
-"use client";
-
 import { useCreateManufacturer } from "@renderer/hooks/manufacturers/useCreateManufacturer";
 import { useUpdateManufacturer } from "@renderer/hooks/manufacturers/useUpdateManufacturer";
-import { ManufacturerProps } from "@renderer/types";
+import { ApiError, ManufacturerProps } from "@renderer/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal } from "antd";
+import axios from "axios";
 
 type FieldType = {
   name: string;
@@ -68,8 +67,14 @@ const ManufacturerDialog = ({
           message.success("Thêm hãng phim thành công");
           onCancel();
         },
-        onError: (error) => {
-          message.error(error?.message || "Có lỗi bất thường xảy ra");
+        onError: (error: unknown) => {
+          let msg = "Thêm hãng phim thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
         }
       });
     } else {
@@ -80,8 +85,14 @@ const ManufacturerDialog = ({
             message.success("Cập nhật hãng phim thành công");
             onCancel();
           },
-          onError: (error) => {
-            message.error(error?.message || "Có lỗi bất thường xảy ra");
+          onError: (error: unknown) => {
+            let msg = "Cập nhật hãng phim thất bại";
+
+            if (axios.isAxiosError<ApiError>(error)) {
+              msg = error.response?.data?.message ?? msg;
+            }
+
+            message.error(msg);
           }
         }
       );

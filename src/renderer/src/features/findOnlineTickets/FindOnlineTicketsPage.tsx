@@ -1,5 +1,3 @@
-"use client";
-
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Table } from "antd";
 import { useMemo, useState } from "react";

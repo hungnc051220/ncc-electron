@@ -1,11 +1,10 @@
-"use client";
-
 import { useCreateUser } from "@renderer/hooks/users/useCreateUser";
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select } from "antd";
-import { CustomerRoleProps, ManufacturerProps, UserProps } from "../../../types";
+import { ApiError, CustomerRoleProps, ManufacturerProps, UserProps } from "../../../types";
 import { UserDto } from "@renderer/api/users.api";
+import axios from "axios";
 interface UserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,8 +53,14 @@ const UserDialog = ({
             message.success("Thêm người dùng thành công");
             onCancel();
           },
-          onError: (error) => {
-            message.error(error?.message || "Có lỗi bất thường xảy ra");
+          onError: (error: unknown) => {
+            let msg = "Thêm người dùng thất bại";
+
+            if (axios.isAxiosError<ApiError>(error)) {
+              msg = error.response?.data?.message ?? msg;
+            }
+
+            message.error(msg);
           }
         }
       );
@@ -67,8 +72,14 @@ const UserDialog = ({
             message.success("Cập nhật người dùng thành công");
             onCancel();
           },
-          onError: (error) => {
-            message.error(error?.message || "Có lỗi bất thường xảy ra");
+          onError: (error: unknown) => {
+            let msg = "Cập nhật người dùng thất bại";
+
+            if (axios.isAxiosError<ApiError>(error)) {
+              msg = error.response?.data?.message ?? msg;
+            }
+
+            message.error(msg);
           }
         }
       );

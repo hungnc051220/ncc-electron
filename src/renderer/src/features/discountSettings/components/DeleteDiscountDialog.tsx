@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteDiscount } from "@renderer/hooks/discounts/useDeleteDiscount";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeleteDiscountDialogProps {
   open: boolean;
@@ -19,8 +19,14 @@ const DeleteDiscountDialog = ({ open, onOpenChange, id, name }: DeleteDiscountDi
         message.success("Xóa giảm giá thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa giảm giá thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

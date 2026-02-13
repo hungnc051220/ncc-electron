@@ -1,5 +1,3 @@
-"use client";
-
 import { useReportMonthly } from "@renderer/hooks/reports/useReportMonthly";
 import { Film, Manufacturer, MonthlyReportPlanProps } from "@renderer/types";
 import type { TabsProps } from "antd";

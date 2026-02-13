@@ -6,6 +6,10 @@ import { useAuthStore } from "../store/auth.store";
 import logo from "../assets/images/logo-text.png";
 import { useQueryClient } from "@tanstack/react-query";
 import { generalDataApi } from "@renderer/api/generalData.api";
+import { usersKeys } from "@renderer/hooks/users/keys";
+import { usersApi } from "@renderer/api/users.api";
+import { jwtDecode } from "jwt-decode";
+import { JwtPayload } from "@renderer/types";
 
 type LoginForm = {
   username: string;
@@ -27,7 +31,13 @@ export default function Login() {
 
   const onFinish = (values: LoginForm) => {
     loginMutation.mutate(values, {
-      onSuccess: async () => {
+      onSuccess: async (data) => {
+        const decoded = jwtDecode<JwtPayload>(data.access_token);
+        const userId = decoded?.user_id;
+        await queryClient.prefetchQuery({
+          queryKey: usersKeys.getDetail(Number(userId)),
+          queryFn: () => usersApi.getDetail(Number(userId))
+        });
         await queryClient.prefetchQuery({
           queryKey: ["general-data"],
           queryFn: generalDataApi.get

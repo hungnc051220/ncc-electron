@@ -1,5 +1,3 @@
-"use client";
-
 import { formatMoney } from "@renderer/lib/utils";
 import { QrCodeResponseProps } from "@renderer/types";
 import { Modal } from "antd";
@@ -7,6 +5,7 @@ import dayjs from "dayjs";
 import { Hourglass } from "lucide-react";
 import QRCode from "react-qr-code";
 import Countdown from "./Countdown";
+import { useEffect, useState } from "react";
 
 interface QrCodeDialogProps {
   open: boolean;
@@ -17,9 +16,11 @@ interface QrCodeDialogProps {
   projectTime: string;
   dataQr: QrCodeResponseProps;
   selectedSeats: string;
+  orderId: number;
   orderTotal?: number;
   orderDiscount?: number;
   orderCreatedAt?: string;
+  onCancelOrder: (orderIds: number[]) => void;
 }
 
 const QrCodeDialog = ({
@@ -31,36 +32,53 @@ const QrCodeDialog = ({
   projectTime,
   dataQr,
   selectedSeats,
+  orderId,
   orderTotal,
   orderDiscount,
-  orderCreatedAt
+  orderCreatedAt,
+  onCancelOrder
 }: QrCodeDialogProps) => {
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    if (expired && open) {
+      onCancelOrder([orderId]);
+      onOpenChange(false);
+    }
+  }, [expired, onCancelOrder, onOpenChange, orderId, open]);
+
   return (
     <Modal
       title="Thanh toán QR Code"
       open={open}
-      onCancel={() => onOpenChange(false)}
+      onCancel={() => {
+        onCancelOrder([orderId]);
+        onOpenChange(false);
+      }}
       width={800}
+      centered
       footer={() => (
-        <div className="flex w-full">
+        <div className="flex w-full gap-6">
           <div className="w-3/5 text-sm">
             <p className="text-trunks">
               Tổng tiền vé:{" "}
-              <span className="font-bold text-black">{formatMoney(orderTotal || 0)}</span>
+              <span className="font-bold text-black">
+                {formatMoney((orderTotal || 0) + (orderDiscount || 0))}
+              </span>
             </p>
             <p className="text-trunks mt-1">
               Giảm giá:{" "}
               <span className="font-bold text-black">{formatMoney(orderDiscount || 0)}</span>
             </p>
           </div>
-          <div className="w-2/5 border-l pl-4">
+          <div className="w-2/5 pl-4">
             <p className="text-sm text-trunks">Tổng thanh toán</p>
             <p className="text-chichi font-bold text-xl mt-1">{formatMoney(orderTotal || 0)}</p>
           </div>
         </div>
       )}
     >
-      <div className="px-6 py-9">
+      <div className="py-2">
         <div className="flex gap-6">
           <div className="w-3/5">
             <div className="bg-goku rounded-lg p-4">
@@ -89,12 +107,11 @@ const QrCodeDialog = ({
             </div>
 
             <div className="bg-krillin/10 rounded-lg p-4 mt-10 flex items-center justify-between">
-              <div>
-                <p className="font-bold text-sm">
-                  Bạn còn <Countdown orderCreatedAt={orderCreatedAt} /> để thanh toán
-                </p>
-                <p className="mt-1 text-trunks text-sm">Đang chờ thanh toán ...</p>
-              </div>
+              <Countdown
+                orderCreatedAt={orderCreatedAt}
+                expired={expired}
+                setExpired={(value: boolean) => setExpired(value)}
+              />
               <Hourglass size={36} className="text-krillin" />
             </div>
           </div>

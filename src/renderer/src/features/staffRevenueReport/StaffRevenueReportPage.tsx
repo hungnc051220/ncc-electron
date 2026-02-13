@@ -1,5 +1,3 @@
-"use client";
-
 import type { TabsProps } from "antd";
 import { Breadcrumb, Tabs } from "antd";
 import RevenueByFilm from "./components/revenueByFilm";

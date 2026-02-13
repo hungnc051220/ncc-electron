@@ -1,5 +1,3 @@
-"use client";
-
 import { FilterOutlined } from "@ant-design/icons";
 import { usersApi } from "@renderer/api/users.api";
 import { useDebounce } from "@renderer/hooks/useDebounce";

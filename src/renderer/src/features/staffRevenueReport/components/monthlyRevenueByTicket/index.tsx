@@ -1,5 +1,3 @@
-"use client";
-
 import { useReportRevenueDayInMonth } from "@renderer/hooks/reports/useReportRevenueDayInMonth";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { RevenuesByDayProps } from "@renderer/types";

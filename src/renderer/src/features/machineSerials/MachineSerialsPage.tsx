@@ -1,5 +1,3 @@
-"use client";
-
 import { useMachineSerials } from "@renderer/hooks/useMachineSerials";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { MachineSerialProps } from "@renderer/types";

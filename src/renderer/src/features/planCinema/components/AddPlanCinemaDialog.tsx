@@ -1,9 +1,9 @@
-"use client";
-
 import Icon from "@ant-design/icons";
 import { useCreatePlanCinema } from "@renderer/hooks/planCinemas/useCreatePlanCinema";
+import { ApiError } from "@renderer/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message, Modal } from "antd";
+import axios from "axios";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -35,8 +35,14 @@ const AddPlanCinemaDialog = () => {
         form.resetFields();
         onCancel();
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Tạo kế hoạch chiếu phim thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

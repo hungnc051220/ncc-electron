@@ -1,8 +1,7 @@
-"use client";
-
 import { useDeletePlanCinema } from "@renderer/hooks/planCinemas/useDeletePlanCinema";
-import { PlanCinemaProps } from "@renderer/types";
+import { ApiError, PlanCinemaProps } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeletePlanCinemaDialogProps {
   open: boolean;
@@ -28,8 +27,14 @@ const DeletePlanCinemaDialog = ({
         setSelectedPlan(undefined);
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa kế hoạch chiếu phim thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

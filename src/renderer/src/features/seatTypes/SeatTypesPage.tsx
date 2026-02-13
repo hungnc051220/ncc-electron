@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { formatNumber } from "@renderer/lib/utils";

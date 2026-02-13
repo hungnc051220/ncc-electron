@@ -1,5 +1,3 @@
-"use client";
-
 import { useOrders } from "@renderer/hooks/orders/useUsers";
 import { formatNumber } from "@renderer/lib/utils";
 import { OrderDetailProps } from "@renderer/types";

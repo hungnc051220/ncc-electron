@@ -1,7 +1,7 @@
-"use client";
-
 import { useUpdatePlanCinema } from "@renderer/hooks/planCinemas/useUpdatePlanCinema";
+import { ApiError } from "@renderer/types";
 import { Button, message } from "antd";
+import axios from "axios";
 
 const SendForApproveActions = ({
   planCinemaId,
@@ -20,8 +20,14 @@ const SendForApproveActions = ({
           clearSelectedPlan();
           message.success("Cập nhật trạng thái kế hoạch thành công");
         },
-        onError: (error) => {
-          message.error(error?.message || "Có lỗi bất thường xảy ra");
+        onError: (error: unknown) => {
+          let msg = "Cập nhật trạng thái kế hoạch thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
         }
       }
     );

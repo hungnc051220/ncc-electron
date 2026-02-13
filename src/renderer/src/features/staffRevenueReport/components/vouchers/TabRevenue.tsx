@@ -1,5 +1,3 @@
-"use client";
-
 import { formatNumber } from "@renderer/lib/utils";
 import { VoucherUsageProps } from "@renderer/types";
 import type { TableProps } from "antd";

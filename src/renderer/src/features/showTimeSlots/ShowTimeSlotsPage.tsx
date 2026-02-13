@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useShowTimeSlots } from "@renderer/hooks/showTimeSlots/useShowTimeSlots";
 import { formatNumber } from "@renderer/lib/utils";

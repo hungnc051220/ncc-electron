@@ -1,5 +1,3 @@
-"use client";
-
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
 import { useCreateFilm } from "@renderer/hooks/films/useCreateFilm";
 import { useUpdateFilm } from "@renderer/hooks/films/useUpdateFilm";

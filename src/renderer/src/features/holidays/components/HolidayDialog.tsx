@@ -1,5 +1,3 @@
-"use client";
-
 import { useCreateHoliday } from "@renderer/hooks/holidays/useCreateHoliday";
 import type { FormProps } from "antd";
 import { Checkbox, Col, DatePicker, Form, message, Modal, Row } from "antd";

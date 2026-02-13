@@ -5,7 +5,8 @@ import { Button, message, Table } from "antd";
 import dayjs from "dayjs";
 import { useState } from "react";
 import AddSchedulingDialog from "./AddSchedulingDialog";
-import { PlanScreeningDetailProps } from "@renderer/types";
+import { ApiError, PlanScreeningDetailProps } from "@renderer/types";
+import axios from "axios";
 
 interface TabSchedulingProps {
   planCinemaId?: number;
@@ -24,8 +25,14 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
         setSelectedRowKeys([]);
         message.success("Xóa ca chiếu trong kế hoạch thành công");
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa ca chiếu vào kế hoạch thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

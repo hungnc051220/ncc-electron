@@ -1,5 +1,3 @@
-"use client";
-
 import { FilterOutlined } from "@ant-design/icons";
 import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";

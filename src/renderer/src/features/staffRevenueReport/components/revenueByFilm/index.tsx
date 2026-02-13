@@ -1,5 +1,3 @@
-"use client";
-
 import { useReportRevenueByFilm } from "@renderer/hooks/reports/useReportRevenueByFilm";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import type { TabsProps } from "antd";

@@ -8,10 +8,14 @@ import secondaryIcon1 from "@renderer/assets/icons/drag_indicator.svg";
 import secondaryIcon2 from "@renderer/assets/icons/insert_chart.svg";
 import secondaryIcon3 from "@renderer/assets/icons/summarize.svg";
 import secondaryIcon4 from "@renderer/assets/icons/password.svg";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { useAuthStore } from "@renderer/store/auth.store";
 
 const Dashboard = () => {
-  const date = dayjs("2026-02-07");
+  const userId = useAuthStore((s) => s.userId);
+  const { data: user } = useUserDetail(userId!);
 
+  const date = dayjs();
   const dateFormat = `${date.format("dddd")}, ngày ${date.format("D [tháng] M [năm] YYYY")}`;
 
   return (
@@ -20,7 +24,7 @@ const Dashboard = () => {
         <div>
           <div className="flex gap-4 items-center">
             <h2 className="font-bold text-2xl xl:text-3xl">
-              Xin chào, <span className="text-primary">Nguyễn Cảnh Hưng</span>
+              Xin chào, <span className="text-primary">{user?.fullname}</span>
             </h2>
             {/* <Logout /> */}
           </div>

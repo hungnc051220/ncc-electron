@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -22,7 +20,7 @@ const ExportRevenueExcelButton = ({
   treeData,
   allTimes,
   fileName = "bao-cao-suat-chieu-theo-phong.xlsx",
-  fromDate,
+  fromDate
 }: Props) => {
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
@@ -74,12 +72,7 @@ const ExportRevenueExcelButton = ({
     // ---- Total ----
     const totalStart = col;
 
-    ws.mergeCells(
-      headerStartRow,
-      totalStart,
-      headerStartRow + 1,
-      totalStart + 3,
-    );
+    ws.mergeCells(headerStartRow, totalStart, headerStartRow + 1, totalStart + 3);
     ws.getCell(headerStartRow, totalStart).value = "Tổng";
 
     ws.getCell(headerStartRow + 2, totalStart).value = "Vé V";
@@ -94,12 +87,12 @@ const ExportRevenueExcelButton = ({
         cell.alignment = {
           vertical: "middle",
           horizontal: cn === 1 ? "left" : "center",
-          wrapText: true,
+          wrapText: true
         };
         cell.fill = {
           type: "pattern",
           pattern: "solid",
-          fgColor: { argb: "FFF2F2F2" },
+          fgColor: { argb: "FFF2F2F2" }
         };
       });
     }
@@ -137,7 +130,7 @@ const ExportRevenueExcelButton = ({
         excelRow.fill = {
           type: "pattern",
           pattern: "solid",
-          fgColor: { argb: "FFEFEFEF" },
+          fgColor: { argb: "FFEFEFEF" }
         };
       } else if (level === 1) {
         excelRow.font = { bold: true };
@@ -157,7 +150,7 @@ const ExportRevenueExcelButton = ({
           top: { style: "thin" },
           left: { style: "thin" },
           bottom: { style: "thin" },
-          right: { style: "thin" },
+          right: { style: "thin" }
         };
 
         if (cn > 1 && typeof cell.value === "number") {
@@ -182,8 +175,8 @@ const ExportRevenueExcelButton = ({
       {
         state: "frozen",
         ySplit: headerStartRow + 3,
-        xSplit: 1,
-      },
+        xSplit: 1
+      }
     ];
 
     const buf = await wb.xlsx.writeBuffer();

@@ -1,5 +1,3 @@
-"use client";
-
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { cn } from "@renderer/lib/utils";
 import { PlanCinemaProps } from "@renderer/types";

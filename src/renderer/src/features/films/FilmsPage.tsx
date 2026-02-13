@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import type { TableProps, TabsProps, PaginationProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table, Tabs } from "antd";

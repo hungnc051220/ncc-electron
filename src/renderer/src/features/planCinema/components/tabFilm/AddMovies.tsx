@@ -1,11 +1,10 @@
-"use client";
-
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useCreatePlanFilm } from "@renderer/hooks/planFilms/useCreatePlanFilm";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { FilmProps, PlanFilmProps } from "@renderer/types";
+import { ApiError, FilmProps, PlanFilmProps } from "@renderer/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Button, Input, message, Modal, Table } from "antd";
+import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 
 type TableRowSelection<T extends object = object> = TableProps<T>["rowSelection"];
@@ -121,8 +120,14 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
         message.success("Thêm phim cho kế hoạch thành công");
         setOpen(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Thêm phim cho kế hoạch thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

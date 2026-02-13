@@ -1,5 +1,3 @@
-"use client";
-
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";

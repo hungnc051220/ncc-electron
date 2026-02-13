@@ -3,6 +3,8 @@ import { api } from "../api/client";
 import { useAuthStore } from "../store/auth.store";
 import { AxiosError } from "axios";
 import { message } from "antd";
+import { jwtDecode } from "jwt-decode";
+import { JwtPayload } from "@renderer/types";
 
 type ApiError = {
   message?: string;
@@ -24,7 +26,9 @@ export const useLogin = () => {
     },
 
     onSuccess: (data) => {
-      login(data.access_token);
+      const decoded = jwtDecode<JwtPayload>(data.access_token);
+      const userId = decoded?.user_id;
+      login(data.access_token, data.refresh_token, Number(userId));
     },
     onError: (err: AxiosError<ApiError>) => {
       message.error(err.response?.data?.message ?? "Đăng nhập thất bại");

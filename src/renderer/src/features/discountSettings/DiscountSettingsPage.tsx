@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";

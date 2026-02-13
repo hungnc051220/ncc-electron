@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRooms";
 import { formatNumber } from "@renderer/lib/utils";

@@ -1,5 +1,3 @@
-"use client";
-
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { U22UsageProps } from "@renderer/types";
 import type { TableProps } from "antd";

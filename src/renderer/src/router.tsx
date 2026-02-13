@@ -28,6 +28,8 @@ import QuarterlyReportPage from "./features/quarterlyReport/QuarterlyReportPage"
 import TicketSalesRevenuePage from "./features/ticketSalesRevenue/TicketSalesRevenuePage";
 import ShowtimesPage from "./features/showtimes/ShowtimesPage";
 import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
+import ContractTicketSalesPage from "./features/contractTicketSales/ContractTicketSalesPage";
+import ContractTicketSalesDetailPage from "./features/contractTicketSales/ContractTicketSalesDetailPage";
 
 export const router = createHashRouter([
   {
@@ -136,6 +138,10 @@ export const router = createHashRouter([
           {
             path: "/ticket-sales-revenue",
             element: <TicketSalesRevenuePage />
+          },
+          {
+            path: "/contract-ticket-sales",
+            element: <ContractTicketSalesPage />
           }
         ]
       },
@@ -146,6 +152,10 @@ export const router = createHashRouter([
       {
         path: "/plan-screening/:id",
         element: <PlanScreeningPage />
+      },
+      {
+        path: "/contract-ticket-sales/:id",
+        element: <ContractTicketSalesDetailPage />
       }
     ]
   },

@@ -1,5 +1,3 @@
-"use client";
-
 import { useCancelTickets } from "@renderer/hooks/useCancelTickets";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { CancellationTicketProps } from "@renderer/types";

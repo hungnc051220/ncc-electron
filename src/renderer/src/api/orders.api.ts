@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, OrderDetailProps } from "@renderer/types";
+import { ApiResponse, OrderDetailProps, QrCodeResponseProps } from "@renderer/types";
 import queryString from "query-string";
 
 export interface OrdersQuery {
@@ -18,17 +18,41 @@ export interface OrdersQuery {
 }
 
 export interface OrderDto {
-  id?: number;
-  roleIds: number[];
-  customerFirstName: string;
-  manufacturerId: number;
-  address?: string;
-  email: string;
-  mobile: string;
-  username: string;
-  password?: string;
-  confirmPassword?: string;
-  isHidden?: boolean;
+  planScreenId: number;
+  floorNo: number;
+  paymentMethodSystemName: string;
+  posName: string;
+  posShortName: string;
+  listChairIndexF1?: string;
+  listChairValueF1?: string;
+  listChairIndexF2?: string;
+  listChairValueF2?: string;
+  listChairIndexF3?: string;
+  listChairValueF3?: string;
+  isInvitation?: boolean;
+  discountId?: number;
+  action?: string;
+}
+
+export interface CancelOrderDto {
+  planScreenId: number;
+  orderIds: number[];
+  listChairIndexF1?: string;
+  listChairValueF1?: string;
+  listChairIndexF2?: string;
+  listChairValueF2?: string;
+  listChairIndexF3?: string;
+  listChairValueF3?: string;
+  cancelReasonId: number;
+  notes: string;
+  isRefund?: boolean;
+  cancelReasonMsg?: string;
+}
+
+export interface CreateQrOrderDto {
+  orderId: number;
+  paymentMethod: string;
+  shortName: string;
 }
 
 export interface OrderCreateQrDto {
@@ -139,8 +163,8 @@ export const ordersApi = {
     const res = await api.get(`/api/pos/get-by-screens/${id}`);
     return res.data;
   },
-  createQr: async (dto: OrderCreateQrDto): Promise<string> => {
-    const res = await api.post("/api/pos/create-qr", dto);
+  createQr: async (dto: CreateQrOrderDto): Promise<QrCodeResponseProps> => {
+    const res = await api.post("/api/pos/order/create-qr", dto);
     return res.data;
   },
   create: async (dto: OrderDto) => {
@@ -155,7 +179,7 @@ export const ordersApi = {
     const res = await api.put("/api/pos/order/cancel/reserve", dto);
     return res.data;
   },
-  cancel: async (dto: OrderDto) => {
+  cancel: async (dto: CancelOrderDto) => {
     const res = await api.post("/api/pos/order/cancel", dto);
     return res.data;
   },

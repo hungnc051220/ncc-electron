@@ -1,5 +1,3 @@
-"use client";
-
 import { useReportExamineTicketByPlan } from "@renderer/hooks/reports/useReportExamineTicketByPlan";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { ExamineTicketsByFilmProps } from "@renderer/types";

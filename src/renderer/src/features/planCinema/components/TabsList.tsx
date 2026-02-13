@@ -1,5 +1,3 @@
-"use client";
-
 import TabFilm from "./tabFilm";
 // import TabScheduling from "./tabScheduling";
 import { Tabs, type TabsProps } from "antd";

@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useManufacturers } from "@renderer/hooks/manufacturers/useManufacturers";
 import { ManufacturerProps } from "@renderer/types";

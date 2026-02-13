@@ -1,5 +1,3 @@
-"use client";
-
 import { usersApi } from "@renderer/api/users.api";
 import { useAuditLog } from "@renderer/hooks/useAuditLog";
 import { useDebounce } from "@renderer/hooks/useDebounce";

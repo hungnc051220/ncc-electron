@@ -1,5 +1,3 @@
-"use client";
-
 import { FilterOutlined } from "@ant-design/icons";
 import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Input, Modal } from "antd";

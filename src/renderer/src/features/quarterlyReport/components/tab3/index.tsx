@@ -1,5 +1,3 @@
-"use client";
-
 import { useReportQuarterly } from "@renderer/hooks/reports/useReportQuarterly";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { MonthlyReportRoomProps, RoomReport } from "@renderer/types";

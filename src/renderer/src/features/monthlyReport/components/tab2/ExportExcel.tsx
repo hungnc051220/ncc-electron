@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";

@@ -1,5 +1,3 @@
-"use client";
-
 import { VoucherUsageProps } from "@renderer/types";
 import { Button } from "antd";
 import dayjs from "dayjs";

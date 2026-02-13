@@ -1,12 +1,12 @@
-"use client";
-
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
+import { ApiError } from "@renderer/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Button, DatePicker, Form, Input, message, Modal, Select, TimePicker } from "antd";
+import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
@@ -139,8 +139,14 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
         form.resetFields();
         setOpen(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Thêm ca chiếu vào kế hoạch thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

@@ -1,10 +1,9 @@
-"use client";
-
 import { useCreateCancellationReason } from "@renderer/hooks/cancellationReasons/useCreateCancellationReason";
 import { useUpdateCancellationReason } from "@renderer/hooks/cancellationReasons/useUpdateCancellationReason";
-import { CancellationReasonProps } from "@renderer/types";
+import { ApiError, CancellationReasonProps } from "@renderer/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal } from "antd";
+import axios from "axios";
 
 type FieldType = {
   reason: string;
@@ -48,8 +47,14 @@ const CancellationReasonDialog = ({
           message.success("Thêm lý do hủy vé thành công");
           onCancel();
         },
-        onError: (error) => {
-          message.error(error?.message || "Có lỗi bất thường xảy ra");
+        onError: (error: unknown) => {
+          let msg = "Thêm lý do hủy vé thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
         }
       });
     } else {
@@ -63,8 +68,14 @@ const CancellationReasonDialog = ({
             message.success("Cập nhật lý do hủy vé thành công");
             onCancel();
           },
-          onError: (error) => {
-            message.error(error?.message || "Có lỗi bất thường xảy ra");
+          onError: (error: unknown) => {
+            let msg = "Cập nhật lý do hủy vé thất bại";
+
+            if (axios.isAxiosError<ApiError>(error)) {
+              msg = error.response?.data?.message ?? msg;
+            }
+
+            message.error(msg);
           }
         }
       );

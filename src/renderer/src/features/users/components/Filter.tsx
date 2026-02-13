@@ -1,5 +1,3 @@
-"use client";
-
 import { FilterOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Select } from "antd";
 import { useState } from "react";

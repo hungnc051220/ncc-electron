@@ -1,5 +1,3 @@
-"use client";
-
 import { MoreOutlined } from "@ant-design/icons";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { useOrders } from "@renderer/hooks/orders/useUsers";

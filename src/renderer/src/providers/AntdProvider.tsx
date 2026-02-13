@@ -1,5 +1,3 @@
-"use client";
-
 import { StyleProvider } from "@ant-design/cssinjs";
 import { ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";

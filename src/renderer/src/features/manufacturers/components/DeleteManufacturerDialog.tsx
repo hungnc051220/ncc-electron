@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteManufacturer } from "@renderer/hooks/manufacturers/useDeleteManufacturer";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeleteManufacturerDialogProps {
   open: boolean;
@@ -24,8 +24,14 @@ const DeleteManufacturerDialog = ({
         message.success("Xóa hãng phim thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa hãng phim thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

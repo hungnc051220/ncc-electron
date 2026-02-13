@@ -1,5 +1,3 @@
-"use client";
-
 import { FilterOutlined } from "@ant-design/icons";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TimeRangePickerProps } from "antd";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useReportTicketSalesRevenue } from "@renderer/hooks/reports/useReportTicketSalesRevenue";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { ReportRevenueStaffProps, RevenueByEmployeeProps } from "@renderer/types";

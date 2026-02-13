@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteUser } from "@renderer/hooks/users/useDeleteUser";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeleteUserDialogProps {
   open: boolean;
@@ -19,8 +19,14 @@ const DeleteUserDialog = ({ open, onOpenChange, id, username }: DeleteUserDialog
         message.success("Xóa người dùng thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa người dùng thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

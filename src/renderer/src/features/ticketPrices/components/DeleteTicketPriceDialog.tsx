@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteTicketPrice } from "@renderer/hooks/ticketPrices/useDeleteTicketPrice";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeleteTicketPriceDialogProps {
   open: boolean;
@@ -24,8 +24,14 @@ const DeleteTicketPriceDialog = ({
         message.success("Xóa giá vé thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa giá vé thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

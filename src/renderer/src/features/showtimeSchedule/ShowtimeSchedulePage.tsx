@@ -1,5 +1,3 @@
-"use client";
-
 import { MoreOutlined } from "@ant-design/icons";
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { formatNumber } from "@renderer/lib/utils";

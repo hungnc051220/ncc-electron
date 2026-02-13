@@ -1,5 +1,3 @@
-"use client";
-
 import Icon from "@ant-design/icons";
 import { Button, DatePicker, Form, Modal } from "antd";
 import dayjs from "dayjs";

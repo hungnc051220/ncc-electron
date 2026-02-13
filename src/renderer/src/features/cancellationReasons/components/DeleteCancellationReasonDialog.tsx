@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteCancellationReason } from "@renderer/hooks/cancellationReasons/useDeleteCancellationReason";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeleteCancellationReasonDialogProps {
   open: boolean;
@@ -24,8 +24,14 @@ const DeleteCancellationReasonDialog = ({
         message.success("Xóa lý do hủy vé thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa lý do hủy vé thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

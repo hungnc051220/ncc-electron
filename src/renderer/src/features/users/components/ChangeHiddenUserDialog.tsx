@@ -1,8 +1,7 @@
-"use client";
-
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
-import { UserProps } from "@renderer/types";
+import { ApiError, UserProps } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface ChangeHiddenUserDialogProps {
   open: boolean;
@@ -34,8 +33,14 @@ const ChangeHiddenUserDialog = ({
           message.success("Thay đổi ẩn/hiện người dùng thành công");
           onOpenChange(false);
         },
-        onError: (error) => {
-          message.error(error?.message || "Có lỗi bất thường xảy ra");
+        onError: (error: unknown) => {
+          let msg = "Thay đổi ẩn/hiện người dùng thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
         }
       }
     );

@@ -1,5 +1,3 @@
-"use client";
-
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { formatNumber } from "@renderer/lib/utils";
 import { PlanCinemaProps, PlanScreeningDetailProps } from "@renderer/types";

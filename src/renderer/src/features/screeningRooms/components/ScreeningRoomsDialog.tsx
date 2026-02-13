@@ -1,10 +1,9 @@
-"use client";
-
 import { useCreateScreeningRoom } from "@renderer/hooks/screeningRooms/useCreateScreeningRoom";
 import { useUpdateScreeningRoom } from "@renderer/hooks/screeningRooms/useUpdateScreeningRoom";
-import { RoomProps } from "@renderer/types";
+import { ApiError, RoomProps } from "@renderer/types";
 import type { FormProps } from "antd";
 import { Col, Form, Input, InputNumber, message, Modal, Row, Select } from "antd";
+import axios from "axios";
 
 const ruleOrderOptions = [
   {
@@ -67,8 +66,14 @@ const ScreeningRoomsDialog = ({ open, onOpenChange, editingRoom }: ScreeningRoom
           message.success("Thêm phòng chiếu thành công");
           onCancel();
         },
-        onError: (error) => {
-          message.error(error?.message || "Có lỗi bất thường xảy ra");
+        onError: (error: unknown) => {
+          let msg = "Thêm phòng chiếu thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
         }
       });
     } else {
@@ -79,8 +84,14 @@ const ScreeningRoomsDialog = ({ open, onOpenChange, editingRoom }: ScreeningRoom
             message.success("Cập nhật phòng chiếu thành công");
             onCancel();
           },
-          onError: (error) => {
-            message.error(error?.message || "Có lỗi bất thường xảy ra");
+          onError: (error: unknown) => {
+            let msg = "Cập nhật phòng chiếu thất bại";
+
+            if (axios.isAxiosError<ApiError>(error)) {
+              msg = error.response?.data?.message ?? msg;
+            }
+
+            message.error(msg);
           }
         }
       );

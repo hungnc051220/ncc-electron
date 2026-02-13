@@ -1,13 +1,11 @@
-"use client";
-
 import { useEffect } from "react";
 
 const CustomerView = ({ planScreeningsId }: { planScreeningsId: number }) => {
   useEffect(() => {
     if (!planScreeningsId) return;
-    window.electron?.openCustomerScreen(planScreeningsId);
+    window.api?.openCustomerScreen(planScreeningsId);
 
-    return () => window.electron?.closeCustomerScreen();
+    return () => window.api?.closeCustomerScreen();
   }, [planScreeningsId]);
 
   return null;

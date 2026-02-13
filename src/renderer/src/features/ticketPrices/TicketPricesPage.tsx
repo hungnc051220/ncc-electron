@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useTicketPrices } from "@renderer/hooks/ticketPrices/useTicketPrices";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";

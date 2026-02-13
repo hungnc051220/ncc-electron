@@ -1,5 +1,3 @@
-"use client";
-
 import type { DragEndEvent } from "@dnd-kit/core";
 import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
@@ -13,11 +11,12 @@ import { CSS } from "@dnd-kit/utilities";
 import { useDeletePlanFilm } from "@renderer/hooks/planFilms/useDeletePlanFilm";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useUpdatePlanFilm } from "@renderer/hooks/planFilms/useUpdatePlanCinema";
-import { PlanFilmProps } from "@renderer/types";
+import { ApiError, PlanFilmProps } from "@renderer/types";
 import type { TableColumnsType, TableProps } from "antd";
 import { Button, message, Table } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import AddMovies from "./AddMovies";
+import axios from "axios";
 
 interface TabFilmProps {
   planCinemaId?: number;
@@ -66,8 +65,14 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
           onSuccess: () => {
             message.success("Thay đổi thứ tự phim trong kế hoạch thành công");
           },
-          onError: (error) => {
-            message.error(error?.message || "Có lỗi bất thường xảy ra");
+          onError: (error: unknown) => {
+            let msg = "Thay đổi thứ tự phim trong kế hoạch thất bại";
+
+            if (axios.isAxiosError<ApiError>(error)) {
+              msg = error.response?.data?.message ?? msg;
+            }
+
+            message.error(msg);
           }
         }
       );
@@ -90,8 +95,14 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
           setSelectedFilmIds([]);
           message.success("Xóa phim trong kế hoạch thành công");
         },
-        onError: (error) => {
-          message.error(error?.message || "Có lỗi bất thường xảy ra");
+        onError: (error: unknown) => {
+          let msg = "Xóa phim trong kế hoạch thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
         }
       }
     );

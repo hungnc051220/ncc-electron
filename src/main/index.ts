@@ -1,12 +1,59 @@
 import { app, shell, BrowserWindow, ipcMain } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
-import icon from "../../resources/icon.png?asset";
 import { autoUpdater } from "electron-updater";
+import icon from "../../resources/icon.png?asset";
+
+let mainWindow: BrowserWindow | null = null;
+
+function setupUpdater(win: BrowserWindow) {
+  const isDev = !app.isPackaged;
+
+  // ✅ IPC luôn tồn tại
+  ipcMain.handle("app:get-version", () => app.getVersion());
+
+  ipcMain.handle("app:check-update", async () => {
+    if (isDev) return null;
+
+    const result = await autoUpdater.checkForUpdates();
+    return result?.updateInfo ?? null;
+  });
+
+  ipcMain.handle("app:start-download", () => {
+    if (!isDev) autoUpdater.downloadUpdate();
+  });
+
+  ipcMain.handle("app:install-update", () => {
+    if (!isDev) autoUpdater.quitAndInstall();
+  });
+
+  // ❌ Dev mode không chạy updater thật
+  if (isDev) return;
+
+  autoUpdater.autoDownload = false;
+
+  autoUpdater.on("update-available", (info) => {
+    win.webContents.send("update:available", info);
+  });
+
+  autoUpdater.on("download-progress", (p) => {
+    win.webContents.send("update:progress", Math.round(p.percent));
+  });
+
+  autoUpdater.on("update-downloaded", () => {
+    win.webContents.send("update:ready");
+  });
+
+  autoUpdater.on("error", (err) => {
+    win.webContents.send("update:error", err.message);
+  });
+
+  autoUpdater.checkForUpdates();
+}
 
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1024,
     height: 768,
     show: false,
@@ -20,7 +67,7 @@ function createWindow(): void {
   });
 
   mainWindow.on("ready-to-show", () => {
-    mainWindow.show();
+    mainWindow?.show();
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -35,13 +82,14 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
+
+  setupUpdater(mainWindow);
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  autoUpdater.checkForUpdatesAndNotify();
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
 
@@ -54,15 +102,6 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on("ping", () => console.log("pong"));
-
-  // Check update
-  autoUpdater.on("update-available", () => {
-    console.log("Update available");
-  });
-
-  autoUpdater.on("update-downloaded", () => {
-    console.log("Update downloaded");
-  });
 
   createWindow();
 

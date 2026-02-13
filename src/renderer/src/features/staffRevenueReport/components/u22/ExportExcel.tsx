@@ -1,5 +1,3 @@
-"use client";
-
 import { U22UsageProps } from "@renderer/types";
 import { Button } from "antd";
 import dayjs from "dayjs";

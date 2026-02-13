@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteHoliday } from "@renderer/hooks/holidays/useDeleteHoliday";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 import dayjs from "dayjs";
 
 interface DeleteHolidayDialogProps {
@@ -20,8 +20,14 @@ const DeleteHolidayDialog = ({ open, onOpenChange, id, date }: DeleteHolidayDial
         message.success("Xóa ngày thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa ngày thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

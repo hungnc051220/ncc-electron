@@ -1,5 +1,3 @@
-"use client";
-
 import { Breadcrumb, Tabs } from "antd";
 import type { TabsProps } from "antd";
 import { Link } from "react-router";

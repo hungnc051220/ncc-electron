@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useCancellationReasons } from "@renderer/hooks/cancellationReasons/useCancellationReasons";
 import { formatNumber } from "@renderer/lib/utils";

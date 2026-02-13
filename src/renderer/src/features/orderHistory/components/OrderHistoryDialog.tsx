@@ -1,5 +1,3 @@
-"use client";
-
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { formatMoney } from "@renderer/lib/utils";
 import { OrderDetailProps } from "@renderer/types";

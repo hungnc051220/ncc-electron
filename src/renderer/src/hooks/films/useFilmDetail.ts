@@ -2,7 +2,7 @@ import { filmsApi } from "@renderer/api/films.api";
 import { useQuery } from "@tanstack/react-query";
 import { filmsKey } from "./keys";
 
-export const useUserDetail = (id: number) =>
+export const useFilmDetail = (id: number) =>
   useQuery({
     queryKey: filmsKey.getDetail(id),
     queryFn: () => filmsApi.getDetail(id)

@@ -1,5 +1,3 @@
-"use client";
-
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import ChangeHiddenUserDialog from "@renderer/features/users/components/ChangeHiddenUserDialog";
 import DeleteUserDialog from "@renderer/features/users/components/DeleteUserDialog";

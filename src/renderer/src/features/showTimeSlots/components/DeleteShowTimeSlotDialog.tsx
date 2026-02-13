@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteShowTimeSlot } from "@renderer/hooks/showTimeSlots/useDeleteShowTimeSlot";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeleteShowTimeSlotDialogProps {
   open: boolean;
@@ -24,8 +24,14 @@ const DeleteShowTimeSlotDialog = ({
         message.success("Xóa khung giờ chiếu thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa khung giờ chiếu thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

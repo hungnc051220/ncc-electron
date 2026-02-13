@@ -1,5 +1,3 @@
-"use client";
-
 // import { InfiniteSelect } from "@/components/infinite-select";
 // import {
 //   useInfiniteFilms,

@@ -1,5 +1,3 @@
-"use client";
-
 import { MoreOutlined } from "@ant-design/icons";
 import { useHolidays } from "@renderer/hooks/holidays/useScreeningRooms";
 import { formatNumber } from "@renderer/lib/utils";

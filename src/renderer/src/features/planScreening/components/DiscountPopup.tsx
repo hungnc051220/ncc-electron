@@ -1,5 +1,3 @@
-"use client";
-
 import { formatMoney } from "@renderer/lib/utils";
 import { DiscountProps } from "@renderer/types";
 import { Button, Modal, Table } from "antd";
@@ -99,6 +97,13 @@ const DiscountPopup = ({
             setSelectedItem(selectedRows[0]);
           }
         }}
+        onRow={(record) => ({
+          onClick: () => {
+            setSelectedKey(record.id);
+            setSelectedItem(record);
+          }
+        })}
+        rowClassName="cursor-pointer"
       />
     </Modal>
   );

@@ -1,5 +1,3 @@
-"use client";
-
 import { FilterOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Form, Input, Modal } from "antd";
 import { useState } from "react";

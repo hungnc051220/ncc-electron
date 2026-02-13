@@ -1,7 +1,7 @@
-"use client";
-
 import { useDeleteFilm } from "@renderer/hooks/films/useDeleteFilm";
+import { ApiError } from "@renderer/types";
 import { message, Modal } from "antd";
+import axios from "axios";
 
 interface DeleteFilmDialogProps {
   open: boolean;
@@ -19,8 +19,14 @@ const DeleteFilmDialog = ({ open, onOpenChange, id, filmName }: DeleteFilmDialog
         message.success("Xóa phim thành công");
         onOpenChange(false);
       },
-      onError: (error) => {
-        message.error(error?.message || "Có lỗi bất thường xảy ra");
+      onError: (error: unknown) => {
+        let msg = "Xóa phim thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
       }
     });
   };

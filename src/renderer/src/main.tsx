@@ -7,13 +7,16 @@ import { queryClient } from "./lib/queryClient";
 import { router } from "./router";
 import AntdProvider from "./providers/AntdProvider";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
+import { UpdaterProvider } from "./components/UpdaterContext";
 
 createRoot(document.getElementById("root")!).render(
-  <AntdProvider>
-    <QueryClientProvider client={queryClient}>
-      <NuqsAdapter>
-        <RouterProvider router={router} />
-      </NuqsAdapter>
-    </QueryClientProvider>
-  </AntdProvider>
+  <UpdaterProvider>
+    <AntdProvider>
+      <QueryClientProvider client={queryClient}>
+        <NuqsAdapter>
+          <RouterProvider router={router} />
+        </NuqsAdapter>
+      </QueryClientProvider>
+    </AntdProvider>
+  </UpdaterProvider>
 );

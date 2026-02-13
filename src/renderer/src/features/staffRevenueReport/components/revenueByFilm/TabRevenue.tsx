@@ -1,5 +1,3 @@
-"use client";
-
 import { Table } from "antd";
 import { Row } from ".";
 import type { TableProps } from "antd";

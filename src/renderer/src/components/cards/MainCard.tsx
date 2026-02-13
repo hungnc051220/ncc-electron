@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import rectangle from "../../assets/images/rectangle.png";
+import rectangle from "@renderer/assets/images/rectangle.png";
 
 const colorTypes = {
   red: "linear-gradient(127.77deg, #EE6666 3.56%, #D72626 96.37%)",
