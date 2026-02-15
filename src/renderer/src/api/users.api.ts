@@ -23,6 +23,11 @@ export interface UserDto {
   isHidden?: boolean;
 }
 
+export interface UserChangePasswordDto {
+  password: string;
+  new_password: string;
+}
+
 export const usersApi = {
   getAll: async (params: UsersQuery): Promise<ApiResponse<UserProps>> => {
     const { current, pageSize, roleId, keyword } = params;
@@ -69,6 +74,10 @@ export const usersApi = {
   },
   delete: async (id: number) => {
     const res = await api.delete(`/api/pos/staff/${id}`);
+    return res.data;
+  },
+  changePassword: async (dto: UserChangePasswordDto) => {
+    const res = await api.post("/api/pos/staff/change-password", dto);
     return res.data;
   }
 };

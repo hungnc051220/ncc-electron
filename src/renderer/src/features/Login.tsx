@@ -88,10 +88,7 @@ export default function Login() {
                 htmlType="submit"
                 size="large"
                 block
-                disabled={
-                  !form.isFieldsTouched(true) ||
-                  form.getFieldsError().some(({ errors }) => errors.length)
-                }
+                disabled={form.getFieldsError().some(({ errors }) => errors.length)}
                 loading={loginMutation.isPending}
               >
                 Đăng nhập

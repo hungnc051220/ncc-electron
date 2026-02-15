@@ -5,5 +5,6 @@ import { planScreeningsKeys } from "./keys";
 export const usePlanScreeningDetail = (id: number) =>
   useQuery({
     queryKey: planScreeningsKeys.getDetail(id),
-    queryFn: () => planScreeningsApi.getDetail(id)
+    queryFn: () => planScreeningsApi.getDetail(id),
+    enabled: !!id
   });

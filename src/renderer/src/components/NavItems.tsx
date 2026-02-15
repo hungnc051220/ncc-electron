@@ -24,12 +24,12 @@ const NavItems = () => {
           key: "user-roles"
         },
         {
-          label: <Link to="/change-password">Thay đổi mật khẩu</Link>,
-          key: "change-password"
-        },
-        {
           label: <Link to="/machine-serials">Xem Seri máy</Link>,
           key: "machine-serials"
+        },
+        {
+          label: <Link to="/settings">Cài đặt</Link>,
+          key: "settings"
         },
         {
           label: "Kiểm tra phiên bản",

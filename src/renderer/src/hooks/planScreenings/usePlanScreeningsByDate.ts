@@ -5,5 +5,6 @@ import { planScreeningsKeys } from "./keys";
 export const usePlanScreeningsByDate = (date: string) =>
   useQuery({
     queryKey: planScreeningsKeys.getByDate(date),
-    queryFn: () => planScreeningsApi.getByDate(date)
+    queryFn: () => planScreeningsApi.getByDate(date),
+    enabled: !!date
   });

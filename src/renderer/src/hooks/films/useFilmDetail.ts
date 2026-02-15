@@ -5,5 +5,6 @@ import { filmsKey } from "./keys";
 export const useFilmDetail = (id: number) =>
   useQuery({
     queryKey: filmsKey.getDetail(id),
-    queryFn: () => filmsApi.getDetail(id)
+    queryFn: () => filmsApi.getDetail(id),
+    enabled: !!id
   });

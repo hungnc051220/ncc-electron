@@ -5,5 +5,6 @@ import { seatTypesKeys } from "./keys";
 export const useSeatTypeDetail = (id: number) =>
   useQuery({
     queryKey: seatTypesKeys.getDetail(id),
-    queryFn: () => seatTypesApi.getDetail(id)
+    queryFn: () => seatTypesApi.getDetail(id),
+    enabled: !!id
   });

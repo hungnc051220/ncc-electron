@@ -10,6 +10,7 @@ import secondaryIcon3 from "@renderer/assets/icons/summarize.svg";
 import secondaryIcon4 from "@renderer/assets/icons/password.svg";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useAuthStore } from "@renderer/store/auth.store";
+import Logout from "@renderer/components/Logout";
 
 const Dashboard = () => {
   const userId = useAuthStore((s) => s.userId);
@@ -26,7 +27,7 @@ const Dashboard = () => {
             <h2 className="font-bold text-2xl xl:text-3xl">
               Xin chào, <span className="text-primary">{user?.fullname}</span>
             </h2>
-            {/* <Logout /> */}
+            <Logout />
           </div>
           <p className="text-trunks text-sm xl:text-base capitalize">{dateFormat}</p>
         </div>
@@ -78,13 +79,14 @@ const Dashboard = () => {
           title="Báo cáo bán vé"
           description="Xem báo cáo chi tiết tình hình bán vé xem phim"
           color="text-green-500"
+          href="staff-revenue-report"
           icon={secondaryIcon3}
         />
         <SecondaryCard
           title="Thay đổi mật khẩu"
           description="Cập nhật và thay đổi mật khẩu đăng nhập hệ thống"
           color="text-blue-700"
-          href="change-password"
+          href="settings"
           icon={secondaryIcon4}
         />
       </div>

@@ -3,7 +3,7 @@ import ChangeHiddenUserDialog from "@renderer/features/users/components/ChangeHi
 import DeleteUserDialog from "@renderer/features/users/components/DeleteUserDialog";
 import Filter from "@renderer/features/users/components/Filter";
 import UserDialog from "@renderer/features/users/components/UserDialog";
-import { useCustomerRoles } from "@renderer/hooks/useCustomerRoles";
+import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { useUsers } from "@renderer/hooks/users/useUsers";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";

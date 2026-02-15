@@ -5,7 +5,17 @@ import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPri
 import { ApiError } from "@renderer/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
-import { Button, DatePicker, Form, Input, message, Modal, Select, TimePicker } from "antd";
+import {
+  Button,
+  Checkbox,
+  DatePicker,
+  Form,
+  Input,
+  message,
+  Modal,
+  Select,
+  TimePicker
+} from "antd";
 import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
@@ -20,6 +30,7 @@ type FieldType = {
   priceOfPosition2: string;
   priceOfPosition3: string;
   priceOfPosition4: string;
+  isOnlineSelling?: boolean;
 };
 
 interface AddSchedulingDialogProps {
@@ -130,25 +141,29 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
       priceOfPosition1: values.priceOfPosition1,
       priceOfPosition2: values.priceOfPosition2,
       priceOfPosition3: values.priceOfPosition3,
-      priceOfPosition4: values.priceOfPosition4
+      priceOfPosition4: values.priceOfPosition4,
+      isOnlineSelling: values.isOnlineSelling
     };
 
-    createPlanScreening.mutate(body, {
-      onSuccess: () => {
-        message.success("Thêm ca chiếu vào kế hoạch thành công");
-        form.resetFields();
-        setOpen(false);
-      },
-      onError: (error: unknown) => {
-        let msg = "Thêm ca chiếu vào kế hoạch thất bại";
+    createPlanScreening.mutate(
+      { ...body, isOnlineSelling: values.isOnlineSelling ? 1 : 0 },
+      {
+        onSuccess: () => {
+          message.success("Thêm ca chiếu vào kế hoạch thành công");
+          form.resetFields();
+          setOpen(false);
+        },
+        onError: (error: unknown) => {
+          let msg = "Thêm ca chiếu vào kế hoạch thất bại";
 
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
         }
-
-        message.error(msg);
       }
-    });
+    );
   };
 
   const onCancel = () => {
@@ -174,7 +189,16 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
         }}
         width={800}
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          initialValues={{
+            projectDate: dayjs(),
+            projectTime: dayjs(),
+            isOnlineSelling: true
+          }}
+        >
           <div className="grid grid-cols-2 gap-3">
             <Form.Item<FieldType>
               name="filmId"
@@ -223,11 +247,16 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
                 <TimePicker format="HH:mm" className="w-full" disabled />
               </Form.Item>
             </div>
-            <Form.Item name="duration" label="Thời lượng (phút)">
-              <Input readOnly placeholder="Thời lượng (phút)" />
-            </Form.Item>
-            <Form.Item name="versionCode" label="Phiên bản">
-              <Input readOnly placeholder="Phiên bản" />
+            <div className="grid grid-cols-2 gap-3">
+              <Form.Item name="duration" label="Thời lượng (phút)">
+                <Input readOnly placeholder="Thời lượng (phút)" />
+              </Form.Item>
+              <Form.Item name="versionCode" label="Phiên bản">
+                <Input readOnly placeholder="Phiên bản" />
+              </Form.Item>
+            </div>
+            <Form.Item name="isOnlineSelling" valuePropName="checked">
+              <Checkbox className="mt-10.5">Bán online</Checkbox>
             </Form.Item>
             <Form.Item<FieldType>
               name="priceOfPosition1"

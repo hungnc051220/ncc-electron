@@ -5,5 +5,6 @@ import { ordersKeys } from "./keys";
 export const useOrderDetail = (id: number) =>
   useQuery({
     queryKey: ordersKeys.getDetail(id),
-    queryFn: () => ordersApi.getDetail(id)
+    queryFn: () => ordersApi.getDetail(id),
+    enabled: !!id
   });

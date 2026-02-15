@@ -32,6 +32,8 @@ import ContractTicketSalesPage from "./features/contractTicketSales/ContractTick
 import ContractTicketSalesDetailPage from "./features/contractTicketSales/ContractTicketSalesDetailPage";
 import InvitationTicketsPage from "./features/invitationTickets/InvitationTicketsPage";
 import InvitationTicketsDetailPage from "./features/invitationTickets/InvitationTicketsDetailPage";
+import SettingPage from "./features/settings/SettingPage";
+import UserRolesPage from "./features/userRoles/UserRolesPage";
 
 export const router = createHashRouter([
   {
@@ -54,8 +56,16 @@ export const router = createHashRouter([
             element: <UsersPage />
           },
           {
+            path: "/user-roles",
+            element: <UserRolesPage />
+          },
+          {
             path: "/machine-serials",
             element: <MachineSerialsPage />
+          },
+          {
+            path: "/settings",
+            element: <SettingPage />
           },
           {
             path: "/films",

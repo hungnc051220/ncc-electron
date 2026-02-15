@@ -5,5 +5,6 @@ import { usersKeys } from "./keys";
 export const useUserDetail = (id: number) =>
   useQuery({
     queryKey: usersKeys.getDetail(id),
-    queryFn: () => usersApi.getDetail(id)
+    queryFn: () => usersApi.getDetail(id),
+    enabled: !!id
   });

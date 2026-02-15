@@ -5,5 +5,6 @@ import { planFilmsKeys } from "./keys";
 export const usePlanFilmDetail = (id: number) =>
   useQuery({
     queryKey: planFilmsKeys.getDetail(id),
-    queryFn: () => planFilmsApi.getDetail(id)
+    queryFn: () => planFilmsApi.getDetail(id),
+    enabled: !!id
   });

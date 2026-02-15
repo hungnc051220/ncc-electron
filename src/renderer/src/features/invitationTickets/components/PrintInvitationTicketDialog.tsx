@@ -149,7 +149,11 @@ const PrintInvitationTicketDialog = ({
   });
 
   const handleExport: FormProps<FieldType>["onFinish"] = async (values: FieldType) => {
+    console.log(values);
     if (!selectedItem) return;
+
+    setEmail("");
+    setEmailTitle("");
 
     const qrBase64 = await generateQrCode(selectedItem.order.barCode);
 

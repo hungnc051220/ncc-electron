@@ -5,5 +5,6 @@ import { showTimeSlotsKeys } from "./keys";
 export const useShowTimeSlotDetail = (id: number) =>
   useQuery({
     queryKey: showTimeSlotsKeys.getDetail(id),
-    queryFn: () => showTimeSlotsApi.getDetail(id)
+    queryFn: () => showTimeSlotsApi.getDetail(id),
+    enabled: !!id
   });
