@@ -13,15 +13,19 @@ const Seat = ({
   seat,
   isSelected,
   onSelect,
-  size
+  size,
+  canSelect,
+  onHover,
+  onLeave
 }: {
   seat: ListSeat;
   isSelected: boolean;
   onSelect: (seat: ListSeat) => void;
   size: number;
+  canSelect: boolean;
+  onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
+  onLeave?: () => void;
 }) => {
-  const canSelect = seat.type !== 12 && seat.status !== 1;
-
   const handleClick = useCallback(() => {
     if (canSelect) {
       onSelect(seat);
@@ -34,10 +38,11 @@ const Seat = ({
         "relative rounded-sm flex items-center justify-center selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
-        isSelected && "bg-whis text-white",
         seat.isContract && "bg-raditz text-white",
         seat.isHold && "bg-roshi text-white",
-        seat.status === 1 && "bg-trunks text-white cursor-not-allowed"
+        seat.status === 1 && "bg-trunks text-white",
+        !canSelect && "cursor-not-allowed",
+        isSelected && "bg-whis text-white"
       )}
       style={{
         width: `${size}px`,
@@ -47,6 +52,8 @@ const Seat = ({
       data-seat-code={seat.code}
       data-seat-floor={seat.floor}
       data-seat-unique-key={`${seat.floor}-${seat.code}`}
+      onMouseEnter={(e) => onHover?.(seat, e)}
+      onMouseLeave={onLeave}
     >
       <p className="text-xs" style={{ fontSize: `${Math.max(10, size * 0.25)}px` }}>
         {seat.type !== 12 ? seat.code : ""}

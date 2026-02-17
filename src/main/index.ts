@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from "electron";
 import path, { join } from "path";
-import fs from "node:fs";
+import fs from "fs";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { autoUpdater } from "electron-updater";
 import icon from "../../resources/icon.png?asset";
@@ -9,6 +9,16 @@ const baseURL = import.meta.env.VITE_API_BASE_URL;
 
 let mainWindow: BrowserWindow | null = null;
 let printWindow: BrowserWindow | null = null;
+
+const getTemplatePath = () => {
+  if (app.isPackaged) {
+    // khi đã build .exe
+    return path.join(process.resourcesPath, "resources", "ticket-template.html");
+  }
+
+  // khi chạy dev
+  return path.join(__dirname, "../../resources/ticket-template.html");
+};
 
 function setupUpdater(win: BrowserWindow) {
   const isDev = !app.isPackaged;
@@ -179,14 +189,14 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  const printSingleTicket = (orderId, itemIndex, seatIndex) => {
+  const printSingleTicket = (orderId?: number, itemIndex?: number, seatIndex?: number) => {
     return new Promise((resolve, reject) => {
       if (printWindow && !printWindow.isDestroyed()) {
         printWindow.close();
       }
 
       printWindow = new BrowserWindow({
-        show: false, // ⚠️ BẮT BUỘC
+        show: false,
         width: 300,
         height: 600,
         webPreferences: {
@@ -239,7 +249,7 @@ app.whenReady().then(() => {
               }, 100);
             }
           );
-        }, 1000); // ⚠️ đừng giảm
+        }, 1000);
       });
 
       // Build URL with query params
@@ -379,7 +389,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("export-ticket", async (_, payload) => {
-    const templatePath = path.join(__dirname, "ticket-template.html");
+    const templatePath = getTemplatePath();
     const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
 
     const html = renderTemplate(htmlTemplate, {

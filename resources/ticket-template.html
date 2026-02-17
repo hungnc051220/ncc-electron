@@ -1,0 +1,211 @@
+<html>
+  <head>
+    <style>
+      @font-face {
+        font-family: "Bebas Neue";
+        src: url("https://testapi.chieuphimquocgia.com.vn/Content/Font/BEBASNEUEBOLD.ttf");
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      *,
+      *:before,
+      *:after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 2363px;
+        height: 1064px;
+        font-family: "Bebas Neue", sans-serif;
+        font-weight: 400;
+        font-style: normal;
+        font-size: 30px;
+        overflow: hidden !important;
+        position: relative;
+      }
+
+      .bg-img {
+        width: 2363px;
+        height: 1064px;
+        position: absolute;
+        z-index: 0;
+        top: 0px;
+        left: 0px;
+      }
+
+      .container {
+        position: relative;
+        width: 2363px;
+        height: 1064px;
+      }
+
+      .content {
+        position: absolute; /* Thay đổi từ relative sang absolute */
+        display: flex;
+        z-index: 1;
+        left: 919px;
+        top: 349px;
+      }
+
+      .content-left {
+        position: relative;
+        z-index: 1;
+        width: 712px;
+        height: 318px;
+      }
+
+      .content-right {
+        position: relative;
+        z-index: 1;
+        width: 712px;
+        height: 318px;
+      }
+
+      .film-name {
+        position: relative;
+        display: inline-block;
+        color: black;
+      }
+
+      .film-age {
+        position: relative;
+        display: inline-block;
+        color: black;
+      }
+
+      .film-country-name {
+        position: relative;
+        display: inline-block;
+        color: black;
+      }
+
+      .film-date-container {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        width: 318px;
+        margin-top: 69px;
+      }
+
+      .film-date-color {
+        color: rgb(27, 79, 162);
+      }
+
+      .film-datetime-color {
+        color: rgb(27, 79, 162);
+        position: absolute;
+        top: 0px;
+        left: 366px;
+      }
+
+      .film-cotainer {
+        position: relative;
+      }
+
+      .film-room {
+        position: relative;
+        display: inline-block;
+        color: black;
+        margin-top: 2px;
+      }
+
+      .film-seat {
+        position: absolute;
+        margin-top: 2px;
+        top: 0px;
+        left: 366px;
+      }
+
+      .thin {
+        font-weight: 300;
+        font-family: sans-serif;
+      }
+
+      .relative {
+        position: relative;
+      }
+
+      .img-qr {
+        position: absolute;
+        z-index: 1;
+        top: 230px;
+        left: 1996px;
+      }
+
+      .font-sans {
+        font-family: sans-serif;
+        color: #3b3a3a;
+      }
+
+      div.img-qr svg > rect:nth-child(1) {
+        display: none;
+      }
+
+      /* Đảm bảo không có phần tử nào vượt ra ngoài */
+      .container > * {
+        max-width: 2363px;
+        max-height: 1064px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <img class="bg-img" src="{{imageSource}}" />
+      <div class="content">
+        <div class="relative content-left">
+          <h1 class="film-name">{{filmName}}</h1>
+          <h1 class="film-name">{{filmNameEn}}</h1>
+          <br />
+          <h2 style="margin-top: 190px">Thể loại: {{categories}}</h2>
+        </div>
+        <div class="relative content-right">
+          <h2 class="film-country-name">{{countryName}}</h2>
+          <br />
+          <h2 class="film-country-name">{{duration}}"</h2>
+          <br />
+          <div class="film-date-container">
+            <h1 class="film-date-color">{{date}}</h1>
+            <h1 class="film-datetime-color">{{datetime}}</h1>
+          </div>
+          <br />
+          <div class="film-cotainer">
+            <h2 class="film-room">PHÒNG /HALL: {{room}}</h2>
+            <h2 class="film-seat">GHẾ /SEAT: {{seat}}</h2>
+          </div>
+        </div>
+      </div>
+      <div class="img-qr">
+        <img src="{{qrImage}}" />
+        <p style="width: 100%; text-align: center; margin-top: 4px;">{{barCode}}</p>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    // Debug script
+    console.log("Document size:", {
+      html: {
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        clientWidth: document.documentElement.clientWidth,
+        clientHeight: document.documentElement.clientHeight,
+      },
+      body: {
+        scrollWidth: document.body.scrollWidth,
+        scrollHeight: document.body.scrollHeight,
+        offsetWidth: document.body.offsetWidth,
+        offsetHeight: document.body.offsetHeight,
+      },
+      window: {
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+      },
+    });
+  </script>
+</html>

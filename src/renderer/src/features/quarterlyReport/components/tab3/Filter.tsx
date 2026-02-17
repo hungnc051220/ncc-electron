@@ -56,7 +56,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           <Form
             layout="vertical"
             form={form}
-            name="filter-form"
             initialValues={{ fromDate: dayjs() }}
             onFinish={(values) => {
               const { fromDate } = values;

@@ -36,7 +36,7 @@ export interface OrderDto {
 
 export interface CancelOrderDto {
   planScreenId: number;
-  orderIds: number[];
+  orderIds?: number[];
   listChairIndexF1?: string;
   listChairValueF1?: string;
   listChairIndexF2?: string;

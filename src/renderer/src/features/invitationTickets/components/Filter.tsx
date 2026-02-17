@@ -55,7 +55,6 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
           <Form
             layout="vertical"
             form={form}
-            name="filter-form"
             initialValues={{
               dateRange: [dayjs(), dayjs()]
             }}

@@ -53,7 +53,6 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
           <Form
             layout="vertical"
             form={form}
-            name="filter-form"
             onFinish={(values) => {
               setOpen(false);
               setCurrent(1);

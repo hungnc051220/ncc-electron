@@ -120,9 +120,9 @@ const FilmDialog = ({
       if (!(file instanceof File)) {
         throw new Error("File không hợp lệ");
       }
-      const url = await uploadImage.mutateAsync(file);
-      onSuccess?.(url);
-      form.setFieldValue("imageUrl", url);
+      const response = await uploadImage.mutateAsync(file);
+      onSuccess?.(response.imageUrl);
+      form.setFieldValue("imageUrl", response.imageUrl);
     } catch (error: unknown) {
       let msg = "Tải ảnh lên thất bại";
 

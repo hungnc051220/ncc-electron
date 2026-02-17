@@ -51,7 +51,6 @@ const Filter = ({ onSearch, filterValues, setCurrent, manufacturers }: FilterPro
           <Form
             layout="vertical"
             form={form}
-            name="filter-form"
             onFinish={(values) => {
               console.log(values);
               setOpen(false);

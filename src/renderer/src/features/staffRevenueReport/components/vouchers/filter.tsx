@@ -75,7 +75,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           <Form
             layout="vertical"
             form={form}
-            name="filter-form"
             onFinish={(values) => {
               setOpen(false);
               onSearch(values);

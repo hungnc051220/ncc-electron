@@ -5,6 +5,7 @@ import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney } from "@renderer/lib/utils";
 import { useAuthStore } from "@renderer/store/auth.store";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, ListSeat } from "@renderer/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
@@ -22,6 +23,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
+  const { posName, posShortName } = useSettingPosStore();
 
   const createOrder = useCreateOrder();
 
@@ -58,14 +60,16 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   ];
 
   const onBooking = () => {
+    if (!posName || !posShortName) return;
+
     const floorNo = selectedSeats[0]?.floor || 1;
     const body: OrderDto = {
       planScreenId: planScreeningId,
       floorNo,
       isInvitation: true,
       paymentMethodSystemName: "POS",
-      posName: "POS Machine 1",
-      posShortName: "M11"
+      posName,
+      posShortName
     };
 
     if (floorNo === 1) {

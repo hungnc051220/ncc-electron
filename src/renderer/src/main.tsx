@@ -8,6 +8,9 @@ import { router } from "./router";
 import AntdProvider from "./providers/AntdProvider";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { UpdaterProvider } from "./components/UpdaterContext";
+import { useSettingPosStore } from "./store/settingPos.store";
+
+useSettingPosStore.getState();
 
 createRoot(document.getElementById("root")!).render(
   <UpdaterProvider>

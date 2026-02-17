@@ -66,6 +66,7 @@ const Dashboard = () => {
           title="Sơ đồ bán vé"
           description="Xem nhanh sơ đồ ghế và trạng thái bán vé theo suất chiếu"
           color="text-yellow-500"
+          href="showtimes?callbackUrl=/ticket-sales-diagram&id=view"
           icon={secondaryIcon1}
         />
         <SecondaryCard

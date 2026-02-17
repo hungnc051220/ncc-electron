@@ -1,6 +1,11 @@
 import { EditOutlined } from "@ant-design/icons";
+import { CancelOrderDto, OrderDto } from "@renderer/api/orders.api";
+import ticketIcon from "@renderer/assets/icons/confirmation_number.svg";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
+import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
+import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
+import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { cn, formatMoney } from "@renderer/lib/utils";
 import {
   ApiError,
@@ -11,19 +16,16 @@ import {
   PlanScreeningDetailProps,
   QrCodeResponseProps
 } from "@renderer/types";
+import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
 import { Button, Checkbox, Descriptions, message } from "antd";
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
-import DiscountPopup from "./DiscountPopup";
-import ticketIcon from "@renderer/assets/icons/confirmation_number.svg";
-import { OrderDto } from "@renderer/api/orders.api";
 import axios from "axios";
-import { useQueryClient } from "@tanstack/react-query";
-import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
+import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
+import DiscountPopup from "./DiscountPopup";
 import QrCodeDialog from "./QrCodeDialog";
-import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
-import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
+import VipCardDialog from "./VipCardDialog";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 
 const paymentTypes = [
   {
@@ -41,6 +43,8 @@ interface ActionsProps {
   planScreenId: number;
   selectedSeats: ListSeat[];
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
+  cancelMode: boolean;
+  setCancelMode: Dispatch<SetStateAction<boolean>>;
 }
 
 interface QrDialogData extends QrCodeResponseProps {
@@ -50,8 +54,16 @@ interface QrDialogData extends QrCodeResponseProps {
   createdOnUtc: string;
 }
 
-const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: ActionsProps) => {
+const Actions = ({
+  data,
+  planScreenId,
+  selectedSeats,
+  setSelectedSeats,
+  cancelMode,
+  setCancelMode
+}: ActionsProps) => {
   const [searchParams] = useSearchParams();
+  const { posName, posShortName } = useSettingPosStore();
   const isCustomerView = searchParams.get("view") === "customer";
   const queryClient = useQueryClient();
   const [vipCard, setVipCard] = useState(false);
@@ -59,6 +71,7 @@ const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: Action
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountProps | undefined>(undefined);
   const [paymentMethod, setPaymentMethod] = useState<string[]>([]);
   const [openQrDialog, setOpenQrDialog] = useState(false);
+  const [openVipCardDialog, setOpenVipCardDialog] = useState(false);
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
 
   const { data: discounts } = useDiscounts({ current: 1, pageSize: 20 });
@@ -74,14 +87,15 @@ const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: Action
   );
 
   const onBooking = () => {
+    if (!posName || !posShortName) return;
     const floorNo = selectedSeats[0]?.floor || 1;
 
     const body: OrderDto = {
       planScreenId,
       floorNo,
       paymentMethodSystemName: paymentMethod.length > 0 ? paymentMethod[0] : "POS",
-      posName: "POS Machine 1",
-      posShortName: "M11",
+      posName,
+      posShortName,
       discountId: selectedDiscount?.id,
       isInvitation: false
     };
@@ -140,14 +154,15 @@ const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: Action
   };
 
   const onReserveSeats = () => {
+    if (!posName || !posShortName) return;
     const floorNo = selectedSeats[0]?.floor || 1;
 
     const body: OrderDto = {
       planScreenId,
       floorNo,
       paymentMethodSystemName: paymentMethod.length > 0 ? paymentMethod[0] : "POS",
-      posName: "POS Machine 1",
-      posShortName: "M11",
+      posName,
+      posShortName,
       discountId: selectedDiscount?.id,
       isInvitation: false,
       action: "RESERVE_SEAT"
@@ -262,14 +277,61 @@ const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: Action
     );
   };
 
+  const onCancelSeats = () => {
+    const floorNo = selectedSeats[0]?.floor || 1;
+
+    const body: CancelOrderDto = {
+      planScreenId,
+      cancelReasonId: 0,
+      notes: "Huỷ đơn",
+      isRefund: true,
+      cancelReasonMsg: "Huỷ đơn"
+    };
+
+    if (floorNo === 1) {
+      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 2) {
+      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 3) {
+      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
+    }
+
+    cancelOrder.mutate(body, {
+      onSuccess: () => {
+        setSelectedSeats([]);
+        queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
+        message.success("Huỷ vé thành công");
+      },
+      onError: (error: unknown) => {
+        let msg = "Huỷ vé thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
+      }
+    });
+  };
+
   return (
     <div
       className={cn("bg-beerus border-t border-gray-300 shrink-0 px-2", isCustomerView && "hidden")}
     >
       <div className="p-2 flex gap-2 items-center justify-center">
         <div className="flex flex-col gap-2">
-          <Checkbox>Huỷ vé</Checkbox>
-          <Button variant="outlined" color="danger">
+          <Checkbox checked={cancelMode} onChange={(e) => setCancelMode(e.target.checked)}>
+            Huỷ vé
+          </Checkbox>
+          <Button
+            variant="outlined"
+            color="danger"
+            disabled={!cancelMode || selectedSeats.length === 0}
+            onClick={onCancelSeats}
+          >
             Huỷ vé
           </Button>
         </div>
@@ -296,7 +358,7 @@ const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: Action
             Giữ chỗ
           </Button>
           <Button variant="outlined" danger disabled={createOrder.isPending}>
-            Hủy chỗ
+            Hủy giữ
           </Button>
         </div>
         <div className="flex gap-3">
@@ -318,8 +380,20 @@ const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: Action
             type="primary"
             className="flex flex-col"
             style={{ height: "74px" }}
-            onClick={onBooking}
-            disabled={createOrder.isPending || selectedSeats.length === 0 || createQr.isPending}
+            onClick={() => {
+              if (vipCard) {
+                setOpenVipCardDialog(true);
+                return;
+              }
+
+              onBooking();
+            }}
+            disabled={
+              createOrder.isPending ||
+              selectedSeats.length === 0 ||
+              createQr.isPending ||
+              cancelMode
+            }
           >
             <img src={ticketIcon} width={24} height={24} alt="icon" />
             <span className="text-base font-bold">In vé</span>
@@ -349,6 +423,15 @@ const Actions = ({ data, planScreenId, selectedSeats, setSelectedSeats }: Action
           orderDiscount={qrData.orderDiscount}
           orderTotal={qrData.orderTotal}
           onCancelOrder={onCancelOrder}
+        />
+      )}
+
+      {openVipCardDialog && (
+        <VipCardDialog
+          open={openVipCardDialog}
+          onCancel={() => setOpenVipCardDialog(false)}
+          totalPrice={totalPrice}
+          onBooking={onBooking}
         />
       )}
     </div>

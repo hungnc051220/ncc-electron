@@ -4,29 +4,59 @@ import { ListSeat, PlanScreeningDetailProps } from "@renderer/types";
 import { Button, Tag } from "antd";
 import dayjs from "dayjs";
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import Selecto from "react-selecto";
 import Seat from "./Seat";
-import { useNavigate } from "react-router";
+import TooltipFloating from "./TooltipFloating";
+
+type TooltipPosition = {
+  x: number;
+  y: number;
+};
 
 interface SeatsProps {
   data?: PlanScreeningDetailProps;
   selectedSeats: ListSeat[];
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
+  cancelMode?: boolean;
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
   return `${seat.floor}-${seat.code}`;
 };
 
-const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
+const Seats = ({ data, selectedSeats, setSelectedSeats, cancelMode }: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
   const selectoRef = useRef<Selecto>(null);
   const isSelectingRef = useRef(false);
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [seatSize, setSeatSize] = useState(44);
+  const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(null);
+  const [hoverSeat, setHoverSeat] = useState<ListSeat | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<TooltipPosition | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const seats = data?.listSeats;
+
+  useEffect(() => {
+    setSelectedSeats([]);
+  }, [cancelMode, setSelectedSeats]);
+
+  const canSelectSeat = useCallback(
+    (seat: ListSeat) => {
+      if (seat.type === 12) return false;
+
+      if (cancelMode) {
+        return seat.status === 1; // chỉ ghế đã bán
+      }
+
+      return seat.status !== 1; // ghế chưa bán
+    },
+    [cancelMode]
+  );
 
   // Tính toán số tầng có sẵn
   const availableFloors = useMemo(() => {
@@ -41,10 +71,6 @@ const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
     return Array.from(floors).sort((a, b) => a - b);
   }, [seats]);
 
-  // State cho tầng được chọn bởi người dùng
-  const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(null);
-
-  // Tính toán tầng được chọn: ưu tiên userSelectedFloor, nếu không hợp lệ thì dùng tầng đầu tiên
   const selectedFloor = useMemo(() => {
     if (availableFloors.length === 0) return 1;
     if (userSelectedFloor && availableFloors.includes(userSelectedFloor)) {
@@ -53,9 +79,6 @@ const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
     return availableFloors[0];
   }, [availableFloors, userSelectedFloor]);
 
-  // Không filter selectedSeats khi đổi tầng - cho phép chọn ghế từ nhiều tầng cùng lúc
-
-  // Filter seats theo tầng được chọn
   const filteredSeats = useMemo(() => {
     if (!seats) return [];
     return seats
@@ -63,22 +86,18 @@ const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
       .filter((row) => row.length > 0);
   }, [seats, selectedFloor]);
 
-  // Key prop trên Selecto component sẽ force re-mount khi selectedFloor thay đổi
-  // Điều này đảm bảo Selecto nhận biết các element mới sau khi chuyển tầng
-
-  // Tạo map để tra cứu ghế từ unique key (kết hợp floor và code để tránh trùng)
   const seatMap = useMemo(() => {
     const map: Record<string, ListSeat> = {};
     seats?.forEach((row) => {
       row.forEach((seat) => {
-        if (seat.type !== 12 && seat.status !== 1) {
+        if (canSelectSeat(seat)) {
           const uniqueKey = getSeatUniqueKey(seat);
           map[uniqueKey] = seat;
         }
       });
     });
     return map;
-  }, [seats]);
+  }, [seats, canSelectSeat]);
 
   const handleSelectSeat = useCallback(
     (seat: ListSeat) => {
@@ -221,6 +240,24 @@ const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
     };
   }, [calculateSeatSize]);
 
+  const handleHover = (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => {
+    const { clientX, clientY } = e;
+
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoverSeat(seat);
+      setTooltipPos({ x: clientX, y: clientY });
+      setVisible(true);
+    }, 500); // 1 giây
+  };
+
+  const handleLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    setVisible(false);
+    setHoverSeat(null);
+  };
+
   // Render seats với useMemo để tránh re-render không cần thiết
   const renderedSeats = useMemo(() => {
     return filteredSeats?.map((item, index) => (
@@ -246,6 +283,9 @@ const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
             isSelected={selectedSeats.some((s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat))}
             onSelect={handleSelectSeat}
             size={seatSize}
+            canSelect={canSelectSeat(seat)}
+            onHover={handleHover}
+            onLeave={handleLeave}
           />
         ))}
         <div
@@ -260,7 +300,7 @@ const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
         </div>
       </div>
     ));
-  }, [filteredSeats, selectedSeats, handleSelectSeat, seatSize]);
+  }, [filteredSeats, selectedSeats, handleSelectSeat, seatSize, canSelectSeat]);
 
   if (!data) return null;
 
@@ -359,6 +399,10 @@ const Seats = ({ data, selectedSeats, setSelectedSeats }: SeatsProps) => {
           }}
         />
       </div>
+
+      {hoverSeat && tooltipPos && (
+        <TooltipFloating seat={hoverSeat} position={tooltipPos} visible={visible} />
+      )}
     </div>
   );
 };

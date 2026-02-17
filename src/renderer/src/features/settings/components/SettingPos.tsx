@@ -8,7 +8,7 @@ type FieldType = {
 };
 
 const SettingPos = () => {
-  const setPos = useSettingPosStore((s) => s.setPos);
+  const { posName, posShortName, setPos } = useSettingPosStore();
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
     setPos(values.posName, values.posShortName);
@@ -21,7 +21,7 @@ const SettingPos = () => {
       <Form
         name="basic"
         style={{ maxWidth: 600 }}
-        initialValues={{ remember: true }}
+        initialValues={{ posName, posShortName }}
         onFinish={onFinish}
         autoComplete="off"
         layout="vertical"
