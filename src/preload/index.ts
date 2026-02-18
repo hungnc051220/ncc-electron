@@ -25,8 +25,8 @@ const api: PreloadAPI = {
     ipcRenderer.on("close-qr-dialog", handler);
     return () => ipcRenderer.removeListener("close-qr-dialog", handler);
   },
-  printTicket: (o, i, s) => ipcRenderer.send("print-ticket", o, i, s),
-  printTickets: (o, d) => ipcRenderer.send("print-tickets", o, d),
+  printTickets: async (tickets, printerName) =>
+    ipcRenderer.invoke("print-tickets", tickets, printerName),
   getDefaultExportFolder: () => ipcRenderer.invoke("get-default-export-folder"),
   selectFolder: () => ipcRenderer.invoke("select-folder"),
   exportTicket: (payload) => ipcRenderer.invoke("export-ticket", payload),
@@ -45,7 +45,8 @@ const api: PreloadAPI = {
   onAvailable: (cb) => ipcRenderer.on("update:available", (_, info) => cb(info)),
   onProgress: (cb) => ipcRenderer.on("update:progress", (_, percent) => cb(percent)),
   onReady: (cb: () => void) => ipcRenderer.on("update:ready", cb),
-  onError: (cb: (msg: string) => void) => ipcRenderer.on("update:error", (_, msg) => cb(msg))
+  onError: (cb: (msg: string) => void) => ipcRenderer.on("update:error", (_, msg) => cb(msg)),
+  getPrinters: () => ipcRenderer.invoke("get-printers")
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

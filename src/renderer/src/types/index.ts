@@ -1241,3 +1241,17 @@ export interface RealmManagement {
 export interface Account {
   roles: string[];
 }
+
+export type PrintTicketPayload = {
+  cinemaName: string;
+  address: string;
+  movieName: string;
+  showTime: string;
+  date: string;
+  seat: string;
+  room: string;
+  floor: string;
+  price: string;
+  ticketCode: string;
+  qrData: string;
+};

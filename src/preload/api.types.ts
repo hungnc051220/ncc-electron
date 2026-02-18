@@ -2,6 +2,20 @@ export interface UpdateInfo {
   version: string;
 }
 
+export type PrintTicketPayload = {
+  cinemaName: string;
+  address: string;
+  movieName: string;
+  showTime: string;
+  date: string;
+  seat: string;
+  room: string;
+  floor: string;
+  price: string;
+  ticketCode: string;
+  qrData: string;
+};
+
 export interface PreloadAPI {
   openCustomerScreen(id: number): void;
   closeCustomerScreen(): void;
@@ -15,8 +29,7 @@ export interface PreloadAPI {
   onQrDialogOpen(cb: (data: unknown) => void): () => void;
   onQrDialogClose(cb: () => void): () => void;
 
-  printTicket(orderId: number, itemIndex: number, seatIndex: number): void;
-  printTickets(orderId: number, ticketsData: unknown): void;
+  printTickets(tickets: PrintTicketPayload[], printerName?: string): Promise<void>;
 
   getDefaultExportFolder(): Promise<string>;
   selectFolder(): Promise<string>;
@@ -32,4 +45,5 @@ export interface PreloadAPI {
   onProgress(cb: (percent: number) => void): void;
   onReady(cb: () => void): void;
   onError(cb: (msg: string) => void): void;
+  getPrinters: () => Promise<Electron.PrinterInfo[]>;
 }

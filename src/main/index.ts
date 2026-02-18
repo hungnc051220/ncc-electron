@@ -4,21 +4,11 @@ import fs from "fs";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { autoUpdater } from "electron-updater";
 import icon from "../../resources/icon.png?asset";
-
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+import { createPrintService } from "./print.service";
 
 let mainWindow: BrowserWindow | null = null;
-let printWindow: BrowserWindow | null = null;
 
-const getTemplatePath = () => {
-  if (app.isPackaged) {
-    // khi đã build .exe
-    return path.join(process.resourcesPath, "resources", "ticket-template.html");
-  }
-
-  // khi chạy dev
-  return path.join(__dirname, "../../resources/ticket-template.html");
-};
+const printService = createPrintService();
 
 function setupUpdater(win: BrowserWindow) {
   const isDev = !app.isPackaged;
@@ -62,6 +52,16 @@ function setupUpdater(win: BrowserWindow) {
 
   autoUpdater.checkForUpdates();
 }
+
+const getTemplatePath = () => {
+  if (app.isPackaged) {
+    // khi đã build .exe
+    return path.join(process.resourcesPath, "resources", "ticket-template.html");
+  }
+
+  // khi chạy dev
+  return path.join(__dirname, "../../resources/ticket-template.html");
+};
 
 function renderTemplate(html, data) {
   let result = html;
@@ -189,171 +189,29 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  const printSingleTicket = (orderId?: number, itemIndex?: number, seatIndex?: number) => {
-    return new Promise((resolve, reject) => {
-      if (printWindow && !printWindow.isDestroyed()) {
-        printWindow.close();
-      }
+  ipcMain.handle("get-printers", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return [];
 
-      printWindow = new BrowserWindow({
-        show: false,
-        width: 300,
-        height: 600,
-        webPreferences: {
-          devTools: true
-        }
-      });
-
-      printWindow.on("closed", () => {
-        printWindow = null;
-      });
-
-      let isResolved = false;
-
-      printWindow.webContents.on("did-fail-load", (_e, code, desc, url) => {
-        console.error("did-fail-load", { code, desc, url });
-        if (!isResolved) {
-          isResolved = true;
-          reject(new Error(`Failed to load: ${desc}`));
-        }
-      });
-
-      printWindow.webContents.on("dom-ready", () => {
-        setTimeout(() => {
-          printWindow?.webContents.print(
-            {
-              silent: true,
-              deviceName: "EPSON TM-T81III Receipt",
-              printBackground: true,
-              margins: { marginType: "none" }
-            },
-            (success, error) => {
-              if (!isResolved) {
-                isResolved = true;
-                if (success) {
-                  console.log(
-                    `PRINT RESULT: Success for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`
-                  );
-                  // resolve();
-                } else {
-                  console.error(
-                    `PRINT RESULT: Error for order ${orderId}, item ${itemIndex}, seat ${seatIndex}`,
-                    error
-                  );
-                  reject(error);
-                }
-              }
-              // Đóng window sau một chút để đảm bảo print hoàn tất
-              setTimeout(() => {
-                printWindow?.close();
-              }, 100);
-            }
-          );
-        }, 1000);
-      });
-
-      // Build URL with query params
-      const url = new URL(`${baseURL}/print-ticket/${orderId}`);
-      if (itemIndex !== undefined) {
-        url.searchParams.set("itemIndex", itemIndex.toString());
-      }
-      if (seatIndex !== undefined) {
-        url.searchParams.set("seatIndex", seatIndex.toString());
-      }
-
-      printWindow.loadURL(url.toString()).catch((err) => {
-        if (!isResolved) {
-          isResolved = true;
-          reject(err);
-        }
-      });
-    });
-  };
-
-  ipcMain.on("print-ticket", async (_, orderId, itemIndex, seatIndex) => {
-    // Nếu có orderId, in vé cụ thể
-    if (orderId !== undefined && orderId !== null) {
-      try {
-        await printSingleTicket(orderId, itemIndex, seatIndex);
-      } catch (error) {
-        console.error("Print ticket error:", error);
-      }
-      return;
-    }
-
-    // Fallback: print ticket không có params (backward compatibility)
-    try {
-      await printSingleTicket(undefined, undefined, undefined);
-    } catch (error) {
-      console.error("Print ticket error:", error);
-    }
+    const printers = await win.webContents.getPrintersAsync();
+    return printers;
   });
 
-  ipcMain.on("print-tickets", async (_, orderId, ticketsData) => {
-    // ticketsData là array của { itemIndex, seatIndex } để in
-    // Nếu không có ticketsData, sẽ lấy từ API (fallback)
-    try {
-      let ticketsToPrint = ticketsData;
-
-      // Nếu không có ticketsData, lấy từ API
-      if (!ticketsToPrint || ticketsToPrint.length === 0) {
-        const response = await fetch(`${baseURL}/api/order-items/${orderId}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch order items: ${response.statusText}`);
-        }
-        const orderData = await response.json();
-
-        // Tạo danh sách vé cần in
-        ticketsToPrint = [];
-        for (let itemIndex = 0; itemIndex < orderData.items.length; itemIndex++) {
-          const item = orderData.items[itemIndex];
-
-          // Tách từng ghế từ listChairValueF1, F2, F3
-          const getSeatsList = (item) => {
-            const seatsF1 = item.listChairValueF1
-              ? item.listChairValueF1
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              : [];
-            const seatsF2 = item.listChairValueF2
-              ? item.listChairValueF2
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              : [];
-            const seatsF3 = item.listChairValueF3
-              ? item.listChairValueF3
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              : [];
-            return [...seatsF1, ...seatsF2, ...seatsF3];
-          };
-
-          const seatsList = getSeatsList(item);
-
-          // Thêm từng ghế vào danh sách
-          for (let seatIndex = 0; seatIndex < seatsList.length; seatIndex++) {
-            ticketsToPrint.push({ itemIndex, seatIndex });
-          }
-        }
-      }
-
-      // In từng vé
-      for (const ticket of ticketsToPrint) {
-        try {
-          await printSingleTicket(orderId, ticket.itemIndex, ticket.seatIndex);
-          // Delay giữa các lần in để tránh conflict
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        } catch (error) {
-          console.error(`Error printing ticket ${ticket.itemIndex}-${ticket.seatIndex}:`, error);
-          // Tiếp tục in các vé khác dù có lỗi
-        }
-      }
-    } catch (error) {
-      console.error("Print tickets error:", error);
+  // 🔹 IPC handler
+  ipcMain.handle("print-tickets", async (_, tickets, printerName) => {
+    if (!tickets || tickets.length === 0) {
+      throw new Error("No tickets to print");
     }
+
+    return printService.enqueue(async () => {
+      for (const ticket of tickets) {
+        try {
+          await printService.printSingleTicket(ticket, printerName);
+        } catch (err) {
+          console.error("Failed printing ticket:", err);
+        }
+      }
+    });
   });
 
   function getAppRootDir() {
@@ -388,6 +246,11 @@ app.whenReady().then(() => {
     return result.filePaths[0];
   });
 
+  ipcMain.handle("read-file", async (_, filePath) => {
+    const data = await fs.promises.readFile(filePath);
+    return new Uint8Array(data.buffer);
+  });
+
   ipcMain.handle("export-ticket", async (_, payload) => {
     const templatePath = getTemplatePath();
     const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
@@ -414,11 +277,6 @@ app.whenReady().then(() => {
     await renderTicketImage(html, outputPath);
 
     return outputPath;
-  });
-
-  ipcMain.handle("read-file", async (_, filePath) => {
-    const data = await fs.promises.readFile(filePath);
-    return new Uint8Array(data.buffer);
   });
 
   createWindow();

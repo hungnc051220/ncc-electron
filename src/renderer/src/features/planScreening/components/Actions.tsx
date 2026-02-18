@@ -1,5 +1,5 @@
 import { EditOutlined } from "@ant-design/icons";
-import { CancelOrderDto, OrderDto } from "@renderer/api/orders.api";
+import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
 import ticketIcon from "@renderer/assets/icons/confirmation_number.svg";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
@@ -11,9 +11,11 @@ import {
   ApiError,
   DiscountProps,
   ListSeat,
+  OrderDetailProps,
   OrderResponseProps,
   PaymentType,
   PlanScreeningDetailProps,
+  PrintTicketPayload,
   QrCodeResponseProps
 } from "@renderer/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,6 +28,43 @@ import DiscountPopup from "./DiscountPopup";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
+import { ordersKeys } from "@renderer/hooks/orders/keys";
+import { usePrinterStore } from "@renderer/store/printer.store";
+import dayjs from "dayjs";
+import QRCode from "qrcode";
+
+const buildTicketsFromOrder = async (data: OrderDetailProps): Promise<PrintTicketPayload[]> => {
+  const tickets: PrintTicketPayload[] = [];
+  const qrBase64 = await QRCode.toDataURL(data.order.barCode);
+
+  data.order.items.forEach((item) => {
+    const seats = [
+      ...(item.listChairValueF1?.split(",") ?? []),
+      ...(item.listChairValueF2?.split(",") ?? []),
+      ...(item.listChairValueF3?.split(",") ?? [])
+    ]
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    seats.forEach((seat) => {
+      tickets.push({
+        cinemaName: "TRUNG TÂM CHIẾU PHIM QUỐC GIA",
+        address: "Số 87 Láng Hạ, Ba Đình, Hà Nội",
+        movieName: data.film.filmName,
+        showTime: dayjs(data.planScreening.projectTime).format("HH:mm"),
+        date: dayjs(data.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
+        seat: seat,
+        room: data.room.name,
+        floor: data.room.floor,
+        price: formatMoney(item.unitPriceInclTax),
+        ticketCode: data.order.barCode,
+        qrData: qrBase64
+      });
+    });
+  });
+
+  return tickets;
+};
 
 const paymentTypes = [
   {
@@ -64,6 +103,7 @@ const Actions = ({
 }: ActionsProps) => {
   const [searchParams] = useSearchParams();
   const { posName, posShortName } = useSettingPosStore();
+  const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
   const isCustomerView = searchParams.get("view") === "customer";
   const queryClient = useQueryClient();
   const [vipCard, setVipCard] = useState(false);
@@ -134,12 +174,28 @@ const Actions = ({
           }
           return;
         }
+
         sessionStorage.setItem("lastTotal", order.orderTotal.toString());
         message.success("Tạo đơn thành công");
         setSelectedSeats([]);
         queryClient.invalidateQueries({
           queryKey: planScreeningsKeys.getDetail(planScreenId)
         });
+
+        try {
+          const orderDetail = await queryClient.fetchQuery({
+            queryKey: ordersKeys.getDetail(order.id),
+            queryFn: () => ordersApi.getDetail(order.id)
+          });
+
+          const tickets = await buildTicketsFromOrder(orderDetail);
+
+          await window.api.printTickets(tickets, selectedPrinter);
+
+          message.success("In vé thành công");
+        } catch {
+          message.error("In vé thất bại");
+        }
       },
       onError: (error: unknown) => {
         let msg = "Tạo đơn thất bại";

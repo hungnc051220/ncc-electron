@@ -1,37 +1,49 @@
-import { useSettingPosStore } from "@renderer/store/settingPos.store";
+import { usePrinterStore } from "@renderer/store/printer.store";
 import type { FormProps } from "antd";
 import { Button, Form, message, Select } from "antd";
+import { useEffect } from "react";
 
 type FieldType = {
-  posName: string;
-  posShortName: string;
+  printerName: string;
 };
 
 const SettingPrinter = () => {
-  const setPos = useSettingPosStore((s) => s.setPos);
+  const { printers, selectedPrinter, setSelectedPrinter, fetchPrinters, loading } =
+    usePrinterStore();
+
+  useEffect(() => {
+    fetchPrinters();
+  }, [fetchPrinters]);
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
-    setPos(values.posName, values.posShortName);
-    message.success("Cấu hình máy POS thành công");
+    setSelectedPrinter(values.printerName);
+    message.success("Cấu hình máy in mặc định thành công");
   };
 
   return (
     <>
-      <h3 className="font-semibold text-xl mb-4">Cấu hình máy in</h3>
+      <h3 className="font-semibold text-xl mb-4">Cấu hình máy in mặc định</h3>
       <Form
         name="basic"
         style={{ maxWidth: 600 }}
-        initialValues={{ remember: true }}
+        initialValues={{ printerName: selectedPrinter }}
         onFinish={onFinish}
         autoComplete="off"
         layout="vertical"
       >
         <Form.Item<FieldType>
-          label="Máy in"
-          name="posName"
-          rules={[{ required: true, message: "Chọn máy in" }]}
+          label="Máy in mặc định"
+          name="printerName"
+          rules={[{ required: true, message: "Chọn máy in mặc định" }]}
         >
-          <Select options={[]} placeholder="Chọn máy in" />
+          <Select
+            loading={loading}
+            options={printers.map((p) => ({
+              label: p.displayName || p.name,
+              value: p.name
+            }))}
+            placeholder="Chọn máy in mặc định"
+          />
         </Form.Item>
 
         <Form.Item label={null} className="flex justify-end">
