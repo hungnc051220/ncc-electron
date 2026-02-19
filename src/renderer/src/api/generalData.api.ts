@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { GeneralDataProps } from "@renderer/types";
+import { GeneralDataProps } from "@shared/types";
 
 export const generalDataApi = {
   get: async (): Promise<GeneralDataProps> => {

@@ -1,6 +1,6 @@
 import { useReportExamineTicketByPlan } from "@renderer/hooks/reports/useReportExamineTicketByPlan";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
-import { ExamineTicketsByFilmProps } from "@renderer/types";
+import { ExamineTicketsByFilmProps } from "@shared/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";

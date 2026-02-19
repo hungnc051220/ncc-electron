@@ -1,7 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { useHolidays } from "@renderer/hooks/holidays/useScreeningRooms";
 import { formatNumber } from "@renderer/lib/utils";
-import { HolidayProps } from "@renderer/types";
+import { HolidayProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Breadcrumb, Button, DatePicker, Dropdown, Table, Tabs } from "antd";
 import type { Dayjs } from "dayjs";

@@ -6,7 +6,7 @@ import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney } from "@renderer/lib/utils";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ApiError, ListSeat } from "@renderer/types";
+import { ApiError, ListSeat } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message } from "antd";

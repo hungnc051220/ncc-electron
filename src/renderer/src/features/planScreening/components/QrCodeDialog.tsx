@@ -1,5 +1,5 @@
 import { formatMoney } from "@renderer/lib/utils";
-import { QrCodeResponseProps } from "@renderer/types";
+import { QrCodeResponseProps } from "@shared/types";
 import { Modal } from "antd";
 import dayjs from "dayjs";
 import { Hourglass } from "lucide-react";

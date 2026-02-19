@@ -1,6 +1,6 @@
 import { useOrders } from "@renderer/hooks/orders/useUsers";
 import { formatNumber } from "@renderer/lib/utils";
-import { OrderDetailProps } from "@renderer/types";
+import { OrderDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Table } from "antd";
 import dayjs from "dayjs";

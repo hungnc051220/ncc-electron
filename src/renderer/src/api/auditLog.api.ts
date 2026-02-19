@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, AuditLogProps } from "@renderer/types";
+import { ApiResponse, AuditLogProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface AuditLogQuery {

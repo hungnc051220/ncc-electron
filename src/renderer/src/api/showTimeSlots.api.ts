@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, DayPartProps } from "@renderer/types";
+import { ApiResponse, DayPartProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface ShowTimeSlotsQuery {

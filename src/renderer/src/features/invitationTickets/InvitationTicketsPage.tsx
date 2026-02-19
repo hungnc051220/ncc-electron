@@ -4,7 +4,7 @@ import { MoreOutlined } from "@ant-design/icons";
 import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
 import { useOrders } from "@renderer/hooks/orders/useUsers";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
-import { OrderDetailProps, OrderStatus } from "@renderer/types";
+import { OrderDetailProps, OrderStatus } from "@shared/types";
 import { Breadcrumb, Button, Dropdown, Table, type PaginationProps, type TableProps } from "antd";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";

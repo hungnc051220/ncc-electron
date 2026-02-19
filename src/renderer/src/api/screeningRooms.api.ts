@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, RoomProps } from "@renderer/types";
+import { ApiResponse, RoomProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface ScreeningRoomsQuery {

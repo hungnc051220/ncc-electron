@@ -1,7 +1,7 @@
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useCreatePlanFilm } from "@renderer/hooks/planFilms/useCreatePlanFilm";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { ApiError, FilmProps, PlanFilmProps } from "@renderer/types";
+import { ApiError, FilmProps, PlanFilmProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Button, Input, message, Modal, Table } from "antd";
 import axios from "axios";

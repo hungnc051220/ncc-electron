@@ -1,5 +1,5 @@
 import { useReportMonthly } from "@renderer/hooks/reports/useReportMonthly";
-import { Film, Manufacturer, MonthlyReportPlanProps } from "@renderer/types";
+import { Film, Manufacturer, MonthlyReportPlanProps } from "@shared/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";

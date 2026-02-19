@@ -1,6 +1,6 @@
 import { useReportTicketSalesRevenue } from "@renderer/hooks/reports/useReportTicketSalesRevenue";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { ReportRevenueFilmProps, RevenueByFilmProps } from "@renderer/types";
+import { ReportRevenueFilmProps, RevenueByFilmProps } from "@shared/types";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { DatePicker, Table, Typography } from "antd";
 import type { Dayjs } from "dayjs";

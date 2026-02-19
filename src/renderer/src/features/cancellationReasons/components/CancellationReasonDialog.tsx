@@ -1,6 +1,6 @@
 import { useCreateCancellationReason } from "@renderer/hooks/cancellationReasons/useCreateCancellationReason";
 import { useUpdateCancellationReason } from "@renderer/hooks/cancellationReasons/useUpdateCancellationReason";
-import { ApiError, CancellationReasonProps } from "@renderer/types";
+import { ApiError, CancellationReasonProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal } from "antd";
 import axios from "axios";

@@ -1,4 +1,4 @@
-import { VoucherUsageProps } from "@renderer/types";
+import { VoucherUsageProps } from "@shared/types";
 import { Button } from "antd";
 import dayjs from "dayjs";
 import ExcelJS from "exceljs";

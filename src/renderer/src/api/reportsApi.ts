@@ -10,7 +10,7 @@ import {
   ReportRevenueStaffProps,
   ReportU22UsageProps,
   ReportVoucherUsageProps
-} from "@renderer/types";
+} from "@shared/types";
 
 export interface ReportRevenueByFilmDto {
   fromDate?: string;

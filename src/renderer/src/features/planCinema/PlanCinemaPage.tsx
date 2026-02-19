@@ -1,6 +1,6 @@
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { cn } from "@renderer/lib/utils";
-import { PlanCinemaProps } from "@renderer/types";
+import { PlanCinemaProps } from "@shared/types";
 import type { CollapseProps, PaginationProps } from "antd";
 import { Breadcrumb, Button, Collapse, Empty, Pagination, Spin } from "antd";
 import dayjs from "dayjs";

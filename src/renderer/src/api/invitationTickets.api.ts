@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { BackgroundProps } from "@renderer/types";
+import { BackgroundProps } from "@shared/types";
 
 export interface InvitationTicketDto {
   orderId: number;

@@ -1,5 +1,5 @@
 import { useDeleteFilm } from "@renderer/hooks/films/useDeleteFilm";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 

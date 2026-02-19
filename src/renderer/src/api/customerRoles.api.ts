@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { CustomerRoleMenuProps, CustomerRoleProps } from "@renderer/types";
+import { CustomerRoleMenuProps, CustomerRoleProps } from "@shared/types";
 
 export interface CustomerRoleMenuDto {
   customerIds?: number[];

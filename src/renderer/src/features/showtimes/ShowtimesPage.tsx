@@ -1,6 +1,6 @@
 import { usePlanScreeningsByDate } from "@renderer/hooks/planScreenings/usePlanScreeningsByDate";
 import { useRealtimeClock } from "@renderer/hooks/useRealtimeClock";
-import { DetailPlanScreeningProps, PlanScreeningProps } from "@renderer/types";
+import { DetailPlanScreeningProps, PlanScreeningProps } from "@shared/types";
 import { Button, Checkbox, DatePicker, Table, type TableProps } from "antd";
 import dayjs from "dayjs";
 import { useQueryState } from "nuqs";

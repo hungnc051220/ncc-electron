@@ -1,6 +1,6 @@
 import { useCreateManufacturer } from "@renderer/hooks/manufacturers/useCreateManufacturer";
 import { useUpdateManufacturer } from "@renderer/hooks/manufacturers/useUpdateManufacturer";
-import { ApiError, ManufacturerProps } from "@renderer/types";
+import { ApiError, ManufacturerProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal } from "antd";
 import axios from "axios";

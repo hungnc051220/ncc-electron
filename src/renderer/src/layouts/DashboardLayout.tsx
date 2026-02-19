@@ -15,7 +15,7 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <Layout className="h-screen">
-      <header className="flex items-center gap-10 bg-white h-12 sticky top-0 z-50 w-full px-4 shadow-sm">
+      <header className="flex items-center gap-10 bg-white h-11.25 sticky top-0 z-50 w-full px-4 shadow-sm">
         <Link to="/">
           <img src={logo} alt="logo" className="h-9 w-auto object-contain" />
         </Link>

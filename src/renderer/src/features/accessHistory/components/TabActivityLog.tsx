@@ -2,7 +2,7 @@ import { usersApi } from "@renderer/api/users.api";
 import { useAuditLog } from "@renderer/hooks/useAuditLog";
 import { useDebounce } from "@renderer/hooks/useDebounce";
 import { formatNumber } from "@renderer/lib/utils";
-import { AuditLogProps } from "@renderer/types";
+import { AuditLogProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { DatePicker, Select, Table } from "antd";

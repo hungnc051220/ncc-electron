@@ -1,7 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { formatNumber } from "@renderer/lib/utils";
-import { PlanCinemaProps } from "@renderer/types";
+import { PlanCinemaProps } from "@shared/types";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { Breadcrumb, DatePicker, Dropdown, Table } from "antd";
 import type { Dayjs } from "dayjs";

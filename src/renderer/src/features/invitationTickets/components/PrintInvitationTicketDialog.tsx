@@ -2,7 +2,7 @@
 
 import { useCreateInvitationTicket } from "@renderer/hooks/invitationTickets/useCreateInvitationTicket";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
-import { ApiError, BackgroundProps, OrderDetailProps } from "@renderer/types";
+import { ApiError, BackgroundProps, OrderDetailProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message, Modal, Select, Space } from "antd";
 import axios from "axios";

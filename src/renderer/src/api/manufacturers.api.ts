@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, ManufacturerProps } from "@renderer/types";
+import { ApiResponse, ManufacturerProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface ManufacturersQuery {

@@ -1,7 +1,7 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Select } from "antd";
 import { useState } from "react";
-import { CustomerRoleProps } from "@renderer/types";
+import { CustomerRoleProps } from "@shared/types";
 import { ValuesProps } from "../UsersPage";
 
 interface FilterProps {

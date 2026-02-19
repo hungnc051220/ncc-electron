@@ -9,7 +9,7 @@ import { generalDataApi } from "@renderer/api/generalData.api";
 import { usersKeys } from "@renderer/hooks/users/keys";
 import { usersApi } from "@renderer/api/users.api";
 import { jwtDecode } from "jwt-decode";
-import { JwtPayload } from "@renderer/types";
+import { JwtPayload } from "@shared/types";
 
 type LoginForm = {
   username: string;

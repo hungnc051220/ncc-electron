@@ -1,5 +1,5 @@
 import { useDeleteTicketPrice } from "@renderer/hooks/ticketPrices/useDeleteTicketPrice";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 

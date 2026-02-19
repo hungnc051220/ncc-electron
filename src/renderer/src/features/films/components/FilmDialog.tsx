@@ -11,9 +11,9 @@ import {
   FilmProps,
   FilmStatusProps,
   FilmVersionProps,
-  LanguageProps,
+  FilmLanguageProps,
   ManufacturerProps
-} from "@renderer/types";
+} from "@shared/types";
 import type { FormProps, GetProp, UploadProps } from "antd";
 import {
   Checkbox,
@@ -79,7 +79,7 @@ interface FilmDialogProps {
   versions: FilmVersionProps[];
   manufactureres: ManufacturerProps[];
   countries: CountryProps[];
-  languages: LanguageProps[];
+  languages: FilmLanguageProps[];
   filmStatuses: FilmStatusProps[];
 }
 

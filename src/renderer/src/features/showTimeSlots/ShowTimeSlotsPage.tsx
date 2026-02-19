@@ -1,7 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useShowTimeSlots } from "@renderer/hooks/showTimeSlots/useShowTimeSlots";
 import { formatNumber } from "@renderer/lib/utils";
-import { DayPartProps } from "@renderer/types";
+import { DayPartProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";

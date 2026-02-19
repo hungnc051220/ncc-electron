@@ -1,5 +1,5 @@
 import { useDeleteDiscount } from "@renderer/hooks/discounts/useDeleteDiscount";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 

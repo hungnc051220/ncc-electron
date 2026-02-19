@@ -1,6 +1,6 @@
 import { useCreateShowTimeSlot } from "@renderer/hooks/showTimeSlots/useCreateShowTimeSlot";
 import { useUpdateShowTimeSlot } from "@renderer/hooks/showTimeSlots/useUpdateShowTimeSlot";
-import { ApiError, DayPartProps } from "@renderer/types";
+import { ApiError, DayPartProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select, TimePicker } from "antd";
 import axios from "axios";

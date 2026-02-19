@@ -1,7 +1,7 @@
 import { Table } from "antd";
 import { TableRow } from ".";
 import type { TableProps } from "antd";
-import { ExamineTicketTotalOnlineProps, ExamineTicketTotalProps } from "@renderer/types";
+import { ExamineTicketTotalOnlineProps, ExamineTicketTotalProps } from "@shared/types";
 import { formatNumber } from "@renderer/lib/utils";
 
 interface TabRevenueProps {

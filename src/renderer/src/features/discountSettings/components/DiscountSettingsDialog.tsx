@@ -1,7 +1,7 @@
 import { useCreateDiscount } from "@renderer/hooks/discounts/useCreateDiscount";
 import { useUpdateDiscount } from "@renderer/hooks/discounts/useUpdateDiscount";
 import { formatter } from "@renderer/lib/utils";
-import { ApiError, DiscountProps } from "@renderer/types";
+import { ApiError, DiscountProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, InputNumber, message, Modal, Select } from "antd";
 import axios from "axios";

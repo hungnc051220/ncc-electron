@@ -1,7 +1,7 @@
 import { Table } from "antd";
 import { Row } from ".";
 import type { TableProps } from "antd";
-import { ReportMonthlyRevenueTicketByStaffProps } from "@renderer/types";
+import { ReportMonthlyRevenueTicketByStaffProps } from "@shared/types";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 
 interface TabRevenueProps {

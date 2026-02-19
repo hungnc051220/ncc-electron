@@ -1,5 +1,5 @@
 import { useDeleteSeatType } from "@renderer/hooks/seatTypes/useDeleteSeatType";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 

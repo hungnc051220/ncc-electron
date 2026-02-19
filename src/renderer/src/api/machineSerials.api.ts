@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, MachineSerialProps } from "@renderer/types";
+import { ApiResponse, MachineSerialProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface MachineSerialsQuery {

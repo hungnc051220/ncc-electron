@@ -1,7 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRooms";
 import { formatNumber } from "@renderer/lib/utils";
-import { RoomProps } from "@renderer/types";
+import { RoomProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";

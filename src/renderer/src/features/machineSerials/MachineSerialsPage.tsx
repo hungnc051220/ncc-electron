@@ -1,6 +1,6 @@
 import { useMachineSerials } from "@renderer/hooks/useMachineSerials";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
-import { MachineSerialProps } from "@renderer/types";
+import { MachineSerialProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Table } from "antd";
 import { useMemo, useState } from "react";

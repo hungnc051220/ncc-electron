@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal, message } from "antd";
-import { UpdateInfo } from "@renderer/types";
+import { UpdateInfo } from "@shared/types";
 
 export function useAutoUpdater() {
   const [version, setVersion] = useState<string>("");

@@ -1,7 +1,7 @@
 import { useCustomerRoleMenu } from "@renderer/hooks/customerRoles/useCustomerRoleMenu";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { useUpdateCustomerRoleMenu } from "@renderer/hooks/customerRoles/useUpdateCustomerRoleMenu";
-import { ApiError, CustomerRoleMenuProps } from "@renderer/types";
+import { ApiError, CustomerRoleMenuProps } from "@shared/types";
 import type { MenuProps, TableProps } from "antd";
 import { Breadcrumb, Button, Checkbox, Layout, Menu, message, Spin, Table } from "antd";
 import axios from "axios";

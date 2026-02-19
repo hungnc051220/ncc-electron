@@ -1,6 +1,6 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useManufacturers } from "@renderer/hooks/manufacturers/useManufacturers";
-import { ManufacturerProps } from "@renderer/types";
+import { ManufacturerProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";

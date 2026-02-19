@@ -1,5 +1,5 @@
 import { cn } from "@renderer/lib/utils";
-import { ListSeat } from "@renderer/types";
+import { ListSeat } from "@shared/types";
 import { useCallback } from "react";
 
 const colorMap: { [key: string]: string } = {

@@ -7,7 +7,7 @@ import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { useUsers } from "@renderer/hooks/users/useUsers";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
-import { UserProps } from "@renderer/types";
+import { UserProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { Check, PlusIcon, X } from "lucide-react";

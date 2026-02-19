@@ -1,6 +1,6 @@
 import { useCreateScreeningRoom } from "@renderer/hooks/screeningRooms/useCreateScreeningRoom";
 import { useUpdateScreeningRoom } from "@renderer/hooks/screeningRooms/useUpdateScreeningRoom";
-import { ApiError, RoomProps } from "@renderer/types";
+import { ApiError, RoomProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Col, Form, Input, InputNumber, message, Modal, Row, Select } from "antd";
 import axios from "axios";

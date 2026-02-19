@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { formatMoney } from "@renderer/lib/utils";
-import { ListSeat } from "@renderer/types";
+import { ListSeat } from "@shared/types";
 
 type TooltipPosition = {
   x: number;

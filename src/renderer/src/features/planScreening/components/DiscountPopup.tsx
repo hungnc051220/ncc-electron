@@ -1,5 +1,5 @@
 import { formatMoney } from "@renderer/lib/utils";
-import { DiscountProps } from "@renderer/types";
+import { DiscountProps } from "@shared/types";
 import { Button, Modal, Table } from "antd";
 import type { TableProps } from "antd";
 import { useState } from "react";

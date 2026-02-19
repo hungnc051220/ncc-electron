@@ -1,5 +1,5 @@
 import { useAutoUpdater } from "@renderer/hooks/useAutoUpdater";
-import { UpdaterContextType } from "@renderer/types";
+import { UpdaterContextType } from "@shared/types";
 import { createContext, useContext, ReactNode } from "react";
 
 const UpdaterContext = createContext<UpdaterContextType | null>(null);

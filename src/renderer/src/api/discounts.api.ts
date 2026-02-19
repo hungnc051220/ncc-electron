@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, DiscountProps } from "@renderer/types";
+import { ApiResponse, DiscountProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface DiscountsQuery {

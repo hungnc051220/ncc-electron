@@ -1,5 +1,5 @@
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
-import { ApiError, UserProps } from "@renderer/types";
+import { ApiError, UserProps } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 

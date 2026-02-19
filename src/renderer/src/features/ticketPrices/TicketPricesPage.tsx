@@ -1,7 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useTicketPrices } from "@renderer/hooks/ticketPrices/useTicketPrices";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { TicketPriceProps } from "@renderer/types";
+import { TicketPriceProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";

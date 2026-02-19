@@ -1,5 +1,5 @@
 import { useDeleteScreeningRoom } from "@renderer/hooks/screeningRooms/useDeleteScreeningRoom";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 

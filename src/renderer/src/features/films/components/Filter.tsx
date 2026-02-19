@@ -2,7 +2,7 @@ import { FilterOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Form, Input, Modal, Select } from "antd";
 import { useState } from "react";
 import { ValuesProps } from "../FilmsPage";
-import { ManufacturerProps } from "@renderer/types";
+import { ManufacturerProps } from "@shared/types";
 import { filterEmptyValues } from "@renderer/lib/utils";
 
 interface FilterProps {

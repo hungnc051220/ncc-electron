@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, OrderDetailProps, QrCodeResponseProps } from "@renderer/types";
+import { ApiResponse, OrderDetailProps, QrCodeResponseProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface OrdersQuery {

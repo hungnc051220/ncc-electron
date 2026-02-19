@@ -3,7 +3,7 @@ import { Breadcrumb, Button, Table } from "antd";
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Link } from "react-router";
-import { OrderDetailProps } from "@renderer/types";
+import { OrderDetailProps } from "@shared/types";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useUsers";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";

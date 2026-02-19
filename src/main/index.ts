@@ -1,12 +1,20 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from "electron";
-import path, { join } from "path";
-import fs from "fs";
-import { electronApp, optimizer, is } from "@electron-toolkit/utils";
+import { electronApp, is, optimizer } from "@electron-toolkit/utils";
+import { CurrentSeatState, PlanScreeningDetailProps, PrintTicketPayload } from "@shared/types";
+import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
 import { autoUpdater } from "electron-updater";
+import fs from "fs";
+import path, { join } from "path";
 import icon from "../../resources/icon.png?asset";
 import { createPrintService } from "./print.service";
 
 let mainWindow: BrowserWindow | null = null;
+let customerWindow: BrowserWindow | null = null;
+let currentScreeningData: PlanScreeningDetailProps | null = null;
+
+let currentSeatState: CurrentSeatState = {
+  selectedSeats: [],
+  cancelMode: false
+};
 
 const printService = createPrintService();
 
@@ -51,6 +59,14 @@ function setupUpdater(win: BrowserWindow) {
   });
 
   autoUpdater.checkForUpdates();
+}
+
+function loadRenderer(win: BrowserWindow, route: string) {
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    win.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}#${route}`);
+  } else {
+    win.loadFile(join(__dirname, "../renderer/index.html"), { hash: route });
+  }
 }
 
 const getTemplatePath = () => {
@@ -118,8 +134,6 @@ async function renderTicketImage(htmlContent, outputPath) {
     })();
   `);
 
-  console.log("Actual size:", actualSize);
-
   // Resize window
   win.setContentSize(actualSize.width, actualSize.height);
 
@@ -133,8 +147,6 @@ async function renderTicketImage(htmlContent, outputPath) {
     width: actualSize.width,
     height: actualSize.height
   });
-
-  console.log("Image size:", image.getSize());
 
   fs.writeFileSync(outputPath, image.toPNG());
 
@@ -175,6 +187,48 @@ function createWindow(): void {
   setupUpdater(mainWindow);
 }
 
+function getExternalDisplay() {
+  const displays = screen.getAllDisplays();
+  const primary = screen.getPrimaryDisplay();
+
+  const external = displays.find((d) => d.id !== primary.id);
+
+  if (!external) {
+    console.log("DEV MODE: Using primary display as external");
+    return primary;
+  }
+
+  return external;
+}
+
+function createCustomerWindow(planScreeningId: number) {
+  const externalDisplay = getExternalDisplay();
+
+  if (customerWindow && !customerWindow.isDestroyed()) {
+    customerWindow.focus();
+    return;
+  }
+
+  customerWindow = new BrowserWindow({
+    x: externalDisplay.bounds.x,
+    y: externalDisplay.bounds.y,
+    width: externalDisplay.bounds.width,
+    height: externalDisplay.bounds.height,
+    kiosk: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false
+    }
+  });
+
+  loadRenderer(customerWindow, `/plan-screening/${planScreeningId}?view=customer`);
+
+  customerWindow.on("closed", () => {
+    customerWindow = null;
+  });
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -197,22 +251,62 @@ app.whenReady().then(() => {
     return printers;
   });
 
-  // 🔹 IPC handler
-  ipcMain.handle("print-tickets", async (_, tickets, printerName) => {
-    if (!tickets || tickets.length === 0) {
-      throw new Error("No tickets to print");
+  ipcMain.handle("customer:open", async (_, id: number) => {
+    createCustomerWindow(id);
+  });
+
+  ipcMain.handle("customer:close", async () => {
+    if (!customerWindow || customerWindow.isDestroyed()) {
+      return { success: false };
     }
 
-    return printService.enqueue(async () => {
-      for (const ticket of tickets) {
-        try {
-          await printService.printSingleTicket(ticket, printerName);
-        } catch (err) {
-          console.error("Failed printing ticket:", err);
-        }
-      }
-    });
+    customerWindow.close();
+    customerWindow = null;
+
+    return { success: true };
   });
+
+  ipcMain.on("customer:request-init", (event) => {
+    event.sender.send("customer:update-data", currentScreeningData);
+    event.sender.send("customer:seat-sync", currentSeatState);
+  });
+
+  ipcMain.on("customer:update-data", (_, data) => {
+    currentScreeningData = data;
+
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.webContents.send("customer:update-data", data);
+    }
+  });
+
+  ipcMain.on("booking:seat-update", (_, payload) => {
+    // update state trung tâm
+    currentSeatState = payload;
+
+    // broadcast sang customer
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.webContents.send("customer:seat-sync", currentSeatState);
+    }
+  });
+
+  ipcMain.handle(
+    "print-tickets",
+    async (_, tickets: PrintTicketPayload[], printerName?: string) => {
+      if (!tickets || tickets.length === 0) {
+        throw new Error("No tickets to print");
+      }
+
+      return printService.enqueue(async () => {
+        for (const ticket of tickets) {
+          try {
+            await printService.printSingleTicket(ticket, printerName);
+          } catch (err) {
+            console.error("Failed printing ticket:", err);
+          }
+        }
+      });
+    }
+  );
 
   function getAppRootDir() {
     if (!app.isPackaged) {
@@ -272,7 +366,6 @@ app.whenReady().then(() => {
     });
 
     const outputPath = path.join(payload.folder, `${payload.barCode}.png`);
-    console.log("output Path", outputPath);
 
     await renderTicketImage(html, outputPath);
 

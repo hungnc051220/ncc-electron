@@ -5,7 +5,7 @@ import { Button, message, Table } from "antd";
 import dayjs from "dayjs";
 import { useState } from "react";
 import AddSchedulingDialog from "./AddSchedulingDialog";
-import { ApiError, PlanScreeningDetailProps } from "@renderer/types";
+import { ApiError, PlanScreeningDetailProps } from "@shared/types";
 import axios from "axios";
 
 interface TabSchedulingProps {

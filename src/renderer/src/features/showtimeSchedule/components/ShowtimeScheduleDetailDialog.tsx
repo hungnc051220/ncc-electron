@@ -1,6 +1,6 @@
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { formatNumber } from "@renderer/lib/utils";
-import { PlanCinemaProps, PlanScreeningDetailProps } from "@renderer/types";
+import { PlanCinemaProps, PlanScreeningDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Modal, Table } from "antd";
 import dayjs from "dayjs";

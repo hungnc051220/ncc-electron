@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, FilmProps, UserProps } from "@renderer/types";
+import { ApiResponse, FilmProps, UserProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface FilmsQuery {

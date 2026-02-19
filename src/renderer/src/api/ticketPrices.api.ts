@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, TicketPriceProps } from "@renderer/types";
+import { ApiResponse, TicketPriceProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface TicketPricesQuery {

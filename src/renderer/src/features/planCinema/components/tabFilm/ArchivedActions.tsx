@@ -1,5 +1,5 @@
 import { useUpdatePlanCinema } from "@renderer/hooks/planCinemas/useUpdatePlanCinema";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { Button, message } from "antd";
 import axios from "axios";
 

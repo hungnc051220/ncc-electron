@@ -1,5 +1,5 @@
 import { formatNumber } from "@renderer/lib/utils";
-import { VoucherUsageProps } from "@renderer/types";
+import { VoucherUsageProps } from "@shared/types";
 import type { TableProps } from "antd";
 import { Table } from "antd";
 

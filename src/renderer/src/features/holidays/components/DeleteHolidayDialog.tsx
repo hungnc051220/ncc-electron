@@ -1,5 +1,5 @@
 import { useDeleteHoliday } from "@renderer/hooks/holidays/useDeleteHoliday";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";

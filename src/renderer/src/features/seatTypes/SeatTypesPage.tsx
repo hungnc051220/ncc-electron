@@ -1,7 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { formatNumber } from "@renderer/lib/utils";
-import { SeatTypeProps } from "@renderer/types";
+import { SeatTypeProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, ColorPicker, Dropdown, Table } from "antd";
 import { Check, PlusIcon, X } from "lucide-react";

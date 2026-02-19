@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, FilmCategoryProps } from "@renderer/types";
+import { ApiResponse, FilmCategoryProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface FilmCategoriesQuery {

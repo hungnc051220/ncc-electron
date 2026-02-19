@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, CancellationReasonProps } from "@renderer/types";
+import { ApiResponse, CancellationReasonProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface CanncellationReasonsQuery {

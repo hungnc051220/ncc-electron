@@ -1,6 +1,6 @@
 import { useCancelTickets } from "@renderer/hooks/useCancelTickets";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
-import { CancellationTicketProps } from "@renderer/types";
+import { CancellationTicketProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Table } from "antd";
 import dayjs from "dayjs";

@@ -3,7 +3,7 @@
 import { useCreateContractTicketSale } from "@renderer/hooks/contractTicketSales/useCreateContractTicketSale";
 import { useUpdateContractTicketSale } from "@renderer/hooks/contractTicketSales/useUpdateContractTicketSale";
 import { formatter } from "@renderer/lib/utils";
-import { ApiError, OrderResponseProps } from "@renderer/types";
+import { ApiError, OrderResponseProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, InputNumber, message, Modal } from "antd";
 import axios from "axios";

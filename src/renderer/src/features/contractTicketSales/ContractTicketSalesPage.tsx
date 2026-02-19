@@ -1,7 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useContractTicketSales } from "@renderer/hooks/contractTicketSales/useContractTicketSales";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
-import { OrderDetailProps, OrderResponseProps } from "@renderer/types";
+import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import dayjs from "dayjs";

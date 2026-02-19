@@ -1,5 +1,5 @@
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { U22UsageProps } from "@renderer/types";
+import { U22UsageProps } from "@shared/types";
 import type { TableProps } from "antd";
 import { Table } from "antd";
 

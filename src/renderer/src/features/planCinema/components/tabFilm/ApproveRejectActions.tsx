@@ -1,5 +1,5 @@
 import { useApproveRejectPlanCinema } from "@renderer/hooks/planCinemas/useApproveRejectPlanCinema";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { Button, message } from "antd";
 import axios from "axios";
 

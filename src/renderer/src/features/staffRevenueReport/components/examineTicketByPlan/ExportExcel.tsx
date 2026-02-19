@@ -2,7 +2,7 @@ import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import dayjs from "dayjs";
-import { ExamineTicketTotalOnlineProps, ExamineTicketTotalProps } from "@renderer/types";
+import { ExamineTicketTotalOnlineProps, ExamineTicketTotalProps } from "@shared/types";
 import { TableRow } from ".";
 
 type Props = {

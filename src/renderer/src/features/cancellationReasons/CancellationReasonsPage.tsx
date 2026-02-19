@@ -1,7 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useCancellationReasons } from "@renderer/hooks/cancellationReasons/useCancellationReasons";
 import { formatNumber } from "@renderer/lib/utils";
-import { CancellationReasonProps } from "@renderer/types";
+import { CancellationReasonProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";

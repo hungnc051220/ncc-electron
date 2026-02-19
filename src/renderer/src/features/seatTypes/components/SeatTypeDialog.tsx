@@ -2,7 +2,7 @@ import { cyan, generate, green, presetPalettes, red } from "@ant-design/colors";
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
 import { useCreateSeatType } from "@renderer/hooks/seatTypes/useCreateSeatType";
 import { useUpdateSeatType } from "@renderer/hooks/seatTypes/useUpdateSeatType";
-import { ApiError, SeatTypeProps } from "@renderer/types";
+import { ApiError, SeatTypeProps } from "@shared/types";
 import type { ColorPickerProps, FormProps, GetProp, UploadProps } from "antd";
 import {
   Checkbox,

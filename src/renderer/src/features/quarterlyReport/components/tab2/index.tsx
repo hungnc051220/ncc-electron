@@ -1,6 +1,6 @@
 import { useReportQuarterly } from "@renderer/hooks/reports/useReportQuarterly";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { Manufacturer2, MonthlyReportTicketProps } from "@renderer/types";
+import { Manufacturer2, MonthlyReportTicketProps } from "@shared/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";

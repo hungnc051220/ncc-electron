@@ -7,6 +7,8 @@ import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { cn, formatMoney } from "@renderer/lib/utils";
+import { usePrinterStore } from "@renderer/store/printer.store";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import {
   ApiError,
   DiscountProps,
@@ -17,21 +19,19 @@ import {
   PlanScreeningDetailProps,
   PrintTicketPayload,
   QrCodeResponseProps
-} from "@renderer/types";
+} from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
 import { Button, Checkbox, Descriptions, message } from "antd";
 import axios from "axios";
+import dayjs from "dayjs";
+import QRCode from "qrcode";
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import DiscountPopup from "./DiscountPopup";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
-import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
-import { usePrinterStore } from "@renderer/store/printer.store";
-import dayjs from "dayjs";
-import QRCode from "qrcode";
 
 const buildTicketsFromOrder = async (data: OrderDetailProps): Promise<PrintTicketPayload[]> => {
   const tickets: PrintTicketPayload[] = [];

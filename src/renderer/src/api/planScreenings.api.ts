@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, PlanScreeningDetailProps, PlanScreeningProps } from "@renderer/types";
+import { ApiResponse, PlanScreeningDetailProps, PlanScreeningProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface PlanScreeningsQuery {

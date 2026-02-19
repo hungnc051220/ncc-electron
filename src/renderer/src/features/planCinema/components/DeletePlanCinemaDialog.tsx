@@ -1,5 +1,5 @@
 import { useDeletePlanCinema } from "@renderer/hooks/planCinemas/useDeletePlanCinema";
-import { ApiError, PlanCinemaProps } from "@renderer/types";
+import { ApiError, PlanCinemaProps } from "@shared/types";
 import { message, Modal } from "antd";
 import axios from "axios";
 

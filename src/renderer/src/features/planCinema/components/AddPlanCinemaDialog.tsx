@@ -1,6 +1,6 @@
 import Icon from "@ant-design/icons";
 import { useCreatePlanCinema } from "@renderer/hooks/planCinemas/useCreatePlanCinema";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message, Modal } from "antd";
 import axios from "axios";

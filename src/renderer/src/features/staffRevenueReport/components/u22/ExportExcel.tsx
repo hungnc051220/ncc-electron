@@ -1,4 +1,4 @@
-import { U22UsageProps } from "@renderer/types";
+import { U22UsageProps } from "@shared/types";
 import { Button } from "antd";
 import dayjs from "dayjs";
 import ExcelJS from "exceljs";

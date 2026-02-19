@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, SeatTypeProps } from "@renderer/types";
+import { ApiResponse, SeatTypeProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface SeatTypesQuery {

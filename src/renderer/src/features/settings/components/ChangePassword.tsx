@@ -1,6 +1,6 @@
 import { useChangePasswordUser } from "@renderer/hooks/users/useChangePasswordUser";
 import { useAuthStore } from "@renderer/store/auth.store";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message } from "antd";
 import axios from "axios";

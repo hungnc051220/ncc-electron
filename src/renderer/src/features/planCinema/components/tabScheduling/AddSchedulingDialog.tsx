@@ -2,7 +2,7 @@ import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
-import { ApiError } from "@renderer/types";
+import { ApiError } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import {

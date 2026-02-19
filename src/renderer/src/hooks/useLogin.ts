@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/auth.store";
 import { AxiosError } from "axios";
 import { message } from "antd";
 import { jwtDecode } from "jwt-decode";
-import { JwtPayload } from "@renderer/types";
+import { JwtPayload } from "@shared/types";
 
 type ApiError = {
   message?: string;

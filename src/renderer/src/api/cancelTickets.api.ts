@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, CancellationTicketProps } from "@renderer/types";
+import { ApiResponse, CancellationTicketProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface CancelTicketsQuery {

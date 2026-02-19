@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus } from "@renderer/types";
+import { OrderStatus, PaymentStatus } from "@shared/types";
 import { Tag } from "antd";
 
 interface OrderStatusBadgeProps {

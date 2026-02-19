@@ -1,6 +1,6 @@
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { formatMoney } from "@renderer/lib/utils";
-import { OrderDetailProps, PaymentStatus } from "@renderer/types";
+import { OrderDetailProps, PaymentStatus } from "@shared/types";
 import { Button, Checkbox, Modal } from "antd";
 import dayjs from "dayjs";
 

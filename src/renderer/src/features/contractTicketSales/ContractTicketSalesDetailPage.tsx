@@ -5,7 +5,7 @@ import { Spin } from "antd";
 import { useParams, useSearchParams } from "react-router";
 import Seats from "../planScreening/components/Seats";
 import { useState } from "react";
-import { ListSeat } from "@renderer/types";
+import { ListSeat } from "@shared/types";
 import Actions from "./components/Actions";
 
 const ContractTicketSalesDetailPage = () => {

@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, HolidayProps } from "@renderer/types";
+import { ApiResponse, HolidayProps } from "@shared/types";
 import dayjs from "dayjs";
 import queryString from "query-string";
 

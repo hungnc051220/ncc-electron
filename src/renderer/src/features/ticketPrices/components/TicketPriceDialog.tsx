@@ -3,7 +3,7 @@ import { showTimeSlotsApi } from "@renderer/api/showTimeSlots.api";
 import { useCreateTicketPrice } from "@renderer/hooks/ticketPrices/useCreateTicketPrice";
 import { useUpdateTicketPrice } from "@renderer/hooks/ticketPrices/useUpdateTicketPrice";
 import { formatter } from "@renderer/lib/utils";
-import { ApiError, TicketPriceProps } from "@renderer/types";
+import { ApiError, TicketPriceProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Form, Input, InputNumber, message, Modal, Select } from "antd";

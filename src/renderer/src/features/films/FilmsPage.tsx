@@ -8,7 +8,7 @@ import DeleteFilmDialog from "./components/DeleteFilmDialog";
 import FilmDialog from "./components/FilmDialog";
 import Filter from "./components/Filter";
 import type { Dayjs } from "dayjs";
-import { FilmProps } from "@renderer/types";
+import { FilmProps } from "@shared/types";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";

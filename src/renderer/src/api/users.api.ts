@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, UserProps } from "@renderer/types";
+import { ApiResponse, UserProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface UsersQuery {

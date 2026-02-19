@@ -11,7 +11,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useDeletePlanFilm } from "@renderer/hooks/planFilms/useDeletePlanFilm";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useUpdatePlanFilm } from "@renderer/hooks/planFilms/useUpdatePlanCinema";
-import { ApiError, PlanFilmProps } from "@renderer/types";
+import { ApiError, PlanFilmProps } from "@shared/types";
 import type { TableColumnsType, TableProps } from "antd";
 import { Button, message, Table } from "antd";
 import { useEffect, useMemo, useState } from "react";

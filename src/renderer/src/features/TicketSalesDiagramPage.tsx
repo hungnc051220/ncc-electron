@@ -1,7 +1,7 @@
 "use client";
 
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
-import { ListSeat } from "@renderer/types";
+import { ListSeat } from "@shared/types";
 import { Spin } from "antd";
 import { useState } from "react";
 import { useSearchParams } from "react-router";

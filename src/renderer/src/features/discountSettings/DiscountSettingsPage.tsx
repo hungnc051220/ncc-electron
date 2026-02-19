@@ -1,7 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { DiscountProps } from "@renderer/types";
+import { DiscountProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import { PlusIcon } from "lucide-react";

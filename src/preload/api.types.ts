@@ -1,27 +1,18 @@
-export interface UpdateInfo {
-  version: string;
-}
-
-export type PrintTicketPayload = {
-  cinemaName: string;
-  address: string;
-  movieName: string;
-  showTime: string;
-  date: string;
-  seat: string;
-  room: string;
-  floor: string;
-  price: string;
-  ticketCode: string;
-  qrData: string;
-};
+import {
+  CurrentSeatState,
+  PlanScreeningDetailProps,
+  PrintTicketPayload,
+  UpdateInfo
+} from "@shared/types";
 
 export interface PreloadAPI {
-  openCustomerScreen(id: number): void;
-  closeCustomerScreen(): void;
-
-  sendSeatUpdate(data: unknown): void;
-  onSeatUpdate(cb: (data: unknown) => void): () => void;
+  openCustomerScreen(id: number): Promise<void>;
+  closeCustomerScreen(): Promise<void>;
+  requestCustomerInit(): void;
+  sendCustomerData(data: PlanScreeningDetailProps): void;
+  onCustomerData(cb: (data: PlanScreeningDetailProps) => void): () => void;
+  sendSeatUpdate(data: CurrentSeatState): void;
+  onSeatSync(cb: (data: CurrentSeatState) => void): () => void;
 
   sendQrDialogOpen(data: unknown): void;
   sendQrDialogClose(): void;

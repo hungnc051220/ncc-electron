@@ -1,6 +1,6 @@
 import Legend from "@renderer/components/Legend";
 import { cn } from "@renderer/lib/utils";
-import { ListSeat, PlanScreeningDetailProps } from "@renderer/types";
+import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { Button, Tag } from "antd";
 import dayjs from "dayjs";
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";

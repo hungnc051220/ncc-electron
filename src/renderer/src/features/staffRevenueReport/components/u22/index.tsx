@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
-import { U22UsageProps } from "@renderer/types";
+import { U22UsageProps } from "@shared/types";
 import { filterEmptyValues, formatMoney } from "@renderer/lib/utils";
 import { useReportU22Usage } from "@renderer/hooks/reports/useReportU22Usage";
 

@@ -1,6 +1,6 @@
 import { useReportVoucherUsage } from "@renderer/hooks/reports/useReportVoucherUsage";
 import { filterEmptyValues } from "@renderer/lib/utils";
-import { VoucherUsageProps } from "@renderer/types";
+import { VoucherUsageProps } from "@shared/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
