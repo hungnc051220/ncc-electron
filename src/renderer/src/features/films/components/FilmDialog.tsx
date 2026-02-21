@@ -432,7 +432,7 @@ const FilmDialog = ({
           </div>
 
           <div className="w-75">
-            <div className="bg-goku rounded-lg py-3 px-4">
+            <div className="bg-app-bg-container rounded-lg py-3 px-4">
               <p className="font-semibold mb-2 text-sm">Cấu hình phim</p>
               <div className="space-y-1.5">
                 <Form.Item<FieldValues> name="isHot" noStyle valuePropName="checked">
@@ -470,7 +470,7 @@ const FilmDialog = ({
                 </Form.Item>
               </div>
             </div>
-            <div className="bg-goku rounded-lg py-3 px-4 mt-4">
+            <div className="bg-app-bg-container rounded-lg py-3 px-4 mt-4">
               <p className="font-semibold mb-2 text-sm">Thể loại phim</p>
               <div className="space-y-1.5">
                 <Form.Item<FieldValues>

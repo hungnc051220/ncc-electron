@@ -1,3 +1,5 @@
+import { QrDialogData } from "./order.types";
+
 export interface MachineSerialProps {
   shortName: string;
   activeYear: number;
@@ -32,3 +34,8 @@ export interface BackgroundProps {
 }
 
 export type AppTheme = "light" | "dark";
+
+export interface QrState {
+  isOpen: boolean;
+  data?: QrDialogData;
+}

@@ -1,7 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
 import { PreloadAPI } from "./api.types";
-import { CurrentSeatState, PlanScreeningDetailProps, UpdateInfo } from "@shared/types";
+import {
+  AppTheme,
+  CurrentSeatState,
+  PlanScreeningDetailProps,
+  QrState,
+  UpdateInfo
+} from "@shared/types";
 
 // Custom APIs for renderer
 const api: PreloadAPI = {
@@ -22,18 +28,12 @@ const api: PreloadAPI = {
     return () => ipcRenderer.removeListener("customer:seat-sync", handler);
   },
 
-  sendQrDialogOpen: (data) => ipcRenderer.send("open-qr-dialog", data),
-  sendQrDialogClose: () => ipcRenderer.send("close-qr-dialog"),
-  onQrDialogOpen: (cb) => {
-    const handler = (_: unknown, data: unknown) => cb(data);
-    ipcRenderer.on("open-qr-dialog", handler);
-    return () => ipcRenderer.removeListener("open-qr-dialog", handler);
-  },
-
-  onQrDialogClose: (cb) => {
-    const handler = () => cb();
-    ipcRenderer.on("close-qr-dialog", handler);
-    return () => ipcRenderer.removeListener("close-qr-dialog", handler);
+  sendQrOpen: (data) => ipcRenderer.send("qr:open", data),
+  sendQrClose: () => ipcRenderer.send("qr:close"),
+  onQrSync: (cb) => {
+    const handler = (_: unknown, state: QrState) => cb(state);
+    ipcRenderer.on("qr:sync", handler);
+    return () => ipcRenderer.removeListener("qr:sync", handler);
   },
   printTickets: async (tickets, printerName) =>
     ipcRenderer.invoke("print-tickets", tickets, printerName),
@@ -61,7 +61,16 @@ const api: PreloadAPI = {
   onProgress: (cb) => ipcRenderer.on("update:progress", (_, percent) => cb(percent)),
   onReady: (cb: () => void) => ipcRenderer.on("update:ready", cb),
   onError: (cb: (msg: string) => void) => ipcRenderer.on("update:error", (_, msg) => cb(msg)),
-  getPrinters: () => ipcRenderer.invoke("get-printers")
+  getPrinters: () => ipcRenderer.invoke("get-printers"),
+  sendThemeUpdate: (theme) => ipcRenderer.send("theme:update", theme),
+
+  requestTheme: () => ipcRenderer.send("theme:request"),
+
+  onThemeUpdate: (cb) => {
+    const handler = (_: unknown, theme: AppTheme) => cb(theme);
+    ipcRenderer.on("theme:update", handler);
+    return () => ipcRenderer.removeListener("theme:update", handler);
+  }
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

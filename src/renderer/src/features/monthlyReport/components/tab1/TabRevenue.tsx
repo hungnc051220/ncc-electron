@@ -18,7 +18,7 @@ const TabRevenue = ({ tableData, columns, isFetching }: TabRevenueProps) => {
       scroll={{ x: "max-content", y: "calc(100vh - 375px)" }}
       loading={isFetching}
       pagination={false}
-      rowClassName={(row) => (row.isSummary ? "bg-gray-100 font-bold" : "")}
+      rowClassName={(row) => (row.isSummary ? "bg-gray-100 dark:bg-app-bg font-bold" : "")}
     />
   );
 };

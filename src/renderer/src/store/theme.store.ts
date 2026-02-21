@@ -8,5 +8,15 @@ interface ThemeState {
 
 export const useThemeStore = create<ThemeState>((set) => ({
   theme: "light",
-  setTheme: (theme) => set({ theme })
+  setTheme: (theme) => {
+    const root = document.documentElement;
+
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+
+    set({ theme });
+  }
 }));

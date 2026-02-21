@@ -17,6 +17,11 @@
   --color-whis: #3448f0;
   --color-dodoria: #d33030;
   --color-raditz: #b3804a;
+  --color-app-bg: var(--app-bg);
+  --color-app-bg-container: var(--app-bg-container);
+  --color-app-text: var(--app-text);
+  --color-app-border: var(--app-border);
+  --color-app-primary: var(--app-primary);
 }
 
 @layer utilities {

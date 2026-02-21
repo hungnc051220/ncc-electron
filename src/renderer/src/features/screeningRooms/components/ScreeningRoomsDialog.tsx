@@ -146,7 +146,7 @@ const ScreeningRoomsDialog = ({ open, onOpenChange, editingRoom }: ScreeningRoom
           <Select placeholder="Chọn quy luật xếp ghế" options={ruleOrderOptions} />
         </Form.Item>
 
-        <div className="bg-gray-100 rounded-lg p-4 space-y-4">
+        <div className="bg-goku dark:bg-app-bg-container rounded-lg p-4 space-y-4">
           {Array.from({ length: numberOfFloor }).map((_, index) => {
             const floor = index + 1;
 

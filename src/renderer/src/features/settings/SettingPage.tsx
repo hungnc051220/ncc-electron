@@ -55,10 +55,10 @@ const SettingPage = () => {
             defaultOpenKeys={["settings"]}
             mode="inline"
             items={items}
-            className="h-full"
+            className="h-full bg-app-bg"
           />
           <Layout>
-            <Content className="bg-white px-6">
+            <Content className="bg-app-bg px-6">
               {selectedKey === "1" && <ChangePassword />}
               {selectedKey === "2" && <SettingPos />}
               {selectedKey === "3" && <SettingPrinter />}

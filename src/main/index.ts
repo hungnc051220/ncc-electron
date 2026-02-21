@@ -1,11 +1,24 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { CurrentSeatState, PlanScreeningDetailProps, PrintTicketPayload } from "@shared/types";
+import {
+  AppTheme,
+  CurrentSeatState,
+  PlanScreeningDetailProps,
+  PrintTicketPayload,
+  QrState
+} from "@shared/types";
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 import fs from "fs";
 import path, { join } from "path";
 import icon from "../../resources/icon.png?asset";
 import { createPrintService } from "./print.service";
+import ElectronStore from "electron-store";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Store = (ElectronStore as any).default ?? ElectronStore;
+
+const store = new Store();
+let currentTheme: AppTheme = store.get("theme", "light") as AppTheme;
 
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
@@ -14,6 +27,10 @@ let currentScreeningData: PlanScreeningDetailProps | null = null;
 let currentSeatState: CurrentSeatState = {
   selectedSeats: [],
   cancelMode: false
+};
+
+let currentQrState: QrState = {
+  isOpen: false
 };
 
 const printService = createPrintService();
@@ -289,6 +306,21 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.on("qr:open", (_, data) => {
+    currentQrState = {
+      isOpen: true,
+      data
+    };
+
+    customerWindow?.webContents.send("qr:sync", currentQrState);
+  });
+
+  ipcMain.on("qr:close", () => {
+    currentQrState = { isOpen: false };
+
+    customerWindow?.webContents.send("qr:sync", currentQrState);
+  });
+
   ipcMain.handle(
     "print-tickets",
     async (_, tickets: PrintTicketPayload[], printerName?: string) => {
@@ -307,6 +339,18 @@ app.whenReady().then(() => {
       });
     }
   );
+
+  ipcMain.on("theme:update", (_, theme: AppTheme) => {
+    currentTheme = theme;
+    store.set("theme", theme);
+
+    mainWindow?.webContents.send("theme:update", theme);
+    customerWindow?.webContents.send("theme:update", theme);
+  });
+
+  ipcMain.on("theme:request", (event) => {
+    event.sender.send("theme:update", currentTheme);
+  });
 
   function getAppRootDir() {
     if (!app.isPackaged) {

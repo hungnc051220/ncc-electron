@@ -30,7 +30,7 @@ const TabRevenue = ({
       scroll={{ x: "max-content", y: "calc(100vh - 490px)" }}
       loading={isFetching}
       pagination={false}
-      rowClassName={(row) => (row.isSummary ? "bg-gray-100 font-bold" : "")}
+      rowClassName={(row) => (row.isSummary ? "bg-gray-100 dark:bg-app-bg font-bold" : "")}
       summary={() =>
         tableData && tableData.length > 0 ? (
           <Table.Summary fixed>

@@ -1,16 +1,15 @@
-import MainCard from "@renderer/components/cards/MainCard";
-import SecondaryCard from "@renderer/components/cards/SecondaryCard";
-import dayjs from "dayjs";
 import mainIcon1 from "@renderer/assets/icons/confirmation_number.svg";
-import mainIcon2 from "@renderer/assets/icons/redeem.svg";
-import mainIcon3 from "@renderer/assets/icons/print.svg";
 import secondaryIcon1 from "@renderer/assets/icons/drag_indicator.svg";
 import secondaryIcon2 from "@renderer/assets/icons/insert_chart.svg";
-import secondaryIcon3 from "@renderer/assets/icons/summarize.svg";
 import secondaryIcon4 from "@renderer/assets/icons/password.svg";
+import mainIcon3 from "@renderer/assets/icons/print.svg";
+import mainIcon2 from "@renderer/assets/icons/redeem.svg";
+import secondaryIcon3 from "@renderer/assets/icons/summarize.svg";
+import MainCard from "@renderer/components/cards/MainCard";
+import SecondaryCard from "@renderer/components/cards/SecondaryCard";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useAuthStore } from "@renderer/store/auth.store";
-import Logout from "@renderer/components/Logout";
+import dayjs from "dayjs";
 
 const Dashboard = () => {
   const userId = useAuthStore((s) => s.userId);
@@ -27,12 +26,11 @@ const Dashboard = () => {
             <h2 className="font-bold text-2xl xl:text-3xl">
               Xin chào, <span className="text-primary">{user?.fullname}</span>
             </h2>
-            <Logout />
           </div>
           <p className="text-trunks text-sm xl:text-base capitalize">{dateFormat}</p>
         </div>
         <div>
-          <div className="bg-goku py-2 px-3 rounded-[10px] font-bold text-sm xl:text-base">
+          <div className="bg-gray-200 dark:bg-app-bg-container py-2 px-3 rounded-[10px] font-bold text-sm xl:text-base">
             Máy: JQK
           </div>
         </div>

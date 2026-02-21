@@ -18,7 +18,7 @@ import {
   PaymentType,
   PlanScreeningDetailProps,
   PrintTicketPayload,
-  QrCodeResponseProps
+  QrDialogData
 } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
@@ -86,13 +86,6 @@ interface ActionsProps {
   setCancelMode: Dispatch<SetStateAction<boolean>>;
 }
 
-interface QrDialogData extends QrCodeResponseProps {
-  orderId: number;
-  orderTotal: number;
-  orderDiscount: number;
-  createdOnUtc: string;
-}
-
 const Actions = ({
   data,
   planScreenId,
@@ -156,19 +149,28 @@ const Actions = ({
         const isPaymentQr = paymentMethod.length > 0;
         if (isPaymentQr) {
           try {
-            const data = await createQr.mutateAsync({
+            const responseQr = await createQr.mutateAsync({
               orderId: order.id,
               paymentMethod: paymentMethod[0],
               shortName: "M11"
             });
-            setQrData({
-              ...data,
+
+            const body: QrDialogData = {
+              ...responseQr,
               orderId: order.id,
               orderTotal: order.orderTotal,
               orderDiscount: order.orderDiscount,
-              createdOnUtc: order.createdOnUtc
-            });
+              createdOnUtc: order.createdOnUtc,
+              filmName: data.filmInfo.filmName,
+              roomName: data.roomInfo.name,
+              projectDate: data.projectDate,
+              projectTime: data.projectTime,
+              seats: selectedSeats.map((seat) => seat.code).join(", ")
+            };
+
+            setQrData(body);
             setOpenQrDialog(true);
+            window.api.sendQrOpen(body);
           } catch {
             message.error("Tạo QR thất bại");
           }
@@ -375,7 +377,10 @@ const Actions = ({
 
   return (
     <div
-      className={cn("bg-beerus border-t border-gray-300 shrink-0 px-2", isCustomerView && "hidden")}
+      className={cn(
+        "bg-jiren dark:bg-app-bg border-t border-gray-300 dark:border-app-border shrink-0 px-2",
+        isCustomerView && "hidden"
+      )}
     >
       <div className="p-2 flex gap-2 items-center justify-center">
         <div className="flex flex-col gap-2">
@@ -391,7 +396,7 @@ const Actions = ({
             Huỷ vé
           </Button>
         </div>
-        <div className="flex-1 max-w-120 bg-white py-2 px-4 rounded-md">
+        <div className="flex-1 max-w-120 bg-app-bg-container py-2 px-4 rounded-md">
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="text-xs">
@@ -467,18 +472,12 @@ const Actions = ({
       {openQrDialog && qrData && (
         <QrCodeDialog
           open={openQrDialog}
-          onOpenChange={() => setOpenQrDialog(false)}
-          filmName={data.filmInfo.filmName}
+          onCancel={() => {
+            onCancelOrder([qrData.orderId]);
+            setOpenQrDialog(false);
+            window.api.sendQrClose();
+          }}
           dataQr={qrData}
-          projectDate={data.projectDate}
-          projectTime={data.projectTime}
-          roomName={data.roomInfo.name}
-          selectedSeats={selectedSeats.map((seat) => seat.code).join(", ")}
-          orderId={qrData.orderId}
-          orderCreatedAt={qrData.createdOnUtc}
-          orderDiscount={qrData.orderDiscount}
-          orderTotal={qrData.orderTotal}
-          onCancelOrder={onCancelOrder}
         />
       )}
 

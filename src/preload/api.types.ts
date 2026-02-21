@@ -1,7 +1,9 @@
 import {
+  AppTheme,
   CurrentSeatState,
   PlanScreeningDetailProps,
   PrintTicketPayload,
+  QrState,
   UpdateInfo
 } from "@shared/types";
 
@@ -14,11 +16,9 @@ export interface PreloadAPI {
   sendSeatUpdate(data: CurrentSeatState): void;
   onSeatSync(cb: (data: CurrentSeatState) => void): () => void;
 
-  sendQrDialogOpen(data: unknown): void;
-  sendQrDialogClose(): void;
-
-  onQrDialogOpen(cb: (data: unknown) => void): () => void;
-  onQrDialogClose(cb: () => void): () => void;
+  sendQrOpen(data: unknown): void;
+  sendQrClose(): void;
+  onQrSync(cb: (data: QrState) => void): () => void;
 
   printTickets(tickets: PrintTicketPayload[], printerName?: string): Promise<void>;
 
@@ -37,4 +37,7 @@ export interface PreloadAPI {
   onReady(cb: () => void): void;
   onError(cb: (msg: string) => void): void;
   getPrinters: () => Promise<Electron.PrinterInfo[]>;
+  sendThemeUpdate: (theme: AppTheme) => void;
+  requestTheme: () => void;
+  onThemeUpdate: (cb: (theme: AppTheme) => void) => () => void;
 }

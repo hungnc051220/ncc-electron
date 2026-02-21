@@ -152,7 +152,7 @@ const UserRolesPage = () => {
               className="h-full"
             />
             <Layout>
-              <Content className="bg-white px-6">
+              <Content className="bg-app-bg px-6">
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="text-sm text-gray-500">
                     Nhóm người dùng đang chọn:{" "}

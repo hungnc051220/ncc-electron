@@ -28,10 +28,6 @@ const NavItems = () => {
           key: "machine-serials"
         },
         {
-          label: <Link to="/settings">Cài đặt</Link>,
-          key: "settings"
-        },
-        {
           label: "Kiểm tra phiên bản",
           key: "check-update",
           onClick: manualCheck
@@ -198,7 +194,13 @@ const NavItems = () => {
       mode="horizontal"
       items={items}
       triggerSubMenuAction="click"
-      style={{ minWidth: 0, flex: "auto", justifyContent: "center", border: "none" }}
+      style={{
+        minWidth: 0,
+        flex: "auto",
+        justifyContent: "center",
+        border: "none",
+        height: "100%"
+      }}
     />
   );
 };

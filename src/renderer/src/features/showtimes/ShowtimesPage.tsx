@@ -100,7 +100,7 @@ const ShowtimesPage = () => {
   ];
 
   return (
-    <div className="space-y-3 mt-4 px-4 flex-1">
+    <div className="space-y-3 p-4 flex-1 min-h-screen bg-app-bg text-black dark:text-white">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-lg">Danh sách phim đang chiếu</h2>

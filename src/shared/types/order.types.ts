@@ -359,3 +359,15 @@ export interface ContractTicketSaleProps {
   qrPayment: QrPayment;
   createdBy: string;
 }
+
+export interface QrDialogData extends QrCodeResponseProps {
+  orderId: number;
+  orderTotal: number;
+  orderDiscount: number;
+  createdOnUtc: string;
+  filmName: string;
+  roomName: string;
+  projectDate: string;
+  projectTime: string;
+  seats: string;
+}

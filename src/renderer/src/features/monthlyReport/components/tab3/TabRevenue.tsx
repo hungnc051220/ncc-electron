@@ -22,7 +22,7 @@ const TabRevenue = ({ tableData, columns, isFetching }: TabRevenueProps) => {
       expandable={{ defaultExpandAllRows: false, indentSize: 18 }}
       rowClassName={(row) => {
         if (/^\d{4}-\d{2}-\d{2}$/.test(row.label)) return "bg-primary/5 font-semibold";
-        if (row.label.startsWith("Phòng")) return "bg-slate-100 font-bold";
+        if (row.label.startsWith("Phòng")) return "bg-slate-100 dark:bg-app-bg font-bold";
         return "";
       }}
     />

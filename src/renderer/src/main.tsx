@@ -9,8 +9,15 @@ import AntdProvider from "./providers/AntdProvider";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { UpdaterProvider } from "./components/UpdaterContext";
 import { useSettingPosStore } from "./store/settingPos.store";
+import { useThemeStore } from "./store/theme.store";
 
 useSettingPosStore.getState();
+
+window.api?.onThemeUpdate((theme) => {
+  useThemeStore.getState().setTheme(theme);
+});
+
+window.api?.requestTheme();
 
 createRoot(document.getElementById("root")!).render(
   <UpdaterProvider>

@@ -23,7 +23,7 @@ const TabRevenue = ({ tableData, columns, isFetching }: TabRevenueProps) => {
         indentSize: 18
       }}
       rowClassName={(row) => {
-        if (row.version && !row.channel) return "bg-gray-50 font-medium";
+        if (row.version && !row.channel) return "bg-gray-50 dark:bg-app-bg font-medium";
         if (row.name && row.children) return "font-semibold";
         return "";
       }}

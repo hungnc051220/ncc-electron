@@ -19,13 +19,20 @@ interface SeatsProps {
   selectedSeats: ListSeat[];
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
   cancelMode?: boolean;
+  isCustomerView?: boolean;
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
   return `${seat.floor}-${seat.code}`;
 };
 
-const Seats = ({ data, selectedSeats, setSelectedSeats, cancelMode }: SeatsProps) => {
+const Seats = ({
+  data,
+  selectedSeats,
+  setSelectedSeats,
+  cancelMode,
+  isCustomerView
+}: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
   const selectoRef = useRef<Selecto>(null);
@@ -267,7 +274,7 @@ const Seats = ({ data, selectedSeats, setSelectedSeats, cancelMode }: SeatsProps
         style={{ columnGap: "6px", height: `${seatSize}px` }}
       >
         <div
-          className="text-trunks font-medium flex items-center justify-center"
+          className="text-trunks dark:text-white font-medium flex items-center justify-center"
           style={{
             width: `${seatSize}px`,
             height: `${seatSize}px`,
@@ -289,7 +296,7 @@ const Seats = ({ data, selectedSeats, setSelectedSeats, cancelMode }: SeatsProps
           />
         ))}
         <div
-          className="text-trunks font-medium flex items-center justify-center"
+          className="text-trunks dark:text-white font-medium flex items-center justify-center"
           style={{
             width: `${seatSize}px`,
             height: `${seatSize}px`,
@@ -305,7 +312,7 @@ const Seats = ({ data, selectedSeats, setSelectedSeats, cancelMode }: SeatsProps
   if (!data) return null;
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full bg-app-bg text-black dark:text-white">
       <div className="flex items-center justify-between px-4 py-2 gap-3">
         <div className="flex-1 flex items-center gap-3">
           <div className="flex items-center gap-4">
@@ -339,22 +346,24 @@ const Seats = ({ data, selectedSeats, setSelectedSeats, cancelMode }: SeatsProps
             PHÒNG {data.roomInfo.name}
           </Tag>
 
-          <Button
-            variant="outlined"
-            className="ml-4"
-            onClick={() => {
-              sessionStorage.removeItem("lastTotal");
-              navigate(-1);
-            }}
-          >
-            Đóng
-          </Button>
+          {!isCustomerView && (
+            <Button
+              variant="outlined"
+              className="ml-4"
+              onClick={() => {
+                sessionStorage.removeItem("lastTotal");
+                navigate(-1);
+              }}
+            >
+              Đóng
+            </Button>
+          )}
         </div>
       </div>
 
       <div
         ref={mainContainerRef}
-        className="bg-goku p-2 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
+        className="bg-goku dark:bg-app-bg-container p-2 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
           <legend className="mx-auto px-3 text-sm text-trunks font-bold">Màn hình</legend>

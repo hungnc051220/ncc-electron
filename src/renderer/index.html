@@ -18,5 +18,11 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
   </body>
 </html>

@@ -7,7 +7,6 @@ import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import DeletePlanDialog from "./components/DeletePlanCinemaDialog";
 import ApproveRejectActions from "./components/tabFilm/ApproveRejectActions";
-// import ArchivedActions from "./components/tabFilm/ArchivedActions";
 import SendForApproveActions from "./components/tabFilm/SendForApproveActions";
 import { Link } from "react-router";
 import AddPlanCinemaDialog from "./components/AddPlanCinemaDialog";
@@ -158,7 +157,7 @@ const PlanCinemaPage = () => {
               accordion
             />
           </div>
-          <div className="flex-1 flex flex-col min-h-0 border border-[#D9D9D9] p-4 rounded-lg">
+          <div className="flex-1 flex flex-col min-h-0 border border-app-border p-4 rounded-lg">
             {!selectedPlan ? (
               <div className="flex items-center justify-center py-20 rounded-lg">
                 <span className="text-gray-400">Chưa chọn kế hoạch</span>
@@ -199,7 +198,7 @@ const PlanCinemaPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-goku p-2 rounded-lg mt-4 flex items-center shrink-0">
+                <div className="bg-goku dark:bg-app-bg-container p-2 rounded-lg mt-4 flex items-center shrink-0">
                   <div className="py-3 px-4 w-44.25">
                     <p className="text-trunks text-xs">Người tạo</p>
                     <p className="mt-1 text-base">{selectedPlan.createdUser}</p>

@@ -12,8 +12,8 @@ const SecondaryCard = ({ title, description, href, icon }: SecondaryCardProps) =
   return (
     <Link to={href ?? "#"}>
       <div
-        className="size-full rounded-3xl p-6 bg-gray-200 cursor-pointer flex flex-col justify-start transform transition-all duration-300
-            hover:shadow-lg hover:border-gray-200 hover:-translate-y-1 min-h-50"
+        className="size-full rounded-3xl p-6 bg-gray-300 dark:bg-app-bg-container cursor-pointer flex flex-col justify-start transform transition-all duration-300
+            hover:shadow-lg hover:-translate-y-1 min-h-50"
       >
         <div className="bg-white rounded-full flex items-center justify-center size-14">
           <img src={icon} className="size-8" />
