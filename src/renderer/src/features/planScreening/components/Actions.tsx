@@ -6,65 +6,29 @@ import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
-import { cn, formatMoney } from "@renderer/lib/utils";
+import { buildTicketsFromOrder, cn, formatMoney } from "@renderer/lib/utils";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import {
   ApiError,
   DiscountProps,
   ListSeat,
-  OrderDetailProps,
   OrderResponseProps,
   PaymentType,
   PlanScreeningDetailProps,
-  PrintTicketPayload,
   QrDialogData
 } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
 import { Button, Checkbox, Descriptions, message } from "antd";
 import axios from "axios";
-import dayjs from "dayjs";
-import QRCode from "qrcode";
+
+import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import DiscountPopup from "./DiscountPopup";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
-import { ordersKeys } from "@renderer/hooks/orders/keys";
-
-const buildTicketsFromOrder = async (data: OrderDetailProps): Promise<PrintTicketPayload[]> => {
-  const tickets: PrintTicketPayload[] = [];
-  const qrBase64 = await QRCode.toDataURL(data.order.barCode);
-
-  data.order.items.forEach((item) => {
-    const seats = [
-      ...(item.listChairValueF1?.split(",") ?? []),
-      ...(item.listChairValueF2?.split(",") ?? []),
-      ...(item.listChairValueF3?.split(",") ?? [])
-    ]
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    seats.forEach((seat) => {
-      tickets.push({
-        cinemaName: "TRUNG TÂM CHIẾU PHIM QUỐC GIA",
-        address: "Số 87 Láng Hạ, Ba Đình, Hà Nội",
-        movieName: data.film.filmName,
-        showTime: dayjs(data.planScreening.projectTime).format("HH:mm"),
-        date: dayjs(data.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
-        seat: seat,
-        room: data.room.name,
-        floor: data.room.floor,
-        price: formatMoney(item.unitPriceInclTax),
-        ticketCode: data.order.barCode,
-        qrData: qrBase64
-      });
-    });
-  });
-
-  return tickets;
-};
 
 const paymentTypes = [
   {

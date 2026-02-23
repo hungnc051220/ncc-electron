@@ -79,6 +79,11 @@ export interface OrderRefundDto {
   refundedAmount: number;
 }
 
+export interface OrderPrintedQuery {
+  orderId: number;
+  posShortName?: string;
+}
+
 export const ordersApi = {
   getAll: async (params: OrdersQuery): Promise<ApiResponse<OrderDetailProps>> => {
     const {
@@ -183,8 +188,13 @@ export const ordersApi = {
     const res = await api.post("/api/pos/order/cancel", dto);
     return res.data;
   },
-  print: async (dto: OrderDto) => {
-    const res = await api.patch("/api/pos/order/print", dto);
+  printed: async (params: OrderPrintedQuery) => {
+    const query = queryString.stringify(params, {
+      skipEmptyString: true,
+      skipNull: true
+    });
+
+    const res = await api.patch(`/api/pos/order/print?${query}`);
     return res.data;
   },
   refund: async (dto: OrderRefundDto[]) => {

@@ -9,11 +9,13 @@ import MainCard from "@renderer/components/cards/MainCard";
 import SecondaryCard from "@renderer/components/cards/SecondaryCard";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useAuthStore } from "@renderer/store/auth.store";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import dayjs from "dayjs";
 
 const Dashboard = () => {
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
+  const { posName } = useSettingPosStore();
 
   const date = dayjs();
   const dateFormat = `${date.format("dddd")}, ngày ${date.format("D [tháng] M [năm] YYYY")}`;
@@ -31,7 +33,7 @@ const Dashboard = () => {
         </div>
         <div>
           <div className="bg-gray-200 dark:bg-app-bg-container py-2 px-3 rounded-[10px] font-bold text-sm xl:text-base">
-            Máy: JQK
+            Máy: {posName}
           </div>
         </div>
       </div>

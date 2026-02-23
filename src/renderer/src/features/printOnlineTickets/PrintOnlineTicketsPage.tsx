@@ -1,27 +1,79 @@
 import { useOrders } from "@renderer/hooks/orders/useUsers";
-import { formatNumber } from "@renderer/lib/utils";
-import { OrderDetailProps } from "@shared/types";
+import { buildTicketsFromOrder, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { ApiError, OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Table } from "antd";
+import { Breadcrumb, Button, message, Table } from "antd";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
+import Filter from "./components/Filter";
+import { usePrinterStore } from "@renderer/store/printer.store";
+import { usePrintedOrder } from "@renderer/hooks/orders/usePrintedOrder";
+import axios from "axios";
+
+export interface ValuesProps {
+  id?: string;
+  barCode?: string;
+  phoneNumber?: string;
+  email?: string;
+  dateRange?: [string, string];
+}
 
 const PrintOnlineTicketsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
 
-  const params = useMemo(
-    () => ({
+  const params = useMemo(() => {
+    const { dateRange, ...rest } = filterValues;
+    const filtered = filterEmptyValues(rest as Record<string, unknown>);
+
+    filtered.isOnline = true;
+    filtered.orderStatusId = OrderStatus.COMPLETED;
+
+    if (dateRange && dateRange.length === 2) {
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
+    }
+
+    return {
       current,
       pageSize,
-      orderStatusId: 30
-    }),
-    [current, pageSize]
-  );
+      ...filtered
+    };
+  }, [current, pageSize, filterValues]);
 
   const { data, isFetching } = useOrders(params);
+  const printedOrder = usePrintedOrder();
+
+  const onPrint = async (orderDetail: OrderDetailProps) => {
+    try {
+      const tickets = await buildTicketsFromOrder(orderDetail);
+      await window.api.printTickets(tickets, selectedPrinter);
+      message.success("In vé thành công");
+    } catch {
+      message.error("In vé thất bại");
+    }
+
+    await printedOrder.mutateAsync(
+      {
+        orderId: orderDetail.order.id
+      },
+      {
+        onError: (error: unknown) => {
+          let msg = "Cập nhật trạng thái in vé thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
+        }
+      }
+    );
+  };
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
@@ -111,13 +163,22 @@ const PrintOnlineTicketsPage = () => {
       key: "operation",
       width: 80,
       render: (_, record) => (
-        <Button type="link" onClick={() => console.log(record)}>
-          In vé
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button type="link" onClick={() => console.log(record)}>
+            Cho phép in lại vé
+          </Button>
+          <Button type="link" onClick={() => onPrint(record)}>
+            In vé
+          </Button>
+        </div>
       ),
       fixed: "right"
     }
   ];
+
+  const onSearch = (values: ValuesProps) => {
+    setFilterValues(values);
+  };
 
   const onChange = (page: number) => {
     setCurrent(page);
@@ -130,19 +191,22 @@ const PrintOnlineTicketsPage = () => {
 
   return (
     <div className="space-y-3 mt-4 px-4">
-      <Breadcrumb
-        items={[
-          {
-            title: <Link to="/">Trang chủ</Link>
-          },
-          {
-            title: "Bán vé"
-          },
-          {
-            title: "In vé online"
-          }
-        ]}
-      />
+      <div className="flex items-center justify-between">
+        <Breadcrumb
+          items={[
+            {
+              title: <Link to="/">Trang chủ</Link>
+            },
+            {
+              title: "Bán vé"
+            },
+            {
+              title: "In vé online"
+            }
+          ]}
+        />
+        <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
+      </div>
 
       <Table
         rowKey={(record) => record.order.id}

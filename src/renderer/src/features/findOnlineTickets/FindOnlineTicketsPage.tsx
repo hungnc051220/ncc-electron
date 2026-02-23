@@ -22,6 +22,28 @@ const FindOnlineTicketsPage = () => {
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
+  const params = useMemo(() => {
+    const { dateRange, ...rest } = filterValues;
+    const filtered = filterEmptyValues(rest as Record<string, unknown>);
+
+    filtered.isOnline = true;
+
+    if (dateRange && dateRange.length === 2) {
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
+    }
+
+    return {
+      current,
+      pageSize,
+      ...filtered
+    };
+  }, [current, pageSize, filterValues]);
+
+  const { data: orders, isFetching } = useOrders(params);
+
+  console.log(orders);
+
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
       title: "STT",
@@ -125,24 +147,6 @@ const FindOnlineTicketsPage = () => {
       fixed: "right"
     }
   ];
-
-  const params = useMemo(() => {
-    const { dateRange, ...rest } = filterValues;
-    const filtered = filterEmptyValues(rest as Record<string, unknown>);
-
-    if (dateRange && dateRange.length === 2) {
-      filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
-      filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
-    }
-
-    return {
-      current,
-      pageSize,
-      ...filtered
-    };
-  }, [current, pageSize, filterValues]);
-
-  const { data: orders, isFetching } = useOrders(params);
 
   const onSearch = (values: ValuesProps) => {
     setFilterValues(values);
