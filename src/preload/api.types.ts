@@ -1,4 +1,5 @@
 import {
+  AppConfig,
   AppTheme,
   CurrentSeatState,
   PlanScreeningDetailProps,
@@ -8,6 +9,8 @@ import {
 } from "@shared/types";
 
 export interface PreloadAPI {
+  getConfig: () => Promise<AppConfig>;
+  setConfig: (config: AppConfig) => Promise<void>;
   openCustomerScreen(id: number): Promise<void>;
   closeCustomerScreen(): Promise<void>;
   requestCustomerInit(): void;

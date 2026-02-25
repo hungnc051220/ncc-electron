@@ -33,3 +33,8 @@ export interface CurrentSeatState {
   selectedSeats: ListSeat[];
   cancelMode: boolean;
 }
+
+export interface AppConfig {
+  apiBaseUrl: string;
+  theme: "light" | "dark";
+}

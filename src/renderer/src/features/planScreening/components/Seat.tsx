@@ -38,9 +38,9 @@ const Seat = ({
         "relative rounded-sm flex items-center justify-center selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
+        seat.status === 1 && "bg-trunks text-white",
         seat.isContract && "bg-raditz text-white",
         seat.isHold && "bg-roshi text-white",
-        seat.status === 1 && "bg-trunks text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white"
       )}

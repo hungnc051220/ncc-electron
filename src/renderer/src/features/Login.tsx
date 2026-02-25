@@ -1,15 +1,16 @@
+import { generalDataApi } from "@renderer/api/generalData.api";
+import { usersApi } from "@renderer/api/users.api";
+import SettingEndpointPopup from "@renderer/components/SettingEndpointPopup";
+import { usersKeys } from "@renderer/hooks/users/keys";
+import { JwtPayload } from "@shared/types";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Form, Image, Input } from "antd";
+import { jwtDecode } from "jwt-decode";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
+import logo from "../assets/images/logo-text.png";
 import { useLogin } from "../hooks/useLogin";
 import { useAuthStore } from "../store/auth.store";
-import logo from "../assets/images/logo-text.png";
-import { useQueryClient } from "@tanstack/react-query";
-import { generalDataApi } from "@renderer/api/generalData.api";
-import { usersKeys } from "@renderer/hooks/users/keys";
-import { usersApi } from "@renderer/api/users.api";
-import { jwtDecode } from "jwt-decode";
-import { JwtPayload } from "@shared/types";
 
 type LoginForm = {
   username: string;
@@ -50,6 +51,9 @@ export default function Login() {
     <div className="h-screen relative flex items-center justify-center p-4">
       <div className="absolute inset-0 z-0 auth-bg bg-cover bg-center bg-no-repeat">
         <div className="absolute inset-0 bg-black/40" />
+      </div>
+      <div className="absolute top-3 right-4 z-99 text-white">
+        <SettingEndpointPopup />
       </div>
       <Card className="max-w-md w-full">
         <div className="flex flex-col items-center mb-4 space-y-2">

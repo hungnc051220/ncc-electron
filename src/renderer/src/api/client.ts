@@ -10,13 +10,21 @@ interface RefreshResponse {
   refresh_token: string;
 }
 
-export const refreshApi = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL
+let apiBaseUrl = "";
+
+export const initApi = async () => {
+  const config = await window.api.getConfig();
+  apiBaseUrl = config.apiBaseUrl;
+};
+
+export const refreshApi = axios.create();
+
+refreshApi.interceptors.request.use((config) => {
+  config.baseURL = apiBaseUrl;
+  return config;
 });
 
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL
-});
+export const api = axios.create();
 
 let isRefreshing = false;
 type FailedQueueItem = {
@@ -39,6 +47,7 @@ const processQueue = (error: AxiosError | null, token: string | null) => {
 };
 
 api.interceptors.request.use((config) => {
+  config.baseURL = apiBaseUrl;
   const token = useAuthStore.getState().token;
 
   if (token) {

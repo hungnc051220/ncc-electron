@@ -1,5 +1,6 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import {
+  AppConfig,
   AppTheme,
   CurrentSeatState,
   PlanScreeningDetailProps,
@@ -13,6 +14,7 @@ import path, { join } from "path";
 import icon from "../../resources/icon.ico?asset";
 import { createPrintService } from "./print.service";
 import ElectronStore from "electron-store";
+import { getConfig, setConfig } from "./config.service";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Store = (ElectronStore as any).default ?? ElectronStore;
@@ -211,8 +213,7 @@ function getExternalDisplay() {
   const external = displays.find((d) => d.id !== primary.id);
 
   if (!external) {
-    console.log("DEV MODE: Using primary display as external");
-    return primary;
+    return null;
   }
 
   return external;
@@ -220,6 +221,10 @@ function getExternalDisplay() {
 
 function createCustomerWindow(planScreeningId: number) {
   const externalDisplay = getExternalDisplay();
+
+  if (!externalDisplay) {
+    return;
+  }
 
   if (customerWindow && !customerWindow.isDestroyed()) {
     customerWindow.focus();
@@ -258,6 +263,14 @@ app.whenReady().then(() => {
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window);
+  });
+
+  ipcMain.handle("get-config", () => {
+    return getConfig();
+  });
+
+  ipcMain.handle("set-config", (_, config: AppConfig) => {
+    setConfig(config);
   });
 
   ipcMain.handle("get-printers", async (event) => {

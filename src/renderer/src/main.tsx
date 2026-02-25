@@ -10,6 +10,7 @@ import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { UpdaterProvider } from "./components/UpdaterContext";
 import { useSettingPosStore } from "./store/settingPos.store";
 import { useThemeStore } from "./store/theme.store";
+import { initApi } from "./api/client";
 
 useSettingPosStore.getState();
 
@@ -19,14 +20,20 @@ window.api?.onThemeUpdate((theme) => {
 
 window.api?.requestTheme();
 
-createRoot(document.getElementById("root")!).render(
-  <UpdaterProvider>
-    <AntdProvider>
-      <QueryClientProvider client={queryClient}>
-        <NuqsAdapter>
-          <RouterProvider router={router} />
-        </NuqsAdapter>
-      </QueryClientProvider>
-    </AntdProvider>
-  </UpdaterProvider>
-);
+async function bootstrap() {
+  await initApi();
+
+  createRoot(document.getElementById("root")!).render(
+    <UpdaterProvider>
+      <AntdProvider>
+        <QueryClientProvider client={queryClient}>
+          <NuqsAdapter>
+            <RouterProvider router={router} />
+          </NuqsAdapter>
+        </QueryClientProvider>
+      </AntdProvider>
+    </UpdaterProvider>
+  );
+}
+
+bootstrap();

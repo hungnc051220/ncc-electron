@@ -136,6 +136,7 @@ const Actions = ({
             setOpenQrDialog(true);
             window.api.sendQrOpen(body);
           } catch {
+            onCancelOrder([order.id]);
             message.error("Tạo QR thất bại");
           }
           return;
@@ -339,6 +340,8 @@ const Actions = ({
     });
   };
 
+  const disableActions = createOrder.isPending || cancelOrder.isPending;
+
   return (
     <div
       className={cn(
@@ -368,21 +371,21 @@ const Actions = ({
           <p className="font-bold text-red-500 text-sm">{formatMoney(Number(lastTotal) || 0)}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outlined" color="cyan" disabled={createOrder.isPending}>
+          <Button variant="outlined" color="cyan" disabled={disableActions}>
             Đổi vé
           </Button>
-          <Button variant="outlined" color="pink" disabled={createOrder.isPending}>
+          <Button variant="outlined" color="pink" disabled={disableActions}>
             Đổi quà
           </Button>
           <Button
             variant="outlined"
             color="green"
-            disabled={createOrder.isPending}
+            disabled={disableActions}
             onClick={onReserveSeats}
           >
             Giữ chỗ
           </Button>
-          <Button variant="outlined" danger disabled={createOrder.isPending}>
+          <Button variant="outlined" danger disabled={disableActions} onClick={onCancelSeats}>
             Hủy giữ
           </Button>
         </div>

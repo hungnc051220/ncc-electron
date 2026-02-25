@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import ChangePassword from "./components/ChangePassword";
 import SettingPos from "./components/SettingPos";
 import SettingPrinter from "./components/SettingPrinter";
+import SettingEndpoint from "./components/SettingEndpoint";
 const { Content } = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -17,7 +18,8 @@ const items: MenuItem[] = [
     children: [
       { key: "1", label: "Cấu hình tài khoản" },
       { key: "2", label: "Cấu hình máy POS" },
-      { key: "3", label: "Cấu hình máy in" }
+      { key: "3", label: "Cấu hình máy in" },
+      { key: "4", label: "Cấu hình endpoint" }
     ]
   }
 ];
@@ -62,6 +64,7 @@ const SettingPage = () => {
               {selectedKey === "1" && <ChangePassword />}
               {selectedKey === "2" && <SettingPos />}
               {selectedKey === "3" && <SettingPrinter />}
+              {selectedKey === "4" && <SettingEndpoint />}
             </Content>
           </Layout>
         </Layout>

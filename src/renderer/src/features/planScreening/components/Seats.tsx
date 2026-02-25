@@ -60,7 +60,7 @@ const Seats = ({
         return seat.status === 1; // chỉ ghế đã bán
       }
 
-      return seat.status !== 1; // ghế chưa bán
+      return seat.status !== 1 || seat.isHold === 1; // ghế chưa bán
     },
     [cancelMode]
   );

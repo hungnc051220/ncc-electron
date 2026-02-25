@@ -11,6 +11,8 @@ import {
 
 // Custom APIs for renderer
 const api: PreloadAPI = {
+  getConfig: () => ipcRenderer.invoke("get-config"),
+  setConfig: (config) => ipcRenderer.invoke("set-config", config),
   openCustomerScreen: (id) => ipcRenderer.invoke("customer:open", id),
   closeCustomerScreen: () => ipcRenderer.invoke("customer:close"),
   requestCustomerInit: () => ipcRenderer.send("customer:request-init"),
