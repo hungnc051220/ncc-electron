@@ -231,7 +231,7 @@ function createCustomerWindow(planScreeningId: number) {
     y: externalDisplay.bounds.y,
     width: externalDisplay.bounds.width,
     height: externalDisplay.bounds.height,
-    kiosk: false,
+    kiosk: true,
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
