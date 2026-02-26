@@ -47,6 +47,29 @@ export const formatter: InputNumberProps<number>["formatter"] = (value) => {
   return `${end ? `${v}.${end}` : `${v}`}`;
 };
 
+export const sortSeats = (seats: string[]): string[] => {
+  return [...seats].sort((a, b) => {
+    const matchA = a.match(/^([A-Za-z]+)(\d+)$/);
+    const matchB = b.match(/^([A-Za-z]+)(\d+)$/);
+
+    if (!matchA || !matchB) return 0;
+
+    const rowA = matchA[1];
+    const rowB = matchB[1];
+
+    const numA = parseInt(matchA[2], 10);
+    const numB = parseInt(matchB[2], 10);
+
+    // So sánh row trước
+    if (rowA !== rowB) {
+      return rowA.localeCompare(rowB);
+    }
+
+    // Nếu cùng row → so sánh số
+    return numA - numB;
+  });
+};
+
 export const buildTicketsFromOrder = async (
   data: OrderDetailProps
 ): Promise<PrintTicketPayload[]> => {
@@ -54,11 +77,11 @@ export const buildTicketsFromOrder = async (
   const qrBase64 = await QRCode.toDataURL(data.order.barCode);
 
   data.order.items.forEach((item) => {
-    const seats = [
+    const seats = sortSeats([
       ...(item.listChairValueF1?.split(",") ?? []),
       ...(item.listChairValueF2?.split(",") ?? []),
       ...(item.listChairValueF3?.split(",") ?? [])
-    ]
+    ])
       .map((s) => s.trim())
       .filter(Boolean);
 

@@ -372,9 +372,7 @@ const Actions = ({
           <p className="font-bold text-red-500 text-sm">{formatMoney(Number(lastTotal) || 0)}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outlined" color="cyan" disabled={disableActions}>
-            Đổi vé
-          </Button>
+          <div></div>
           <Button variant="outlined" color="pink" disabled={disableActions}>
             Đổi quà
           </Button>

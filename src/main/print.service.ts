@@ -267,7 +267,7 @@ export const createPrintService = () => {
       win.webContents.print(
         {
           silent: true,
-          deviceName: undefined,
+          deviceName: printerName,
           printBackground: true,
           margins: { marginType: "none" }
         },

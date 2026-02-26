@@ -162,16 +162,16 @@ const PrintOnlineTicketsPage = () => {
       title: "",
       key: "operation",
       width: 80,
-      render: (_, record) => (
-        <div className="flex items-center gap-3">
-          <Button type="link" onClick={() => console.log(record)}>
-            Cho phép in lại vé
-          </Button>
+      render: (_, record) => {
+        const isPrinted = record.order.printedOnUtc;
+        return isPrinted ? (
+          <Button type="link">Cho phép in lại vé</Button>
+        ) : (
           <Button type="link" onClick={() => onPrint(record)}>
             In vé
           </Button>
-        </div>
-      ),
+        );
+      },
       fixed: "right"
     }
   ];
