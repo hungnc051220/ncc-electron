@@ -4,6 +4,7 @@ import type { MenuProps } from "antd";
 import { Avatar, Dropdown } from "antd";
 import { Link } from "react-router";
 import ThemeSwitcher from "./ThemeSwitcher";
+import { disconnectSocket } from "@renderer/socket/socket";
 
 const NavActions = () => {
   const logout = useAuthStore((s) => s.logout);
@@ -17,7 +18,10 @@ const NavActions = () => {
       key: "2",
       danger: true,
       label: "Đăng xuất",
-      onClick: logout
+      onClick: () => {
+        logout();
+        disconnectSocket();
+      }
     }
   ];
 

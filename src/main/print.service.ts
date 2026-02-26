@@ -264,7 +264,6 @@ export const createPrintService = () => {
     await win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
 
     await new Promise<void>((resolve, reject) => {
-      win.webContents.openDevTools();
       win.webContents.print(
         {
           silent: true,

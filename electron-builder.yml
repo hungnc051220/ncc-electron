@@ -33,7 +33,6 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
-  icon: icon.ico
   target:
     - AppImage
     - snap

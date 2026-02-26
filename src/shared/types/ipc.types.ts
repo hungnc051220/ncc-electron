@@ -36,5 +36,6 @@ export interface CurrentSeatState {
 
 export interface AppConfig {
   apiBaseUrl: string;
+  socketUrl: string;
   theme: "light" | "dark";
 }

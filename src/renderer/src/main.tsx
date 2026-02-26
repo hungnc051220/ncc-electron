@@ -11,6 +11,7 @@ import { UpdaterProvider } from "./components/UpdaterContext";
 import { useSettingPosStore } from "./store/settingPos.store";
 import { useThemeStore } from "./store/theme.store";
 import { initApi } from "./api/client";
+import { initSocket } from "./socket/socket";
 
 useSettingPosStore.getState();
 
@@ -21,7 +22,9 @@ window.api?.onThemeUpdate((theme) => {
 window.api?.requestTheme();
 
 async function bootstrap() {
-  await initApi();
+  const config = await window.api?.getConfig();
+  initApi(config?.apiBaseUrl || "https://testapiv3.chieuphimquocgia.com.vn");
+  initSocket(config?.socketUrl || "wss://testapiv3.chieuphimquocgia.com.vn");
 
   createRoot(document.getElementById("root")!).render(
     <UpdaterProvider>

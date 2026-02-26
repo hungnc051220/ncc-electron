@@ -5,6 +5,7 @@ import { AxiosError } from "axios";
 import { message } from "antd";
 import { jwtDecode } from "jwt-decode";
 import { JwtPayload } from "@shared/types";
+import { connectSocket } from "@renderer/socket/socket";
 
 type ApiError = {
   message?: string;
@@ -21,7 +22,9 @@ export const useLogin = () => {
 
   return useMutation({
     mutationFn: async (payload: LoginPayload) => {
-      const res = await api.post("/api/pos/staff/login", payload);
+      const res = await api.post("/api/pos/staff/login", payload, {
+        headers: { skipAuthRefresh: true }
+      });
 
       return res.data;
     },
@@ -31,6 +34,7 @@ export const useLogin = () => {
       const userId = decoded?.user_id;
       login(data.access_token, data.refresh_token);
       setUserId(Number(userId));
+      connectSocket(data.access_token);
     },
     onError: (err: AxiosError<ApiError>) => {
       message.error(err.response?.data?.message ?? "Đăng nhập thất bại");

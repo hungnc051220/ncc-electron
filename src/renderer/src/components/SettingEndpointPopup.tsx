@@ -1,9 +1,8 @@
-import { Button, Form, Input, message, Modal } from "antd";
 import { SettingOutlined } from "@ant-design/icons";
-import { useEffect, useState } from "react";
 import { AppConfig } from "@shared/types";
-import { initApi } from "@renderer/api/client";
 import type { FormProps } from "antd";
+import { Button, Form, Input, message, Modal } from "antd";
+import { useEffect, useState } from "react";
 
 const SettingEndpointPopup = () => {
   const [open, setOpen] = useState(false);
@@ -12,8 +11,11 @@ const SettingEndpointPopup = () => {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      const config = await window.api.getConfig();
-      form.setFieldValue("apiBaseUrl", config.apiBaseUrl);
+      const config = await window.api?.getConfig();
+      form.setFieldValue(
+        "apiBaseUrl",
+        config?.apiBaseUrl || "https://testapiv3.chieuphimquocgia.com.vn"
+      );
     };
 
     fetchConfig();
@@ -21,9 +23,9 @@ const SettingEndpointPopup = () => {
 
   const onFinish: FormProps<AppConfig>["onFinish"] = async (values) => {
     await window.api.setConfig(values);
-    await initApi();
     message.success("Lưu endpoint thành công");
     setOpen(false);
+    window.location.reload();
   };
 
   return (
@@ -36,23 +38,26 @@ const SettingEndpointPopup = () => {
         width={600}
         onCancel={() => setOpen(false)}
         onOk={form.submit}
-      >
-        <Form
-          form={form}
-          name="basic"
-          style={{ maxWidth: 600 }}
-          onFinish={onFinish}
-          autoComplete="off"
-          layout="vertical"
-        >
-          <Form.Item<AppConfig>
-            label="Endpoint"
-            name="apiBaseUrl"
-            rules={[{ required: true, message: "Nhập endpoint" }]}
+        modalRender={(dom) => (
+          <Form
+            form={form}
+            name="basic"
+            style={{ maxWidth: 600 }}
+            onFinish={onFinish}
+            autoComplete="off"
+            layout="vertical"
           >
-            <Input placeholder="Nhập endpoint" />
-          </Form.Item>
-        </Form>
+            {dom}
+          </Form>
+        )}
+      >
+        <Form.Item<AppConfig>
+          label="Endpoint"
+          name="apiBaseUrl"
+          rules={[{ required: true, message: "Nhập endpoint" }]}
+        >
+          <Input placeholder="Nhập endpoint" />
+        </Form.Item>
       </Modal>
     </>
   );

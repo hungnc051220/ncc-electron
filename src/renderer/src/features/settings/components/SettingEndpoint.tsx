@@ -18,7 +18,7 @@ const SettingEndpoint = () => {
 
   const onFinish: FormProps<AppConfig>["onFinish"] = async (values) => {
     await window.api.setConfig(values);
-    await initApi();
+    await initApi(values.apiBaseUrl);
     message.success("Lưu endpoint thành công");
   };
 

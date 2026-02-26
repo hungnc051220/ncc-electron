@@ -12,9 +12,8 @@ interface RefreshResponse {
 
 let apiBaseUrl = "";
 
-export const initApi = async () => {
-  const config = await window.api.getConfig();
-  apiBaseUrl = config.apiBaseUrl;
+export const initApi = async (url: string) => {
+  apiBaseUrl = url;
 };
 
 export const refreshApi = axios.create();
@@ -66,7 +65,9 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (error.response.status === 401 && !originalRequest._retry) {
+    const shouldSkip = originalRequest.headers?.skipAuthRefresh;
+
+    if (error.response.status === 401 && !originalRequest._retry && !shouldSkip) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });

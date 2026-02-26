@@ -83,7 +83,7 @@ const Actions = ({
     [selectedSeats]
   );
 
-  const onBooking = () => {
+  const onBooking = (memberCardCode?: string) => {
     if (!posName || !posShortName) return;
     const floorNo = selectedSeats[0]?.floor || 1;
 
@@ -94,7 +94,8 @@ const Actions = ({
       posName,
       posShortName,
       discountId: selectedDiscount?.id,
-      isInvitation: false
+      isInvitation: false,
+      memberCardCode
     };
 
     if (floorNo === 1) {

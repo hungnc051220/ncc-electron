@@ -40,3 +40,50 @@ export interface CustomerRoleMenuProps {
   edit: boolean;
   readOnly: boolean;
 }
+
+export interface CustomerPosProps {
+  id: number;
+  customerGuid: string;
+  username: string;
+  email: string;
+  password: string;
+  passwordFormatId: number;
+  passwordSalt: string;
+  isStaff: boolean;
+  active: boolean;
+  fullName: string;
+  customerFirstName: string;
+  customerLastName: string;
+  birthDay: string;
+  mobile: string;
+  idCard: string;
+  sex: boolean;
+  deleted: boolean;
+  lastIpAddress: string;
+  lastActivityDateUtc: string;
+  marriage: boolean;
+  address: string;
+  position: string;
+  favour: string;
+  pointReward: number;
+  pointCard: number;
+  cardCode: string;
+  cardLevelName: string;
+  currentCardId: number;
+  cardIssued: boolean;
+  lastVisitedPage: string;
+  dateCreateCard: string;
+  dateExpireCard: string;
+  dateLevel: string;
+  areaId: string;
+  cityId: number;
+  jobId: number;
+  districtId: number;
+  countryId: number;
+  cardIssuedBy: string;
+  otp: string;
+  dateOTP: string;
+  userType: string;
+  registerType: string;
+  studentIdCard: string;
+}

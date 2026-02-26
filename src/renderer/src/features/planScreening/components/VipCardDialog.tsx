@@ -1,49 +1,64 @@
+import { useCustomer } from "@renderer/hooks/useCustomer";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { Button, Checkbox, Descriptions, Input, message, Modal, Space } from "antd";
 import type { DescriptionsProps } from "antd";
+import { Button, Checkbox, Descriptions, Input, message, Modal, Space } from "antd";
 import { InputStatus } from "antd/es/_util/statusUtils";
-import { useState } from "react";
+import dayjs from "dayjs";
+import { useMemo, useState } from "react";
 
 interface VipCardDialogProps {
   open: boolean;
   onCancel: () => void;
   totalPrice?: number;
-  onBooking: () => void;
+  onBooking: (memberCardCode: string) => void;
 }
 
 const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogProps) => {
   const [searchText, setSearchText] = useState<string | undefined>(undefined);
+  const [lastSearched, setLastSearched] = useState<string | null>(null);
   const [status, setStatus] = useState<InputStatus>("");
+
+  const { data, isFetching, refetch } = useCustomer({
+    current: 1,
+    pageSize: 1,
+    cardCode: searchText
+  });
+
+  const customer = useMemo(() => {
+    if (!data || data.data.length === 0) return null;
+
+    return data.data[0];
+  }, [data]);
 
   const items: DescriptionsProps["items"] = [
     {
       label: "Họ và tên",
-      children: "Anh Tuấn Trương"
+      children: customer?.fullName
     },
     {
       label: "Hạng thẻ",
-      children: "Member"
+      children: customer?.cardLevelName
     },
     {
       label: "Ngày sinh",
-      children: "16-03-2000"
+      children: customer?.birthDay ? dayjs(customer.birthDay).format("DD/MM/YYYY") : ""
     },
     {
       label: "Ngày hết hạn",
-      children: "01-06-2021"
+      children: customer?.dateExpireCard ? dayjs(customer.dateExpireCard).format("DD/MM/YYYY") : ""
     },
     {
       label: "Điểm tích lũy",
-      children: "3726045"
+      children: formatNumber(customer?.pointCard || 0)
     },
     {
       label: "Điểm thưởng",
-      children: "183280"
+      children: formatNumber(customer?.pointReward || 0)
     },
     {
       label: "Địa chỉ",
       span: 1,
-      children: "Hà Nội"
+      children: customer?.address
     }
   ];
 
@@ -54,8 +69,36 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
       return;
     }
 
-    onBooking();
+    onBooking(searchText);
     onCancel();
+  };
+
+  const onSearch = async () => {
+    if (!searchText) {
+      message.error("Bạn chưa nhập số thẻ");
+      setStatus("error");
+      return;
+    }
+
+    if (searchText === lastSearched) {
+      return;
+    }
+
+    setLastSearched(searchText);
+
+    try {
+      const res = await refetch();
+
+      const customers = res.data?.data;
+
+      if (!customers || customers.length === 0) {
+        message.error("Không tìm thấy khách hàng");
+        setStatus("error");
+        return;
+      }
+    } catch {
+      message.error("Có lỗi xảy ra khi tìm kiếm");
+    }
   };
 
   return (
@@ -79,8 +122,9 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
                 setStatus("");
               }}
               status={status}
+              onPressEnter={onSearch}
             />
-            <Button variant="outlined" color="primary">
+            <Button variant="outlined" color="primary" onClick={onSearch} loading={isFetching}>
               Tìm kiếm
             </Button>
           </Space.Compact>
@@ -93,7 +137,7 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
           <Checkbox className="flex-1">Áp dụng ưu đãi cho thành viên U22</Checkbox>
         </div>
 
-        <div className="bg-gray-100 p-4 rounded-md">
+        <div className="bg-gray-100 dark:bg-app-bg-container p-4 rounded-md">
           <div className="grid grid-cols-2 gap-10">
             <div>
               <div className="flex justify-between">

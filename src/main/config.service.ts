@@ -1,17 +1,23 @@
 // config.service.ts
+import { AppConfig } from "@shared/types";
 import { app } from "electron";
 import fs from "fs";
 import path from "path";
 
 const configPath = path.join(app.getPath("userData"), "config.json");
 
-export interface AppConfig {
-  apiBaseUrl: string;
-}
-
 const defaultConfig: AppConfig = {
-  apiBaseUrl: "https://testapiv3.chieuphimquocgia.com.vn"
+  apiBaseUrl: "https://testapiv3.chieuphimquocgia.com.vn",
+  socketUrl: "wss://testapiv3.chieuphimquocgia.com.vn",
+  theme: "light"
 };
+
+function toSocketUrl(apiUrl: string): string {
+  if (apiUrl.startsWith("https")) {
+    return apiUrl.replace("https", "wss");
+  }
+  return apiUrl.replace("http", "ws");
+}
 
 export function getConfig(): AppConfig {
   if (!fs.existsSync(configPath)) {
@@ -27,6 +33,10 @@ export function getConfig(): AppConfig {
     ...defaultConfig,
     ...parsed
   };
+
+  if (!merged.socketUrl) {
+    merged.socketUrl = toSocketUrl(merged.apiBaseUrl);
+  }
 
   // Ghi lại nếu thiếu field
   fs.writeFileSync(configPath, JSON.stringify(merged, null, 2));

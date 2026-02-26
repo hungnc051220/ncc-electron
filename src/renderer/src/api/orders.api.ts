@@ -32,6 +32,7 @@ export interface OrderDto {
   isInvitation?: boolean;
   discountId?: number;
   action?: string;
+  memberCardCode?: string;
 }
 
 export interface CancelOrderDto {

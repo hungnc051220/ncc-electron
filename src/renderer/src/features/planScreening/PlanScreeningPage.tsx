@@ -1,12 +1,13 @@
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
+import { onOrderPaymentUpdated } from "@renderer/socket/socket";
+import { useThemeStore } from "@renderer/store/theme.store";
 import { ListSeat, PlanScreeningDetailProps, QrState } from "@shared/types";
 import { Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import Actions from "./components/Actions";
-import Seats from "./components/Seats";
-import { useThemeStore } from "@renderer/store/theme.store";
 import QrCodeDialog from "./components/QrCodeDialog";
+import Seats from "./components/Seats";
 
 const PlanScreeningPage = () => {
   const { id } = useParams();
@@ -17,6 +18,14 @@ const PlanScreeningPage = () => {
   const [qrState, setQrState] = useState<QrState>({ isOpen: false });
 
   const { data, isFetching } = usePlanScreeningDetail(Number(id), isCustomerMode);
+
+  useEffect(() => {
+    const cleanup = onOrderPaymentUpdated((data) => {
+      console.log("orderPaymentUpdated:", data);
+    });
+
+    return cleanup;
+  }, []);
 
   useEffect(() => {
     if (isCustomerMode) return;

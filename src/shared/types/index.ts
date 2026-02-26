@@ -9,3 +9,4 @@ export * from "./report.types";
 export * from "./room.types";
 export * from "./screening.types";
 export * from "./user.types";
+export * from "./socket.types";
