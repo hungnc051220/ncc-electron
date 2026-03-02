@@ -71,7 +71,9 @@ export const sortSeats = (seats: string[]): string[] => {
 };
 
 export const buildTicketsFromOrder = async (
-  data: OrderDetailProps
+  data: OrderDetailProps,
+  staffName?: string,
+  posName?: string
 ): Promise<PrintTicketPayload[]> => {
   const tickets: PrintTicketPayload[] = [];
   const qrBase64 = await QRCode.toDataURL(data.order.barCode);
@@ -97,7 +99,9 @@ export const buildTicketsFromOrder = async (
         floor: data.room.floor,
         price: formatMoney(item.unitPriceInclTax),
         ticketCode: data.order.barCode,
-        qrData: qrBase64
+        qrData: qrBase64,
+        posName,
+        staffName
       });
     });
   });

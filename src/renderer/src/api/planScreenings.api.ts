@@ -20,6 +20,9 @@ export interface PlanScreeningDto {
   priceOfPosition3: string;
   priceOfPosition4: string;
   isOnlineSelling?: number;
+  noOnlineChairF1?: string;
+  noOnlineChairF2?: string;
+  noOnlineChairF3?: string;
 }
 
 export const planScreeningsApi = {

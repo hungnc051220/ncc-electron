@@ -341,8 +341,6 @@ app.whenReady().then(() => {
         throw new Error("No tickets to print");
       }
 
-      console.log("Requested deviceName:", printerName);
-
       return printService.enqueue(async () => {
         for (const ticket of tickets) {
           try {

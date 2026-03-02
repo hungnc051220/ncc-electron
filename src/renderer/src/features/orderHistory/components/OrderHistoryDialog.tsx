@@ -57,7 +57,7 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 bg-beerus mt-4 rounded-md">
+      <div className="grid grid-cols-3 gap-4 bg-app-bg-container mt-4 rounded-md">
         <div className="py-3 px-4">
           <p className="text-sm text-trunks">Ngày mua</p>
           <p>

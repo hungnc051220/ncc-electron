@@ -1,6 +1,8 @@
 import { SetSeatsContractTicketSaleDto } from "@renderer/api/contractTicketSales.api";
+import { CancelOrderDto } from "@renderer/api/orders.api";
 import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
 import { useSetSeatsContractTicketSale } from "@renderer/hooks/contractTicketSales/useSetSeatsContractTicketSale";
+import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney } from "@renderer/lib/utils";
@@ -30,6 +32,7 @@ const Actions = ({
   const { data: user } = useUserDetail(userId!);
 
   const setSeatsContractTicketSale = useSetSeatsContractTicketSale();
+  const cancelOrder = useCancelOrder();
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -107,10 +110,50 @@ const Actions = ({
     );
   };
 
+  const onCancelSeats = () => {
+    const floorNo = selectedSeats[0]?.floor || 1;
+
+    const body: CancelOrderDto = {
+      planScreenId: planScreeningId,
+      cancelReasonId: 0,
+      notes: "Huỷ vé hợp đồng",
+      isRefund: true,
+      cancelReasonMsg: "Huỷ vé hợp đồng"
+    };
+
+    if (floorNo === 1) {
+      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 2) {
+      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 3) {
+      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
+    }
+
+    cancelOrder.mutate(body, {
+      onSuccess: () => {
+        setSelectedSeats([]);
+        queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
+        message.success("Huỷ vé hợp đồng thành công");
+      },
+      onError: (error: unknown) => {
+        let msg = "Huỷ vé hợp đồng thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
+      }
+    });
+  };
+
   return (
-    <div className="bg-beerus border-t border-gray-300 shrink-0 px-4">
+    <div className="bg-beerus dark:bg-app-bg border-t border-gray-300 dark:border-app-border shrink-0 px-4">
       <div className="p-2 flex gap-6 max-w-5xl mx-auto">
-        <div className="flex-1 bg-white py-2 px-4 rounded-md">
+        <div className="flex-1 bg-app-bg-container py-2 px-4 rounded-md">
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="flex gap-3">
@@ -129,6 +172,7 @@ const Actions = ({
             color="danger"
             className="h-full! font-bold"
             disabled={selectedSeats.length === 0 || setSeatsContractTicketSale.isPending}
+            onClick={onCancelSeats}
           >
             Hủy vé hợp đồng
           </Button>

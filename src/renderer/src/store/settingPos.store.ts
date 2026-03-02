@@ -2,16 +2,16 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 type SettingPosState = {
-  posName: string | null;
-  posShortName: string | null;
+  posName: string | undefined;
+  posShortName: string | undefined;
   setPos: (posName: string, posShortName: string) => void;
 };
 
 export const useSettingPosStore = create<SettingPosState>()(
   persist(
     (set) => ({
-      posName: null,
-      posShortName: null,
+      posName: undefined,
+      posShortName: undefined,
       setPos: (posName, posShortName) => set({ posName, posShortName })
     }),
     {

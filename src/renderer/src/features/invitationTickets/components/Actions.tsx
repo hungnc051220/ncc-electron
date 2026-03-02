@@ -1,5 +1,6 @@
-import { OrderDto } from "@renderer/api/orders.api";
+import { CancelOrderDto, OrderDto } from "@renderer/api/orders.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
+import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
@@ -26,6 +27,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   const { posName, posShortName } = useSettingPosStore();
 
   const createOrder = useCreateOrder();
+  const cancelOrder = useCancelOrder();
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -105,10 +107,50 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
     });
   };
 
+  const onCancelSeats = () => {
+    const floorNo = selectedSeats[0]?.floor || 1;
+
+    const body: CancelOrderDto = {
+      planScreenId: planScreeningId,
+      cancelReasonId: 0,
+      notes: "Huỷ đơn",
+      isRefund: true,
+      cancelReasonMsg: "Huỷ đơn"
+    };
+
+    if (floorNo === 1) {
+      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 2) {
+      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
+    } else if (floorNo === 3) {
+      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
+      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
+    }
+
+    cancelOrder.mutate(body, {
+      onSuccess: () => {
+        setSelectedSeats([]);
+        queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
+        message.success("Huỷ vé mời thành công");
+      },
+      onError: (error: unknown) => {
+        let msg = "Huỷ vé mời thất bại";
+
+        if (axios.isAxiosError<ApiError>(error)) {
+          msg = error.response?.data?.message ?? msg;
+        }
+
+        message.error(msg);
+      }
+    });
+  };
+
   return (
-    <div className="bg-beerus border-t border-gray-300 shrink-0 px-4">
+    <div className="bg-jiren dark:bg-app-bg border-t border-gray-300 dark:border-app-border shrink-0 px-4">
       <div className="p-2 flex gap-6 max-w-5xl mx-auto">
-        <div className="flex-1 bg-white py-2 px-4 rounded-md">
+        <div className="flex-1 bg-app-bg-container py-2 px-4 rounded-md">
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="flex gap-3">
@@ -127,6 +169,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
             color="danger"
             className="h-full! font-bold"
             disabled={selectedSeats.length === 0 || createOrder.isPending}
+            onClick={onCancelSeats}
           >
             Hủy vé mời
           </Button>

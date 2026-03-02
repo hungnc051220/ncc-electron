@@ -1,5 +1,5 @@
 import { cn } from "@renderer/lib/utils";
-import { ListSeat, ScreenMode } from "@shared/types";
+import { ListSeat } from "@shared/types";
 import { useCallback } from "react";
 
 const colorMap: { [key: string]: string } = {
@@ -9,24 +9,24 @@ const colorMap: { [key: string]: string } = {
   12: "bg-transparent"
 };
 
-const Seat = ({
+const SeatOnline = ({
   seat,
   isSelected,
   onSelect,
   size,
   canSelect,
+  isBlockedOnline,
   onHover,
-  onLeave,
-  screenMode
+  onLeave
 }: {
   seat: ListSeat;
   isSelected: boolean;
   onSelect: (seat: ListSeat) => void;
   size: number;
   canSelect: boolean;
+  isBlockedOnline?: boolean;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
-  screenMode?: ScreenMode;
 }) => {
   const handleClick = useCallback(() => {
     if (canSelect) {
@@ -40,10 +40,10 @@ const Seat = ({
         "relative rounded-sm flex items-center justify-center selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
-        seat.status === 1 && "bg-trunks text-white",
         seat.isContract && "bg-raditz text-white",
         seat.isHold && "bg-roshi text-white",
-        screenMode === "invitation" && seat.isInvitation && "bg-teal-500 text-white",
+        isBlockedOnline && "bg-trunks/50",
+        seat.status === 1 && "bg-trunks text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white"
       )}
@@ -65,4 +65,4 @@ const Seat = ({
   );
 };
 
-export default Seat;
+export default SeatOnline;

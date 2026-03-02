@@ -1,16 +1,14 @@
 "use client";
 
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
-import { ListSeat, ScreenMode } from "@shared/types";
+import { ListSeat } from "@shared/types";
 import { Spin } from "antd";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
-import Seats from "../planScreening/components/Seats";
+import SeatsOnline from "../planScreening/components/SeatsOnline";
 import Actions from "./components/Actions";
 
-const screenMode: ScreenMode = "invitation";
-
-const InvitationTicketsDetailPage = () => {
+const OnlineSeatBookingDetailPage = () => {
   const [searchParams] = useSearchParams();
   const planScreeningId = searchParams.get("plan-screening");
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
@@ -20,14 +18,14 @@ const InvitationTicketsDetailPage = () => {
   return (
     <Spin spinning={isFetching}>
       <div className="relative flex flex-col h-screen overflow-hidden select-none">
-        <Seats
+        <SeatsOnline
           data={data}
           selectedSeats={selectedSeats}
           setSelectedSeats={setSelectedSeats}
-          screenMode={screenMode}
         />
         {data && (
           <Actions
+            data={data}
             planScreeningId={Number(planScreeningId)}
             selectedSeats={selectedSeats}
             setSelectedSeats={setSelectedSeats}
@@ -38,4 +36,4 @@ const InvitationTicketsDetailPage = () => {
   );
 };
 
-export default InvitationTicketsDetailPage;
+export default OnlineSeatBookingDetailPage;

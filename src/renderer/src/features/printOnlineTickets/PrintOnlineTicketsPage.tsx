@@ -1,16 +1,20 @@
+import { useMarkPrintedOrder } from "@renderer/hooks/orders/useMarkPrintedOrder";
 import { useOrders } from "@renderer/hooks/orders/useUsers";
 import { buildTicketsFromOrder, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { usePrinterStore } from "@renderer/store/printer.store";
 import { ApiError, OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, message, Table } from "antd";
+import axios from "axios";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import Filter from "./components/Filter";
-import { usePrinterStore } from "@renderer/store/printer.store";
-import { usePrintedOrder } from "@renderer/hooks/orders/usePrintedOrder";
-import axios from "axios";
+import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
+import { useAuthStore } from "@renderer/store/auth.store";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 
 export interface ValuesProps {
   id?: string;
@@ -25,6 +29,9 @@ const PrintOnlineTicketsPage = () => {
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
+  const { posShortName } = useSettingPosStore();
+  const userId = useAuthStore((s) => s.userId);
+  const { data: user } = useUserDetail(userId!);
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -46,24 +53,46 @@ const PrintOnlineTicketsPage = () => {
   }, [current, pageSize, filterValues]);
 
   const { data, isFetching } = useOrders(params);
-  const printedOrder = usePrintedOrder();
+  const markPrintedOrder = useMarkPrintedOrder();
+  const unmarkPrintedOrder = useUnmarkPrintedOrder();
 
   const onPrint = async (orderDetail: OrderDetailProps) => {
     try {
-      const tickets = await buildTicketsFromOrder(orderDetail);
+      const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posShortName);
       await window.api.printTickets(tickets, selectedPrinter);
       message.success("In vé thành công");
     } catch {
       message.error("In vé thất bại");
     }
 
-    await printedOrder.mutateAsync(
+    await markPrintedOrder.mutateAsync(
       {
-        orderId: orderDetail.order.id
+        orderId: orderDetail.order.id,
+        posShortName
       },
       {
         onError: (error: unknown) => {
           let msg = "Cập nhật trạng thái in vé thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
+        }
+      }
+    );
+  };
+
+  const onUnmarkPrinted = async (orderDetail: OrderDetailProps) => {
+    unmarkPrintedOrder.mutate(
+      { orderId: orderDetail.order.id },
+      {
+        onSuccess: () => {
+          message.success("Cho phép in lại vé thành công");
+        },
+        onError: (error: unknown) => {
+          let msg = "Cho phép in lại vé thất bại";
 
           if (axios.isAxiosError<ApiError>(error)) {
             msg = error.response?.data?.message ?? msg;
@@ -165,7 +194,9 @@ const PrintOnlineTicketsPage = () => {
       render: (_, record) => {
         const isPrinted = record.order.printedOnUtc;
         return isPrinted ? (
-          <Button type="link">Cho phép in lại vé</Button>
+          <Button type="link" onClick={() => onUnmarkPrinted(record)}>
+            Cho phép in lại vé
+          </Button>
         ) : (
           <Button type="link" onClick={() => onPrint(record)}>
             In vé

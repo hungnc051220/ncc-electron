@@ -10,8 +10,9 @@ import axios from "axios";
 
 type FieldType = {
   customerFirstName: string;
-  customerPhone: string;
+  customerPhone?: string;
   orderTotal: number;
+  note?: string;
 };
 
 interface CancellationReasonDialogProps {
@@ -38,7 +39,8 @@ const ContractTicketSaleDialog = ({
     return {
       customerFirstName: selectedItem.customerFirstName,
       customerPhone: selectedItem.customerPhone,
-      orderTotal: selectedItem.orderTotal
+      orderTotal: selectedItem.orderTotal,
+      note: selectedItem.note
     };
   };
 
@@ -103,11 +105,7 @@ const ContractTicketSaleDialog = ({
         >
           <Input placeholder="Nhập tên khách hàng" />
         </Form.Item>
-        <Form.Item<FieldType>
-          name="customerPhone"
-          label="Số điện thoại"
-          rules={[{ required: true, message: "Nhập số điện thoại" }]}
-        >
+        <Form.Item<FieldType> name="customerPhone" label="Số điện thoại">
           <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
         <Form.Item<FieldType>
@@ -123,6 +121,9 @@ const ContractTicketSaleDialog = ({
             formatter={formatter}
             parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as unknown as number}
           />
+        </Form.Item>
+        <Form.Item<FieldType> name="note" label="Ghi chú">
+          <Input.TextArea rows={3} placeholder="Nhập ghi chú" />
         </Form.Item>
       </Form>
     </Modal>

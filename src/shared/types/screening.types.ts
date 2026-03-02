@@ -219,3 +219,5 @@ export interface PlanFilmProps {
   order: number;
   film: FilmInfo;
 }
+
+export type ScreenMode = "normal" | "contract" | "invitation";

@@ -189,13 +189,22 @@ export const ordersApi = {
     const res = await api.post("/api/pos/order/cancel", dto);
     return res.data;
   },
-  printed: async (params: OrderPrintedQuery) => {
+  markPrinted: async (params: OrderPrintedQuery) => {
     const query = queryString.stringify(params, {
       skipEmptyString: true,
       skipNull: true
     });
 
     const res = await api.patch(`/api/pos/order/print?${query}`);
+    return res.data;
+  },
+  unmarkPrinted: async (params: OrderPrintedQuery) => {
+    const query = queryString.stringify(params, {
+      skipEmptyString: true,
+      skipNull: true
+    });
+
+    const res = await api.patch(`/api/pos/order/unmark-print?${query}`);
     return res.data;
   },
   refund: async (dto: OrderRefundDto[]) => {

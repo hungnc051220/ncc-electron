@@ -95,6 +95,7 @@ export interface OrderResponseProps {
   errorStatus: string;
   eTicketUrl: string;
   items: OrderItem[];
+  note?: string;
 }
 
 export interface OrderItem {

@@ -89,7 +89,11 @@ const NavItems = () => {
           key: "showtime-schedule"
         },
         {
-          label: <Link to="/online-seat-booking">Thiết lập bán online theo ghế</Link>,
+          label: (
+            <Link to="/showtimes?callbackUrl=/online-seat-booking&id=create">
+              Thiết lập bán online theo ghế
+            </Link>
+          ),
           key: "online-seat-booking"
         },
         {

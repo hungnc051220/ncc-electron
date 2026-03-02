@@ -1,7 +1,8 @@
 export interface OrderPaymentUpdatedPayload {
-  orderId: number;
-  status: "PENDING" | "PAID" | "FAILED";
-  paymentMethod: "QR" | "CASH" | "CARD";
+  orderId: string;
+  orderStatus: number;
+  paymentStatus: number;
+  shippingStatus: number;
+  transactionId: string;
   amount: number;
-  paidAt?: string;
 }

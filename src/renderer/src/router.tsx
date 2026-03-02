@@ -35,6 +35,7 @@ import InvitationTicketsDetailPage from "./features/invitationTickets/Invitation
 import SettingPage from "./features/settings/SettingPage";
 import UserRolesPage from "./features/userRoles/UserRolesPage";
 import TicketSalesDiagramPage from "./features/TicketSalesDiagramPage";
+import OnlineSeatBookingDetailPage from "./features/onlineSeatBooking/OnlineSeatBookingDetailPage";
 
 export const router = createHashRouter([
   {
@@ -177,6 +178,10 @@ export const router = createHashRouter([
       {
         path: "/invitation-tickets/create",
         element: <InvitationTicketsDetailPage />
+      },
+      {
+        path: "/online-seat-booking/create",
+        element: <OnlineSeatBookingDetailPage />
       },
       {
         path: "/ticket-sales-diagram/view",

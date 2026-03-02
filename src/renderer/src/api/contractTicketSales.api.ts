@@ -11,8 +11,9 @@ export interface ContractTicketSalesQuery {
 
 export interface ContractTicketSaleDto {
   customerFirstName: string;
-  customerPhone: string;
+  customerPhone?: string;
   orderTotal: number;
+  note?: string;
 }
 
 export interface SetSeatsContractTicketSaleDto {

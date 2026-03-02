@@ -222,7 +222,7 @@ export const createPrintService = () => {
         <div class="info-wrapper">
           <div class="row">
             <span class="en-label">Máy bán:</span>
-            <span class="label-footer">M4-202112</span>
+            <span class="label-footer">${ticket.posName}</span>
           </div>
           <div class="row">
             <span class="bold"></span>
@@ -230,7 +230,7 @@ export const createPrintService = () => {
           </div>
           <div class="row">
             <span class="en-label">Nhân viên:</span>
-            <span class="label-footer">Hưng</span>
+            <span class="label-footer">${ticket.staffName}</span>
           </div>
           <div class="row">
             <span class="en-label">Hotline:</span>

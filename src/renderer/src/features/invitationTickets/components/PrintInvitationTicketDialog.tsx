@@ -259,7 +259,7 @@ const PrintInvitationTicketDialog = ({
             />
           </div>
         ) : (
-          <div className="w-full h-63.5 bg-beerus mt-5 rounded-md" />
+          <div className="w-full h-63.5 bg-app-bg-container mt-5 rounded-md" />
         )}
         <div className="mt-5">
           <ReactQuill value={templateHtml} readOnly />

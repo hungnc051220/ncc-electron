@@ -24,20 +24,23 @@ import { Button, Checkbox, Descriptions, message } from "antd";
 import axios from "axios";
 
 import { ordersKeys } from "@renderer/hooks/orders/keys";
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import DiscountPopup from "./DiscountPopup";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
+import { useAuthStore } from "@renderer/store/auth.store";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { onOrderPaymentUpdated } from "@renderer/socket/socket";
 
 const paymentTypes = [
   {
-    value: PaymentType.VNPAY,
-    label: "Quét VNPayQR"
-  },
-  {
     value: PaymentType.VIETQR,
     label: "Quét VietQR"
+  },
+  {
+    value: PaymentType.VNPAY,
+    label: "Quét VNPayQR"
   }
 ];
 
@@ -71,12 +74,53 @@ const Actions = ({
   const [openVipCardDialog, setOpenVipCardDialog] = useState(false);
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
 
+  const userId = useAuthStore((s) => s.userId);
+  const { data: user } = useUserDetail(userId!);
   const { data: discounts } = useDiscounts({ current: 1, pageSize: 20 });
   const createOrder = useCreateOrder();
   const createQr = useCreateQrOrder();
   const cancelOrder = useCancelOrder();
 
   const lastTotal = sessionStorage.getItem("lastTotal");
+
+  const handlePrint = useCallback(
+    async (orderId: number) => {
+      try {
+        const orderDetail = await queryClient.fetchQuery({
+          queryKey: ordersKeys.getDetail(orderId),
+          queryFn: () => ordersApi.getDetail(orderId)
+        });
+
+        const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posName);
+
+        await window.api?.printTickets(tickets, selectedPrinter);
+
+        message.success("In vé thành công");
+      } catch (error) {
+        console.error(error);
+        message.error("In vé thất bại");
+      }
+    },
+    [queryClient, selectedPrinter, user, posName]
+  );
+
+  useEffect(() => {
+    const cleanup = onOrderPaymentUpdated((data) => {
+      console.log("data", data);
+      if (data.paymentStatus !== 30) return;
+
+      message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
+      handlePrint(Number(data.orderId));
+      setSelectedSeats([]);
+      queryClient.invalidateQueries({
+        queryKey: planScreeningsKeys.getDetail(planScreenId)
+      });
+      setOpenQrDialog(false);
+      window.api?.sendQrClose();
+    });
+
+    return cleanup;
+  }, [handlePrint, planScreenId, queryClient, setSelectedSeats]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -150,20 +194,7 @@ const Actions = ({
           queryKey: planScreeningsKeys.getDetail(planScreenId)
         });
 
-        try {
-          const orderDetail = await queryClient.fetchQuery({
-            queryKey: ordersKeys.getDetail(order.id),
-            queryFn: () => ordersApi.getDetail(order.id)
-          });
-
-          const tickets = await buildTicketsFromOrder(orderDetail);
-
-          await window.api.printTickets(tickets, selectedPrinter);
-
-          message.success("In vé thành công");
-        } catch {
-          message.error("In vé thất bại");
-        }
+        handlePrint(order.id);
       },
       onError: (error: unknown) => {
         let msg = "Tạo đơn thất bại";
@@ -441,7 +472,7 @@ const Actions = ({
           onCancel={() => {
             onCancelOrder([qrData.orderId]);
             setOpenQrDialog(false);
-            window.api.sendQrClose();
+            window.api?.sendQrClose();
           }}
           dataQr={qrData}
         />

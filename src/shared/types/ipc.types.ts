@@ -12,6 +12,8 @@ export interface PrintTicketPayload {
   price: string;
   ticketCode: string;
   qrData: string;
+  posName?: string;
+  staffName?: string;
 }
 
 export type PrintTicketsArgs = {

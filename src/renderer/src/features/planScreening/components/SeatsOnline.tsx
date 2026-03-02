@@ -1,12 +1,12 @@
 import Legend from "@renderer/components/Legend";
 import { cn } from "@renderer/lib/utils";
-import { ListSeat, PlanScreeningDetailProps, ScreenMode } from "@shared/types";
+import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { Button, Tag } from "antd";
 import dayjs from "dayjs";
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import Selecto from "react-selecto";
-import Seat from "./Seat";
+import SeatOnline from "./SeatOnline";
 import TooltipFloating from "./TooltipFloating";
 
 type TooltipPosition = {
@@ -20,20 +20,18 @@ interface SeatsProps {
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
   cancelMode?: boolean;
   isCustomerView?: boolean;
-  screenMode?: ScreenMode;
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
   return `${seat.floor}-${seat.code}`;
 };
 
-const Seats = ({
+const SeatsOnline = ({
   data,
   selectedSeats,
   setSelectedSeats,
   cancelMode,
-  isCustomerView,
-  screenMode = "normal"
+  isCustomerView
 }: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
@@ -58,44 +56,28 @@ const Seats = ({
     (seat: ListSeat) => {
       if (seat.type === 12) return false;
 
-      // --- Nếu đang ở chế độ hủy ---
       if (cancelMode) {
-        // Ghế chưa bán thì không hủy được
-        if (seat.status !== 1) return false;
-
-        // 🎫 Màn giấy mời
-        if (screenMode === "invitation") {
-          return seat.isInvitation === 1;
-        }
-
-        // 📄 Màn hợp đồng
-        if (screenMode === "contract") {
-          return seat.isContract === 1;
-        }
-
-        // 🎟 Màn bán vé thường
-        return seat.isInvitation !== 1 && seat.isContract !== 1;
+        return seat.status === 1; // chỉ ghế đã bán
       }
 
-      // --- Nếu đang bán vé ---
-      // Ghế đã có đơn thì disable
-      if (seat.status === 1 && seat.isHold !== 1) {
-        // 🎫 Giấy mời: cho phép chọn ghế invitation
-        if (screenMode === "invitation" && seat.isInvitation === 1) {
-          return true;
-        }
-
-        // 📄 Hợp đồng: cho phép chọn ghế contract
-        if (screenMode === "contract" && seat.isContract === 1) {
-          return true;
-        }
-
-        return false;
-      }
-
-      return true;
+      return seat.status !== 1 || seat.isHold === 1; // ghế chưa bán
     },
-    [cancelMode, screenMode]
+    [cancelMode]
+  );
+
+  const isSeatBlockedOnline = useCallback(
+    (seat: ListSeat) => {
+      const key = `noOnlineChairF${seat.floor}` as
+        | "noOnlineChairF1"
+        | "noOnlineChairF2"
+        | "noOnlineChairF3";
+
+      const seatString = data?.[key];
+      if (!seatString) return false;
+
+      return seatString.split(",").includes(seat.seat);
+    },
+    [data]
   );
 
   // Tính toán số tầng có sẵn
@@ -317,16 +299,16 @@ const Seats = ({
           {item[4]?.code?.charAt(0) || ""}
         </div>
         {item.map((seat) => (
-          <Seat
+          <SeatOnline
             key={seat.seat}
             seat={seat}
             isSelected={selectedSeats.some((s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat))}
             onSelect={handleSelectSeat}
             size={seatSize}
             canSelect={canSelectSeat(seat)}
+            isBlockedOnline={isSeatBlockedOnline(seat)}
             onHover={handleHover}
             onLeave={handleLeave}
-            screenMode={screenMode}
           />
         ))}
         <div
@@ -341,7 +323,14 @@ const Seats = ({
         </div>
       </div>
     ));
-  }, [filteredSeats, selectedSeats, handleSelectSeat, seatSize, canSelectSeat, screenMode]);
+  }, [
+    filteredSeats,
+    selectedSeats,
+    handleSelectSeat,
+    seatSize,
+    canSelectSeat,
+    isSeatBlockedOnline
+  ]);
 
   if (!data) return null;
 
@@ -418,7 +407,7 @@ const Seats = ({
           <Legend color="bg-krillin" label="Ghế VIP" />
           <Legend color="bg-raditz" label="Ghế hợp đồng" />
           <Legend color="bg-chichi" label="Ghế đôi" />
-          <Legend color="bg-teal-500" label="Vé mời" />
+          <Legend color="bg-trunks/50" label="Ghế không bán online" />
         </div>
 
         {/* React-Selecto với cấu hình tối ưu */}
@@ -451,4 +440,4 @@ const Seats = ({
   );
 };
 
-export default Seats;
+export default SeatsOnline;
