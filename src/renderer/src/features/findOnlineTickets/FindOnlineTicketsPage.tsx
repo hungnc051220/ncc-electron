@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { Link } from "react-router";
 import { OrderDetailProps } from "@shared/types";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
-import { useOrders } from "@renderer/hooks/orders/useUsers";
+import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import Filter from "./components/Filter";
 
@@ -54,7 +54,7 @@ const FindOnlineTicketsPage = () => {
       fixed: "left"
     },
     {
-      title: "Mã barcode",
+      title: "Mã vé",
       key: "barCode",
       dataIndex: "order",
       render: (order) => order.barCode,

@@ -1,11 +1,21 @@
 import { usePlanScreeningsByDate } from "@renderer/hooks/planScreenings/usePlanScreeningsByDate";
 import { useRealtimeClock } from "@renderer/hooks/useRealtimeClock";
 import { DetailPlanScreeningProps, PlanScreeningProps } from "@shared/types";
-import { Button, Checkbox, DatePicker, Table, type TableProps } from "antd";
+import { Button, Checkbox, DatePicker, Table } from "antd";
 import dayjs from "dayjs";
 import { useQueryState } from "nuqs";
 import { startTransition, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import type { DatePickerProps, TableProps } from "antd";
+import type { Dayjs } from "dayjs";
+
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(customParseFormat);
+
+const showDates = ["02-03-2026", "05-03-2026", "12-03-2026"];
+
+const showDateSet = new Set(showDates.map((d) => dayjs(d, "DD-MM-YYYY").format("YYYY-MM-DD")));
 
 const ShowtimesPage = () => {
   const navigate = useNavigate();
@@ -99,6 +109,27 @@ const ShowtimesPage = () => {
     }
   ];
 
+  const cellRender: DatePickerProps<Dayjs>["cellRender"] = (current, info) => {
+    if (info.type !== "date") return info.originNode;
+
+    const dateKey = (current as Dayjs).format("YYYY-MM-DD");
+    const hasShow = showDateSet.has(dateKey);
+
+    return (
+      <div
+        className="ant-picker-cell-inner"
+        style={{
+          border: hasShow ? "2px solid #ff4d4f" : undefined,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        {(current as Dayjs).date()}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-3 p-4 flex-1 min-h-screen bg-app-bg text-black dark:text-white">
       <div className="flex items-center justify-between">
@@ -112,6 +143,7 @@ const ShowtimesPage = () => {
             format="dddd DD/MM/YYYY"
             onChange={(date) => setDate(dayjs(date).format("YYYY-MM-DD"))}
             allowClear={false}
+            cellRender={cellRender}
           />
 
           <Checkbox checked={showPast} onChange={(e) => setShowPast(e.target.checked)}>

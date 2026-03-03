@@ -1,5 +1,5 @@
 import { useMarkPrintedOrder } from "@renderer/hooks/orders/useMarkPrintedOrder";
-import { useOrders } from "@renderer/hooks/orders/useUsers";
+import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { buildTicketsFromOrder, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { ApiError, OrderDetailProps, OrderStatus } from "@shared/types";
@@ -122,10 +122,10 @@ const PrintOnlineTicketsPage = () => {
       fixed: "left"
     },
     {
-      title: "Thời gian mua",
+      title: "Mã thanh toán",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
-      render: (createdOnUtc) => dayjs(createdOnUtc).format("HH:mm DD/MM/YYYY")
+      render: (_, record) => record.order.id
     },
     {
       title: "Tên khách hàng",
@@ -133,18 +133,6 @@ const PrintOnlineTicketsPage = () => {
       dataIndex: "order",
       render: (order) =>
         [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" ")
-    },
-    {
-      title: "Số điện thoại",
-      key: "customerPhone",
-      dataIndex: "order",
-      render: (order) => order.customerPhone
-    },
-    {
-      title: "Email",
-      key: "customerEmail",
-      dataIndex: "order",
-      render: (order) => order.customerEmail
     },
     {
       title: "Ngày chiếu",

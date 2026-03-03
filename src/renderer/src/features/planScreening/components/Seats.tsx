@@ -98,6 +98,21 @@ const Seats = ({
     [cancelMode, screenMode]
   );
 
+  const isSeatBlockedOnline = useCallback(
+    (seat: ListSeat) => {
+      const key = `noOnlineChairF${seat.floor}` as
+        | "noOnlineChairF1"
+        | "noOnlineChairF2"
+        | "noOnlineChairF3";
+
+      const seatString = data?.[key];
+      if (!seatString) return false;
+
+      return seatString.split(",").includes(seat.seat);
+    },
+    [data]
+  );
+
   // Tính toán số tầng có sẵn
   const availableFloors = useMemo(() => {
     const floors = new Set<number>();
@@ -324,6 +339,7 @@ const Seats = ({
             onSelect={handleSelectSeat}
             size={seatSize}
             canSelect={canSelectSeat(seat)}
+            isBlockedOnline={isSeatBlockedOnline(seat)}
             onHover={handleHover}
             onLeave={handleLeave}
             screenMode={screenMode}
@@ -341,7 +357,15 @@ const Seats = ({
         </div>
       </div>
     ));
-  }, [filteredSeats, selectedSeats, handleSelectSeat, seatSize, canSelectSeat, screenMode]);
+  }, [
+    filteredSeats,
+    selectedSeats,
+    handleSelectSeat,
+    seatSize,
+    canSelectSeat,
+    screenMode,
+    isSeatBlockedOnline
+  ]);
 
   if (!data) return null;
 

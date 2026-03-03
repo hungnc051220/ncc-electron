@@ -15,6 +15,7 @@ const Seat = ({
   onSelect,
   size,
   canSelect,
+  isBlockedOnline,
   onHover,
   onLeave,
   screenMode
@@ -24,6 +25,7 @@ const Seat = ({
   onSelect: (seat: ListSeat) => void;
   size: number;
   canSelect: boolean;
+  isBlockedOnline?: boolean;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
   screenMode?: ScreenMode;
@@ -43,6 +45,7 @@ const Seat = ({
         seat.status === 1 && "bg-trunks text-white",
         seat.isContract && "bg-raditz text-white",
         seat.isHold && "bg-roshi text-white",
+        isBlockedOnline && "bg-trunks/50",
         screenMode === "invitation" && seat.isInvitation && "bg-teal-500 text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white"

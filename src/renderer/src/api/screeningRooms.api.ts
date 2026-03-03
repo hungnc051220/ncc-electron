@@ -5,6 +5,13 @@ import queryString from "query-string";
 export interface ScreeningRoomsQuery {
   current: number;
   pageSize: number;
+  id?: number;
+}
+
+export interface ScreeningRoomChairsQuery {
+  current: number;
+  pageSize: number;
+  roomId?: number;
 }
 
 export interface ScreeningRoomDto {
@@ -16,9 +23,13 @@ export interface ScreeningRoomDto {
 
 export const screeningRoomsApi = {
   getAll: async (params: ScreeningRoomsQuery): Promise<ApiResponse<RoomProps>> => {
-    const { current, pageSize } = params;
+    const { current, pageSize, id } = params;
 
     const filter: Record<string, unknown> = {};
+
+    if (id) {
+      filter.id = id;
+    }
 
     const queryObject: Record<string, unknown> = {
       current,
@@ -35,6 +46,33 @@ export const screeningRoomsApi = {
     });
 
     const res = await api.get(`/api/pos/rooms?${query}`);
+
+    return res.data;
+  },
+  getChairs: async (params: ScreeningRoomChairsQuery): Promise<ApiResponse<RoomProps>> => {
+    const { current, pageSize, roomId } = params;
+
+    const filter: Record<string, unknown> = {};
+
+    if (roomId) {
+      filter.roomId = roomId;
+    }
+
+    const queryObject: Record<string, unknown> = {
+      current,
+      pageSize
+    };
+
+    if (Object.keys(filter).length > 0) {
+      queryObject.filter = JSON.stringify(filter);
+    }
+
+    const query = queryString.stringify(queryObject, {
+      skipEmptyString: true,
+      skipNull: true
+    });
+
+    const res = await api.get(`/api/pos/chairs?${query}`);
 
     return res.data;
   },

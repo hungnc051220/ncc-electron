@@ -12,6 +12,7 @@ import { Link } from "react-router";
 import AddPlanCinemaDialog from "./components/AddPlanCinemaDialog";
 import ArchivedActions from "./components/tabFilm/ArchivedActions";
 import TabsList from "./components/TabsList";
+import RestoreActions from "./components/tabFilm/RestoreActions";
 
 const PlanCinemaPage = () => {
   const [activeKey, setActiveKey] = useState<string | string[]>("0");
@@ -191,6 +192,12 @@ const PlanCinemaPage = () => {
                     )}
                     {selectedPlan.status === 1 && (
                       <ApproveRejectActions
+                        planCinemaId={selectedPlan.id}
+                        clearSelectedPlan={clearSelectedPlan}
+                      />
+                    )}
+                    {selectedPlan.status === 4 && (
+                      <RestoreActions
                         planCinemaId={selectedPlan.id}
                         clearSelectedPlan={clearSelectedPlan}
                       />

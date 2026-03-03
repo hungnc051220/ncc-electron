@@ -1,6 +1,6 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
-import { useOrders } from "@renderer/hooks/orders/useUsers";
+import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { OrderDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";

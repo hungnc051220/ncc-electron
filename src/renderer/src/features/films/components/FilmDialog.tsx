@@ -104,6 +104,16 @@ const FilmDialog = ({
 
   const imageUrl = form.getFieldValue("imageUrl");
   const sellOnline = Form.useWatch("sellOnline", form);
+  const ageAbove = Form.useWatch("ageAbove", form);
+
+  useEffect(() => {
+    if (ageAbove && ageAbove > 0) {
+      form.setFieldValue(
+        "description",
+        `Kiểm duyệt: T${ageAbove} - Phim được phổ biến đến người xem từ đủ ${ageAbove} tuổi trở lên (${ageAbove}+)`
+      );
+    }
+  });
 
   useEffect(() => {
     if (!sellOnline) {
@@ -371,7 +381,6 @@ const FilmDialog = ({
             <Form.Item<FieldValues>
               name="videoUrl"
               label="URL file video"
-              className="col-span-2"
               rules={[{ required: true, message: "Nhập URL file video" }]}
             >
               <Input placeholder="Nhập URL file video" />
@@ -385,17 +394,23 @@ const FilmDialog = ({
                 placeholder="Nhập tuổi yêu cầu từ"
               />
             </Form.Item>
-            <Form.Item<FieldValues> name="orderNo" label="Thứ tự hiển thị">
-              <InputNumber
-                className="w-full"
-                min={0}
-                max={100}
-                placeholder="Nhập thứ tự hiển thị"
-              />
-            </Form.Item>
 
             <Form.Item<FieldValues> name="imageUrl" hidden />
 
+            <Form.Item<FieldValues> name="description" label="Khuyến cáo" className="col-span-2">
+              <Input.TextArea rows={5} placeholder="Nhập khuyến cáo" />
+            </Form.Item>
+
+            <Form.Item<FieldValues>
+              name="introduction"
+              label="Tóm tắt nội dung"
+              className="col-span-2"
+            >
+              <Input.TextArea rows={5} placeholder="Nhập tóm tắt nội dung" />
+            </Form.Item>
+          </div>
+
+          <div className="w-75">
             <Form.Item label="Ảnh" className="col-span-2">
               <Upload
                 showUploadList={false}
@@ -417,21 +432,6 @@ const FilmDialog = ({
                 )}
               </Upload>
             </Form.Item>
-
-            <Form.Item<FieldValues> name="description" label="Khuyến cáo" className="col-span-2">
-              <Input.TextArea rows={5} placeholder="Nhập khuyến cáo" />
-            </Form.Item>
-
-            <Form.Item<FieldValues>
-              name="introduction"
-              label="Tóm tắt nội dung"
-              className="col-span-2"
-            >
-              <Input.TextArea rows={5} placeholder="Nhập tóm tắt nội dung" />
-            </Form.Item>
-          </div>
-
-          <div className="w-75">
             <div className="bg-app-bg-container rounded-lg py-3 px-4">
               <p className="font-semibold mb-2 text-sm">Cấu hình phim</p>
               <div className="space-y-1.5">
@@ -477,13 +477,14 @@ const FilmDialog = ({
                   name="categoryIds"
                   rules={[{ required: true, message: "Chọn ít nhất 1 thể loại" }]}
                 >
-                  <Checkbox.Group>
-                    {categories?.data?.map((category) => (
-                      <div key={category.id} className="mb-1 w-full">
-                        <Checkbox value={category.id}>{category.name}</Checkbox>
-                      </div>
-                    ))}
-                  </Checkbox.Group>
+                  <Select
+                    mode="multiple"
+                    placeholder="Chọn thể loại"
+                    options={categories?.data?.map((category) => ({
+                      label: category.name,
+                      value: category.id
+                    }))}
+                  />
                 </Form.Item>
               </div>
             </div>

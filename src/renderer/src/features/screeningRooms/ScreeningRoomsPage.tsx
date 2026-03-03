@@ -8,14 +8,16 @@ import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteScreeningRoomDialog from "./components/DeleteScreeningRoomDialog";
 import ScreeningRoomsDialog from "./components/ScreeningRoomsDialog";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
-  { key: "2", label: <p className="text-red-500">Xóa</p> }
+  { key: "2", label: "Xem sơ đồ ghế" },
+  { key: "3", label: <p className="text-red-500">Xóa</p> }
 ];
 
 const ScreeningRoomsPage = () => {
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [current, setCurrent] = useState(1);
@@ -136,6 +138,9 @@ const ScreeningRoomsPage = () => {
                 handleEdit(record);
               }
               if (e.key === "2") {
+                navigate(`/screening-rooms/${record.id}/seat-map`);
+              }
+              if (e.key === "3") {
                 handleDelete(record);
               }
             }

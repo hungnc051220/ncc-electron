@@ -1,12 +1,14 @@
+import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
-import type { TableColumnsType, TableProps } from "antd";
-import { Button, message, Table } from "antd";
-import dayjs from "dayjs";
-import { useState } from "react";
-import AddSchedulingDialog from "./AddSchedulingDialog";
 import { ApiError, PlanScreeningDetailProps } from "@shared/types";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import type { TableColumnsType, TableProps } from "antd";
+import { Button, DatePicker, message, Select, Table } from "antd";
 import axios from "axios";
+import dayjs, { Dayjs } from "dayjs";
+import { useMemo, useState } from "react";
+import AddSchedulingDialog from "./AddSchedulingDialog";
 
 interface TabSchedulingProps {
   planCinemaId?: number;
@@ -14,8 +16,46 @@ interface TabSchedulingProps {
 
 const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [roomId, setRoomId] = useState<number | undefined>(undefined);
+  const [date, setDate] = useState<Dayjs | null>(null);
 
-  const { data, isFetching } = usePlanScreenings({ planCinemaId });
+  const params = useMemo(() => {
+    return {
+      planCinemaId,
+      roomId,
+      fromDate: date ? dayjs(date).startOf("day").format("YYYY-MM-DD") : undefined,
+      toDate: date ? dayjs(date).endOf("day").format("YYYY-MM-DD") : undefined
+    };
+  }, [planCinemaId, roomId, date]);
+
+  const { data, isFetching } = usePlanScreenings(params);
+
+  const {
+    data: rooms,
+    fetchNextPage,
+    hasNextPage,
+    isFetching: isFetchingScreeningRooms,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["screening-rooms"],
+    queryFn: ({ pageParam = 1 }) => screeningRoomsApi.getAll({ current: pageParam, pageSize: 10 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
+
+  const roomOptions = useMemo(() => {
+    return (
+      rooms?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.name
+        }))
+      ) ?? []
+    );
+  }, [rooms]);
 
   const deletePlanScreening = useDeletePlanScreening();
 
@@ -99,7 +139,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     selectedRowKeys,
     onChange: (selectedRowKeys: React.Key[]) => {
       setSelectedRowKeys(selectedRowKeys);
-    }
+    },
+    getCheckboxProps: (record) => ({
+      disabled: dayjs().isAfter(dayjs(record.projectDate, "YYYY-MM-DD"), "day")
+    })
   };
 
   if (!data) return null;
@@ -122,7 +165,35 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
             Xóa
           </Button>
         </div>
-        <AddSchedulingDialog planCinemaId={planCinemaId!} />
+        <div className="flex items-center gap-3">
+          <DatePicker
+            value={date}
+            onChange={(date) => setDate(date)}
+            className="w-40"
+            placeholder="Chọn ngày chiếu"
+            format="DD/MM/YYYY"
+          />
+          <Select
+            value={roomId}
+            onChange={(value) => setRoomId(value)}
+            allowClear
+            className="w-50"
+            options={roomOptions}
+            placeholder="Chọn phòng chiếu"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                target.scrollTop + target.offsetHeight === target.scrollHeight &&
+                hasNextPage &&
+                !isFetchingNextPage
+              ) {
+                fetchNextPage();
+              }
+            }}
+            loading={isFetchingNextPage || isFetchingScreeningRooms}
+          />
+          <AddSchedulingDialog planCinemaId={planCinemaId!} />
+        </div>
       </div>
 
       <div className="mt-2">

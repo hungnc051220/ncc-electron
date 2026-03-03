@@ -45,7 +45,7 @@ export interface CancelOrderDto {
   listChairIndexF3?: string;
   listChairValueF3?: string;
   cancelReasonId: number;
-  notes: string;
+  notes?: string;
   isRefund?: boolean;
   cancelReasonMsg?: string;
 }

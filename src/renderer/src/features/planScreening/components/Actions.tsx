@@ -18,9 +18,9 @@ import {
   PlanScreeningDetailProps,
   QrDialogData
 } from "@shared/types";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
-import { Button, Checkbox, Descriptions, message } from "antd";
+import { Button, Checkbox, Descriptions, Form, message, Modal, Select } from "antd";
 import axios from "axios";
 
 import { ordersKeys } from "@renderer/hooks/orders/keys";
@@ -32,6 +32,7 @@ import VipCardDialog from "./VipCardDialog";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { onOrderPaymentUpdated } from "@renderer/socket/socket";
+import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 
 const paymentTypes = [
   {
@@ -43,6 +44,10 @@ const paymentTypes = [
     label: "Quét VNPayQR"
   }
 ];
+
+type FieldType = {
+  cancelReasonId: number;
+};
 
 interface ActionsProps {
   data: PlanScreeningDetailProps;
@@ -61,6 +66,7 @@ const Actions = ({
   cancelMode,
   setCancelMode
 }: ActionsProps) => {
+  const [form] = Form.useForm();
   const [searchParams] = useSearchParams();
   const { posName, posShortName } = useSettingPosStore();
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
@@ -73,10 +79,40 @@ const Actions = ({
   const [openQrDialog, setOpenQrDialog] = useState(false);
   const [openVipCardDialog, setOpenVipCardDialog] = useState(false);
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
+  const [openCancelSeats, setOpenCancelSeats] = useState(false);
 
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
   const { data: discounts } = useDiscounts({ current: 1, pageSize: 20 });
+
+  const {
+    data: cancellationReasons,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["cancellation-reasons"],
+    queryFn: ({ pageParam = 1 }) =>
+      cancellationReasonsApi.getAll({ current: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
+
+  const options = useMemo(() => {
+    return (
+      cancellationReasons?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.reason
+        }))
+      ) ?? []
+    );
+  }, [cancellationReasons]);
+
   const createOrder = useCreateOrder();
   const createQr = useCreateQrOrder();
   const cancelOrder = useCancelOrder();
@@ -332,15 +368,13 @@ const Actions = ({
     );
   };
 
-  const onCancelSeats = () => {
+  const onCancelSeats = (cancelReasonId?: number) => {
     const floorNo = selectedSeats[0]?.floor || 1;
 
     const body: CancelOrderDto = {
       planScreenId,
-      cancelReasonId: 0,
-      notes: "Huỷ đơn",
-      isRefund: true,
-      cancelReasonMsg: "Huỷ đơn"
+      cancelReasonId: cancelReasonId || 1,
+      isRefund: true
     };
 
     if (floorNo === 1) {
@@ -357,6 +391,7 @@ const Actions = ({
     cancelOrder.mutate(body, {
       onSuccess: () => {
         setSelectedSeats([]);
+        setOpenCancelSeats(false);
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
         message.success("Huỷ vé thành công");
       },
@@ -390,10 +425,61 @@ const Actions = ({
             variant="outlined"
             color="danger"
             disabled={!cancelMode || selectedSeats.length === 0}
-            onClick={onCancelSeats}
+            onClick={() => setOpenCancelSeats(true)}
           >
             Huỷ vé
           </Button>
+          <Modal
+            title="Xác nhận hủy vé"
+            open={openCancelSeats}
+            onOk={() => {
+              form.submit();
+            }}
+            onCancel={() => setOpenCancelSeats(false)}
+            okButtonProps={{
+              loading: cancelOrder.isPending
+            }}
+            cancelButtonProps={{
+              disabled: cancelOrder.isPending
+            }}
+            modalRender={(dom) => (
+              <Form<FieldType>
+                form={form}
+                name="basic"
+                style={{ maxWidth: 600 }}
+                onFinish={(values) => {
+                  onCancelSeats(values.cancelReasonId);
+                }}
+                autoComplete="off"
+                layout="vertical"
+              >
+                {dom}
+              </Form>
+            )}
+          >
+            <Form.Item<FieldType>
+              name="cancelReasonId"
+              label="Lý do hủy vé"
+              rules={[{ required: true, message: "Chọn lý do hủy vé" }]}
+            >
+              <Select
+                loading={isFetching || isFetchingNextPage}
+                options={options}
+                placeholder="Chọn lý do hủy vé"
+                onPopupScroll={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (
+                    hasNextPage &&
+                    !isFetchingNextPage &&
+                    target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+                  ) {
+                    fetchNextPage();
+                  }
+                }}
+                allowClear
+              />
+            </Form.Item>
+          </Modal>
         </div>
         <div className="flex-1 max-w-120 bg-app-bg-container py-2 px-4 rounded-md">
           <Descriptions size="small" items={items} column={2} />
@@ -415,7 +501,12 @@ const Actions = ({
           >
             Giữ chỗ
           </Button>
-          <Button variant="outlined" danger disabled={disableActions} onClick={onCancelSeats}>
+          <Button
+            variant="outlined"
+            danger
+            disabled={disableActions}
+            onClick={() => onCancelSeats()}
+          >
             Hủy giữ
           </Button>
         </div>

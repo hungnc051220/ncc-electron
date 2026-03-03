@@ -2,7 +2,7 @@
 
 import { MoreOutlined } from "@ant-design/icons";
 import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
-import { useOrders } from "@renderer/hooks/orders/useUsers";
+import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import { Breadcrumb, Button, Dropdown, Table, type PaginationProps, type TableProps } from "antd";

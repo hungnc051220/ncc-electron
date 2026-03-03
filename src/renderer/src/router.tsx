@@ -36,6 +36,7 @@ import SettingPage from "./features/settings/SettingPage";
 import UserRolesPage from "./features/userRoles/UserRolesPage";
 import TicketSalesDiagramPage from "./features/TicketSalesDiagramPage";
 import OnlineSeatBookingDetailPage from "./features/onlineSeatBooking/OnlineSeatBookingDetailPage";
+import ScreeningRoomSeatMapPage from "./features/screeningRooms/ScreeningRoomSeatMapPage";
 
 export const router = createHashRouter([
   {
@@ -186,6 +187,10 @@ export const router = createHashRouter([
       {
         path: "/ticket-sales-diagram/view",
         element: <TicketSalesDiagramPage />
+      },
+      {
+        path: "/screening-rooms/:id/seat-map",
+        element: <ScreeningRoomSeatMapPage />
       }
     ]
   },
