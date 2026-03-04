@@ -4,7 +4,7 @@ import { formatNumber } from "@renderer/lib/utils";
 import { RoomProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
-import { PlusIcon } from "lucide-react";
+import { Check, PlusIcon, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteScreeningRoomDialog from "./components/DeleteScreeningRoomDialog";
 import ScreeningRoomsDialog from "./components/ScreeningRoomsDialog";
@@ -12,8 +12,9 @@ import { Link, useNavigate } from "react-router";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
-  { key: "2", label: "Xem sơ đồ ghế" },
-  { key: "3", label: <p className="text-red-500">Xóa</p> }
+  { key: "2", label: "Ẩn/hiện phòng chiếu" },
+  { key: "3", label: "Xem sơ đồ ghế" },
+  { key: "4", label: <p className="text-red-500">Xóa</p> }
 ];
 
 const ScreeningRoomsPage = () => {
@@ -126,6 +127,22 @@ const ScreeningRoomsPage = () => {
       dataIndex: "ruleOrder"
     },
     {
+      title: "Ẩn/Hiện",
+      key: "isVisible",
+      dataIndex: "isVisible",
+      render: (value: boolean) => (
+        <div className="flex items-center justify-center">
+          {value ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <X className="size-4 text-red-500" />
+          )}
+        </div>
+      ),
+      align: "center",
+      width: 100
+    },
+    {
       title: "",
       key: "operation",
       width: 50,
@@ -138,9 +155,12 @@ const ScreeningRoomsPage = () => {
                 handleEdit(record);
               }
               if (e.key === "2") {
-                navigate(`/screening-rooms/${record.id}/seat-map`);
+                console.log("show");
               }
               if (e.key === "3") {
+                navigate(`/screening-rooms/${record.id}/seat-map`);
+              }
+              if (e.key === "4") {
                 handleDelete(record);
               }
             }

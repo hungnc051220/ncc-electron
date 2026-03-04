@@ -3,7 +3,7 @@ import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRo
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Select } from "antd";
+import { Button, Descriptions, Select, Space } from "antd";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -133,11 +133,21 @@ const ScreeningRoomSeatMapPage = () => {
               value={seatType}
               options={seatTypes?.data.map((item) => ({
                 value: item.id,
-                label: item.name
+                label: item.name,
+                color: item.color
               }))}
               onChange={(value) => setSeatType(value)}
               className="w-50"
               placeholder="Chọn loại ghế"
+              optionRender={(option) => (
+                <Space>
+                  <div
+                    style={{ backgroundColor: option.data.color }}
+                    className="w-6 h-4 rounded-sm border border-gray-300"
+                  />
+                  <p>{option.data.label}</p>
+                </Space>
+              )}
             />
           </div>
           <Button className="h-20" type="primary">
