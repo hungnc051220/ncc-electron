@@ -1,4 +1,3 @@
-import { EditOutlined } from "@ant-design/icons";
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
 import ticketIcon from "@renderer/assets/icons/confirmation_number.svg";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
@@ -23,16 +22,17 @@ import type { DescriptionsProps, GetProp } from "antd";
 import { Button, Checkbox, Descriptions, Form, message, Modal, Select } from "antd";
 import axios from "axios";
 
+import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { onOrderPaymentUpdated } from "@renderer/socket/socket";
+import { useAuthStore } from "@renderer/store/auth.store";
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import DiscountPopup from "./DiscountPopup";
+import InvoiceDialog from "../../invoices/components/InvoiceDialog";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
-import { useAuthStore } from "@renderer/store/auth.store";
-import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
-import { onOrderPaymentUpdated } from "@renderer/socket/socket";
-import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 
 const paymentTypes = [
   {
@@ -78,6 +78,9 @@ const Actions = ({
   const [paymentMethod, setPaymentMethod] = useState<string[]>([]);
   const [openQrDialog, setOpenQrDialog] = useState(false);
   const [openVipCardDialog, setOpenVipCardDialog] = useState(false);
+  const [exportInvoice, setExportInvoice] = useState(false);
+  const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
+  const [invoiceOrderId, setInvoiceOrderId] = useState<number | undefined>(undefined);
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
 
@@ -142,7 +145,6 @@ const Actions = ({
 
   useEffect(() => {
     const cleanup = onOrderPaymentUpdated((data) => {
-      console.log("data", data);
       if (data.paymentStatus !== 30) return;
 
       message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
@@ -229,8 +231,13 @@ const Actions = ({
         queryClient.invalidateQueries({
           queryKey: planScreeningsKeys.getDetail(planScreenId)
         });
-
+        queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
         handlePrint(order.id);
+
+        if (exportInvoice) {
+          setInvoiceOrderId(order.id);
+          setOpenInvoiceDialog(true);
+        }
       },
       onError: (error: unknown) => {
         let msg = "Tạo đơn thất bại";
@@ -277,6 +284,7 @@ const Actions = ({
         queryClient.invalidateQueries({
           queryKey: planScreeningsKeys.getDetail(planScreenId)
         });
+        queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
       },
       onError: (error: unknown) => {
         let msg = "Giữ chỗ thất bại";
@@ -306,27 +314,31 @@ const Actions = ({
   const items: DescriptionsProps["items"] = [
     {
       key: "1",
-      label: "Số vé",
-      children: <p className="text-right flex-1 font-bold">{selectedSeats.length}</p>
+      label: <span className="text-xs font-semibold">Số vé</span>,
+      children: <p className="text-right text-sm flex-1 font-bold">{selectedSeats.length}</p>
     },
     {
       key: "2",
-      label: "Tiền vé",
+      label: <span className="text-xs font-semibold">Tiền vé</span>,
       children: <p className="text-right flex-1 font-bold">{formatMoney(totalPrice)}</p>
     },
     {
       key: "3",
-      label: "Giảm giá",
+      label: <span className="text-xs font-semibold">Giảm giá</span>,
       children: (
         <div className="flex items-center justify-end flex-1 gap-2">
-          <p className="text-right flex-1 font-bold">{formatMoney(priceDiscount)}</p>
-          <Button icon={<EditOutlined />} size="small" onClick={() => setOpenDiscount(true)} />
+          <p
+            onClick={() => setOpenDiscount(true)}
+            className="text-right flex-1 font-bold cursor-pointer"
+          >
+            {formatMoney(priceDiscount)}
+          </p>
         </div>
       )
     },
     {
       key: "4",
-      label: "Thành tiền",
+      label: <span className="text-xs font-semibold">Thành tiền</span>,
       children: (
         <p className="text-right flex-1 font-bold text-blue-600">
           {formatMoney(totalPrice - priceDiscount)}
@@ -353,6 +365,9 @@ const Actions = ({
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
+          queryClient.invalidateQueries({
+            queryKey: ordersKeys.getOrdersByScreening(planScreenId)
+          });
           message.success("Huỷ đơn thành công");
         },
         onError: (error: unknown) => {
@@ -393,6 +408,7 @@ const Actions = ({
         setSelectedSeats([]);
         setOpenCancelSeats(false);
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
+        queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
         message.success("Huỷ vé thành công");
       },
       onError: (error: unknown) => {
@@ -525,28 +541,37 @@ const Actions = ({
               </div>
             </Checkbox.Group>
           </div>
-          <Button
-            type="primary"
-            className="flex flex-col"
-            style={{ height: "74px" }}
-            onClick={() => {
-              if (vipCard) {
-                setOpenVipCardDialog(true);
-                return;
-              }
+          <div className="flex flex-col">
+            <Button
+              type="primary"
+              size="large"
+              className="flex w-full"
+              onClick={() => {
+                if (vipCard) {
+                  setOpenVipCardDialog(true);
+                  return;
+                }
 
-              onBooking();
-            }}
-            disabled={
-              createOrder.isPending ||
-              selectedSeats.length === 0 ||
-              createQr.isPending ||
-              cancelMode
-            }
-          >
-            <img src={ticketIcon} width={24} height={24} alt="icon" />
-            <span className="text-base font-bold">In vé</span>
-          </Button>
+                onBooking();
+              }}
+              disabled={
+                createOrder.isPending ||
+                selectedSeats.length === 0 ||
+                createQr.isPending ||
+                cancelMode
+              }
+            >
+              <img src={ticketIcon} width={24} height={24} alt="icon" />
+              <span className="text-base font-bold">In vé</span>
+            </Button>
+            <Checkbox
+              className="mt-1"
+              checked={exportInvoice}
+              onChange={(e) => setExportInvoice(e.target.checked)}
+            >
+              <span className="text-xs">Xuất hóa đơn</span>
+            </Checkbox>
+          </div>
         </div>
       </div>
 
@@ -575,6 +600,19 @@ const Actions = ({
           onCancel={() => setOpenVipCardDialog(false)}
           totalPrice={totalPrice}
           onBooking={onBooking}
+        />
+      )}
+
+      {openInvoiceDialog && invoiceOrderId && (
+        <InvoiceDialog
+          open={openInvoiceDialog}
+          onOpenChange={(open) => {
+            setOpenInvoiceDialog(open);
+            if (!open) {
+              setInvoiceOrderId(undefined);
+            }
+          }}
+          orderId={invoiceOrderId}
         />
       )}
     </div>

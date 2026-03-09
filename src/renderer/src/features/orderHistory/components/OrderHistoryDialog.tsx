@@ -89,22 +89,26 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
           <p className="text-sm text-trunks">Vị trí ghế</p>
           <p>{getChairs()}</p>
         </div>
-        <div className="py-3 px-4">
-          <p className="text-sm text-trunks">Tiền thanh toán</p>
-          <p className="font-bold">{formatMoney(selectedItem?.order.orderTotal || 0)}</p>
-        </div>
-        <div className="py-3 px-4">
-          <p className="text-sm text-trunks mb-1">Trạng thái thanh toán</p>
-          {selectedItem?.order.paymentStatusId && (
-            <OrderStatusBadge status={selectedItem?.order.paymentStatusId} type="payment" />
-          )}
-        </div>
-        {selectedItem?.order.paymentStatusId !== PaymentStatus.PAID && (
-          <div className="py-3 px-4">
-            <Button variant="outlined" color="green">
-              Chuyển sang thành công
-            </Button>
-          </div>
+        {!selectedItem?.order.isInvitation && (
+          <>
+            <div className="py-3 px-4">
+              <p className="text-sm text-trunks">Tiền thanh toán</p>
+              <p className="font-bold">{formatMoney(selectedItem?.order.orderTotal || 0)}</p>
+            </div>
+            <div className="py-3 px-4">
+              <p className="text-sm text-trunks mb-1">Trạng thái thanh toán</p>
+              {selectedItem?.order.paymentStatusId && (
+                <OrderStatusBadge status={selectedItem?.order.paymentStatusId} type="payment" />
+              )}
+            </div>
+            {selectedItem?.order.paymentStatusId !== PaymentStatus.PAID && (
+              <div className="py-3 px-4">
+                <Button variant="outlined" color="green">
+                  Chuyển sang thành công
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </Modal>

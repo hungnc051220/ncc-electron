@@ -9,6 +9,7 @@ import { useCallback, useMemo, useState } from "react";
 import DeleteScreeningRoomDialog from "./components/DeleteScreeningRoomDialog";
 import ScreeningRoomsDialog from "./components/ScreeningRoomsDialog";
 import { Link, useNavigate } from "react-router";
+import ChangeHiddenScreeningRoomDialog from "./components/ChangeHiddenScreeningRoomDialog";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
@@ -21,6 +22,7 @@ const ScreeningRoomsPage = () => {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [changeHiddenDialogOpen, setChangeHiddenDialogOpen] = useState(false);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedScreeningRoom, setSelectedScreeningRoom] = useState<RoomProps | null>(null);
@@ -45,6 +47,11 @@ const ScreeningRoomsPage = () => {
     setDialogOpen(true);
   }, []);
 
+  const handleChangeHidden = useCallback((item: RoomProps) => {
+    setSelectedScreeningRoom(item);
+    setChangeHiddenDialogOpen(true);
+  }, []);
+
   const handleDelete = useCallback((item: RoomProps) => {
     setSelectedScreeningRoom(item);
     setDeleteDialogOpen(true);
@@ -52,6 +59,13 @@ const ScreeningRoomsPage = () => {
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
+    if (!open) {
+      setSelectedScreeningRoom(null);
+    }
+  }, []);
+
+  const handleChangeHiddenDialogClose = useCallback((open: boolean) => {
+    setChangeHiddenDialogOpen(open);
     if (!open) {
       setSelectedScreeningRoom(null);
     }
@@ -128,11 +142,11 @@ const ScreeningRoomsPage = () => {
     },
     {
       title: "Ẩn/Hiện",
-      key: "isVisible",
-      dataIndex: "isVisible",
+      key: "hidden",
+      dataIndex: "hidden",
       render: (value: boolean) => (
         <div className="flex items-center justify-center">
-          {value ? (
+          {!value ? (
             <Check className="size-4 text-green-500" />
           ) : (
             <X className="size-4 text-red-500" />
@@ -155,7 +169,7 @@ const ScreeningRoomsPage = () => {
                 handleEdit(record);
               }
               if (e.key === "2") {
-                console.log("show");
+                handleChangeHidden(record);
               }
               if (e.key === "3") {
                 navigate(`/screening-rooms/${record.id}/seat-map`);
@@ -243,6 +257,15 @@ const ScreeningRoomsPage = () => {
           onOpenChange={handleDeleteDialogClose}
           id={selectedScreeningRoom.id}
           name={selectedScreeningRoom.name}
+        />
+      )}
+
+      {changeHiddenDialogOpen && selectedScreeningRoom && (
+        <ChangeHiddenScreeningRoomDialog
+          name={selectedScreeningRoom.name}
+          room={selectedScreeningRoom}
+          onOpenChange={handleChangeHiddenDialogClose}
+          open={changeHiddenDialogOpen}
         />
       )}
     </div>

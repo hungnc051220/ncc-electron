@@ -1,5 +1,5 @@
 import { cn } from "@renderer/lib/utils";
-import { ListSeat, ScreenMode } from "@shared/types";
+import { ListSeat } from "@shared/types";
 import { useCallback } from "react";
 
 const colorMap: { [key: string]: string } = {
@@ -9,6 +9,72 @@ const colorMap: { [key: string]: string } = {
   12: "bg-transparent"
 };
 
+const getContrastTextColor = (backgroundColor: string) => {
+  const normalized = backgroundColor.trim().toLowerCase();
+  if (!normalized || normalized === "transparent") {
+    return "#374151";
+  }
+
+  // Explicit light seat colors from business data
+  if (normalized === "#ffffff" || normalized === "#ffff00" || normalized === "#ffd700") {
+    return "#111827";
+  }
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  const parseRgbText = (value: string) => {
+    const parts = value.match(/\d+(\.\d+)?/g);
+    if (!parts || parts.length < 3) return null;
+    return {
+      r: Number(parts[0]),
+      g: Number(parts[1]),
+      b: Number(parts[2])
+    };
+  };
+
+  if (normalized.startsWith("#")) {
+    const hex = normalized.slice(1);
+    if (hex.length === 3) {
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length >= 6) {
+      r = parseInt(hex.slice(0, 2), 16);
+      g = parseInt(hex.slice(2, 4), 16);
+      b = parseInt(hex.slice(4, 6), 16);
+    }
+  } else if (normalized.startsWith("rgb")) {
+    const rgb = parseRgbText(normalized);
+    if (rgb) {
+      r = rgb.r;
+      g = rgb.g;
+      b = rgb.b;
+    }
+  } else if (typeof window !== "undefined" && typeof document !== "undefined") {
+    // Resolve CSS keywords / hsl / named colors (white, gold, yellow...) to rgb.
+    const temp = document.createElement("span");
+    temp.style.color = normalized;
+    temp.style.position = "absolute";
+    temp.style.visibility = "hidden";
+    temp.style.pointerEvents = "none";
+    document.body.appendChild(temp);
+    const computed = window.getComputedStyle(temp).color;
+    document.body.removeChild(temp);
+    const rgb = parseRgbText(computed);
+    if (rgb) {
+      r = rgb.r;
+      g = rgb.g;
+      b = rgb.b;
+    }
+  }
+
+  // Perceived luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance >= 0.6 ? "#111827" : "#ffffff";
+};
+
 const Seat = ({
   seat,
   isSelected,
@@ -16,9 +82,9 @@ const Seat = ({
   size,
   canSelect,
   isBlockedOnline,
+  seatColor,
   onHover,
-  onLeave,
-  screenMode
+  onLeave
 }: {
   seat: ListSeat;
   isSelected: boolean;
@@ -26,15 +92,25 @@ const Seat = ({
   size: number;
   canSelect: boolean;
   isBlockedOnline?: boolean;
+  seatColor?: string;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
-  screenMode?: ScreenMode;
 }) => {
   const handleClick = useCallback(() => {
     if (canSelect) {
       onSelect(seat);
     }
   }, [canSelect, onSelect, seat]);
+
+  const shouldShowPositionColor =
+    !!seatColor &&
+    !isSelected &&
+    !seat.isHold &&
+    !seat.isContract &&
+    !seat.isInvitation &&
+    !isBlockedOnline &&
+    seat.status !== 1 &&
+    seat.type !== 12;
 
   return (
     <div
@@ -46,11 +122,13 @@ const Seat = ({
         seat.isContract && "bg-raditz text-white",
         seat.isHold && "bg-roshi text-white",
         isBlockedOnline && "bg-trunks/50",
-        screenMode === "invitation" && seat.isInvitation && "bg-teal-500 text-white",
+        seat.isInvitation && "bg-teal-500 text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white"
       )}
       style={{
+        backgroundColor: shouldShowPositionColor ? seatColor : undefined,
+        color: shouldShowPositionColor ? getContrastTextColor(seatColor) : undefined,
         width: `${size}px`,
         height: `${size}px`
       }}

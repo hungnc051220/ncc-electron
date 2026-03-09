@@ -34,6 +34,37 @@ import { useEffect } from "react";
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
+const ageAboveOptions = [
+  {
+    value: 0,
+    label: "K"
+  },
+  {
+    value: 1,
+    label: "P"
+  },
+  {
+    value: 13,
+    label: "T13"
+  },
+  {
+    value: 16,
+    label: "T16"
+  },
+  {
+    value: 18,
+    label: "K18"
+  }
+];
+
+const ageAboveLabelMap = {
+  0: "Phim được phổ biến đến người xem dưới 13 tuổi và có người bảo hộ đi kèm (Độ tuổi yêu cầu 0)",
+  1: "Phim được phép phổ biến đến người xem ở mọi độ tuổi (Độ tuổi yêu cầu 0)",
+  13: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (13+) (Độ tuổi yêu cầu 13)",
+  16: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (16+) (Độ tuổi yêu cầu 16)",
+  18: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (18+) (Độ tuổi yêu cầu 18)"
+};
+
 export interface FieldValues {
   id?: number;
   filmName: string;
@@ -107,11 +138,8 @@ const FilmDialog = ({
   const ageAbove = Form.useWatch("ageAbove", form);
 
   useEffect(() => {
-    if (ageAbove && ageAbove > 0) {
-      form.setFieldValue(
-        "description",
-        `Kiểm duyệt: T${ageAbove} - Phim được phổ biến đến người xem từ đủ ${ageAbove} tuổi trở lên (${ageAbove}+)`
-      );
+    if (ageAbove) {
+      form.setFieldValue("description", ageAboveLabelMap[ageAbove]);
     }
   });
 
@@ -387,12 +415,7 @@ const FilmDialog = ({
             </Form.Item>
 
             <Form.Item<FieldValues> name="ageAbove" label="Tuổi yêu cầu từ">
-              <InputNumber
-                className="w-full"
-                min={0}
-                max={100}
-                placeholder="Nhập tuổi yêu cầu từ"
-              />
+              <Select placeholder="Chọn tuổi yêu cầu từ" options={ageAboveOptions} />
             </Form.Item>
 
             <Form.Item<FieldValues> name="imageUrl" hidden />

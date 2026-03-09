@@ -47,6 +47,10 @@ const NavItems = () => {
           key: "manufacturers"
         },
         {
+          label: <Link to="/invoices">Danh sách hóa đơn điện tử</Link>,
+          key: "invoices"
+        },
+        {
           label: <Link to="/revenue-sharing">Quản lý phân chia doanh thu</Link>,
           key: "revenue-sharing"
         },

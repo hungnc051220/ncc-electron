@@ -1,6 +1,13 @@
 import Legend from "@renderer/components/Legend";
+import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { cn } from "@renderer/lib/utils";
-import { ListSeat, PlanScreeningDetailProps, ScreenMode } from "@shared/types";
+import {
+  ListSeat,
+  OrderResponseProps,
+  PlanScreeningDetailProps,
+  ScreenMode,
+  SeatTypeProps
+} from "@shared/types";
 import { Button, Tag } from "antd";
 import dayjs from "dayjs";
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,11 +23,15 @@ type TooltipPosition = {
 
 interface SeatsProps {
   data?: PlanScreeningDetailProps;
+  orders?: OrderResponseProps[];
+  seatTypes?: SeatTypeProps[];
   selectedSeats: ListSeat[];
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
   cancelMode?: boolean;
   isCustomerView?: boolean;
   screenMode?: ScreenMode;
+  syncedSelectedFloor?: number | null;
+  onSelectedFloorChange?: (floor: number) => void;
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
@@ -29,11 +40,15 @@ const getSeatUniqueKey = (seat: ListSeat): string => {
 
 const Seats = ({
   data,
+  orders,
+  seatTypes,
   selectedSeats,
   setSelectedSeats,
   cancelMode,
   isCustomerView,
-  screenMode = "normal"
+  screenMode = "normal",
+  syncedSelectedFloor,
+  onSelectedFloorChange
 }: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
@@ -45,10 +60,15 @@ const Seats = ({
   const [hoverSeat, setHoverSeat] = useState<ListSeat | null>(null);
   const [tooltipPos, setTooltipPos] = useState<TooltipPosition | null>(null);
   const [visible, setVisible] = useState(false);
+  const { data: seatTypesResponse } = useSeatTypes({ current: 1, pageSize: 1000 });
 
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const seats = data?.listSeats;
+  const resolvedSeatTypes = useMemo(
+    () => seatTypes || seatTypesResponse?.data || [],
+    [seatTypes, seatTypesResponse]
+  );
 
   useEffect(() => {
     setSelectedSeats([]);
@@ -128,11 +148,21 @@ const Seats = ({
 
   const selectedFloor = useMemo(() => {
     if (availableFloors.length === 0) return 1;
+    if (
+      typeof syncedSelectedFloor === "number" &&
+      availableFloors.includes(syncedSelectedFloor)
+    ) {
+      return syncedSelectedFloor;
+    }
     if (userSelectedFloor && availableFloors.includes(userSelectedFloor)) {
       return userSelectedFloor;
     }
     return availableFloors[0];
-  }, [availableFloors, userSelectedFloor]);
+  }, [availableFloors, userSelectedFloor, syncedSelectedFloor]);
+
+  useEffect(() => {
+    onSelectedFloorChange?.(selectedFloor);
+  }, [onSelectedFloorChange, selectedFloor]);
 
   const filteredSeats = useMemo(() => {
     if (!seats) return [];
@@ -140,6 +170,78 @@ const Seats = ({
       .map((row) => row.filter((seat) => seat.floor === selectedFloor))
       .filter((row) => row.length > 0);
   }, [seats, selectedFloor]);
+
+  const seatOrderMap = useMemo(() => {
+    const map: Record<string, OrderResponseProps> = {};
+
+    const splitSeats = (value?: string) =>
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    orders?.forEach((order) => {
+      order.items?.forEach((item) => {
+        [1, 2, 3].forEach((floor) => {
+          const key = `listChairIndexF${floor}` as
+            | "listChairIndexF1"
+            | "listChairIndexF2"
+            | "listChairIndexF3";
+          const seatIndexes = splitSeats(item[key]);
+
+          seatIndexes.forEach((seatIndex) => {
+            const mapKey = `${floor}-${seatIndex}`;
+            const existing = map[mapKey];
+
+            if (!existing) {
+              map[mapKey] = order;
+              return;
+            }
+
+            const existingTime = dayjs(existing.createdOnUtc);
+            const incomingTime = dayjs(order.createdOnUtc);
+
+            if (incomingTime.isAfter(existingTime)) {
+              map[mapKey] = order;
+            }
+          });
+        });
+      });
+    });
+
+    return map;
+  }, [orders]);
+
+  const hoverSeatOrder = useMemo(() => {
+    if (!hoverSeat) return undefined;
+
+    return seatOrderMap[`${hoverSeat.floor}-${hoverSeat.seat}`];
+  }, [hoverSeat, seatOrderMap]);
+
+  const seatTypeColorMap = useMemo(
+    () => new Map(resolvedSeatTypes.map((item) => [item.id, item.color || "#8f8f8f"] as const)),
+    [resolvedSeatTypes]
+  );
+
+  const seatTypeLegends = useMemo(() => {
+    const excludeKeywords = ["đang chọn", "giữ chỗ", "đã bán", "mời", "hợp đồng"];
+    const usedPositionIds = new Set<number>();
+
+    seats?.forEach((row) => {
+      row.forEach((seat) => {
+        if (seat.positionId) {
+          usedPositionIds.add(seat.positionId);
+        }
+      });
+    });
+
+    return resolvedSeatTypes.filter((item) => {
+      if (!item.isSeat) return false;
+      if (!usedPositionIds.has(item.id)) return false;
+      const normalizedName = item.name?.toLowerCase() || "";
+      return !excludeKeywords.some((keyword) => normalizedName.includes(keyword));
+    });
+  }, [resolvedSeatTypes, seats]);
 
   const seatMap = useMemo(() => {
     const map: Record<string, ListSeat> = {};
@@ -296,11 +398,19 @@ const Seats = ({
   }, [calculateSeatSize]);
 
   const handleHover = (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => {
-    const { clientX, clientY } = e;
+    if (seat.type === 12) return;
+
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const anchorX = rect.left + rect.width / 2;
+    const anchorY = rect.top + rect.height / 2;
 
     hoverTimeoutRef.current = setTimeout(() => {
       setHoverSeat(seat);
-      setTooltipPos({ x: clientX, y: clientY });
+      setTooltipPos({ x: anchorX, y: anchorY });
       setVisible(true);
     }, 500); // 1 giây
   };
@@ -340,9 +450,9 @@ const Seats = ({
             size={seatSize}
             canSelect={canSelectSeat(seat)}
             isBlockedOnline={isSeatBlockedOnline(seat)}
+            seatColor={seat.positionId ? seatTypeColorMap.get(seat.positionId) : undefined}
             onHover={handleHover}
             onLeave={handleLeave}
-            screenMode={screenMode}
           />
         ))}
         <div
@@ -363,8 +473,8 @@ const Seats = ({
     handleSelectSeat,
     seatSize,
     canSelectSeat,
-    screenMode,
-    isSeatBlockedOnline
+    isSeatBlockedOnline,
+    seatTypeColorMap
   ]);
 
   if (!data) return null;
@@ -389,6 +499,7 @@ const Seats = ({
                   key={floor}
                   onClick={() => {
                     setUserSelectedFloor(floor);
+                    onSelectedFloorChange?.(floor);
                   }}
                   className={cn(
                     "pr-1 border-b-2 border-transparent text-sm font-semibold cursor-pointer transition-all hover:opacity-80",
@@ -435,13 +546,19 @@ const Seats = ({
         </div>
 
         <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs shrink-0">
-          <Legend color="bg-jiren" label="Ghế mới" />
           <Legend color="bg-whis" label="Đang chọn" />
           <Legend color="bg-roshi" label="Đang giữ chỗ" />
           <Legend color="bg-trunks" label="Ghế đã bán" />
-          <Legend color="bg-krillin" label="Ghế VIP" />
+          {seatTypeLegends.map((item) => (
+            <div key={item.id} className="flex items-center gap-2">
+              <div
+                className="size-4 rounded-sm border border-app-border"
+                style={{ backgroundColor: item.color || "#8f8f8f" }}
+              />
+              <span className="font-bold text-zeno text-xs">{item.name}</span>
+            </div>
+          ))}
           <Legend color="bg-raditz" label="Ghế hợp đồng" />
-          <Legend color="bg-chichi" label="Ghế đôi" />
           <Legend color="bg-teal-500" label="Vé mời" />
         </div>
 
@@ -469,7 +586,12 @@ const Seats = ({
       </div>
 
       {hoverSeat && tooltipPos && (
-        <TooltipFloating seat={hoverSeat} position={tooltipPos} visible={visible} />
+        <TooltipFloating
+          seat={hoverSeat}
+          order={hoverSeatOrder}
+          position={tooltipPos}
+          visible={visible}
+        />
       )}
     </div>
   );

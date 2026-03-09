@@ -34,14 +34,15 @@ export const contractTicketSalesApi = {
 
     const filter: Record<string, unknown> = {};
 
-    if (fromDate && toDate) {
-      filter.createdOnUtc = { between: [fromDate, toDate] };
-    }
-
     const queryObject: Record<string, unknown> = {
       current,
       pageSize
     };
+
+    if (fromDate && toDate) {
+      queryObject.fromDate = fromDate;
+      queryObject.toDate = toDate;
+    }
 
     if (Object.keys(filter).length > 0) {
       queryObject.filter = JSON.stringify(filter);

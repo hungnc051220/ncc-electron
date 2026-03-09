@@ -10,12 +10,10 @@ import type { DatePickerProps, TableProps } from "antd";
 import type { Dayjs } from "dayjs";
 
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { usePlanScreeningsAvailableDates } from "@renderer/hooks/planScreenings/usePlanScreeningsAvailableDates";
+import { cn } from "@renderer/lib/utils";
 
 dayjs.extend(customParseFormat);
-
-const showDates = ["02-03-2026", "05-03-2026", "12-03-2026"];
-
-const showDateSet = new Set(showDates.map((d) => dayjs(d, "DD-MM-YYYY").format("YYYY-MM-DD")));
 
 const ShowtimesPage = () => {
   const navigate = useNavigate();
@@ -28,6 +26,11 @@ const ShowtimesPage = () => {
   });
   const [showPast, setShowPast] = useState(false);
   const { data, isFetching } = usePlanScreeningsByDate(date);
+  const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
+  const toDate = dayjs(date, "YYYY-MM-DD").endOf("month").format("DD-MM-YYYY");
+  const { data: showDates } = usePlanScreeningsAvailableDates(fromDate, toDate);
+
+  const showDateSet = new Set(showDates?.map((d) => dayjs(d, "DD-MM-YYYY").format("YYYY-MM-DD")));
 
   const filteredList = useMemo(() => {
     if (!data) return [];
@@ -117,13 +120,10 @@ const ShowtimesPage = () => {
 
     return (
       <div
-        className="ant-picker-cell-inner"
-        style={{
-          border: hasShow ? "2px solid #ff4d4f" : undefined,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
+        className={cn(
+          "ant-picker-cell-inner flex items-center justify-center",
+          hasShow && "text-orange-500 font-bold"
+        )}
       >
         {(current as Dayjs).date()}
       </div>

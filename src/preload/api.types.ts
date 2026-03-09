@@ -5,8 +5,14 @@ import {
   PlanScreeningDetailProps,
   PrintTicketPayload,
   QrState,
+  SeatTypeProps,
   UpdateInfo
 } from "@shared/types";
+
+export interface CustomerScreenPayload {
+  data: PlanScreeningDetailProps | null;
+  seatTypes: SeatTypeProps[];
+}
 
 export interface PreloadAPI {
   getConfig: () => Promise<AppConfig>;
@@ -14,8 +20,8 @@ export interface PreloadAPI {
   openCustomerScreen(id: number): Promise<void>;
   closeCustomerScreen(): Promise<void>;
   requestCustomerInit(): void;
-  sendCustomerData(data: PlanScreeningDetailProps): void;
-  onCustomerData(cb: (data: PlanScreeningDetailProps) => void): () => void;
+  sendCustomerData(payload: CustomerScreenPayload): void;
+  onCustomerData(cb: (payload: CustomerScreenPayload) => void): () => void;
   sendSeatUpdate(data: CurrentSeatState): void;
   onSeatSync(cb: (data: CurrentSeatState) => void): () => void;
 

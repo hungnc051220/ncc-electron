@@ -11,6 +11,7 @@ import {
   DatePicker,
   Form,
   Input,
+  InputNumber,
   message,
   Modal,
   Select,
@@ -31,6 +32,7 @@ type FieldType = {
   priceOfPosition3: string;
   priceOfPosition4: string;
   isOnlineSelling?: boolean;
+  price: number;
 };
 
 interface AddSchedulingDialogProps {
@@ -40,6 +42,7 @@ interface AddSchedulingDialogProps {
 const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
+  const [isSamePrice, setIsSamePrice] = useState(false);
 
   const filmId = Form.useWatch("filmId", form);
   const roomId = Form.useWatch("roomId", form);
@@ -63,7 +66,8 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
     isFetchingNextPage
   } = useInfiniteQuery({
     queryKey: ["screening-rooms"],
-    queryFn: ({ pageParam = 1 }) => screeningRoomsApi.getAll({ current: pageParam, pageSize: 20 }),
+    queryFn: ({ pageParam = 1 }) =>
+      screeningRoomsApi.getAll({ current: pageParam, pageSize: 20, hidden: false }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {
       const currentPage = pages.length;
@@ -119,6 +123,34 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
     }
   }, [planPricing, form]);
 
+  const buildUniformPriceValue = (source: string | undefined, uniformPrice: number): string => {
+    if (!source) return `${uniformPrice}`;
+    const sourceValue = `${source}`;
+    if (!sourceValue.includes(":")) return `${uniformPrice}`;
+    const [seatType] = sourceValue.split(":");
+    return `${seatType}:${uniformPrice}`;
+  };
+
+  const applyUniformPriceToPositions = (uniformPrice: number) => {
+    const positionFields: Array<
+      keyof Pick<
+        FieldType,
+        "priceOfPosition1" | "priceOfPosition2" | "priceOfPosition3" | "priceOfPosition4"
+      >
+    > = ["priceOfPosition1", "priceOfPosition2", "priceOfPosition3", "priceOfPosition4"];
+
+    const uniformValues = positionFields.reduce(
+      (acc, field, index) => {
+        const sourceValue = planPricing?.[index];
+        acc[field] = sourceValue ? buildUniformPriceValue(sourceValue, uniformPrice) : "";
+        return acc;
+      },
+      {} as Record<(typeof positionFields)[number], string>
+    );
+
+    form.setFieldsValue(uniformValues);
+  };
+
   useEffect(() => {
     if (projectTime && filmId) {
       form.setFieldValue(
@@ -132,16 +164,39 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
   }, [projectTime, form, filmId, films]);
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    const uniformPrice = Number(values.price);
+    const hasUniformPrice = isSamePrice && Number.isFinite(uniformPrice);
+    const normalizedPriceOfPosition1 = hasUniformPrice
+      ? planPricing?.[0]
+        ? buildUniformPriceValue(planPricing[0], uniformPrice)
+        : ""
+      : values.priceOfPosition1;
+    const normalizedPriceOfPosition2 = hasUniformPrice
+      ? planPricing?.[1]
+        ? buildUniformPriceValue(planPricing[1], uniformPrice)
+        : ""
+      : values.priceOfPosition2;
+    const normalizedPriceOfPosition3 = hasUniformPrice
+      ? planPricing?.[2]
+        ? buildUniformPriceValue(planPricing[2], uniformPrice)
+        : ""
+      : values.priceOfPosition3;
+    const normalizedPriceOfPosition4 = hasUniformPrice
+      ? planPricing?.[3]
+        ? buildUniformPriceValue(planPricing[3], uniformPrice)
+        : ""
+      : values.priceOfPosition4;
+
     const body = {
       planCinemaId,
       projectDate: dayjs(values.projectDate).format("YYYY-MM-DD"),
       projectTime: dayjs(values.projectTime).format(),
       filmId: values.filmId,
       roomId: values.roomId,
-      priceOfPosition1: values.priceOfPosition1,
-      priceOfPosition2: values.priceOfPosition2,
-      priceOfPosition3: values.priceOfPosition3,
-      priceOfPosition4: values.priceOfPosition4,
+      priceOfPosition1: normalizedPriceOfPosition1,
+      priceOfPosition2: normalizedPriceOfPosition2,
+      priceOfPosition3: normalizedPriceOfPosition3,
+      priceOfPosition4: normalizedPriceOfPosition4,
       isOnlineSelling: values.isOnlineSelling
     };
 
@@ -169,6 +224,7 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
   const onCancel = () => {
     setOpen(false);
     form.resetFields();
+    setIsSamePrice(false);
   };
 
   return (
@@ -258,26 +314,60 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
             <Form.Item name="isOnlineSelling" valuePropName="checked">
               <Checkbox className="mt-10.5">Bán online</Checkbox>
             </Form.Item>
-            <Form.Item<FieldType>
-              name="priceOfPosition1"
-              label="Giá vé 1"
-              rules={[{ required: true, message: "Nhập giá vé 1" }]}
+
+            <Checkbox
+              checked={isSamePrice}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setIsSamePrice(checked);
+                if (checked) {
+                  const currentPrice = Number(form.getFieldValue("price"));
+                  if (Number.isFinite(currentPrice)) {
+                    applyUniformPriceToPositions(currentPrice);
+                  }
+                }
+              }}
             >
-              <Input placeholder="Nhập giá vé 1" />
-            </Form.Item>
-            <Form.Item<FieldType>
-              name="priceOfPosition2"
-              label="Giá vé 2"
-              rules={[{ required: true, message: "Nhập giá vé 2" }]}
-            >
-              <Input placeholder="Nhập giá vé 2" />
-            </Form.Item>
-            <Form.Item<FieldType> name="priceOfPosition3" label="Giá vé 3">
-              <Input placeholder="Nhập giá vé 3" />
-            </Form.Item>
-            <Form.Item<FieldType> name="priceOfPosition4" label="Giá vé 4">
-              <Input placeholder="Nhập giá vé 4" />
-            </Form.Item>
+              Đồng giá
+            </Checkbox>
+            {!isSamePrice ? (
+              <div className="bg-primary/10 p-3 rounded-md border border-dashed col-span-2 grid grid-cols-2 gap-3 border-primary">
+                <Form.Item<FieldType>
+                  name="priceOfPosition1"
+                  label="Giá vé 1"
+                  rules={[{ required: true, message: "Nhập giá vé 1" }]}
+                >
+                  <Input placeholder="Nhập giá vé 1" />
+                </Form.Item>
+                <Form.Item<FieldType> name="priceOfPosition2" label="Giá vé 2">
+                  <Input placeholder="Nhập giá vé 2" />
+                </Form.Item>
+                <Form.Item<FieldType> name="priceOfPosition3" label="Giá vé 3">
+                  <Input placeholder="Nhập giá vé 3" />
+                </Form.Item>
+                <Form.Item<FieldType> name="priceOfPosition4" label="Giá vé 4">
+                  <Input placeholder="Nhập giá vé 4" />
+                </Form.Item>
+              </div>
+            ) : (
+              <div className="col-span-2">
+                <Form.Item<FieldType>
+                  name="price"
+                  label="Giá vé"
+                  rules={[{ required: true, message: "Nhập giá vé" }]}
+                >
+                  <InputNumber
+                    placeholder="Nhập giá vé"
+                    className="w-1/2"
+                    onChange={(value) => {
+                      if (typeof value === "number") {
+                        applyUniformPriceToPositions(value);
+                      }
+                    }}
+                  />
+                </Form.Item>
+              </div>
+            )}
           </div>
         </Form>
       </Modal>

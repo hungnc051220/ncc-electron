@@ -1,20 +1,31 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useContractTicketSales } from "@renderer/hooks/contractTicketSales/useContractTicketSales";
-import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
+import {
+  buildTicketsFromOrder,
+  filterEmptyValues,
+  formatMoney,
+  formatNumber
+} from "@renderer/lib/utils";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { Breadcrumb, Button, Dropdown, message, Table } from "antd";
 import dayjs from "dayjs";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import ContractTicketSaleDialog from "./components/ContractTicketSaleDialog";
 import Filter from "./components/Filter";
+import InvoiceDialog from "../invoices/components/InvoiceDialog";
+import { useAuthStore } from "@renderer/store/auth.store";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
+import { usePrinterStore } from "@renderer/store/printer.store";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 
 const actionItems = [
   { key: "1", label: "Cập nhật" },
   { key: "2", label: "Thiết lập ghế ngồi" },
-  { key: "3", label: "In vé" }
+  { key: "3", label: "In vé" },
+  { key: "4", label: "Thông tin xuất hóa đơn" }
 ];
 
 export interface ValuesProps {
@@ -23,9 +34,15 @@ export interface ValuesProps {
 
 const ContractTicketSalesPage = () => {
   const navigate = useNavigate();
+  const userId = useAuthStore((s) => s.userId);
+  const { posShortName } = useSettingPosStore();
+  const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
+  const { data: user } = useUserDetail(userId!);
+
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogInvoiceOpen, setDialogInvoiceOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderResponseProps | null>(null);
   const [filterValues, setFilterValues] = useState<ValuesProps>({
     dateRange: [dayjs().format("YYYY-MM-DD"), dayjs().format("YYYY-MM-DD")]
@@ -59,16 +76,37 @@ const ContractTicketSalesPage = () => {
     setDialogOpen(true);
   }, []);
 
+  const handleDetailInvoice = useCallback((item: OrderResponseProps) => {
+    setSelectedItem(item);
+    setDialogInvoiceOpen(true);
+  }, []);
+
   const handleUpdateSeat = (item: OrderResponseProps) => {
     navigate(`/showtimes?callbackUrl=/contract-ticket-sales&id=${item.id}`);
   };
 
-  // const handlePrint = useCallback((item: OrderResponseProps) => {
-  //   console.log(item);
-  // }, []);
+  const handlePrint = useCallback(
+    async (item: OrderDetailProps) => {
+      try {
+        const tickets = await buildTicketsFromOrder(item, user?.fullname, posShortName);
+        await window.api.printTickets(tickets, selectedPrinter);
+        message.success("In vé thành công");
+      } catch {
+        message.error("In vé thất bại");
+      }
+    },
+    [posShortName, selectedPrinter, user]
+  );
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
+    if (!open) {
+      setSelectedItem(null);
+    }
+  }, []);
+
+  const handleDialogInvoiceClose = useCallback((open: boolean) => {
+    setDialogInvoiceOpen(open);
     if (!open) {
       setSelectedItem(null);
     }
@@ -161,6 +199,12 @@ const ContractTicketSalesPage = () => {
               if (e.key === "2") {
                 handleUpdateSeat(record.order);
               }
+              if (e.key === "3") {
+                handlePrint(record);
+              }
+              if (e.key === "4") {
+                handleDetailInvoice(record.order);
+              }
             }
           }}
           arrow
@@ -239,6 +283,14 @@ const ContractTicketSalesPage = () => {
           open={dialogOpen}
           onOpenChange={handleDialogClose}
           selectedItem={selectedItem}
+        />
+      )}
+
+      {dialogInvoiceOpen && (
+        <InvoiceDialog
+          open={dialogInvoiceOpen}
+          onOpenChange={handleDialogInvoiceClose}
+          orderId={selectedItem?.id}
         />
       )}
     </div>

@@ -38,7 +38,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     isFetchingNextPage
   } = useInfiniteQuery({
     queryKey: ["screening-rooms"],
-    queryFn: ({ pageParam = 1 }) => screeningRoomsApi.getAll({ current: pageParam, pageSize: 10 }),
+    queryFn: ({ pageParam = 1 }) =>
+      screeningRoomsApi.getAll({ current: pageParam, pageSize: 20, hidden: false }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {
       const currentPage = pages.length;

@@ -1,16 +1,28 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
-import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
+import {
+  buildTicketsFromOrder,
+  filterEmptyValues,
+  formatMoney,
+  formatNumber
+} from "@renderer/lib/utils";
 import { OrderDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table, Tabs } from "antd";
+import { Breadcrumb, Button, Dropdown, message, Table, Tabs } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import OrderDialog from "./components/OrderHistoryDialog";
 import Filter from "./components/Filter";
+import { useAuthStore } from "@renderer/store/auth.store";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
+import { usePrinterStore } from "@renderer/store/printer.store";
 
-const actionItems = [{ key: "1", label: "Xem chi tiết" }];
+const actionItems = [
+  { key: "1", label: "Xem chi tiết" },
+  { key: "2", label: "In vé" }
+];
 
 const items: TabsProps["items"] = [
   {
@@ -40,6 +52,11 @@ const OrderHistoryPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
 
+  const userId = useAuthStore((s) => s.userId);
+  const { posShortName } = useSettingPosStore();
+  const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
+  const { data: user } = useUserDetail(userId!);
+
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
     const filtered = filterEmptyValues(rest as Record<string, unknown>);
@@ -58,6 +75,16 @@ const OrderHistoryPage = () => {
   }, [current, pageSize, filterValues, activeKey]);
 
   const { data: orders, isFetching } = useOrders(params);
+
+  const handlePrint = async (orderDetail: OrderDetailProps) => {
+    try {
+      const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posShortName);
+      await window.api.printTickets(tickets, selectedPrinter);
+      message.success("In vé thành công");
+    } catch {
+      message.error("In vé thất bại");
+    }
+  };
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
@@ -173,6 +200,10 @@ const OrderHistoryPage = () => {
             onClick: (e) => {
               if (e.key === "1") {
                 handleViewDetail(record);
+              }
+
+              if (e.key === "2") {
+                handlePrint(record);
               }
             }
           }}

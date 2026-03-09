@@ -1,5 +1,10 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, OrderDetailProps, QrCodeResponseProps } from "@shared/types";
+import {
+  ApiResponse,
+  OrderDetailProps,
+  OrderResponseProps,
+  QrCodeResponseProps
+} from "@shared/types";
 import queryString from "query-string";
 
 export interface OrdersQuery {
@@ -165,8 +170,8 @@ export const ordersApi = {
     const res = await api.get(`/api/pos/order/${id}`);
     return res.data;
   },
-  getByScreens: async (id: number): Promise<OrderDetailProps[]> => {
-    const res = await api.get(`/api/pos/get-by-screens/${id}`);
+  getByScreens: async (id: number): Promise<OrderResponseProps[]> => {
+    const res = await api.get(`/api/pos/order/get-by-screens/${id}`);
     return res.data;
   },
   createQr: async (dto: CreateQrOrderDto): Promise<QrCodeResponseProps> => {

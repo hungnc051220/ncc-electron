@@ -1,18 +1,21 @@
 import { SetSeatsContractTicketSaleDto } from "@renderer/api/contractTicketSales.api";
-import { CancelOrderDto } from "@renderer/api/orders.api";
+import { CancelOrderDto, ordersApi } from "@renderer/api/orders.api";
 import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
 import { useSetSeatsContractTicketSale } from "@renderer/hooks/contractTicketSales/useSetSeatsContractTicketSale";
+import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
-import { formatMoney } from "@renderer/lib/utils";
+import { buildTicketsFromOrder, formatMoney } from "@renderer/lib/utils";
 import { useAuthStore } from "@renderer/store/auth.store";
+import { usePrinterStore } from "@renderer/store/printer.store";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, ListSeat } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message } from "antd";
 import axios from "axios";
-import { Dispatch, SetStateAction, useMemo } from "react";
+import { Dispatch, SetStateAction, useCallback, useMemo } from "react";
 
 interface ActionsProps {
   contractOrderId: number;
@@ -30,6 +33,8 @@ const Actions = ({
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
+  const { posName } = useSettingPosStore();
+  const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
 
   const setSeatsContractTicketSale = useSetSeatsContractTicketSale();
   const cancelOrder = useCancelOrder();
@@ -37,6 +42,27 @@ const Actions = ({
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
     [selectedSeats]
+  );
+
+  const handlePrint = useCallback(
+    async (orderId: number) => {
+      try {
+        const orderDetail = await queryClient.fetchQuery({
+          queryKey: ordersKeys.getDetail(orderId),
+          queryFn: () => ordersApi.getDetail(orderId)
+        });
+
+        const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posName);
+
+        await window.api?.printTickets(tickets, selectedPrinter);
+
+        message.success("In vé thành công");
+      } catch (error) {
+        console.error(error);
+        message.error("In vé thất bại");
+      }
+    },
+    [queryClient, selectedPrinter, user, posName]
   );
 
   const items: DescriptionsProps["items"] = [
@@ -175,6 +201,15 @@ const Actions = ({
             onClick={onCancelSeats}
           >
             Hủy vé hợp đồng
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="orange"
+            className="h-full! font-bold"
+            onClick={() => handlePrint(contractOrderId)}
+          >
+            In vé
           </Button>
         </div>
       </div>

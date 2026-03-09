@@ -71,6 +71,12 @@ export const planScreeningsApi = {
     const res = await api.get(`/api/pos/plan-screenings/get-by-date?date=${date}`);
     return res.data;
   },
+  getAvailableDates: async (fromDate: string, toDate: string): Promise<string[]> => {
+    const res = await api.get(
+      `/api/pos/plan-screenings/available-dates?fromDate=${fromDate}&toDate=${toDate}`
+    );
+    return res.data;
+  },
   create: async (dto: PlanScreeningDto) => {
     const res = await api.post("/api/pos/plan-screenings", dto);
     return res.data;

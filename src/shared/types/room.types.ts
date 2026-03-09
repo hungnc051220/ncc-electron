@@ -16,4 +16,5 @@ export interface RoomProps {
   limitedToStores: boolean;
   orderNo: number;
   floor: string;
+  hidden: boolean;
 }

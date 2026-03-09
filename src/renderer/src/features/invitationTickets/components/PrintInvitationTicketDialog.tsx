@@ -4,7 +4,7 @@ import { useCreateInvitationTicket } from "@renderer/hooks/invitationTickets/use
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { ApiError, BackgroundProps, OrderDetailProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Button, Form, Input, message, Modal, Select, Space } from "antd";
+import { Button, Checkbox, Form, Input, message, Modal, Select, Space } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
 import QRCode from "qrcode";
@@ -58,6 +58,10 @@ const PrintInvitationTicketDialog = ({
   const [loading, setLoading] = useState(false);
   const uploadImage = useUploadImage();
   const createInvitationTicket = useCreateInvitationTicket();
+
+  useEffect(() => {
+    if (backgrounds.length > 0) form.setFieldValue("background", backgrounds[0].urlImage);
+  }, [backgrounds, form]);
 
   useEffect(() => {
     window.api
@@ -191,6 +195,7 @@ const PrintInvitationTicketDialog = ({
   };
 
   const image = Form.useWatch("background", form);
+  const sendZaloOA = Form.useWatch("sendZaloOA", form);
 
   return (
     <Modal
@@ -247,6 +252,16 @@ const PrintInvitationTicketDialog = ({
 
         <Form.Item name="title" label="Tiêu đề email">
           <Input placeholder="Nhập tiêu đề email" />
+        </Form.Item>
+        <Form.Item name="sendZaloOA" label={null} valuePropName="checked">
+          <Checkbox>Gửi zalo OA</Checkbox>
+        </Form.Item>
+        <Form.Item
+          name="phoneNumber"
+          label="Số điện thoại"
+          rules={[{ required: sendZaloOA, message: "Nhập số điện thoại gửi ZaloOA" }]}
+        >
+          <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
         {image ? (
           <div className="mt-5">

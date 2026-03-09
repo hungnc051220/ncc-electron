@@ -108,6 +108,7 @@ export interface ListSeat {
   isInvitation: number;
   isContract: number;
   isHold: number;
+  positionId?: number;
   positionName: string;
 }
 

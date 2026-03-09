@@ -34,6 +34,7 @@ export interface UpdaterContextType {
 export interface CurrentSeatState {
   selectedSeats: ListSeat[];
   cancelMode: boolean;
+  selectedFloor: number | null;
 }
 
 export interface AppConfig {

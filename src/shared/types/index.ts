@@ -10,3 +10,5 @@ export * from "./room.types";
 export * from "./screening.types";
 export * from "./user.types";
 export * from "./socket.types";
+export * from "./chair.types";
+export * from "./invoice.types";

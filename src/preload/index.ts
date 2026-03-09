@@ -6,6 +6,7 @@ import {
   CurrentSeatState,
   PlanScreeningDetailProps,
   QrState,
+  SeatTypeProps,
   UpdateInfo
 } from "@shared/types";
 
@@ -16,9 +17,12 @@ const api: PreloadAPI = {
   openCustomerScreen: (id) => ipcRenderer.invoke("customer:open", id),
   closeCustomerScreen: () => ipcRenderer.invoke("customer:close"),
   requestCustomerInit: () => ipcRenderer.send("customer:request-init"),
-  sendCustomerData: (data) => ipcRenderer.send("customer:update-data", data),
+  sendCustomerData: (payload) => ipcRenderer.send("customer:update-data", payload),
   onCustomerData: (cb) => {
-    const handler = (_: unknown, data: PlanScreeningDetailProps) => cb(data);
+    const handler = (
+      _: unknown,
+      payload: { data: PlanScreeningDetailProps | null; seatTypes: SeatTypeProps[] }
+    ) => cb(payload);
     ipcRenderer.on("customer:update-data", handler);
     return () => ipcRenderer.removeListener("customer:update-data", handler);
   },

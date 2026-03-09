@@ -149,16 +149,6 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
                 <p className="text-red-500 font-semibold">{formatMoney(totalPrice || 0)}</p>
               </div>
             </div>
-            <div>
-              <div className="flex justify-between">
-                <p>Chi tiêu cộng thêm:</p>
-                <p>{formatMoney(totalPrice || 0)}</p>
-              </div>
-              <div className="flex justify-between">
-                <p>Điểm thưởng cộng thêm</p>
-                <p>{formatNumber(0)}</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

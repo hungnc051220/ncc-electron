@@ -5,7 +5,8 @@ import {
   CurrentSeatState,
   PlanScreeningDetailProps,
   PrintTicketPayload,
-  QrState
+  QrState,
+  SeatTypeProps
 } from "@shared/types";
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
 import { autoUpdater } from "electron-updater";
@@ -25,10 +26,12 @@ let currentTheme: AppTheme = store.get("theme", "light") as AppTheme;
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
 let currentScreeningData: PlanScreeningDetailProps | null = null;
+let currentSeatTypes: SeatTypeProps[] = [];
 
 let currentSeatState: CurrentSeatState = {
   selectedSeats: [],
-  cancelMode: false
+  cancelMode: false,
+  selectedFloor: null
 };
 
 let currentQrState: QrState = {
@@ -297,17 +300,24 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on("customer:request-init", (event) => {
-    event.sender.send("customer:update-data", currentScreeningData);
+    event.sender.send("customer:update-data", {
+      data: currentScreeningData,
+      seatTypes: currentSeatTypes
+    });
     event.sender.send("customer:seat-sync", currentSeatState);
   });
 
-  ipcMain.on("customer:update-data", (_, data) => {
-    currentScreeningData = data;
+  ipcMain.on(
+    "customer:update-data",
+    (_, payload: { data: PlanScreeningDetailProps | null; seatTypes: SeatTypeProps[] }) => {
+      currentScreeningData = payload?.data ?? null;
+      currentSeatTypes = payload?.seatTypes ?? [];
 
-    if (customerWindow && !customerWindow.isDestroyed()) {
-      customerWindow.webContents.send("customer:update-data", data);
+      if (customerWindow && !customerWindow.isDestroyed()) {
+        customerWindow.webContents.send("customer:update-data", payload);
+      }
     }
-  });
+  );
 
   ipcMain.on("booking:seat-update", (_, payload) => {
     // update state trung tâm

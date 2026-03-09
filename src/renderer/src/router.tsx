@@ -37,6 +37,7 @@ import UserRolesPage from "./features/userRoles/UserRolesPage";
 import TicketSalesDiagramPage from "./features/TicketSalesDiagramPage";
 import OnlineSeatBookingDetailPage from "./features/onlineSeatBooking/OnlineSeatBookingDetailPage";
 import ScreeningRoomSeatMapPage from "./features/screeningRooms/ScreeningRoomSeatMapPage";
+import InvoicesPage from "./features/invoices/InvoicesPage";
 
 export const router = createHashRouter([
   {
@@ -77,6 +78,10 @@ export const router = createHashRouter([
           {
             path: "/manufacturers",
             element: <ManufacturersPage />
+          },
+          {
+            path: "/invoices",
+            element: <InvoicesPage />
           },
           {
             path: "/seat-types",

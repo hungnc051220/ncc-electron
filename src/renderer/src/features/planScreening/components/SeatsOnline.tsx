@@ -263,11 +263,19 @@ const SeatsOnline = ({
   }, [calculateSeatSize]);
 
   const handleHover = (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => {
-    const { clientX, clientY } = e;
+    if (seat.type === 12) return;
+
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const anchorX = rect.left + rect.width / 2;
+    const anchorY = rect.top + rect.height / 2;
 
     hoverTimeoutRef.current = setTimeout(() => {
       setHoverSeat(seat);
-      setTooltipPos({ x: clientX, y: clientY });
+      setTooltipPos({ x: anchorX, y: anchorY });
       setVisible(true);
     }, 500); // 1 giây
   };
