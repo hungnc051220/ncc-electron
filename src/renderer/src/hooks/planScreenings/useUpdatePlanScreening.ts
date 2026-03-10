@@ -1,6 +1,6 @@
 import { PlanScreeningDto, planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { planScreeningsKeys } from "./keys";
+import { invalidatePlanScreeningsQueries } from "./invalidatePlanScreeningsQueries";
 
 export const useUpdatePlanScreening = () => {
   const queryClient = useQueryClient();
@@ -10,9 +10,7 @@ export const useUpdatePlanScreening = () => {
       planScreeningsApi.update(id, dto),
 
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: planScreeningsKeys.all
-      });
+      return invalidatePlanScreeningsQueries(queryClient);
     }
   });
 };

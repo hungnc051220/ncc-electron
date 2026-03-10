@@ -11,6 +11,7 @@ import { useNavigate } from "react-router";
 import logo from "../assets/images/logo-text.png";
 import { useLogin } from "../hooks/useLogin";
 import { useAuthStore } from "../store/auth.store";
+import QuitApp from "@renderer/components/QuitApp";
 
 type LoginForm = {
   username: string;
@@ -52,8 +53,9 @@ export default function Login() {
       <div className="absolute inset-0 z-0 auth-bg bg-cover bg-center bg-no-repeat">
         <div className="absolute inset-0 bg-black/40" />
       </div>
-      <div className="absolute top-3 right-4 z-99 text-white">
+      <div className="absolute top-3 right-4 z-99 text-white space-x-2">
         <SettingEndpointPopup />
+        <QuitApp />
       </div>
       <Card className="max-w-md w-full">
         <div className="flex flex-col items-center mb-4 space-y-2">

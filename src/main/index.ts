@@ -439,6 +439,10 @@ app.whenReady().then(() => {
     return outputPath;
   });
 
+  ipcMain.on("app:quit", () => {
+    app.quit();
+  });
+
   createWindow();
 
   app.on("activate", function () {

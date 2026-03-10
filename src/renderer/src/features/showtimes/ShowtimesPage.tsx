@@ -21,13 +21,16 @@ const ShowtimesPage = () => {
   const tick = useRealtimeClock();
   const callbackUrl = searchParams.get("callbackUrl");
   const id = searchParams.get("id");
+
   const [date, setDate] = useQueryState("date", {
     defaultValue: dayjs().format("YYYY-MM-DD")
   });
   const [showPast, setShowPast] = useState(false);
-  const { data, isFetching } = usePlanScreeningsByDate(date);
+
   const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
   const toDate = dayjs(date, "YYYY-MM-DD").endOf("month").format("DD-MM-YYYY");
+
+  const { data, isFetching } = usePlanScreeningsByDate(date);
   const { data: showDates } = usePlanScreeningsAvailableDates(fromDate, toDate);
 
   const showDateSet = new Set(showDates?.map((d) => dayjs(d, "DD-MM-YYYY").format("YYYY-MM-DD")));

@@ -76,7 +76,8 @@ const api: PreloadAPI = {
     const handler = (_: unknown, theme: AppTheme) => cb(theme);
     ipcRenderer.on("theme:update", handler);
     return () => ipcRenderer.removeListener("theme:update", handler);
-  }
+  },
+  quitApp: () => ipcRenderer.send("app:quit")
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

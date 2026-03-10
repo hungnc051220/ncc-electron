@@ -1,6 +1,6 @@
 import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { planScreeningsKeys } from "./keys";
+import { invalidatePlanScreeningsQueries } from "./invalidatePlanScreeningsQueries";
 
 export const useDeletePlanScreening = () => {
   const queryClient = useQueryClient();
@@ -9,9 +9,7 @@ export const useDeletePlanScreening = () => {
     mutationFn: planScreeningsApi.delete,
 
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: planScreeningsKeys.all
-      });
+      return invalidatePlanScreeningsQueries(queryClient);
     }
   });
 };

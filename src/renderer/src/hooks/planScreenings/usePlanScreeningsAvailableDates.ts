@@ -4,7 +4,8 @@ import { planScreeningsKeys } from "./keys";
 
 export const usePlanScreeningsAvailableDates = (fromDate: string, toDate: string) =>
   useQuery({
-    queryKey: planScreeningsKeys.allAvailableDates,
+    queryKey: planScreeningsKeys.getAvailableDates(fromDate, toDate),
     queryFn: () => planScreeningsApi.getAvailableDates(fromDate, toDate),
-    placeholderData: keepPreviousData
+    placeholderData: keepPreviousData,
+    enabled: !!fromDate && !!toDate
   });
