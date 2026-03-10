@@ -54,9 +54,10 @@ const Dashboard = () => {
           icon={mainIcon2}
         />
         <MainCard
-          title="In voucher quà tặng"
+          title="Chương trình khuyến mãi"
           description="Phát hành và in voucher quà tặng cho khách hàng, đối tác"
           color="green"
+          href="vouchers"
           icon={mainIcon3}
         />
       </div>

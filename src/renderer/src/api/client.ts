@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosResponse, AxiosRequestConfig } from "axios";
 import { useAuthStore } from "../store/auth.store";
+import { connectSocket, disconnectSocket } from "@renderer/socket/socket";
 
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
   _retry?: boolean;
@@ -92,6 +93,7 @@ api.interceptors.response.use(
         const { access_token, refresh_token: newRefreshToken } = response.data;
 
         useAuthStore.getState().login(access_token, newRefreshToken);
+        connectSocket(access_token);
 
         processQueue(null, access_token);
 
@@ -106,6 +108,7 @@ api.interceptors.response.use(
         processQueue(typedError, null);
 
         useAuthStore.getState().logout();
+        disconnectSocket();
 
         return Promise.reject(typedError);
       } finally {

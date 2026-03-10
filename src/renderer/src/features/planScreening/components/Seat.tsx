@@ -82,6 +82,7 @@ const Seat = ({
   size,
   canSelect,
   isBlockedOnline,
+  isSelectingByOther,
   seatColor,
   onHover,
   onLeave
@@ -92,15 +93,16 @@ const Seat = ({
   size: number;
   canSelect: boolean;
   isBlockedOnline?: boolean;
+  isSelectingByOther?: boolean;
   seatColor?: string;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
 }) => {
   const handleClick = useCallback(() => {
-    if (canSelect) {
+    if (canSelect && !isSelectingByOther) {
       onSelect(seat);
     }
-  }, [canSelect, onSelect, seat]);
+  }, [canSelect, isSelectingByOther, onSelect, seat]);
 
   const shouldShowPositionColor =
     !!seatColor &&
@@ -115,7 +117,8 @@ const Seat = ({
   return (
     <div
       className={cn(
-        "relative rounded-sm flex items-center justify-center selectable-seat",
+        "relative rounded-sm flex items-center justify-center",
+        canSelect && !isSelectingByOther && "selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
         seat.status === 1 && "bg-trunks text-white",
@@ -124,7 +127,8 @@ const Seat = ({
         isBlockedOnline && "bg-trunks/50",
         seat.isInvitation && "bg-teal-500 text-white",
         !canSelect && "cursor-not-allowed",
-        isSelected && "bg-whis text-white"
+        isSelected && "bg-whis text-white",
+        isSelectingByOther && !isSelected && "ring-1 ring-primary/70"
       )}
       style={{
         backgroundColor: shouldShowPositionColor ? seatColor : undefined,
@@ -135,11 +139,14 @@ const Seat = ({
       onClick={handleClick}
       data-seat-code={seat.code}
       data-seat-floor={seat.floor}
-      data-seat-unique-key={`${seat.floor}-${seat.code}`}
+      data-seat-unique-key={`${seat.floor}-${seat.seat}`}
       onMouseEnter={(e) => onHover?.(seat, e)}
       onMouseLeave={onLeave}
     >
-      <p className="text-xs" style={{ fontSize: `${Math.max(10, size * 0.25)}px` }}>
+      <p
+        className={cn("text-xs", isSelectingByOther && !isSelected && "font-bold underline")}
+        style={{ fontSize: `${Math.max(10, size * 0.25)}px` }}
+      >
         {seat.type !== 12 ? seat.code : ""}
       </p>
     </div>

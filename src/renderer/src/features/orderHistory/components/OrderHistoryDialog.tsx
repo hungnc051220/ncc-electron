@@ -1,7 +1,9 @@
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { formatMoney } from "@renderer/lib/utils";
-import { OrderDetailProps, PaymentStatus } from "@shared/types";
-import { Button, Checkbox, Modal } from "antd";
+import { ApiError, OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
+import { Button, Checkbox, message, Modal } from "antd";
+import axios from "axios";
 import dayjs from "dayjs";
 
 interface OrderDialogProps {
@@ -11,6 +13,8 @@ interface OrderDialogProps {
 }
 
 const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogProps) => {
+  const updateStatusOrder = useUpdateOrder();
+
   const getChairs = () => {
     const chairsF1 = selectedItem?.order?.items?.map((item) => item.listChairValueF1) || [];
     const chairsF2 = selectedItem?.order?.items?.map((item) => item.listChairValueF2) || [];
@@ -18,13 +22,57 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
     const allChairs = [...chairsF1, ...chairsF2, ...chairsF3].filter(Boolean);
     return allChairs.join(", ");
   };
+
+  const onChangeStatusOrder = () => {
+    if (!selectedItem) return;
+    updateStatusOrder.mutate(
+      {
+        id: selectedItem?.order.id,
+        dto: {
+          orderStatusId: OrderStatus.COMPLETED,
+          paymentStatusId: PaymentStatus.PAID,
+          shippingStatusId: selectedItem.order.shippingStatusId
+        }
+      },
+      {
+        onSuccess: () => {
+          message.success("Thay đổi trạng thái đơn hàng thành công");
+          onOpenChange(false);
+        },
+        onError: (error: unknown) => {
+          let msg = "Thay đổi trạng thái đơn hàng thất bại";
+
+          if (axios.isAxiosError<ApiError>(error)) {
+            msg = error.response?.data?.message ?? msg;
+          }
+
+          message.error(msg);
+        }
+      }
+    );
+  };
+
   return (
     <Modal
       title="Thông tin vé bán"
       open={open}
       onCancel={() => onOpenChange(false)}
       width={800}
-      footer={null}
+      footer={(_, { CancelBtn }) => (
+        <>
+          <CancelBtn />
+          {selectedItem?.order.paymentStatusId !== PaymentStatus.PAID && (
+            <Button
+              variant="solid"
+              color="green"
+              onClick={onChangeStatusOrder}
+              loading={updateStatusOrder.isPending}
+            >
+              Chuyển sang thành công
+            </Button>
+          )}
+        </>
+      )}
     >
       <div className="grid grid-cols-3 gap-4">
         <div className="py-3 px-4">
@@ -101,13 +149,12 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
                 <OrderStatusBadge status={selectedItem?.order.paymentStatusId} type="payment" />
               )}
             </div>
-            {selectedItem?.order.paymentStatusId !== PaymentStatus.PAID && (
-              <div className="py-3 px-4">
-                <Button variant="outlined" color="green">
-                  Chuyển sang thành công
-                </Button>
-              </div>
-            )}
+            <div className="py-3 px-4">
+              <p className="text-sm text-trunks mb-1">Trạng thái đơn</p>
+              {selectedItem?.order.orderStatusId && (
+                <OrderStatusBadge status={selectedItem?.order.orderStatusId} type="order" />
+              )}
+            </div>
           </>
         )}
       </div>

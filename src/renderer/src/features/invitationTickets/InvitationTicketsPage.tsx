@@ -5,7 +5,8 @@ import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTicket
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
-import { Breadcrumb, Button, Dropdown, Table, type PaginationProps, type TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import type { PaginationProps, TableProps } from "antd";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";

@@ -77,6 +77,10 @@ const NavItems = () => {
         {
           label: <Link to="/ticket-prices">Danh sách giá vé</Link>,
           key: "ticket-prices"
+        },
+        {
+          label: <Link to="/vouchers">Danh sách chương trình khuyến mãi</Link>,
+          key: "vouchers"
         }
       ]
     },

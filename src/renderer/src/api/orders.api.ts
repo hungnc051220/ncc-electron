@@ -90,6 +90,14 @@ export interface OrderPrintedQuery {
   posShortName?: string;
 }
 
+export interface SelectingChairsDto {
+  planScreenId: number;
+  posName: string;
+  selectingChairIndexF1: string;
+  selectingChairIndexF2: string;
+  selectingChairIndexF3: string;
+}
+
 export const ordersApi = {
   getAll: async (params: OrdersQuery): Promise<ApiResponse<OrderDetailProps>> => {
     const {
@@ -183,7 +191,7 @@ export const ordersApi = {
     return res.data;
   },
   update: async (id: number, dto: OrderUpdateStatusDto) => {
-    const res = await api.patch(`/api/pos/order/${id}/status`, dto);
+    const res = await api.put(`/api/pos/order/${id}/status`, dto);
     return res.data;
   },
   cancelReserve: async (dto: OrderCancelReserveDto) => {
@@ -214,6 +222,10 @@ export const ordersApi = {
   },
   refund: async (dto: OrderRefundDto[]) => {
     const res = await api.patch("/api/pos/order/refund", dto);
+    return res.data;
+  },
+  selectingChairs: async (operation: "add" | "remove", dto: SelectingChairsDto) => {
+    const res = await api.post(`/api/pos/seat/selecting-chairs/${operation}`, dto);
     return res.data;
   }
 };

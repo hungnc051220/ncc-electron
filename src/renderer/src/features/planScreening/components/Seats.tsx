@@ -26,6 +26,7 @@ interface SeatsProps {
   orders?: OrderResponseProps[];
   seatTypes?: SeatTypeProps[];
   selectedSeats: ListSeat[];
+  selectingSeatsByOther?: Record<string, string>;
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
   cancelMode?: boolean;
   isCustomerView?: boolean;
@@ -35,7 +36,7 @@ interface SeatsProps {
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
-  return `${seat.floor}-${seat.code}`;
+  return `${seat.floor}-${seat.seat}`;
 };
 
 const Seats = ({
@@ -43,6 +44,7 @@ const Seats = ({
   orders,
   seatTypes,
   selectedSeats,
+  selectingSeatsByOther,
   setSelectedSeats,
   cancelMode,
   isCustomerView,
@@ -256,10 +258,17 @@ const Seats = ({
     return map;
   }, [seats, canSelectSeat]);
 
+  const selectingSeatKeysByOther = useMemo(
+    () => new Set(Object.keys(selectingSeatsByOther || {})),
+    [selectingSeatsByOther]
+  );
+
   const handleSelectSeat = useCallback(
     (seat: ListSeat) => {
+      const seatUniqueKey = getSeatUniqueKey(seat);
+      if (selectingSeatKeysByOther.has(seatUniqueKey)) return;
+
       setSelectedSeats((prev) => {
-        const seatUniqueKey = getSeatUniqueKey(seat);
         const isAlreadySelected = prev.find((s) => getSeatUniqueKey(s) === seatUniqueKey);
         if (isAlreadySelected) {
           return prev.filter((s) => getSeatUniqueKey(s) !== seatUniqueKey);
@@ -268,7 +277,7 @@ const Seats = ({
         }
       });
     },
-    [setSelectedSeats]
+    [selectingSeatKeysByOther, setSelectedSeats]
   );
 
   const handleSelectoSelect = useCallback(
@@ -281,7 +290,12 @@ const Seats = ({
         // Thêm ghế mới
         e.added.forEach((el) => {
           const uniqueKey = el.getAttribute("data-seat-unique-key");
-          if (uniqueKey && seatMap[uniqueKey] && !newSelected.has(uniqueKey)) {
+          if (
+            uniqueKey &&
+            seatMap[uniqueKey] &&
+            !newSelected.has(uniqueKey) &&
+            !selectingSeatKeysByOther.has(uniqueKey)
+          ) {
             newSelected.add(uniqueKey);
           }
         });
@@ -304,7 +318,7 @@ const Seats = ({
         isSelectingRef.current = false;
       }, 100);
     },
-    [seatMap, setSelectedSeats]
+    [seatMap, selectingSeatKeysByOther, setSelectedSeats]
   );
 
   const calculateSeatSize = useCallback(() => {
@@ -446,6 +460,7 @@ const Seats = ({
             key={seat.seat}
             seat={seat}
             isSelected={selectedSeats.some((s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat))}
+            isSelectingByOther={selectingSeatKeysByOther.has(getSeatUniqueKey(seat))}
             onSelect={handleSelectSeat}
             size={seatSize}
             canSelect={canSelectSeat(seat)}
@@ -474,7 +489,8 @@ const Seats = ({
     seatSize,
     canSelectSeat,
     isSeatBlockedOnline,
-    seatTypeColorMap
+    seatTypeColorMap,
+    selectingSeatKeysByOther
   ]);
 
   if (!data) return null;

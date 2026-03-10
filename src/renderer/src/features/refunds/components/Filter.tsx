@@ -1,7 +1,7 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Form, Input, Modal } from "antd";
 import { useState } from "react";
-import { ValuesProps } from "../RefundPage";
+import { ValuesProps } from "../RefundsPage";
 
 const { RangePicker } = DatePicker;
 

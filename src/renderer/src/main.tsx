@@ -10,8 +10,9 @@ import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { UpdaterProvider } from "./components/UpdaterContext";
 import { useSettingPosStore } from "./store/settingPos.store";
 import { useThemeStore } from "./store/theme.store";
+import { useAuthStore } from "./store/auth.store";
 import { initApi } from "./api/client";
-import { initSocket } from "./socket/socket";
+import { connectSocket, initSocket } from "./socket/socket";
 
 useSettingPosStore.getState();
 
@@ -25,6 +26,11 @@ async function bootstrap() {
   const config = await window.api?.getConfig();
   initApi(config?.apiBaseUrl || "https://testapiv3.chieuphimquocgia.com.vn");
   initSocket(config?.socketUrl || "wss://testapiv3.chieuphimquocgia.com.vn");
+
+  const token = useAuthStore.getState().token;
+  if (token) {
+    connectSocket(token);
+  }
 
   createRoot(document.getElementById("root")!).render(
     <UpdaterProvider>

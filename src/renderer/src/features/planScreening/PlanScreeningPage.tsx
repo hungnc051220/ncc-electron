@@ -3,27 +3,63 @@ import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { useThemeStore } from "@renderer/store/theme.store";
 import { ListSeat, PlanScreeningDetailProps, QrState, SeatTypeProps } from "@shared/types";
 import { Spin } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import Actions from "./components/Actions";
 import QrCodeDialog from "./components/QrCodeDialog";
 import Seats from "./components/Seats";
 import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
+import { onSelectingChairsUpdate } from "@renderer/socket/socket";
+import { useSelectingChairs } from "@renderer/hooks/orders/useSelectingChairs";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 
 const PlanScreeningPage = () => {
   const { id } = useParams();
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
+  const [selectingSeatsByOther, setSelectingSeatsByOther] = useState<Record<string, string>>({});
   const [cancelMode, setCancelMode] = useState(false);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [customerData, setCustomerData] = useState<PlanScreeningDetailProps | undefined>(undefined);
   const [customerSeatTypes, setCustomerSeatTypes] = useState<SeatTypeProps[]>([]);
   const isCustomerMode = window.location.hash.includes("view=customer");
   const [qrState, setQrState] = useState<QrState>({ isOpen: false });
+  const { posName } = useSettingPosStore();
+  const syncedSelectedSeatsRef = useRef<ListSeat[]>([]);
+  const syncedSelectedSeatKeysRef = useRef<Set<string>>(new Set());
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data, isFetching } = usePlanScreeningDetail(Number(id), isCustomerMode);
   const { data: orders } = useOrdersByScreening(Number(id));
   const { data: seatTypesRes } = useSeatTypes({ current: 1, pageSize: 1000 });
+  const { mutate: mutateSelectingChairs } = useSelectingChairs();
+  const mutateSelectingChairsRef = useRef(mutateSelectingChairs);
   const seatTypes = useMemo(() => seatTypesRes?.data || [], [seatTypesRes]);
+
+  const selectedSeatKeys = useMemo(
+    () => new Set(selectedSeats.map((seat) => `${seat.floor}-${seat.seat}`)),
+    [selectedSeats]
+  );
+
+  const buildSelectingDto = (planScreenId: number, currentPosName: string, seats: ListSeat[]) => ({
+    planScreenId,
+    posName: currentPosName,
+    selectingChairIndexF1: seats
+      .filter((seat) => seat.floor === 1)
+      .map((seat) => seat.seat)
+      .join(","),
+    selectingChairIndexF2: seats
+      .filter((seat) => seat.floor === 2)
+      .map((seat) => seat.seat)
+      .join(","),
+    selectingChairIndexF3: seats
+      .filter((seat) => seat.floor === 3)
+      .map((seat) => seat.seat)
+      .join(",")
+  });
+
+  useEffect(() => {
+    mutateSelectingChairsRef.current = mutateSelectingChairs;
+  }, [mutateSelectingChairs]);
 
   useEffect(() => {
     if (isCustomerMode) return;
@@ -107,6 +143,127 @@ const PlanScreeningPage = () => {
     return unsub;
   }, [isCustomerMode]);
 
+  useEffect(() => {
+    if (!id || isCustomerMode || !posName) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectingSeatsByOther({});
+
+    const parseSeatIndexes = (value: string, floor: number) =>
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((seatIndex) => `${floor}-${seatIndex}`);
+
+    const cleanup = onSelectingChairsUpdate((payload) => {
+      if (payload.planScreenId !== Number(id) || payload.posName === posName) return;
+
+      const seatKeys = [
+        ...parseSeatIndexes(payload.selectingChairIndexF1, 1),
+        ...parseSeatIndexes(payload.selectingChairIndexF2, 2),
+        ...parseSeatIndexes(payload.selectingChairIndexF3, 3)
+      ];
+
+      setSelectingSeatsByOther((prev) => {
+        const nextState = { ...prev };
+        if (payload.operation === "remove") {
+          seatKeys.forEach((seatKey) => {
+            if (nextState[seatKey] === payload.posName) {
+              delete nextState[seatKey];
+            }
+          });
+          return nextState;
+        }
+
+        seatKeys.forEach((seatKey) => {
+          nextState[seatKey] = payload.posName;
+        });
+
+        return nextState;
+      });
+    });
+    return cleanup;
+  }, [id, isCustomerMode, posName]);
+
+  useEffect(() => {
+    if (!id || isCustomerMode || !posName) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+
+    const syncedSeatKeys = syncedSelectedSeatKeysRef.current;
+    const syncedSeats = syncedSelectedSeatsRef.current;
+
+    if (cancelMode) {
+      if (syncedSeats.length > 0) {
+        mutateSelectingChairsRef.current({
+          operation: "remove",
+          dto: buildSelectingDto(Number(id), posName, syncedSeats)
+        });
+      }
+
+      syncedSelectedSeatsRef.current = [];
+      syncedSelectedSeatKeysRef.current = new Set();
+      return;
+    }
+
+    syncTimeoutRef.current = setTimeout(() => {
+      const addedSeats = selectedSeats.filter(
+        (seat) => !syncedSeatKeys.has(`${seat.floor}-${seat.seat}`)
+      );
+      const removedSeats = syncedSeats.filter(
+        (seat) => !selectedSeatKeys.has(`${seat.floor}-${seat.seat}`)
+      );
+
+      if (addedSeats.length > 0) {
+        mutateSelectingChairsRef.current({
+          operation: "add",
+          dto: buildSelectingDto(Number(id), posName, addedSeats)
+        });
+      }
+
+      if (removedSeats.length > 0) {
+        mutateSelectingChairsRef.current({
+          operation: "remove",
+          dto: buildSelectingDto(Number(id), posName, removedSeats)
+        });
+      }
+
+      syncedSelectedSeatsRef.current = selectedSeats;
+      syncedSelectedSeatKeysRef.current = new Set(selectedSeatKeys);
+      syncTimeoutRef.current = null;
+    }, 150);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+    };
+  }, [cancelMode, id, isCustomerMode, posName, selectedSeatKeys, selectedSeats]);
+
+  useEffect(() => {
+    if (!id || isCustomerMode || !posName) return;
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+
+      const lastSelectedSeats = syncedSelectedSeatsRef.current;
+      if (lastSelectedSeats.length === 0) return;
+
+      mutateSelectingChairsRef.current({
+        operation: "remove",
+        dto: buildSelectingDto(Number(id), posName, lastSelectedSeats)
+      });
+    };
+  }, [id, isCustomerMode, posName]);
+
   if (!id && !data) return null;
 
   const renderData = isCustomerMode ? customerData : data;
@@ -122,6 +279,7 @@ const PlanScreeningPage = () => {
           orders={orders}
           seatTypes={renderSeatTypes}
           selectedSeats={selectedSeats}
+          selectingSeatsByOther={isCustomerMode ? undefined : selectingSeatsByOther}
           setSelectedSeats={setSelectedSeats}
           cancelMode={cancelMode}
           isCustomerView={isCustomerMode}

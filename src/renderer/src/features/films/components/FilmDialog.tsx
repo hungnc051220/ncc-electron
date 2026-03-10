@@ -59,10 +59,10 @@ const ageAboveOptions = [
 
 const ageAboveLabelMap = {
   0: "Phim được phổ biến đến người xem dưới 13 tuổi và có người bảo hộ đi kèm (Độ tuổi yêu cầu 0)",
-  1: "Phim được phép phổ biến đến người xem ở mọi độ tuổi (Độ tuổi yêu cầu 0)",
-  13: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (13+) (Độ tuổi yêu cầu 13)",
-  16: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (16+) (Độ tuổi yêu cầu 16)",
-  18: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (18+) (Độ tuổi yêu cầu 18)"
+  1: "Phim được phép phổ biến đến người xem ở mọi độ tuổi",
+  13: "Phim được phổ biến đến người xem từ đủ 13 tuổi trở lên (13+)",
+  16: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (16+)",
+  18: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (18+)"
 };
 
 export interface FieldValues {
@@ -138,7 +138,7 @@ const FilmDialog = ({
   const ageAbove = Form.useWatch("ageAbove", form);
 
   useEffect(() => {
-    if (ageAbove) {
+    if (ageAbove !== undefined) {
       form.setFieldValue("description", ageAboveLabelMap[ageAbove]);
     }
   });
@@ -190,7 +190,6 @@ const FilmDialog = ({
         languageCode: languages.length > 0 ? languages[0].languageCode : undefined,
         statusCode: filmStatuses.length > 0 ? filmStatuses[0].statusCode : undefined,
         published: true,
-        ageAbove: 0,
         orderNo: 0,
         trailerOnHomePage: false,
         categoryIds: []

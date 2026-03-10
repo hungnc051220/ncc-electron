@@ -174,13 +174,6 @@ const OrderHistoryPage = () => {
       render: (_, record) => record.order.items.map((item) => item.listChairValueF1).join(", ")
     },
     {
-      title: "Trạng thái đơn",
-      key: "orderStatusId",
-      dataIndex: "orderStatusId",
-      render: (_, record) => <OrderStatusBadge status={record.order.orderStatusId} type="order" />,
-      fixed: "right"
-    },
-    {
       title: "Trạng thái thanh toán",
       key: "paymentStatusId",
       dataIndex: "paymentStatusId",
@@ -189,6 +182,14 @@ const OrderHistoryPage = () => {
       ),
       fixed: "right"
     },
+    {
+      title: "Trạng thái đơn",
+      key: "orderStatusId",
+      dataIndex: "orderStatusId",
+      render: (_, record) => <OrderStatusBadge status={record.order.orderStatusId} type="order" />,
+      fixed: "right"
+    },
+
     {
       title: "",
       key: "operation",

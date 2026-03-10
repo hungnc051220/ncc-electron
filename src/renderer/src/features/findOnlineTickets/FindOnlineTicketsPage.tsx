@@ -1,5 +1,5 @@
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Table } from "antd";
+import { Breadcrumb, Dropdown, Table } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Link } from "react-router";
@@ -9,6 +9,9 @@ import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import Filter from "./components/Filter";
 import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
+import { MoreOutlined } from "@ant-design/icons";
+
+const actionItems = [{ key: "1", label: "Xem chi tiết" }];
 
 export interface ValuesProps {
   id?: string;
@@ -143,20 +146,30 @@ const FindOnlineTicketsPage = () => {
       title: "Trạng thái đơn",
       key: "orderStatus",
       dataIndex: "order",
-      render: (_, record) => (
-        <OrderStatusBadge status={record.order.paymentStatusId} type="order" />
-      ),
+      render: (_, record) => <OrderStatusBadge status={record.order.orderStatusId} type="order" />,
       fixed: "right"
     },
     {
       title: "",
       key: "operation",
-      width: 120,
+      width: 50,
       render: (_, record) => (
-        <Button type="link" onClick={() => handeViewDetail(record)}>
-          Xem chi tiết
-        </Button>
+        <Dropdown
+          menu={{
+            items: actionItems,
+            onClick: (e) => {
+              if (e.key === "1") {
+                handeViewDetail(record);
+              }
+            }
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
       ),
+      align: "center",
       fixed: "right"
     }
   ];

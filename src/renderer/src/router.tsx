@@ -1,43 +1,45 @@
 import { createHashRouter, Navigate } from "react-router";
+import AccessHistoryPage from "./features/accessHistory/AccessHistoryPage";
+import CancellationReasonsPage from "./features/cancellationReasons/CancellationReasonsPage";
+import CancellationTicketsPage from "./features/cancellationTickets/CancellationTicketsPage";
+import ContractTicketSalesDetailPage from "./features/contractTicketSales/ContractTicketSalesDetailPage";
+import ContractTicketSalesPage from "./features/contractTicketSales/ContractTicketSalesPage";
 import Dashboard from "./features/Dashboard";
+import DiscountSettingsPage from "./features/discountSettings/DiscountSettingsPage";
 import FilmsPage from "./features/films/FilmsPage";
+import FindOnlineTicketsPage from "./features/findOnlineTickets/FindOnlineTicketsPage";
+import HolidaysPage from "./features/holidays/HolidaysPage";
+import InvitationTicketsDetailPage from "./features/invitationTickets/InvitationTicketsDetailPage";
+import InvitationTicketsPage from "./features/invitationTickets/InvitationTicketsPage";
+import InvoicesPage from "./features/invoices/InvoicesPage";
 import Login from "./features/Login";
 import MachineSerialsPage from "./features/machineSerials/MachineSerialsPage";
+import ManufacturersPage from "./features/manufacturers/ManufacturersPage";
+import MonthlyReportPage from "./features/monthlyReport/MonthlyReportPage";
+import OnlineSeatBookingDetailPage from "./features/onlineSeatBooking/OnlineSeatBookingDetailPage";
+import OnlineShowtimeBookingPage from "./features/onlineShowtimeBooking/OnlineShowtimeBookingPage";
+import OrderHistoryPage from "./features/orderHistory/OrderHistoryPage";
+import PlanCinemaPage from "./features/planCinema/PlanCinemaPage";
+import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
+import PrintOnlineTicketsPage from "./features/printOnlineTickets/PrintOnlineTicketsPage";
+import QuarterlyReportPage from "./features/quarterlyReport/QuarterlyReportPage";
+import RefundsPage from "./features/refunds/RefundsPage";
+import ScreeningRoomSeatMapPage from "./features/screeningRooms/ScreeningRoomSeatMapPage";
+import ScreeningRoomsPage from "./features/screeningRooms/ScreeningRoomsPage";
+import SeatTypesPage from "./features/seatTypes/SeatTypesPage";
+import SettingPage from "./features/settings/SettingPage";
+import ShowtimesPage from "./features/showtimes/ShowtimesPage";
+import ShowtimeSchedulePage from "./features/showtimeSchedule/ShowtimeSchedulePage";
+import ShowTimeSlotsPage from "./features/showTimeSlots/ShowTimeSlotsPage";
+import StaffRevenueReportPage from "./features/staffRevenueReport/StaffRevenueReportPage";
+import TicketPricesPage from "./features/ticketPrices/TicketPricesPage";
+import TicketSalesDiagramPage from "./features/TicketSalesDiagramPage";
+import TicketSalesRevenuePage from "./features/ticketSalesRevenue/TicketSalesRevenuePage";
+import UserRolesPage from "./features/userRoles/UserRolesPage";
 import UsersPage from "./features/users/UsersPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedLayout from "./layouts/ProtectedLayout";
-import ManufacturersPage from "./features/manufacturers/ManufacturersPage";
-import SeatTypesPage from "./features/seatTypes/SeatTypesPage";
-import ScreeningRoomsPage from "./features/screeningRooms/ScreeningRoomsPage";
-import HolidaysPage from "./features/holidays/HolidaysPage";
-import CancellationReasonsPage from "./features/cancellationReasons/CancellationReasonsPage";
-import ShowTimeSlotsPage from "./features/showTimeSlots/ShowTimeSlotsPage";
-import TicketPricesPage from "./features/ticketPrices/TicketPricesPage";
-import PlanCinemaPage from "./features/planCinema/PlanCinemaPage";
-import ShowtimeSchedulePage from "./features/showtimeSchedule/ShowtimeSchedulePage";
-import OnlineShowtimeBookingPage from "./features/onlineShowtimeBooking/OnlineShowtimeBookingPage";
-import DiscountSettingsPage from "./features/discountSettings/DiscountSettingsPage";
-import PrintOnlineTicketsPage from "./features/printOnlineTickets/PrintOnlineTicketsPage";
-import FindOnlineTicketsPage from "./features/findOnlineTickets/FindOnlineTicketsPage";
-import CancellationTicketsPage from "./features/cancellationTickets/CancellationTicketsPage";
-import AccessHistoryPage from "./features/accessHistory/AccessHistoryPage";
-import OrderHistoryPage from "./features/orderHistory/OrderHistoryPage";
-import StaffRevenueReportPage from "./features/staffRevenueReport/StaffRevenueReportPage";
-import MonthlyReportPage from "./features/monthlyReport/MonthlyReportPage";
-import QuarterlyReportPage from "./features/quarterlyReport/QuarterlyReportPage";
-import TicketSalesRevenuePage from "./features/ticketSalesRevenue/TicketSalesRevenuePage";
-import ShowtimesPage from "./features/showtimes/ShowtimesPage";
-import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
-import ContractTicketSalesPage from "./features/contractTicketSales/ContractTicketSalesPage";
-import ContractTicketSalesDetailPage from "./features/contractTicketSales/ContractTicketSalesDetailPage";
-import InvitationTicketsPage from "./features/invitationTickets/InvitationTicketsPage";
-import InvitationTicketsDetailPage from "./features/invitationTickets/InvitationTicketsDetailPage";
-import SettingPage from "./features/settings/SettingPage";
-import UserRolesPage from "./features/userRoles/UserRolesPage";
-import TicketSalesDiagramPage from "./features/TicketSalesDiagramPage";
-import OnlineSeatBookingDetailPage from "./features/onlineSeatBooking/OnlineSeatBookingDetailPage";
-import ScreeningRoomSeatMapPage from "./features/screeningRooms/ScreeningRoomSeatMapPage";
-import InvoicesPage from "./features/invoices/InvoicesPage";
+import VouchersPage from "./features/vouchers/VouchersPage";
 
 export const router = createHashRouter([
   {
@@ -108,6 +110,10 @@ export const router = createHashRouter([
             element: <TicketPricesPage />
           },
           {
+            path: "/vouchers",
+            element: <VouchersPage />
+          },
+          {
             path: "/plan-cinema",
             element: <PlanCinemaPage />
           },
@@ -134,6 +140,10 @@ export const router = createHashRouter([
           {
             path: "/cancellation-tickets",
             element: <CancellationTicketsPage />
+          },
+          {
+            path: "/refunds",
+            element: <RefundsPage />
           },
           {
             path: "/access-history",
