@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { usePermissionStore } from "./permission.store";
 
 type AuthState = {
   token: string | null;
@@ -22,7 +23,10 @@ export const useAuthStore = create<AuthState>()(
 
       login: (token, refreshToken) => set({ token, refreshToken, isAuth: true }),
       setUserId: (userId) => set({ userId }),
-      logout: () => set({ token: null, refreshToken: null, userId: null, isAuth: false })
+      logout: () => {
+        usePermissionStore.getState().clearAssignments();
+        set({ token: null, refreshToken: null, userId: null, isAuth: false });
+      }
     }),
     {
       name: "pos-auth",

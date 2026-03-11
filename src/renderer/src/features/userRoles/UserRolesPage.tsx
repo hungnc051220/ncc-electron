@@ -1,19 +1,100 @@
 import { useCustomerRoleMenu } from "@renderer/hooks/customerRoles/useCustomerRoleMenu";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { useUpdateCustomerRoleMenu } from "@renderer/hooks/customerRoles/useUpdateCustomerRoleMenu";
-import { ApiError, CustomerRoleMenuProps } from "@shared/types";
+import { PERMISSION_ACTION_LABELS } from "@renderer/permissions/definitions";
+import {
+  buildPermissionMatrix,
+  legacyMenusToAssignments,
+  permissionMatrixToLegacyMenus
+} from "@renderer/permissions/utils";
+import {
+  ApiError,
+  CustomerRoleMenuProps,
+  PermissionAction,
+  PermissionMatrixRow,
+  permissionActions
+} from "@shared/types";
 import type { MenuProps, TableProps } from "antd";
 import { Breadcrumb, Button, Checkbox, Layout, Menu, message, Spin, Table } from "antd";
 import axios from "axios";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
 const { Content } = Layout;
 type MenuItem = Required<MenuProps>["items"][number];
 
+type PermissionTreeRow = {
+  id: string;
+  key: string;
+  label: string;
+  route?: string;
+  module?: string;
+  actions: PermissionAction[];
+  values: Record<PermissionAction, boolean>;
+  children?: PermissionTreeRow[];
+  isGroup?: boolean;
+};
+
+const buildTreeRows = (rows: PermissionMatrixRow[]): PermissionTreeRow[] => {
+  const grouped = rows.reduce(
+    (acc, row) => {
+      acc[row.module] = [...(acc[row.module] ?? []), row];
+      return acc;
+    },
+    {} as Record<string, PermissionMatrixRow[]>
+  );
+
+  return Object.entries(grouped).map(([module, features]) => {
+    const supportedActions = permissionActions.filter((action) =>
+      features.some((feature) => feature.actions.includes(action))
+    );
+
+    const values = permissionActions.reduce(
+      (acc, action) => {
+        const applicableFeatures = features.filter((feature) => feature.actions.includes(action));
+        acc[action] =
+          applicableFeatures.length > 0 &&
+          applicableFeatures.every((feature) => feature.values[action]);
+        return acc;
+      },
+      {} as Record<PermissionAction, boolean>
+    );
+
+    return {
+      id: `group:${module}`,
+      key: `group:${module}`,
+      label: module,
+      module,
+      actions: supportedActions,
+      values,
+      isGroup: true,
+      children: features.map((feature) => ({
+        id: feature.id,
+        key: feature.key,
+        label: feature.label,
+        route: feature.route,
+        module: feature.module,
+        actions: feature.actions,
+        values: feature.values
+      }))
+    };
+  });
+};
+
+const getRowToggleState = (row: PermissionTreeRow) => {
+  const checked = row.actions.length > 0 && row.actions.every((action) => row.values[action]);
+  const indeterminate = row.actions.some((action) => row.values[action]) && !checked;
+
+  return { checked, indeterminate };
+};
+
+const normalizeLegacyMenu = (menu: CustomerRoleMenuProps[] | CustomerRoleMenuProps[][] | undefined) =>
+  Array.isArray(menu?.[0]) ? [] : ((menu ?? []) as CustomerRoleMenuProps[]);
+
 const UserRolesPage = () => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [bodyData, setBodyData] = useState<CustomerRoleMenuProps[] | undefined>(undefined);
+  const [legacyMenuData, setLegacyMenuData] = useState<CustomerRoleMenuProps[] | undefined>(undefined);
+  const [bodyData, setBodyData] = useState<PermissionMatrixRow[]>(buildPermissionMatrix());
 
   const { data, isPending } = useCustomerRoles();
   const { data: menu, isFetching: isFetchingMenu } = useCustomerRoleMenu(
@@ -22,7 +103,15 @@ const UserRolesPage = () => {
   const updateCustomerRoleMenu = useUpdateCustomerRoleMenu();
 
   useEffect(() => {
-    setBodyData(menu);
+    if (!selectedKey && data?.length) {
+      setSelectedKey(data[0].id.toString());
+    }
+  }, [data, selectedKey]);
+
+  useEffect(() => {
+    const normalizedMenu = normalizeLegacyMenu(menu);
+    setLegacyMenuData(normalizedMenu);
+    setBodyData(buildPermissionMatrix(legacyMenusToAssignments(normalizedMenu)));
   }, [menu]);
 
   const items: MenuItem[] = [
@@ -37,76 +126,142 @@ const UserRolesPage = () => {
     }
   ];
 
-  const onChangeEdit = useCallback(
-    (id: number, checked: boolean) => {
-      if (!bodyData) return;
-      const indexItem = bodyData?.findIndex((x) => x.id === id);
-      const newData = [...bodyData];
-      newData[indexItem].edit = checked as boolean;
-      setBodyData(newData);
-    },
-    [bodyData]
+  const applyActionChange = useCallback(
+    (rows: PermissionMatrixRow[], permissionKeys: string[], action: PermissionAction, checked: boolean) =>
+      rows.map((row) => {
+        if (!permissionKeys.includes(row.key) || !row.actions.includes(action)) {
+          return row;
+        }
+
+        const nextValues = {
+          ...row.values,
+          [action]: checked
+        };
+
+        if (action === "access" && !checked) {
+          row.actions.forEach((supportedAction) => {
+            nextValues[supportedAction] = false;
+          });
+        }
+
+        if (action !== "access" && checked) {
+          nextValues.access = true;
+        }
+
+        return {
+          ...row,
+          values: nextValues
+        };
+      }),
+    []
   );
 
-  const onChangeReadOnly = useCallback(
-    (id: number, checked: boolean) => {
-      if (!bodyData) return;
-      const indexItem = bodyData?.findIndex((x) => x.id === id);
-      const newData = [...bodyData];
-      newData[indexItem].readOnly = checked as boolean;
-      setBodyData(newData);
+  const onTogglePermission = useCallback(
+    (permissionKeys: string[], action: PermissionAction, checked: boolean) => {
+      setBodyData((current) => applyActionChange(current, permissionKeys, action, checked));
     },
-    [bodyData]
+    [applyActionChange]
   );
 
-  const columns: TableProps<CustomerRoleMenuProps>["columns"] = [
+  const onToggleAllActions = useCallback((permissionKeys: string[], checked: boolean) => {
+    setBodyData((current) =>
+      current.map((row) => {
+        if (!permissionKeys.includes(row.key)) {
+          return row;
+        }
+
+        const nextValues = { ...row.values };
+        row.actions.forEach((action) => {
+          nextValues[action] = checked;
+        });
+
+        return {
+          ...row,
+          values: nextValues
+        };
+      })
+    );
+  }, []);
+
+  const visibleActions = permissionActions.filter((action) =>
+    bodyData.some((row) => row.actions.includes(action))
+  );
+  const treeData = useMemo(() => buildTreeRows(bodyData), [bodyData]);
+
+  const baseColumns: NonNullable<TableProps<PermissionTreeRow>["columns"]> = [
     {
-      title: "STT",
-      key: "no",
+      title: "Chọn tất",
+      key: "select-all",
+      width: 90,
       align: "center",
-      render: (_, __, index) => index + 1,
-      width: 50
+      render: (_, record) => {
+        const featureKeys = record.isGroup
+          ? (record.children ?? []).map((item) => item.key)
+          : [record.key];
+        const { checked, indeterminate } = getRowToggleState(record);
+
+        return (
+          <Checkbox
+            checked={checked}
+            indeterminate={indeterminate}
+            onChange={(e) => onToggleAllActions(featureKeys, e.target.checked)}
+          />
+        );
+      }
     },
     {
-      title: "Tên chức năng",
-      key: "menuName",
-      dataIndex: "menuName"
+      title: "Tính năng",
+      key: "label",
+      dataIndex: "label",
+      width: 320
     },
     {
-      title: "Sửa",
-      key: "edit",
-      dataIndex: "edit",
-      render: (_, record) => (
-        <Checkbox
-          checked={record.edit}
-          onChange={(e) => onChangeEdit(record.id, e.target.checked)}
-        />
-      ),
-      width: 70,
-      align: "center"
-    },
-    {
-      title: "Đọc",
-      key: "readOnly",
-      dataIndex: "readOnly",
-      render: (_, record) => (
-        <Checkbox
-          checked={record.readOnly}
-          onChange={(e) => onChangeReadOnly(record.id, e.target.checked)}
-        />
-      ),
-      width: 70,
-      align: "center"
+      title: "Route",
+      key: "route",
+      dataIndex: "route",
+      render: (value: string | undefined, record) => (record.isGroup ? "-" : (value ?? "-"))
     }
   ];
+
+  const actionColumns: NonNullable<TableProps<PermissionTreeRow>["columns"]> = visibleActions.map(
+    (action) => ({
+      title: PERMISSION_ACTION_LABELS[action],
+      key: action,
+      align: "center",
+      width: 80,
+      render: (_, record) => (
+        <Checkbox
+          checked={record.values[action]}
+          disabled={!record.actions.includes(action)}
+          indeterminate={
+            record.isGroup &&
+            !!record.children?.some((item) => item.actions.includes(action) && item.values[action]) &&
+            !record.values[action]
+          }
+          onChange={(e) =>
+            onTogglePermission(
+              record.isGroup ? (record.children ?? []).map((item) => item.key) : [record.key],
+              action,
+              e.target.checked
+            )
+          }
+        />
+      )
+    })
+  );
+
+  const columns: TableProps<PermissionTreeRow>["columns"] = [...baseColumns, ...actionColumns];
 
   const onClick: MenuProps["onClick"] = (e) => {
     setSelectedKey(e.key);
   };
 
   const onUpdate = () => {
-    if (!bodyData) return;
-    updateCustomerRoleMenu.mutate(bodyData, {
+    if (!selectedKey) return;
+
+    const payload = permissionMatrixToLegacyMenus(Number(selectedKey), bodyData, legacyMenuData);
+
+    updateCustomerRoleMenu.mutate(payload, {
       onSuccess: () => {
         message.success("Lưu thông tin quyền người dùng thành công");
       },
@@ -145,8 +300,6 @@ const UserRolesPage = () => {
               selectedKeys={selectedKey ? [selectedKey] : []}
               onClick={onClick}
               style={{ width: 256 }}
-              defaultSelectedKeys={["1"]}
-              defaultOpenKeys={["settings"]}
               mode="inline"
               items={items}
               className="h-full"
@@ -166,20 +319,23 @@ const UserRolesPage = () => {
                 </div>
                 <Table
                   rowKey="id"
-                  dataSource={bodyData || []}
+                  dataSource={treeData}
                   columns={columns}
                   bordered
                   size="small"
                   pagination={false}
                   loading={isFetchingMenu}
                   scroll={{ y: "calc(100vh - 265px)" }}
+                  expandable={{
+                    defaultExpandAllRows: true
+                  }}
                 />
               </Content>
             </Layout>
           </Layout>
         </div>
       </div>
-      <Spin spinning={isPending || updateCustomerRoleMenu.isPending} fullscreen />
+      <Spin spinning={isPending || isFetchingMenu || updateCustomerRoleMenu.isPending} fullscreen />
     </>
   );
 };
