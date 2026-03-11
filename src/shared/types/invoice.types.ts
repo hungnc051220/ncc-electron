@@ -16,6 +16,8 @@ export interface InvoiceProps {
   createdAt: string;
   updatedBy: string;
   updatedAt: string;
+  invoiceType: "personal" | "business";
+  contractCode?: string;
 }
 
 export enum InvoiceStatus {

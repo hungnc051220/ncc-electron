@@ -66,13 +66,19 @@ const InvoicesPage = () => {
       fixed: "left"
     },
     {
+      title: "Loại hóa đơn",
+      key: "invoiceType",
+      dataIndex: "invoiceType",
+      render: (value: string) => (value === "personal" ? "Cá nhân" : "Đơn vị")
+    },
+    {
       title: "Mã vé",
       key: "orderId",
       dataIndex: "orderId",
       fixed: "left"
     },
     {
-      title: "Bên A",
+      title: "Tên người mua/đơn vị",
       key: "partyA",
       dataIndex: "partyA"
     },
@@ -110,6 +116,11 @@ const InvoicesPage = () => {
       title: "Chức vụ",
       key: "position",
       dataIndex: "position"
+    },
+    {
+      title: "Hợp đồng số",
+      key: "contractCode",
+      dataIndex: "contractCode"
     },
     {
       title: "Trạng thái",

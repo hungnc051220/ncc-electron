@@ -12,3 +12,4 @@ export * from "./user.types";
 export * from "./socket.types";
 export * from "./chair.types";
 export * from "./invoice.types";
+export * from "./voucher.types";

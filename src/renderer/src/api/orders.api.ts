@@ -38,6 +38,13 @@ export interface OrderDto {
   discountId?: number;
   action?: string;
   memberCardCode?: string;
+  discountGroups?: DiscountGroup[];
+  voucherCode?: string;
+}
+
+export interface DiscountGroup {
+  discountId: number;
+  chairIndices: string[];
 }
 
 export interface CancelOrderDto {

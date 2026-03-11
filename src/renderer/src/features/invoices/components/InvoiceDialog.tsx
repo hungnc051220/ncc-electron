@@ -3,13 +3,12 @@ import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
 import { useUpdateInvoice } from "@renderer/hooks/invoices/useUpdateInvoice";
 import { ApiError, InvoiceProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, Input, message, Modal } from "antd";
+import { Form, Input, message, Modal, Select } from "antd";
 import axios from "axios";
 import { useEffect } from "react";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 
 type FieldType = {
-  orderId: number;
   partyA?: string;
   address?: string;
   taxCode?: string;
@@ -20,6 +19,8 @@ type FieldType = {
   position?: string;
   imageUrl?: string;
   note?: string;
+  contractCode?: string;
+  invoiceType: "personal" | "business";
 };
 
 interface InvoiceDialogProps {
@@ -39,6 +40,8 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
   const { data } = useInvoices({ current: 1, pageSize: 1, orderId }, { enabled: !!orderId });
   const invoiceData = data?.data[0];
 
+  const invoiceType = Form.useWatch("invoiceType", form);
+
   useEffect(() => {
     if (invoiceData) {
       form.setFieldsValue(invoiceData);
@@ -50,7 +53,9 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
 
   const getInitialValues = (): FieldType | undefined => {
     if (!editingItem) {
-      return undefined;
+      return {
+        invoiceType: "personal"
+      };
     }
 
     return { ...editingItem };
@@ -79,13 +84,13 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
     } else {
       const invoiceId = editingItem?.id ?? invoiceData?.id;
 
-      if (!invoiceId) {
+      if (!invoiceId || !orderId) {
         message.error("Không tìm thấy hóa đơn để cập nhật");
         return;
       }
 
       updateInvoice.mutate(
-        { id: invoiceId, dto: values },
+        { id: invoiceId, dto: { orderId, ...values } },
         {
           onSuccess: () => {
             message.success("Cập nhật hóa đơn điện tử thành công");
@@ -126,29 +131,54 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
           </div>
         )}
         <div className="grid grid-cols-2 gap-x-4">
-          <Form.Item<FieldType> name="partyA" label="Bên A">
-            <Input placeholder="Nhập bên A" />
+          <Form.Item<FieldType> name="invoiceType" label="Loại hóa đơn">
+            <Select
+              options={[
+                { value: "personal", label: "Cá nhân" },
+                { value: "business", label: "Đơn vị" }
+              ]}
+              placeholder="Chọn loại hóa đơn"
+            />
+          </Form.Item>
+          <Form.Item<FieldType>
+            name="partyA"
+            label={invoiceType === "personal" ? "Tên người mua" : "Tên đơn vị"}
+          >
+            <Input
+              placeholder={invoiceType === "personal" ? "Nhập tên người mua" : "Nhập tên đơn vị"}
+            />
           </Form.Item>
           <Form.Item<FieldType> name="address" label="Địa chỉ">
             <Input placeholder="Nhập địa chỉ" />
           </Form.Item>
-          <Form.Item<FieldType> name="taxCode" label="Mã số thuế">
-            <Input placeholder="Nhập mã số thuế" />
-          </Form.Item>
+          {invoiceType === "business" && (
+            <Form.Item<FieldType> name="taxCode" label="Mã số thuế">
+              <Input placeholder="Nhập mã số thuế" />
+            </Form.Item>
+          )}
           <Form.Item<FieldType> name="phoneNumber" label="Số điện thoại">
             <Input placeholder="Nhập số điện thoại" />
           </Form.Item>
           <Form.Item<FieldType> name="email" label="Email">
             <Input placeholder="Nhập email" />
           </Form.Item>
-          <Form.Item<FieldType> name="citizenId" label="Số căn cước công dân">
-            <Input placeholder="Nhập số căn cước công dân" />
-          </Form.Item>
-          <Form.Item<FieldType> name="representative" label="Đại diện">
-            <Input placeholder="Nhập dại diện" />
-          </Form.Item>
-          <Form.Item<FieldType> name="position" label="Chức vụ">
-            <Input placeholder="Nhập chức vụ" />
+          {invoiceType === "personal" && (
+            <Form.Item<FieldType> name="citizenId" label="Số căn cước công dân">
+              <Input placeholder="Nhập số căn cước công dân" />
+            </Form.Item>
+          )}
+          {invoiceType === "business" && (
+            <Form.Item<FieldType> name="representative" label="Đại diện">
+              <Input placeholder="Nhập dại diện" />
+            </Form.Item>
+          )}
+          {invoiceType === "business" && (
+            <Form.Item<FieldType> name="position" label="Chức vụ">
+              <Input placeholder="Nhập chức vụ" />
+            </Form.Item>
+          )}
+          <Form.Item<FieldType> name="contractCode" label="Hợp đồng số">
+            <Input placeholder="Nhập hợp đồng số" />
           </Form.Item>
         </div>
       </Form>

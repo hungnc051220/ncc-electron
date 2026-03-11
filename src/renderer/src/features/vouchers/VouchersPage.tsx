@@ -1,8 +1,9 @@
-import { useCancellationReasons } from "@renderer/hooks/cancellationReasons/useCancellationReasons";
+import { useVouchers } from "@renderer/hooks/vouchers/useVouchers";
 import { formatNumber } from "@renderer/lib/utils";
-import { CancellationReasonProps } from "@shared/types";
+import { BatchProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Table } from "antd";
+import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 
@@ -12,15 +13,21 @@ const VouchersPage = () => {
 
   const params = useMemo(
     () => ({
-      current,
-      pageSize
+      url: "/api/v1/Voucher/available-vouchers",
+      method: "POST",
+      data: {
+        pageIndex: current,
+        pageSize: pageSize,
+        movieVersion: 1,
+        salesChannel: 2
+      }
     }),
     [current, pageSize]
   );
 
-  const { data: cancellationReasons, isFetching } = useCancellationReasons(params);
+  const { data: vouchers, isFetching } = useVouchers(params);
 
-  const columns: TableProps<CancellationReasonProps>["columns"] = [
+  const columns: TableProps<BatchProps>["columns"] = [
     {
       title: "STT",
       key: "no",
@@ -35,49 +42,26 @@ const VouchersPage = () => {
       dataIndex: "batchName"
     },
     {
-      title: "Mã voucher",
-      key: "code",
-      dataIndex: "code"
-    },
-    {
-      title: "Mã pin",
-      key: "code",
-      dataIndex: "code"
-    },
-    {
-      title: "Hạng thẻ",
-      key: "code",
-      dataIndex: "code"
-    },
-    {
       title: "Giá trị",
-      key: "code",
-      dataIndex: "code"
+      key: "discountValue",
+      dataIndex: "discountValue"
     },
     {
-      title: "Giá trị tối thiểu",
-      key: "code",
-      dataIndex: "code"
+      title: "Loại",
+      key: "valueTypeName",
+      dataIndex: "valueTypeName"
     },
     {
-      title: "Lượt còn lại",
-      key: "code",
-      dataIndex: "code"
+      title: "Bắt đầu từ",
+      key: "startAt",
+      dataIndex: "startAt",
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
     },
     {
-      title: "Khách hàng",
-      key: "code",
-      dataIndex: "code"
-    },
-    {
-      title: "Ngày hết hạn",
-      key: "code",
-      dataIndex: "code"
-    },
-    {
-      title: "Trạng thái",
-      key: "code",
-      dataIndex: "code"
+      title: "Kết thúc",
+      key: "endAt",
+      dataIndex: "endAt",
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
     }
   ];
 
@@ -109,8 +93,8 @@ const VouchersPage = () => {
       </div>
 
       <Table
-        rowKey={(record) => record.id}
-        dataSource={[]}
+        rowKey={(record) => record.batchId}
+        dataSource={vouchers?.data?.items || []}
         columns={columns}
         bordered
         size="small"
@@ -119,7 +103,7 @@ const VouchersPage = () => {
         pagination={{
           current,
           onChange,
-          total: cancellationReasons?.total || 0,
+          total: vouchers?.data.totalItems || 0,
           size: "middle",
           pageSize,
           pageSizeOptions: [20, 50, 100],

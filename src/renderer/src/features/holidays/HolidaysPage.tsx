@@ -1,5 +1,5 @@
 import { MoreOutlined } from "@ant-design/icons";
-import { useHolidays } from "@renderer/hooks/holidays/useScreeningRooms";
+import { useHolidays } from "@renderer/hooks/holidays/useHolidays";
 import { formatNumber } from "@renderer/lib/utils";
 import { HolidayProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";

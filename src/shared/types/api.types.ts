@@ -11,3 +11,15 @@ export interface ApiError {
   statusCode: number;
   timestamp: string;
 }
+
+export interface MediasoftApiResponse<T> {
+  data: {
+    pageIndex: number;
+    totalPages: number;
+    totalItems: number;
+    pageSize: number;
+    items: T[];
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+}

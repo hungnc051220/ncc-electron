@@ -49,6 +49,54 @@ type FieldType = {
   cancelReasonId: number;
 };
 
+const getSeatDiscountKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
+
+const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
+  const floors = [1, 2, 3] as const;
+
+  return floors.reduce<
+    Pick<
+      OrderDto,
+      | "listChairIndexF1"
+      | "listChairValueF1"
+      | "listChairIndexF2"
+      | "listChairValueF2"
+      | "listChairIndexF3"
+      | "listChairValueF3"
+    >
+  >((acc, floor) => {
+    const seatsByFloor = selectedSeats.filter((seat) => seat.floor === floor);
+
+    if (seatsByFloor.length === 0) {
+      return acc;
+    }
+
+    const indexKey = `listChairIndexF${floor}` as
+      | "listChairIndexF1"
+      | "listChairIndexF2"
+      | "listChairIndexF3";
+    const valueKey = `listChairValueF${floor}` as
+      | "listChairValueF1"
+      | "listChairValueF2"
+      | "listChairValueF3";
+
+    acc[indexKey] = seatsByFloor.map((seat) => seat.seat).join(",");
+    acc[valueKey] = seatsByFloor.map((seat) => seat.code).join(",");
+
+    return acc;
+  }, {});
+};
+
+const calculateSeatDiscount = (seat: ListSeat, discount?: DiscountProps) => {
+  if (!discount) return 0;
+
+  if (discount.discountRate) {
+    return (seat.price * discount.discountRate) / 100;
+  }
+
+  return discount.discountAmount || 0;
+};
+
 interface ActionsProps {
   data: PlanScreeningDetailProps;
   planScreenId: number;
@@ -74,7 +122,9 @@ const Actions = ({
   const queryClient = useQueryClient();
   const [vipCard, setVipCard] = useState(false);
   const [openDiscount, setOpenDiscount] = useState(false);
-  const [selectedDiscount, setSelectedDiscount] = useState<DiscountProps | undefined>(undefined);
+  const [selectedDiscountGroups, setSelectedDiscountGroups] = useState<
+    Record<string, number | undefined>
+  >({});
   const [paymentMethod, setPaymentMethod] = useState<string[]>([]);
   const [openQrDialog, setOpenQrDialog] = useState(false);
   const [openVipCardDialog, setOpenVipCardDialog] = useState(false);
@@ -87,6 +137,10 @@ const Actions = ({
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
   const { data: discounts } = useDiscounts({ current: 1, pageSize: 20 });
+  const discountsById = useMemo(
+    () => new Map((discounts?.data || []).map((discount) => [discount.id, discount])),
+    [discounts]
+  );
 
   const {
     data: cancellationReasons,
@@ -150,6 +204,7 @@ const Actions = ({
       message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
       handlePrint(Number(data.orderId));
       setSelectedSeats([]);
+      setSelectedDiscountGroups({});
       queryClient.invalidateQueries({
         queryKey: planScreeningsKeys.getDetail(planScreenId)
       });
@@ -165,7 +220,48 @@ const Actions = ({
     [selectedSeats]
   );
 
-  const onBooking = (memberCardCode?: string) => {
+  useEffect(() => {
+    const allowedKeys = new Set(selectedSeats.map((seat) => getSeatDiscountKey(seat)));
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedDiscountGroups((prev) => {
+      const nextEntries = Object.entries(prev).filter(
+        ([key, discountId]) => allowedKeys.has(key) && discountId
+      );
+
+      if (nextEntries.length === Object.keys(prev).length) {
+        return prev;
+      }
+
+      return Object.fromEntries(nextEntries);
+    });
+  }, [selectedSeats]);
+
+  const discountGroupsPayload = useMemo(() => {
+    if (selectedSeats.length === 0) return undefined;
+
+    const grouped = new Map<number, string[]>();
+
+    selectedSeats.forEach((seat) => {
+      const seatKey = getSeatDiscountKey(seat);
+      const discountId = selectedDiscountGroups[seatKey];
+
+      if (!discountId) return;
+
+      const current = grouped.get(discountId) || [];
+      current.push(seat.seat);
+      grouped.set(discountId, current);
+    });
+
+    if (grouped.size === 0) return undefined;
+
+    return Array.from(grouped.entries()).map(([discountId, chairIndices]) => ({
+      discountId,
+      chairIndices
+    }));
+  }, [selectedDiscountGroups, selectedSeats]);
+
+  const onBooking = (params?: { memberCardCode?: string; voucherCode?: string }) => {
     if (!posName || !posShortName) return;
     const floorNo = selectedSeats[0]?.floor || 1;
 
@@ -175,21 +271,12 @@ const Actions = ({
       paymentMethodSystemName: paymentMethod.length > 0 ? paymentMethod[0] : "POS",
       posName,
       posShortName,
-      discountId: selectedDiscount?.id,
       isInvitation: false,
-      memberCardCode
+      memberCardCode: params?.memberCardCode,
+      voucherCode: params?.voucherCode,
+      discountGroups: discountGroupsPayload,
+      ...buildSeatFieldsByFloor(selectedSeats)
     };
-
-    if (floorNo === 1) {
-      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 2) {
-      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 3) {
-      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
-    }
 
     createOrder.mutate(body, {
       onSuccess: async (order: OrderResponseProps) => {
@@ -228,6 +315,7 @@ const Actions = ({
         sessionStorage.setItem("lastTotal", order.orderTotal.toString());
         message.success("Tạo đơn thành công");
         setSelectedSeats([]);
+        setSelectedDiscountGroups({});
         queryClient.invalidateQueries({
           queryKey: planScreeningsKeys.getDetail(planScreenId)
         });
@@ -261,26 +349,17 @@ const Actions = ({
       paymentMethodSystemName: paymentMethod.length > 0 ? paymentMethod[0] : "POS",
       posName,
       posShortName,
-      discountId: selectedDiscount?.id,
       isInvitation: false,
-      action: "RESERVE_SEAT"
+      action: "RESERVE_SEAT",
+      discountGroups: discountGroupsPayload,
+      ...buildSeatFieldsByFloor(selectedSeats)
     };
-
-    if (floorNo === 1) {
-      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 2) {
-      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 3) {
-      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
-    }
 
     createOrder.mutate(body, {
       onSuccess: async () => {
         message.success("Giữ chỗ thành công");
         setSelectedSeats([]);
+        setSelectedDiscountGroups({});
         queryClient.invalidateQueries({
           queryKey: planScreeningsKeys.getDetail(planScreenId)
         });
@@ -299,17 +378,14 @@ const Actions = ({
   };
 
   const priceDiscount = useMemo(() => {
-    if (!selectedDiscount || selectedSeats.length === 0) return 0;
-    if (selectedDiscount.discountRate) {
-      return selectedSeats.reduce((total, seat) => {
-        return total + (seat.price * selectedDiscount.discountRate) / 100;
-      }, 0);
-    }
+    return selectedSeats.reduce((total, seat) => {
+      const seatKey = getSeatDiscountKey(seat);
+      const discountId = selectedDiscountGroups[seatKey];
+      const discount = discountId ? discountsById.get(discountId) : undefined;
 
-    return selectedSeats.reduce((total) => {
-      return total + (selectedDiscount.discountAmount || 0);
+      return total + calculateSeatDiscount(seat, discount);
     }, 0);
-  }, [selectedDiscount, selectedSeats]);
+  }, [discountsById, selectedDiscountGroups, selectedSeats]);
 
   const items: DescriptionsProps["items"] = [
     {
@@ -331,7 +407,9 @@ const Actions = ({
             onClick={() => setOpenDiscount(true)}
             className="text-right flex-1 font-bold cursor-pointer"
           >
-            {formatMoney(priceDiscount)}
+            {priceDiscount > 0 || Object.keys(selectedDiscountGroups).length > 0
+              ? formatMoney(priceDiscount)
+              : "Chọn giảm giá"}
           </p>
         </div>
       )
@@ -384,24 +462,12 @@ const Actions = ({
   };
 
   const onCancelSeats = (cancelReasonId?: number) => {
-    const floorNo = selectedSeats[0]?.floor || 1;
-
     const body: CancelOrderDto = {
       planScreenId,
       cancelReasonId: cancelReasonId || 1,
-      isRefund: true
+      isRefund: true,
+      ...buildSeatFieldsByFloor(selectedSeats)
     };
-
-    if (floorNo === 1) {
-      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 2) {
-      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 3) {
-      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
-    }
 
     cancelOrder.mutate(body, {
       onSuccess: () => {
@@ -578,8 +644,10 @@ const Actions = ({
       <DiscountPopup
         data={discounts?.data}
         openDiscount={openDiscount}
+        selectedSeats={selectedSeats}
+        value={selectedDiscountGroups}
         setOpenDiscount={setOpenDiscount}
-        setSelectedDiscount={setSelectedDiscount}
+        onChange={setSelectedDiscountGroups}
       />
 
       {openQrDialog && qrData && (
@@ -598,8 +666,10 @@ const Actions = ({
         <VipCardDialog
           open={openVipCardDialog}
           onCancel={() => setOpenVipCardDialog(false)}
-          totalPrice={totalPrice}
+          totalPrice={totalPrice - priceDiscount}
           onBooking={onBooking}
+          planScreenId={planScreenId}
+          selectedSeats={selectedSeats}
         />
       )}
 

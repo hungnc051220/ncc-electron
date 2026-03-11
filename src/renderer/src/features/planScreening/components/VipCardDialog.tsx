@@ -1,22 +1,69 @@
 import { useCustomer } from "@renderer/hooks/useCustomer";
+import { useAvailableVouchersForPos } from "@renderer/hooks/vouchers/useAvailableVouchersForPos";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { BatchProps, ListSeat } from "@shared/types";
 import type { DescriptionsProps } from "antd";
-import { Button, Checkbox, Descriptions, Input, message, Modal, Space } from "antd";
+import { Button, Radio, Descriptions, Input, message, Modal, Space, Table } from "antd";
 import { InputStatus } from "antd/es/_util/statusUtils";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { TableProps } from "antd";
 
 interface VipCardDialogProps {
   open: boolean;
   onCancel: () => void;
   totalPrice?: number;
-  onBooking: (memberCardCode: string) => void;
+  onBooking: (params?: { memberCardCode?: string; voucherCode?: string }) => void;
+  planScreenId: number;
+  selectedSeats: ListSeat[];
 }
 
-const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogProps) => {
+const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
+  const floors = [1, 2, 3] as const;
+
+  return floors.reduce<{
+    listChairIndexF1?: string;
+    listChairValueF1?: string;
+    listChairIndexF2?: string;
+    listChairValueF2?: string;
+    listChairIndexF3?: string;
+    listChairValueF3?: string;
+  }>((acc, floor) => {
+    const seatsByFloor = selectedSeats.filter((seat) => seat.floor === floor);
+
+    if (seatsByFloor.length === 0) {
+      return acc;
+    }
+
+    const indexKey = `listChairIndexF${floor}` as
+      | "listChairIndexF1"
+      | "listChairIndexF2"
+      | "listChairIndexF3";
+    const valueKey = `listChairValueF${floor}` as
+      | "listChairValueF1"
+      | "listChairValueF2"
+      | "listChairValueF3";
+
+    acc[indexKey] = seatsByFloor.map((seat) => seat.seat).join(",");
+    acc[valueKey] = seatsByFloor.map((seat) => seat.code).join(",");
+
+    return acc;
+  }, {});
+};
+
+const VipCardDialog = ({
+  open,
+  onCancel,
+  totalPrice,
+  onBooking,
+  planScreenId,
+  selectedSeats
+}: VipCardDialogProps) => {
   const [searchText, setSearchText] = useState<string | undefined>(undefined);
   const [lastSearched, setLastSearched] = useState<string | null>(null);
   const [status, setStatus] = useState<InputStatus>("");
+  const [voucherType, setVoucherType] = useState<"campaign" | "u22">("campaign");
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
 
   const { data, isFetching, refetch } = useCustomer({
     current: 1,
@@ -29,6 +76,8 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
 
     return data.data[0];
   }, [data]);
+
+  const seatFields = useMemo(() => buildSeatFieldsByFloor(selectedSeats), [selectedSeats]);
 
   const items: DescriptionsProps["items"] = [
     {
@@ -62,6 +111,85 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
     }
   ];
 
+  const { data: vouchers, isFetching: isFetchingVouchers } = useAvailableVouchersForPos(
+    {
+      customerId: customer?.id || 0,
+      planScreenId,
+      ...seatFields
+    },
+    Boolean(customer?.id)
+  );
+
+  const isU22Member = customer?.currentCardId === 12;
+  const voucherItems = vouchers?.items || [];
+
+  useEffect(() => {
+    if (!isU22Member && voucherType === "u22") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVoucherType("campaign");
+    }
+  }, [isU22Member, voucherType]);
+
+  useEffect(() => {
+    const defaultBatchId = voucherItems.find((item) => item.vouchers?.length > 0)?.batchId ?? null;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedBatchId((current) => {
+      if (
+        current &&
+        voucherItems.some((item) => item.batchId === current && item.vouchers?.length > 0)
+      ) {
+        return current;
+      }
+
+      return defaultBatchId;
+    });
+  }, [voucherItems]);
+
+  const selectedVoucherCode = useMemo(() => {
+    if (!selectedBatchId) return undefined;
+
+    return voucherItems.find((item) => item.batchId === selectedBatchId)?.vouchers?.[0]?.code;
+  }, [selectedBatchId, voucherItems]);
+
+  const columns: TableProps<BatchProps>["columns"] = [
+    {
+      title: "STT",
+      key: "no",
+      align: "center",
+      render: (_, __, index) => index + 1,
+      width: 50,
+      fixed: "left"
+    },
+    {
+      title: "Chiến dịch voucher",
+      key: "batchName",
+      dataIndex: "batchName"
+    },
+    {
+      title: "Giá trị",
+      key: "discountValue",
+      dataIndex: "discountValue"
+    },
+    {
+      title: "Loại",
+      key: "valueTypeName",
+      dataIndex: "valueTypeName"
+    },
+    {
+      title: "Bắt đầu từ",
+      key: "startAt",
+      dataIndex: "startAt",
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
+    },
+    {
+      title: "Kết thúc",
+      key: "endAt",
+      dataIndex: "endAt",
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
+    }
+  ];
+
   const onConfirm = () => {
     if (!searchText) {
       message.error("Bạn chưa nhập số thẻ");
@@ -69,7 +197,15 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
       return;
     }
 
-    onBooking(searchText);
+    if (voucherType === "campaign" && !selectedVoucherCode) {
+      message.error("Chưa chọn voucher áp dụng");
+      return;
+    }
+
+    onBooking({
+      memberCardCode: searchText,
+      voucherCode: voucherType === "u22" ? "U22Ticket" : selectedVoucherCode
+    });
     onCancel();
   };
 
@@ -96,6 +232,8 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
         setStatus("error");
         return;
       }
+
+      setStatus("");
     } catch {
       message.error("Có lỗi xảy ra khi tìm kiếm");
     }
@@ -132,10 +270,49 @@ const VipCardDialog = ({ open, onCancel, totalPrice, onBooking }: VipCardDialogP
 
         <Descriptions bordered items={items} column={2} />
 
-        <div className="flex items-center justify-center">
-          <Checkbox className="flex-1">Áp dụng chương trình khuyến mãi</Checkbox>
-          <Checkbox className="flex-1">Áp dụng ưu đãi cho thành viên U22</Checkbox>
-        </div>
+        <Radio.Group
+          value={voucherType}
+          onChange={(e) => setVoucherType(e.target.value)}
+          className="flex flex-col gap-2"
+        >
+          <Radio value="campaign">Áp dụng chương trình khuyến mãi</Radio>
+          <Radio value="u22" disabled={!isU22Member}>
+            Áp dụng ưu đãi cho thành viên U22
+          </Radio>
+        </Radio.Group>
+
+        {voucherType === "campaign" && (
+          <Table
+            rowKey={(record) => record.batchId}
+            dataSource={voucherItems}
+            columns={columns}
+            bordered
+            size="small"
+            scroll={{ x: "max-content", y: 400 }}
+            loading={isFetching || isFetchingVouchers}
+            pagination={false}
+            rowSelection={{
+              type: "radio",
+              selectedRowKeys: selectedBatchId ? [selectedBatchId] : [],
+              getCheckboxProps: (record) => ({
+                disabled: !record.vouchers?.length
+              }),
+              onChange: (selectedRowKeys) => {
+                const nextKey = selectedRowKeys[0];
+                setSelectedBatchId(typeof nextKey === "number" ? nextKey : null);
+              }
+            }}
+            onRow={(record) => ({
+              onClick: () => {
+                if (!record.vouchers?.length) return;
+                setSelectedBatchId(record.batchId);
+              }
+            })}
+            rowClassName={(record) =>
+              record.vouchers?.length ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+            }
+          />
+        )}
 
         <div className="bg-gray-100 dark:bg-app-bg-container p-4 rounded-md">
           <div className="grid grid-cols-2 gap-10">
