@@ -8,6 +8,7 @@ import Dashboard from "./features/Dashboard";
 import DiscountSettingsPage from "./features/discountSettings/DiscountSettingsPage";
 import FilmsPage from "./features/films/FilmsPage";
 import FindOnlineTicketsPage from "./features/findOnlineTickets/FindOnlineTicketsPage";
+import ForbiddenPage from "./features/ForbiddenPage";
 import HolidaysPage from "./features/holidays/HolidaysPage";
 import InvitationTicketsDetailPage from "./features/invitationTickets/InvitationTicketsDetailPage";
 import InvitationTicketsPage from "./features/invitationTickets/InvitationTicketsPage";
@@ -43,7 +44,9 @@ import VouchersPage from "./features/vouchers/VouchersPage";
 import PermissionGuard from "./permissions/PermissionGuard";
 
 const withAccess = (permissionKey: string, element: React.ReactNode) => (
-  <PermissionGuard permissionKey={permissionKey}>{element}</PermissionGuard>
+  <PermissionGuard permissionKey={permissionKey} fallbackPath="/403">
+    {element}
+  </PermissionGuard>
 );
 
 export const router = createHashRouter([
@@ -61,6 +64,10 @@ export const router = createHashRouter([
           {
             index: true,
             element: <Dashboard />
+          },
+          {
+            path: "/403",
+            element: <ForbiddenPage />
           },
           {
             path: "/users",

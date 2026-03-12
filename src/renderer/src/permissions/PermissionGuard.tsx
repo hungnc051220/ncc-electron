@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { PermissionAction } from "@shared/types";
 import { Navigate } from "react-router";
-import { usePermissionStore } from "@renderer/store/permission.store";
+import { useLocation } from "react-router";
+import { usePermission } from "./usePermission";
 
 type PermissionGuardProps = {
   permissionKey: string;
@@ -16,10 +17,14 @@ const PermissionGuard = ({
   fallbackPath = "/",
   children
 }: PermissionGuardProps) => {
-  const can = usePermissionStore((state) => state.can(permissionKey, action));
+  const { can } = usePermission();
+  const location = useLocation();
+  const allowed = can(permissionKey, action);
 
-  if (!can) {
-    return <Navigate to={fallbackPath} replace />;
+  if (!allowed) {
+    return (
+      <Navigate to={fallbackPath} replace state={{ from: location.pathname + location.search }} />
+    );
   }
 
   return <>{children}</>;

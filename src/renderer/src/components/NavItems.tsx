@@ -3,7 +3,7 @@ import type { MenuProps } from "antd";
 import { Menu } from "antd";
 import { useState } from "react";
 import { useUpdater } from "./UpdaterContext";
-import { usePermissionStore } from "@renderer/store/permission.store";
+import { usePermission } from "@renderer/permissions/usePermission";
 
 type MenuItem = Required<MenuProps>["items"][number];
 type NavConfig = {
@@ -17,7 +17,7 @@ type NavConfig = {
 const NavItems = () => {
   const { manualCheck } = useUpdater();
   const [current, setCurrent] = useState("");
-  const can = usePermissionStore((state) => state.can);
+  const { can } = usePermission();
 
   const navConfig: NavConfig[] = [
     {
