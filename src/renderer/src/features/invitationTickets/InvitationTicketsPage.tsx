@@ -1,19 +1,18 @@
 "use client";
 
 import { MoreOutlined } from "@ant-design/icons";
-import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import type { PaginationProps, TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import Filter from "./components/Filter";
-import PrintInvitationTicketDialog from "./components/PrintInvitationTicketDialog";
 import { useNavigate } from "react-router";
 import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
+import Filter from "./components/Filter";
+import PrintInvitationTicketDialog from "./components/PrintInvitationTicketDialog";
 
 const actionItems = [
   { key: "1", label: "Xem chi tiết" },
@@ -54,7 +53,6 @@ const InvitationTicketsPage = () => {
   }, [current, pageSize, filterValues]);
 
   const { data: invitationTickets, isFetching } = useOrders(params);
-  const { data: backgrounds, isFetching: isFetchingBackgrounds } = useInvitationTicketBackgrounds();
 
   const handleViewShowtimes = () => {
     navigate(`/showtimes?callbackUrl=/invitation-tickets&id=create`);
@@ -287,8 +285,6 @@ const InvitationTicketsPage = () => {
         <PrintInvitationTicketDialog
           open={dialogPrintOpen}
           onOpenChange={handleDialogPrintClose}
-          backgrounds={backgrounds || []}
-          isFetchingBackgrounds={isFetchingBackgrounds}
           selectedItem={selectedItem}
         />
       )}

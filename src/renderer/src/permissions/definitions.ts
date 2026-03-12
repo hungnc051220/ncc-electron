@@ -254,4 +254,11 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   }
 ];
 
-export const DEFAULT_PERMISSION_ACTIONS: PermissionAction[] = ["access", "list", "view", "create", "update", "delete"];
+export const DEFAULT_PERMISSION_ACTIONS: PermissionAction[] = [
+  "access",
+  "list",
+  "view",
+  "create",
+  "update",
+  "delete"
+];

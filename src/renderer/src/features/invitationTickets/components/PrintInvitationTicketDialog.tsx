@@ -1,8 +1,9 @@
 "use client";
 
 import { useCreateInvitationTicket } from "@renderer/hooks/invitationTickets/useCreateInvitationTicket";
+import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
-import { ApiError, BackgroundProps, OrderDetailProps } from "@shared/types";
+import { ApiError, OrderDetailProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Checkbox, Form, Input, message, Modal, Select, Space } from "antd";
 import axios from "axios";
@@ -42,25 +43,23 @@ interface FieldType {
 interface PrintInvitationTicketDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  backgrounds: BackgroundProps[];
   selectedItem?: OrderDetailProps | null;
-  isFetchingBackgrounds: boolean;
 }
 
 const PrintInvitationTicketDialog = ({
   open,
   onOpenChange,
-  backgrounds,
-  selectedItem,
-  isFetchingBackgrounds
+  selectedItem
 }: PrintInvitationTicketDialogProps) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const uploadImage = useUploadImage();
+  const { data: backgrounds, isFetching: isFetchingBackgrounds } = useInvitationTicketBackgrounds();
   const createInvitationTicket = useCreateInvitationTicket();
 
   useEffect(() => {
-    if (backgrounds.length > 0) form.setFieldValue("background", backgrounds[0].urlImage);
+    if (backgrounds && backgrounds.length > 0)
+      form.setFieldValue("background", backgrounds[0].urlImage);
   }, [backgrounds, form]);
 
   useEffect(() => {
@@ -131,7 +130,7 @@ const PrintInvitationTicketDialog = ({
         floor: selectedItem.room.floor,
         categories:
           selectedItem.film?.categories?.map((category) => category.name).join(", ") || "",
-        countryName: selectedItem.film.country.name
+        countryName: selectedItem.film?.country?.name
       });
       setLoading(false);
       return outputPath;
@@ -216,6 +215,7 @@ const PrintInvitationTicketDialog = ({
         </Form>
       )}
       width={1000}
+      centered
     >
       <div className="grid grid-cols-2 gap-x-4">
         <Form.Item
@@ -224,7 +224,7 @@ const PrintInvitationTicketDialog = ({
           rules={[{ required: true, message: "Chọn mẫu ảnh nền" }]}
         >
           <Select
-            options={backgrounds.map((background) => ({
+            options={backgrounds?.map((background) => ({
               value: background.urlImage,
               label: background.name
             }))}
@@ -263,16 +263,17 @@ const PrintInvitationTicketDialog = ({
         >
           <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
+        <Form.Item name="note" label="Ghi chú" className="col-span-2">
+          <Input.TextArea rows={5} placeholder="Nhập ghi chú" />
+        </Form.Item>
         {image ? (
-          <div className="mt-5">
-            <img
-              src={image}
-              alt="preview"
-              width={500}
-              height={254}
-              className="w-125 h-63.5 object-contain rounded-md"
-            />
-          </div>
+          <img
+            src={image}
+            alt="preview"
+            width={500}
+            height={254}
+            className="w-125 h-63.5 object-contain rounded-md"
+          />
         ) : (
           <div className="w-full h-63.5 bg-app-bg-container mt-5 rounded-md" />
         )}

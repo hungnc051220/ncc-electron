@@ -1,5 +1,5 @@
 import { SetSeatsContractTicketSaleDto } from "@renderer/api/contractTicketSales.api";
-import { CancelOrderDto, ordersApi } from "@renderer/api/orders.api";
+import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
 import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
 import { useSetSeatsContractTicketSale } from "@renderer/hooks/contractTicketSales/useSetSeatsContractTicketSale";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
@@ -16,6 +16,42 @@ import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message } from "antd";
 import axios from "axios";
 import { Dispatch, SetStateAction, useCallback, useMemo } from "react";
+
+const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
+  const floors = [1, 2, 3] as const;
+
+  return floors.reduce<
+    Pick<
+      OrderDto,
+      | "listChairIndexF1"
+      | "listChairValueF1"
+      | "listChairIndexF2"
+      | "listChairValueF2"
+      | "listChairIndexF3"
+      | "listChairValueF3"
+    >
+  >((acc, floor) => {
+    const seatsByFloor = selectedSeats.filter((seat) => seat.floor === floor);
+
+    if (seatsByFloor.length === 0) {
+      return acc;
+    }
+
+    const indexKey = `listChairIndexF${floor}` as
+      | "listChairIndexF1"
+      | "listChairIndexF2"
+      | "listChairIndexF3";
+    const valueKey = `listChairValueF${floor}` as
+      | "listChairValueF1"
+      | "listChairValueF2"
+      | "listChairValueF3";
+
+    acc[indexKey] = seatsByFloor.map((seat) => seat.seat).join(",");
+    acc[valueKey] = seatsByFloor.map((seat) => seat.code).join(",");
+
+    return acc;
+  }, {});
+};
 
 interface ActionsProps {
   contractOrderId: number;
@@ -97,19 +133,10 @@ const Actions = ({
     const body: SetSeatsContractTicketSaleDto = {
       planScreenId: planScreeningId,
       floorNo,
-      operation: 1
+      operation: 1,
+      ...buildSeatFieldsByFloor(selectedSeats)
     };
 
-    if (floorNo === 1) {
-      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 2) {
-      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 3) {
-      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
-    }
     setSeatsContractTicketSale.mutate(
       { id: contractOrderId, dto: body },
       {
@@ -137,26 +164,14 @@ const Actions = ({
   };
 
   const onCancelSeats = () => {
-    const floorNo = selectedSeats[0]?.floor || 1;
-
     const body: CancelOrderDto = {
       planScreenId: planScreeningId,
       cancelReasonId: 0,
       notes: "Huỷ vé hợp đồng",
       isRefund: true,
-      cancelReasonMsg: "Huỷ vé hợp đồng"
+      cancelReasonMsg: "Huỷ vé hợp đồng",
+      ...buildSeatFieldsByFloor(selectedSeats)
     };
-
-    if (floorNo === 1) {
-      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 2) {
-      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 3) {
-      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
-    }
 
     cancelOrder.mutate(body, {
       onSuccess: () => {

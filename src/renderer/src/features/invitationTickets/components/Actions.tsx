@@ -1,4 +1,4 @@
-import { CancelOrderDto, OrderDto } from "@renderer/api/orders.api";
+import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
@@ -7,12 +7,49 @@ import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney } from "@renderer/lib/utils";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ApiError, ListSeat } from "@shared/types";
+import { ApiError, ListSeat, OrderDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message } from "antd";
 import axios from "axios";
-import { Dispatch, SetStateAction, useMemo } from "react";
+import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
+import PrintInvitationTicketDialog from "./PrintInvitationTicketDialog";
+
+const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
+  const floors = [1, 2, 3] as const;
+
+  return floors.reduce<
+    Pick<
+      OrderDto,
+      | "listChairIndexF1"
+      | "listChairValueF1"
+      | "listChairIndexF2"
+      | "listChairValueF2"
+      | "listChairIndexF3"
+      | "listChairValueF3"
+    >
+  >((acc, floor) => {
+    const seatsByFloor = selectedSeats.filter((seat) => seat.floor === floor);
+
+    if (seatsByFloor.length === 0) {
+      return acc;
+    }
+
+    const indexKey = `listChairIndexF${floor}` as
+      | "listChairIndexF1"
+      | "listChairIndexF2"
+      | "listChairIndexF3";
+    const valueKey = `listChairValueF${floor}` as
+      | "listChairValueF1"
+      | "listChairValueF2"
+      | "listChairValueF3";
+
+    acc[indexKey] = seatsByFloor.map((seat) => seat.seat).join(",");
+    acc[valueKey] = seatsByFloor.map((seat) => seat.code).join(",");
+
+    return acc;
+  }, {});
+};
 
 interface ActionsProps {
   planScreeningId: number;
@@ -25,6 +62,16 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
   const { posName, posShortName } = useSettingPosStore();
+
+  const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
+
+  const handleDialogPrintClose = useCallback((open: boolean) => {
+    setDialogPrintOpen(open);
+    if (!open) {
+      setSelectedItem(null);
+    }
+  }, []);
 
   const createOrder = useCreateOrder();
   const cancelOrder = useCancelOrder();
@@ -71,22 +118,21 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
       isInvitation: true,
       paymentMethodSystemName: "POS",
       posName,
-      posShortName
+      posShortName,
+      ...buildSeatFieldsByFloor(selectedSeats)
     };
 
-    if (floorNo === 1) {
-      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 2) {
-      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 3) {
-      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
-    }
     createOrder.mutate(body, {
-      onSuccess: async () => {
+      onSuccess: async (data) => {
+        const { id } = data;
         message.success("Tạo vé mời thành công");
+        try {
+          const res = await ordersApi.getDetail(id);
+          setSelectedItem(res);
+          setDialogPrintOpen(true);
+        } catch (error) {
+          console.log(error);
+        }
         setSelectedSeats([]);
         queryClient.invalidateQueries({
           queryKey: planScreeningsKeys.getDetail(planScreeningId)
@@ -108,26 +154,14 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   };
 
   const onCancelSeats = () => {
-    const floorNo = selectedSeats[0]?.floor || 1;
-
     const body: CancelOrderDto = {
       planScreenId: planScreeningId,
       cancelReasonId: 0,
       notes: "Huỷ đơn",
       isRefund: true,
-      cancelReasonMsg: "Huỷ đơn"
+      cancelReasonMsg: "Huỷ đơn",
+      ...buildSeatFieldsByFloor(selectedSeats)
     };
-
-    if (floorNo === 1) {
-      body.listChairIndexF1 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF1 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 2) {
-      body.listChairIndexF2 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF2 = selectedSeats.map((item) => item.code).join(",");
-    } else if (floorNo === 3) {
-      body.listChairIndexF3 = selectedSeats.map((item) => item.seat).join(",");
-      body.listChairValueF3 = selectedSeats.map((item) => item.code).join(",");
-    }
 
     cancelOrder.mutate(body, {
       onSuccess: () => {
@@ -175,6 +209,14 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
           </Button>
         </div>
       </div>
+
+      {dialogPrintOpen && selectedItem && (
+        <PrintInvitationTicketDialog
+          open={dialogPrintOpen}
+          onOpenChange={handleDialogPrintClose}
+          selectedItem={selectedItem}
+        />
+      )}
     </div>
   );
 };

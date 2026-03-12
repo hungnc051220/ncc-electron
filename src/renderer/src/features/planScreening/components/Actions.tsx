@@ -21,7 +21,6 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
 import { Button, Checkbox, Descriptions, Form, message, Modal, Select } from "antd";
 import axios from "axios";
-
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
@@ -223,7 +222,6 @@ const Actions = ({
   useEffect(() => {
     const allowedKeys = new Set(selectedSeats.map((seat) => getSeatDiscountKey(seat)));
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedDiscountGroups((prev) => {
       const nextEntries = Object.entries(prev).filter(
         ([key, discountId]) => allowedKeys.has(key) && discountId

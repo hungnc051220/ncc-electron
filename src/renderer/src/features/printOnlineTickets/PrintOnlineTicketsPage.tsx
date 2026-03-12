@@ -1,20 +1,22 @@
+import { MoreOutlined } from "@ant-design/icons";
 import { useMarkPrintedOrder } from "@renderer/hooks/orders/useMarkPrintedOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
+import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { buildTicketsFromOrder, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, message, Table } from "antd";
+import { Breadcrumb, Dropdown, message, Table } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
+import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
 import Filter from "./components/Filter";
-import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
-import { useAuthStore } from "@renderer/store/auth.store";
-import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
-import { useSettingPosStore } from "@renderer/store/settingPos.store";
 
 export interface ValuesProps {
   id?: string;
@@ -28,6 +30,9 @@ const PrintOnlineTicketsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [dialogViewDetailOpen, setDialogViewDetailOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
+
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
   const { posShortName } = useSettingPosStore();
   const userId = useAuthStore((s) => s.userId);
@@ -104,6 +109,18 @@ const PrintOnlineTicketsPage = () => {
     );
   };
 
+  const handeViewDetail = useCallback((item: OrderDetailProps) => {
+    setSelectedItem(item);
+    setDialogViewDetailOpen(true);
+  }, []);
+
+  const handleDialogViewDetailClose = useCallback((open: boolean) => {
+    setDialogViewDetailOpen(open);
+    if (!open) {
+      setSelectedItem(null);
+    }
+  }, []);
+
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
       title: "STT",
@@ -147,6 +164,12 @@ const PrintOnlineTicketsPage = () => {
       render: (planScreening) => dayjs(planScreening?.projectTime).format("HH:mm")
     },
     {
+      title: "Phòng chiếu",
+      key: "roomName",
+      dataIndex: "room",
+      render: (room) => room?.name
+    },
+    {
       title: "Số lượng vé",
       key: "numberOfTickets",
       dataIndex: "order",
@@ -178,19 +201,30 @@ const PrintOnlineTicketsPage = () => {
     {
       title: "",
       key: "operation",
-      width: 80,
+      width: 50,
       render: (_, record) => {
         const isPrinted = record.order.printedOnUtc;
-        return isPrinted ? (
-          <Button type="link" onClick={() => onUnmarkPrinted(record)}>
-            Cho phép in lại vé
-          </Button>
-        ) : (
-          <Button type="link" onClick={() => onPrint(record)}>
-            In vé
-          </Button>
+
+        return (
+          <Dropdown
+            menu={{
+              items: [
+                { key: "1", label: "Xem chi tiết", onClick: () => handeViewDetail(record) },
+                {
+                  key: "2",
+                  label: isPrinted ? "Cho phép in lại vé" : "In vé",
+                  onClick: () => (isPrinted ? onUnmarkPrinted(record) : onPrint(record))
+                }
+              ]
+            }}
+            arrow
+            trigger={["click"]}
+          >
+            <MoreOutlined />
+          </Dropdown>
         );
       },
+      align: "center",
       fixed: "right"
     }
   ];
@@ -247,6 +281,14 @@ const PrintOnlineTicketsPage = () => {
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
         }}
       />
+
+      {dialogViewDetailOpen && selectedItem && (
+        <OrderHistoryDialog
+          open={dialogViewDetailOpen}
+          onOpenChange={handleDialogViewDetailClose}
+          selectedItem={selectedItem}
+        />
+      )}
     </div>
   );
 };

@@ -44,7 +44,7 @@ const PermissionBootstrap = ({ children }: PermissionBootstrapProps) => {
 
     const menuGroups = Array.isArray(roleMenus?.[0])
       ? (roleMenus as CustomerRoleMenuProps[][])
-      : [((roleMenus ?? []) as CustomerRoleMenuProps[])];
+      : [(roleMenus ?? []) as CustomerRoleMenuProps[]];
     const mergedAssignments = mergePermissionAssignments(
       menuGroups.map((group) => legacyMenusToAssignments(group))
     );

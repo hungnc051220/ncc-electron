@@ -88,12 +88,15 @@ const getRowToggleState = (row: PermissionTreeRow) => {
   return { checked, indeterminate };
 };
 
-const normalizeLegacyMenu = (menu: CustomerRoleMenuProps[] | CustomerRoleMenuProps[][] | undefined) =>
-  Array.isArray(menu?.[0]) ? [] : ((menu ?? []) as CustomerRoleMenuProps[]);
+const normalizeLegacyMenu = (
+  menu: CustomerRoleMenuProps[] | CustomerRoleMenuProps[][] | undefined
+) => (Array.isArray(menu?.[0]) ? [] : ((menu ?? []) as CustomerRoleMenuProps[]));
 
 const UserRolesPage = () => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [legacyMenuData, setLegacyMenuData] = useState<CustomerRoleMenuProps[] | undefined>(undefined);
+  const [legacyMenuData, setLegacyMenuData] = useState<CustomerRoleMenuProps[] | undefined>(
+    undefined
+  );
   const [bodyData, setBodyData] = useState<PermissionMatrixRow[]>(buildPermissionMatrix());
 
   const { data, isPending } = useCustomerRoles();
@@ -104,12 +107,14 @@ const UserRolesPage = () => {
 
   useEffect(() => {
     if (!selectedKey && data?.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedKey(data[0].id.toString());
     }
   }, [data, selectedKey]);
 
   useEffect(() => {
     const normalizedMenu = normalizeLegacyMenu(menu);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLegacyMenuData(normalizedMenu);
     setBodyData(buildPermissionMatrix(legacyMenusToAssignments(normalizedMenu)));
   }, [menu]);
@@ -127,7 +132,12 @@ const UserRolesPage = () => {
   ];
 
   const applyActionChange = useCallback(
-    (rows: PermissionMatrixRow[], permissionKeys: string[], action: PermissionAction, checked: boolean) =>
+    (
+      rows: PermissionMatrixRow[],
+      permissionKeys: string[],
+      action: PermissionAction,
+      checked: boolean
+    ) =>
       rows.map((row) => {
         if (!permissionKeys.includes(row.key) || !row.actions.includes(action)) {
           return row;
@@ -186,6 +196,7 @@ const UserRolesPage = () => {
   const visibleActions = permissionActions.filter((action) =>
     bodyData.some((row) => row.actions.includes(action))
   );
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const treeData = useMemo(() => buildTreeRows(bodyData), [bodyData]);
 
   const baseColumns: NonNullable<TableProps<PermissionTreeRow>["columns"]> = [
@@ -214,12 +225,6 @@ const UserRolesPage = () => {
       key: "label",
       dataIndex: "label",
       width: 320
-    },
-    {
-      title: "Route",
-      key: "route",
-      dataIndex: "route",
-      render: (value: string | undefined, record) => (record.isGroup ? "-" : (value ?? "-"))
     }
   ];
 
@@ -235,7 +240,9 @@ const UserRolesPage = () => {
           disabled={!record.actions.includes(action)}
           indeterminate={
             record.isGroup &&
-            !!record.children?.some((item) => item.actions.includes(action) && item.values[action]) &&
+            !!record.children?.some(
+              (item) => item.actions.includes(action) && item.values[action]
+            ) &&
             !record.values[action]
           }
           onChange={(e) =>
@@ -324,8 +331,7 @@ const UserRolesPage = () => {
                   bordered
                   size="small"
                   pagination={false}
-                  loading={isFetchingMenu}
-                  scroll={{ y: "calc(100vh - 265px)" }}
+                  scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
                   expandable={{
                     defaultExpandAllRows: true
                   }}

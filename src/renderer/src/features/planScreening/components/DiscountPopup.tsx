@@ -1,6 +1,6 @@
 import { formatMoney } from "@renderer/lib/utils";
 import { DiscountProps, ListSeat } from "@shared/types";
-import { Button, Empty, Modal, Table, Tag } from "antd";
+import { Button, Checkbox, Empty, Modal, Table, Tag } from "antd";
 import type { TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
@@ -47,7 +47,7 @@ const DiscountPopup = ({
     [data]
   );
   const [draftValue, setDraftValue] = useState<Record<string, number | undefined>>({});
-  const [activeSeatKey, setActiveSeatKey] = useState<string | null>(null);
+  const [selectedSeatKeys, setSelectedSeatKeys] = useState<string[]>([]);
 
   useEffect(() => {
     if (!openDiscount) return;
@@ -58,18 +58,28 @@ const DiscountPopup = ({
     );
 
     setDraftValue(nextDraft);
-    setActiveSeatKey((current) => {
-      if (current && allowedKeys.has(current)) return current;
-      return seatItems[0]?.key ?? null;
+    setSelectedSeatKeys((current) => {
+      const nextSelected = current.filter((key) => allowedKeys.has(key));
+      return nextSelected.length > 0 ? nextSelected : seatItems.slice(0, 1).map((item) => item.key);
     });
   }, [openDiscount, seatItems, value]);
 
-  const activeSeat = useMemo(
-    () => seatItems.find((item) => item.key === activeSeatKey),
-    [activeSeatKey, seatItems]
+  const selectedSeatItems = useMemo(
+    () => seatItems.filter((item) => selectedSeatKeys.includes(item.key)),
+    [seatItems, selectedSeatKeys]
   );
 
-  const selectedDiscountId = activeSeat ? draftValue[activeSeat.key] : undefined;
+  const selectedDiscountId = useMemo(() => {
+    if (selectedSeatItems.length === 0) return undefined;
+
+    const discountIds = Array.from(
+      new Set(selectedSeatItems.map((item) => draftValue[item.key]).filter(Boolean))
+    );
+
+    if (discountIds.length !== 1) return undefined;
+
+    return discountIds[0];
+  }, [draftValue, selectedSeatItems]);
 
   const columns: TableProps<DiscountProps>["columns"] = [
     {
@@ -105,19 +115,27 @@ const DiscountPopup = ({
   ];
 
   const applyDiscount = (discountId?: number) => {
-    if (!activeSeat) return;
+    if (selectedSeatKeys.length === 0) return;
 
     setDraftValue((prev) => {
       const next = { ...prev };
 
-      if (discountId) {
-        next[activeSeat.key] = discountId;
-      } else {
-        delete next[activeSeat.key];
-      }
+      selectedSeatKeys.forEach((seatKey) => {
+        if (discountId) {
+          next[seatKey] = discountId;
+        } else {
+          delete next[seatKey];
+        }
+      });
 
       return next;
     });
+  };
+
+  const toggleSeatSelection = (seatKey: string) => {
+    setSelectedSeatKeys((prev) =>
+      prev.includes(seatKey) ? prev.filter((key) => key !== seatKey) : [...prev, seatKey]
+    );
   };
 
   const onOk = () => {
@@ -154,18 +172,33 @@ const DiscountPopup = ({
         <div className="grid grid-cols-[320px_minmax(0,1fr)] gap-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
             <div className="mb-3">
-              <p className="text-sm font-semibold">Danh sách ghế</p>
-              <p className="text-xs text-gray-500">
-                Chọn từng ghế bên dưới rồi gán giảm giá tương ứng.
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Danh sách ghế</p>
+                  <p className="text-xs text-gray-500">
+                    Chọn nhiều ghế rồi áp một mức giảm giá trong một lần.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="small"
+                    onClick={() => setSelectedSeatKeys(seatItems.map((item) => item.key))}
+                  >
+                    Chọn tất cả
+                  </Button>
+                  <Button size="small" onClick={() => setSelectedSeatKeys([])}>
+                    Bỏ chọn
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex max-h-[460px] flex-col gap-2 overflow-y-auto pr-1">
+            <div className="flex max-h-115 flex-col gap-2 overflow-y-auto pr-1">
               {seatItems.map((item) => {
                 const appliedDiscount = draftValue[item.key]
                   ? discountsById.get(draftValue[item.key]!)
                   : undefined;
-                const isActive = activeSeatKey === item.key;
+                const isSelected = selectedSeatKeys.includes(item.key);
 
                 return (
                   <button
@@ -173,15 +206,22 @@ const DiscountPopup = ({
                     type="button"
                     className={[
                       "rounded-lg border p-3 text-left transition",
-                      isActive
+                      isSelected
                         ? "border-blue-500 bg-blue-50 shadow-sm"
                         : "border-gray-200 bg-white hover:border-blue-300"
                     ].join(" ")}
-                    onClick={() => setActiveSeatKey(item.key)}
+                    onClick={() => toggleSeatSelection(item.key)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-sm font-semibold">{item.label}</p>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => toggleSeatSelection(item.key)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <p className="text-sm font-semibold">{item.label}</p>
+                        </div>
                         <p className="text-xs text-gray-500">
                           {item.seat.positionName || "Ghế"} x {formatMoney(item.price)}
                         </p>
@@ -209,21 +249,23 @@ const DiscountPopup = ({
             <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
               <div>
                 <p className="text-sm font-semibold">
-                  {activeSeat ? `Giảm giá cho ghế ${activeSeat.label}` : "Chọn ghế"}
+                  {selectedSeatItems.length > 0
+                    ? `Áp dụng cho ${selectedSeatItems.length} ghế`
+                    : "Chọn ghế"}
                 </p>
-                {activeSeat && (
+                {selectedSeatItems.length > 0 && (
                   <p className="text-xs text-gray-500">
-                    {activeSeat.seat.positionName || "Ghế"} | Giá vé {formatMoney(activeSeat.price)}
+                    {selectedSeatItems.map((item) => item.label).join(", ")}
                   </p>
                 )}
               </div>
               <Button
                 variant="outlined"
                 color="red"
-                disabled={!activeSeat || !selectedDiscountId}
+                disabled={selectedSeatItems.length === 0 || !selectedDiscountId}
                 onClick={() => applyDiscount(undefined)}
               >
-                Bỏ giảm giá ghế này
+                Bỏ giảm giá các ghế đã chọn
               </Button>
             </div>
 
