@@ -13,6 +13,7 @@ import { useThemeStore } from "./store/theme.store";
 import { useAuthStore } from "./store/auth.store";
 import { initApi } from "./api/client";
 import { connectSocket, initSocket } from "./socket/socket";
+import PermissionBootstrap from "./permissions/PermissionBootstrap";
 
 useSettingPosStore.getState();
 
@@ -37,7 +38,9 @@ async function bootstrap() {
       <AntdProvider>
         <QueryClientProvider client={queryClient}>
           <NuqsAdapter>
-            <RouterProvider router={router} />
+            <PermissionBootstrap>
+              <RouterProvider router={router} />
+            </PermissionBootstrap>
           </NuqsAdapter>
         </QueryClientProvider>
       </AntdProvider>

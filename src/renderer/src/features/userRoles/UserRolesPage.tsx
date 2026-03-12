@@ -1,15 +1,11 @@
-import { useCustomerRoleMenu } from "@renderer/hooks/customerRoles/useCustomerRoleMenu";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
-import { useUpdateCustomerRoleMenu } from "@renderer/hooks/customerRoles/useUpdateCustomerRoleMenu";
+import { useRolePermissions } from "@renderer/hooks/permissions/useRolePermissions";
+import { useUpdateRolePermissions } from "@renderer/hooks/permissions/useUpdateRolePermissions";
 import { PERMISSION_ACTION_LABELS } from "@renderer/permissions/definitions";
-import {
-  buildPermissionMatrix,
-  legacyMenusToAssignments,
-  permissionMatrixToLegacyMenus
-} from "@renderer/permissions/utils";
+import { buildPermissionMatrix } from "@renderer/permissions/utils";
 import {
   ApiError,
-  CustomerRoleMenuProps,
+  BulkUpdateRolePermissionsRequest,
   PermissionAction,
   PermissionMatrixRow,
   permissionActions
@@ -88,36 +84,25 @@ const getRowToggleState = (row: PermissionTreeRow) => {
   return { checked, indeterminate };
 };
 
-const normalizeLegacyMenu = (
-  menu: CustomerRoleMenuProps[] | CustomerRoleMenuProps[][] | undefined
-) => (Array.isArray(menu?.[0]) ? [] : ((menu ?? []) as CustomerRoleMenuProps[]));
-
 const UserRolesPage = () => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [legacyMenuData, setLegacyMenuData] = useState<CustomerRoleMenuProps[] | undefined>(
-    undefined
-  );
   const [bodyData, setBodyData] = useState<PermissionMatrixRow[]>(buildPermissionMatrix());
 
   const { data, isPending } = useCustomerRoles();
-  const { data: menu, isFetching: isFetchingMenu } = useCustomerRoleMenu(
+  const { data: rolePermissions, isFetching: isFetchingPermissions } = useRolePermissions(
     selectedKey ? { roleIds: [Number(selectedKey)] } : undefined
   );
-  const updateCustomerRoleMenu = useUpdateCustomerRoleMenu();
+  const updateRolePermissions = useUpdateRolePermissions();
 
   useEffect(() => {
     if (!selectedKey && data?.length) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedKey(data[0].id.toString());
     }
   }, [data, selectedKey]);
 
   useEffect(() => {
-    const normalizedMenu = normalizeLegacyMenu(menu);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLegacyMenuData(normalizedMenu);
-    setBodyData(buildPermissionMatrix(legacyMenusToAssignments(normalizedMenu)));
-  }, [menu]);
+    setBodyData(buildPermissionMatrix(rolePermissions?.[0]?.permissions));
+  }, [rolePermissions]);
 
   const items: MenuItem[] = [
     {
@@ -266,9 +251,23 @@ const UserRolesPage = () => {
   const onUpdate = () => {
     if (!selectedKey) return;
 
-    const payload = permissionMatrixToLegacyMenus(Number(selectedKey), bodyData, legacyMenuData);
+    const payload: BulkUpdateRolePermissionsRequest = [
+      {
+        roleId: Number(selectedKey),
+        permissions: bodyData.map((row) => ({
+          permissionKey: row.key,
+          actions: row.actions.reduce(
+            (acc, action) => {
+              acc[action] = row.values[action];
+              return acc;
+            },
+            {} as PermissionMatrixRow["values"]
+          )
+        }))
+      }
+    ];
 
-    updateCustomerRoleMenu.mutate(payload, {
+    updateRolePermissions.mutate(payload, {
       onSuccess: () => {
         message.success("Lưu thông tin quyền người dùng thành công");
       },
@@ -341,7 +340,10 @@ const UserRolesPage = () => {
           </Layout>
         </div>
       </div>
-      <Spin spinning={isPending || isFetchingMenu || updateCustomerRoleMenu.isPending} fullscreen />
+      <Spin
+        spinning={isPending || isFetchingPermissions || updateRolePermissions.isPending}
+        fullscreen
+      />
     </>
   );
 };

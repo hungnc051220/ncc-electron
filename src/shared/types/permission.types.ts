@@ -68,6 +68,8 @@ export interface UpdateRolePermissionsRequest {
   permissions: PermissionAssignment[];
 }
 
+export type BulkUpdateRolePermissionsRequest = UpdateRolePermissionsRequest[];
+
 export interface UpdateRolePermissionsResponse {
   roleId: number;
   updatedAt: string;
@@ -75,9 +77,19 @@ export interface UpdateRolePermissionsResponse {
   permissions: PermissionAssignment[];
 }
 
+export type BulkUpdateRolePermissionsResponse = UpdateRolePermissionsResponse[];
+
+export interface UpdateUserPermissionsRequest {
+  userId: number;
+  permissions: PermissionAssignment[];
+}
+
+export type BulkUpdateUserPermissionsRequest = UpdateUserPermissionsRequest[];
+
 export const permissionApiEndpoints = {
   getCatalog: "/api/pos/permissions/catalog",
   getRolePermissions: "/api/pos/permissions/roles",
   getStaffPermissions: "/api/pos/permissions/staff",
-  updateRolePermissions: "/api/pos/permissions/roles/update"
+  updateRolePermissions: "/api/pos/permissions/roles/update",
+  updateUserPermissions: "/api/pos/permissions/users/update"
 } as const;

@@ -40,6 +40,11 @@ import UsersPage from "./features/users/UsersPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedLayout from "./layouts/ProtectedLayout";
 import VouchersPage from "./features/vouchers/VouchersPage";
+import PermissionGuard from "./permissions/PermissionGuard";
+
+const withAccess = (permissionKey: string, element: React.ReactNode) => (
+  <PermissionGuard permissionKey={permissionKey}>{element}</PermissionGuard>
+);
 
 export const router = createHashRouter([
   {
@@ -59,145 +64,145 @@ export const router = createHashRouter([
           },
           {
             path: "/users",
-            element: <UsersPage />
+            element: withAccess("users", <UsersPage />)
           },
           {
             path: "/user-roles",
-            element: <UserRolesPage />
+            element: withAccess("user_roles", <UserRolesPage />)
           },
           {
             path: "/machine-serials",
-            element: <MachineSerialsPage />
+            element: withAccess("machine_serials", <MachineSerialsPage />)
           },
           {
             path: "/settings",
-            element: <SettingPage />
+            element: withAccess("settings", <SettingPage />)
           },
           {
             path: "/films",
-            element: <FilmsPage />
+            element: withAccess("films", <FilmsPage />)
           },
           {
             path: "/manufacturers",
-            element: <ManufacturersPage />
+            element: withAccess("manufacturers", <ManufacturersPage />)
           },
           {
             path: "/invoices",
-            element: <InvoicesPage />
+            element: withAccess("invoices", <InvoicesPage />)
           },
           {
             path: "/seat-types",
-            element: <SeatTypesPage />
+            element: withAccess("seat_types", <SeatTypesPage />)
           },
           {
             path: "/screening-rooms",
-            element: <ScreeningRoomsPage />
+            element: withAccess("screening_rooms", <ScreeningRoomsPage />)
           },
           {
             path: "/holidays",
-            element: <HolidaysPage />
+            element: withAccess("holidays", <HolidaysPage />)
           },
           {
             path: "/showtime-slots",
-            element: <ShowTimeSlotsPage />
+            element: withAccess("showtime_slots", <ShowTimeSlotsPage />)
           },
           {
             path: "/cancellation-reasons",
-            element: <CancellationReasonsPage />
+            element: withAccess("cancellation_reasons", <CancellationReasonsPage />)
           },
           {
             path: "/ticket-prices",
-            element: <TicketPricesPage />
+            element: withAccess("ticket_prices", <TicketPricesPage />)
           },
           {
             path: "/vouchers",
-            element: <VouchersPage />
+            element: withAccess("vouchers", <VouchersPage />)
           },
           {
             path: "/plan-cinema",
-            element: <PlanCinemaPage />
+            element: withAccess("plan_cinema", <PlanCinemaPage />)
           },
           {
             path: "/showtime-schedule",
-            element: <ShowtimeSchedulePage />
+            element: withAccess("showtime_schedule", <ShowtimeSchedulePage />)
           },
           {
             path: "/online-showtime-booking",
-            element: <OnlineShowtimeBookingPage />
+            element: withAccess("online_showtime_booking", <OnlineShowtimeBookingPage />)
           },
           {
             path: "/discount-settings",
-            element: <DiscountSettingsPage />
+            element: withAccess("discount_settings", <DiscountSettingsPage />)
           },
           {
             path: "/print-online-tickets",
-            element: <PrintOnlineTicketsPage />
+            element: withAccess("print_online_tickets", <PrintOnlineTicketsPage />)
           },
           {
             path: "/find-online-tickets",
-            element: <FindOnlineTicketsPage />
+            element: withAccess("find_online_tickets", <FindOnlineTicketsPage />)
           },
           {
             path: "/cancellation-tickets",
-            element: <CancellationTicketsPage />
+            element: withAccess("cancellation_tickets", <CancellationTicketsPage />)
           },
           {
             path: "/refunds",
-            element: <RefundsPage />
+            element: withAccess("refunds", <RefundsPage />)
           },
           {
             path: "/access-history",
-            element: <AccessHistoryPage />
+            element: withAccess("access_history", <AccessHistoryPage />)
           },
           {
             path: "/order-history",
-            element: <OrderHistoryPage />
+            element: withAccess("order_history", <OrderHistoryPage />)
           },
           {
             path: "/staff-revenue-report",
-            element: <StaffRevenueReportPage />
+            element: withAccess("staff_revenue_report", <StaffRevenueReportPage />)
           },
           {
             path: "/monthly-report",
-            element: <MonthlyReportPage />
+            element: withAccess("monthly_report", <MonthlyReportPage />)
           },
           {
             path: "/quarterly-report",
-            element: <QuarterlyReportPage />
+            element: withAccess("quarterly_report", <QuarterlyReportPage />)
           },
           {
             path: "/ticket-sales-revenue",
-            element: <TicketSalesRevenuePage />
+            element: withAccess("ticket_sales_revenue", <TicketSalesRevenuePage />)
           },
           {
             path: "/contract-ticket-sales",
-            element: <ContractTicketSalesPage />
+            element: withAccess("contract_ticket_sales", <ContractTicketSalesPage />)
           },
           {
             path: "/invitation-tickets",
-            element: <InvitationTicketsPage />
+            element: withAccess("invitation_tickets", <InvitationTicketsPage />)
           }
         ]
       },
       {
         path: "/showtimes",
-        element: <ShowtimesPage />
+        element: withAccess("showtimes", <ShowtimesPage />)
       },
       {
         path: "/plan-screening/:id",
-        element: <PlanScreeningPage />
+        element: withAccess("plan_screening", <PlanScreeningPage />)
       },
       {
         path: "/contract-ticket-sales/:id",
-        element: <ContractTicketSalesDetailPage />
+        element: withAccess("contract_ticket_sales", <ContractTicketSalesDetailPage />)
       },
       {
         path: "/invitation-tickets/create",
-        element: <InvitationTicketsDetailPage />
+        element: withAccess("invitation_tickets", <InvitationTicketsDetailPage />)
       },
       {
         path: "/online-seat-booking/create",
-        element: <OnlineSeatBookingDetailPage />
+        element: withAccess("online_seat_booking", <OnlineSeatBookingDetailPage />)
       },
       {
         path: "/ticket-sales-diagram/view",
@@ -205,7 +210,7 @@ export const router = createHashRouter([
       },
       {
         path: "/screening-rooms/:id/seat-map",
-        element: <ScreeningRoomSeatMapPage />
+        element: withAccess("screening_rooms", <ScreeningRoomSeatMapPage />)
       }
     ]
   },

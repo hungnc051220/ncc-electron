@@ -1,12 +1,14 @@
 import { api } from "@renderer/api/client";
 import {
+  BulkUpdateRolePermissionsRequest,
+  BulkUpdateRolePermissionsResponse,
   CustomerRoleMenuProps,
   CustomerRoleProps,
   GetRolePermissionsRequest,
+  GetStaffPermissionsRequest,
   PermissionCatalogResponse,
   RolePermissionResponse,
-  UpdateRolePermissionsRequest,
-  UpdateRolePermissionsResponse,
+  StaffPermissionResponse,
   permissionApiEndpoints
 } from "@shared/types";
 
@@ -46,9 +48,15 @@ export const customerRolesApi = {
     const res = await api.post(permissionApiEndpoints.getRolePermissions, dto);
     return res.data;
   },
+  getStaffPermissions: async (
+    dto: GetStaffPermissionsRequest
+  ): Promise<StaffPermissionResponse> => {
+    const res = await api.post(permissionApiEndpoints.getStaffPermissions, dto);
+    return res.data;
+  },
   updateRolePermissions: async (
-    dto: UpdateRolePermissionsRequest
-  ): Promise<UpdateRolePermissionsResponse> => {
+    dto: BulkUpdateRolePermissionsRequest
+  ): Promise<BulkUpdateRolePermissionsResponse> => {
     const res = await api.post(permissionApiEndpoints.updateRolePermissions, dto);
     return res.data;
   }
