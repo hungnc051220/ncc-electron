@@ -24,20 +24,20 @@ const ExportRevenueExcelButton = ({
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Tong hop");
+    const ws = wb.addWorksheet("Tổng hợp");
 
-    ws.getCell(1, 1).value = `BAO CAO NAM TONG HOP SO LIEU PHIM CHIEU - ${year}`;
+    ws.getCell(1, 1).value = `BÁO CÁO NĂM TỔNG HỢP SỐ LIỆU PHIM CHIẾU - ${year}`;
     ws.mergeCells(1, 1, 1, 6);
     ws.getRow(1).font = { bold: true, size: 16 };
     ws.getRow(1).alignment = { horizontal: "center" };
 
     ws.addRow([
-      "Don vi phat hanh",
-      "Tong phim",
-      "Tong buoi chieu",
-      "Tong khan gia",
-      "Tong doanh thu",
-      "DT chia se"
+      "Đơn vị phát hành",
+      "Tổng phim",
+      "Tổng buổi chiếu",
+      "Tổng khán giả",
+      "Tổng doanh thu",
+      "DT chia sẻ"
     ]);
 
     ws.getRow(2).font = { bold: true };

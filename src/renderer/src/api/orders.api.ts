@@ -147,7 +147,7 @@ export const ordersApi = {
       filter.barCode = barCode;
     }
 
-    if (filter.searchText) {
+    if (searchText) {
       filter.keyword = searchText;
     }
 

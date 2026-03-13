@@ -25,10 +25,10 @@ const ExportRevenueExcelButton = ({
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Tong hop buoi chieu");
+    const ws = wb.addWorksheet("Tổng hợp buổi chiếu");
     const totalColumns = 1 + QUARTERS.length * 3 + 3;
 
-    ws.getCell(1, 1).value = `BAO CAO NAM TONG HOP BUOI CHIEU, LUONG KHAN GIA - ${year}`;
+    ws.getCell(1, 1).value = `BÁO CÁO TỔNG HỢP BUỔI CHIẾU, LƯỢNG KHÁN GIẢ - NĂM ${year}`;
     ws.mergeCells(1, 1, 1, totalColumns);
     ws.getRow(1).font = { bold: true, size: 16 };
     ws.getRow(1).alignment = { horizontal: "center" };
@@ -42,17 +42,17 @@ const ExportRevenueExcelButton = ({
     QUARTERS.forEach((quarter, index) => {
       const startCol = 2 + index * 3;
       ws.mergeCells(headerTopRow, startCol, headerTopRow, startCol + 2);
-      ws.getCell(headerTopRow, startCol).value = `Quy ${quarter}`;
-      ws.getCell(headerBottomRow, startCol).value = "Buoi chieu";
-      ws.getCell(headerBottomRow, startCol + 1).value = "Khan gia";
+      ws.getCell(headerTopRow, startCol).value = `Quý ${quarter}`;
+      ws.getCell(headerBottomRow, startCol).value = "Buổi chiếu";
+      ws.getCell(headerBottomRow, startCol + 1).value = "Khán giả";
       ws.getCell(headerBottomRow, startCol + 2).value = "Doanh thu";
     });
 
     const totalStartCol = 2 + QUARTERS.length * 3;
     ws.mergeCells(headerTopRow, totalStartCol, headerTopRow, totalStartCol + 2);
-    ws.getCell(headerTopRow, totalStartCol).value = "Ca nam";
-    ws.getCell(headerBottomRow, totalStartCol).value = "Buoi chieu";
-    ws.getCell(headerBottomRow, totalStartCol + 1).value = "Khan gia";
+    ws.getCell(headerTopRow, totalStartCol).value = "Cả năm";
+    ws.getCell(headerBottomRow, totalStartCol).value = "Buổi chiếu";
+    ws.getCell(headerBottomRow, totalStartCol + 1).value = "Khán giả";
     ws.getCell(headerBottomRow, totalStartCol + 2).value = "Doanh thu";
 
     [headerTopRow, headerBottomRow].forEach((rowIndex) => {

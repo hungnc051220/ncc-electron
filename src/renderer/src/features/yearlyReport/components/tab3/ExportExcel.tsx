@@ -25,10 +25,10 @@ const ExportRevenueExcelButton = ({
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Doanh thu doi tac");
+    const ws = wb.addWorksheet("Doanh thu đối tác");
     const totalColumns = 1 + QUARTERS.length * 2 + 2;
 
-    ws.getCell(1, 1).value = `BAO CAO NAM DOANH THU DOI TAC - ${year}`;
+    ws.getCell(1, 1).value = `BÁO CÁO DOANH THU ĐỐI TÁC - ${year}`;
     ws.mergeCells(1, 1, 1, totalColumns);
     ws.getRow(1).font = { bold: true, size: 16 };
     ws.getRow(1).alignment = { horizontal: "center" };
@@ -37,21 +37,21 @@ const ExportRevenueExcelButton = ({
     const headerBottomRow = 4;
 
     ws.mergeCells(headerTopRow, 1, headerBottomRow, 1);
-    ws.getCell(headerTopRow, 1).value = "Doi tac / Phim";
+    ws.getCell(headerTopRow, 1).value = "Đối tác / Phim";
 
     QUARTERS.forEach((quarter, index) => {
       const startCol = 2 + index * 2;
       ws.mergeCells(headerTopRow, startCol, headerTopRow, startCol + 1);
-      ws.getCell(headerTopRow, startCol).value = `Quy ${quarter}`;
-      ws.getCell(headerBottomRow, startCol).value = "DT doi tac";
-      ws.getCell(headerBottomRow, startCol + 1).value = "Tong doanh thu";
+      ws.getCell(headerTopRow, startCol).value = `Quý ${quarter}`;
+      ws.getCell(headerBottomRow, startCol).value = "DT đối tác";
+      ws.getCell(headerBottomRow, startCol + 1).value = "Tổng doanh thu";
     });
 
     const totalStartCol = 2 + QUARTERS.length * 2;
     ws.mergeCells(headerTopRow, totalStartCol, headerTopRow, totalStartCol + 1);
-    ws.getCell(headerTopRow, totalStartCol).value = "Ca nam";
-    ws.getCell(headerBottomRow, totalStartCol).value = "DT doi tac";
-    ws.getCell(headerBottomRow, totalStartCol + 1).value = "Tong doanh thu";
+    ws.getCell(headerTopRow, totalStartCol).value = "Cả năm";
+    ws.getCell(headerBottomRow, totalStartCol).value = "DT đối tác";
+    ws.getCell(headerBottomRow, totalStartCol + 1).value = "Tổng doanh thu";
 
     [headerTopRow, headerBottomRow].forEach((rowIndex) => {
       ws.getRow(rowIndex).font = { bold: true };
