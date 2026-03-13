@@ -1,3 +1,4 @@
+import { usePermission } from "@renderer/permissions/usePermission";
 import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -48,6 +49,13 @@ const ExportRevenueExcelButton = ({
   employeeName = "Tất cả",
   fileName = "bao-cao-doanh-thu-phim.xlsx"
 }: Props) => {
+  const { can } = usePermission();
+  const canExport = can("staff_revenue_report", "export");
+
+  if (!canExport) {
+    return null;
+  }
+
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Doanh thu theo phim");

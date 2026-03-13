@@ -67,7 +67,8 @@ const NavItems = () => {
         },
         {
           label: <Link to="/revenue-sharing">Quản lý phân chia doanh thu</Link>,
-          key: "revenue-sharing"
+          key: "revenue-sharing",
+          permissionKey: "revenue_sharing"
         },
         {
           label: <Link to="/seat-types">Danh sách loại ghế, vị trí</Link>,
@@ -213,10 +214,6 @@ const NavItems = () => {
           permissionKey: "staff_revenue_report"
         },
         {
-          label: <Link to="/film-sales-detail-report">Báo cáo chi tiết bán vé theo phim</Link>,
-          key: "film-sales-detail-report"
-        },
-        {
           label: <Link to="/monthly-report">Báo cáo tháng</Link>,
           key: "monthly-report",
           permissionKey: "monthly_report"
@@ -228,8 +225,9 @@ const NavItems = () => {
         },
 
         {
-          label: <Link to="/annual-report">Báo cáo năm</Link>,
-          key: "annual-report"
+          label: <Link to="/yearly-report">Báo cáo năm</Link>,
+          key: "yearly-report",
+          permissionKey: "yearly_report"
         }
       ]
     }

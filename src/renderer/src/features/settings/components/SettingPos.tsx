@@ -1,3 +1,4 @@
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message } from "antd";
@@ -9,6 +10,8 @@ type FieldType = {
 
 const SettingPos = () => {
   const { posName, posShortName, setPos } = useSettingPosStore();
+  const { can } = usePermission();
+  const canUpdate = can("settings", "update");
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
     setPos(values.posName, values.posShortName);
@@ -43,7 +46,7 @@ const SettingPos = () => {
         </Form.Item>
 
         <Form.Item label={null} className="flex justify-end">
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="submit" disabled={!canUpdate}>
             Lưu thông tin
           </Button>
         </Form.Item>

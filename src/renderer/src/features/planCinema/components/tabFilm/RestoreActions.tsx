@@ -1,4 +1,5 @@
 import { useUpdatePlanCinema } from "@renderer/hooks/planCinemas/useUpdatePlanCinema";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError } from "@shared/types";
 import { Button, message } from "antd";
 import axios from "axios";
@@ -11,6 +12,8 @@ const RestoreActions = ({
   clearSelectedPlan: () => void;
 }) => {
   const updatePlanCinema = useUpdatePlanCinema();
+  const { can } = usePermission();
+  const canApprove = can("plan_cinema", "approve");
 
   const onConfirm = () => {
     updatePlanCinema.mutate(
@@ -32,6 +35,10 @@ const RestoreActions = ({
       }
     );
   };
+
+  if (!canApprove) {
+    return null;
+  }
 
   return (
     <Button

@@ -1,6 +1,7 @@
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useCreatePlanFilm } from "@renderer/hooks/planFilms/useCreatePlanFilm";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError, FilmProps, PlanFilmProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Button, Input, message, Modal, Table } from "antd";
@@ -22,6 +23,8 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
   const [pageSize, setPageSize] = useState(20);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pickedFilmIds, setPickedFilmIds] = useState<number[]>([]);
+  const { can } = usePermission();
+  const canUpdate = can("plan_cinema", "update");
 
   const params = useMemo(
     () => ({
@@ -131,6 +134,10 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
       }
     });
   };
+
+  if (!canUpdate) {
+    return null;
+  }
 
   return (
     <>

@@ -5,6 +5,7 @@ import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, ListSeat, OrderDetailProps } from "@shared/types";
@@ -62,6 +63,10 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
   const { posName, posShortName } = useSettingPosStore();
+  const { can } = usePermission();
+  const canCreate = can("invitation_tickets", "create");
+  const canDelete = can("invitation_tickets", "delete");
+  const canPrint = can("invitation_tickets", "print");
 
   const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
@@ -126,12 +131,14 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
       onSuccess: async (data) => {
         const { id } = data;
         message.success("Tạo vé mời thành công");
-        try {
-          const res = await ordersApi.getDetail(id);
-          setSelectedItem(res);
-          setDialogPrintOpen(true);
-        } catch (error) {
-          console.log(error);
+        if (canPrint) {
+          try {
+            const res = await ordersApi.getDetail(id);
+            setSelectedItem(res);
+            setDialogPrintOpen(true);
+          } catch (error) {
+            console.log(error);
+          }
         }
         setSelectedSeats([]);
         queryClient.invalidateQueries({
@@ -188,25 +195,29 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="flex gap-3">
-          <Button
-            variant="outlined"
-            color="primary"
-            className="h-full! font-bold"
-            onClick={onBooking}
-            disabled={selectedSeats.length === 0 || createOrder.isPending}
-          >
-            Thêm vé mời
-          </Button>
+          {canCreate && (
+            <Button
+              variant="outlined"
+              color="primary"
+              className="h-full! font-bold"
+              onClick={onBooking}
+              disabled={selectedSeats.length === 0 || createOrder.isPending}
+            >
+              Thêm vé mời
+            </Button>
+          )}
 
-          <Button
-            variant="outlined"
-            color="danger"
-            className="h-full! font-bold"
-            disabled={selectedSeats.length === 0 || createOrder.isPending}
-            onClick={onCancelSeats}
-          >
-            Hủy vé mời
-          </Button>
+          {canDelete && (
+            <Button
+              variant="outlined"
+              color="danger"
+              className="h-full! font-bold"
+              disabled={selectedSeats.length === 0 || createOrder.isPending}
+              onClick={onCancelSeats}
+            >
+              Hủy vé mời
+            </Button>
+          )}
         </div>
       </div>
 

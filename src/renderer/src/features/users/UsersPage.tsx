@@ -5,6 +5,7 @@ import Filter from "@renderer/features/users/components/Filter";
 import UserDialog from "@renderer/features/users/components/UserDialog";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useUsers } from "@renderer/hooks/users/useUsers";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { UserProps } from "@shared/types";
@@ -18,12 +19,6 @@ export interface ValuesProps {
   roleId?: number;
   keyword?: string;
 }
-
-const items = [
-  { key: "1", label: "Ẩn/hiện" },
-  { key: "2", label: "Cập nhật" },
-  { key: "3", label: <p className="text-red-500">Xóa</p> }
-];
 
 const UsersPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -46,6 +41,10 @@ const UsersPage = () => {
   const { data: users, isFetching } = useUsers(params);
   const { data: customerRoles, isFetching: isFetchingCustomerRoles } = useCustomerRoles();
   const { data: generalData } = useGeneralData();
+  const { can } = usePermission();
+  const canCreate = can("users", "create");
+  const canUpdate = can("users", "update");
+  const canDelete = can("users", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedUser(null);
@@ -95,6 +94,16 @@ const UsersPage = () => {
   const onChange = (page: number) => {
     setCurrent(page);
   };
+
+  const actionItems = [
+    ...(canUpdate
+      ? [
+          { key: "1", label: "Ẩn/hiện" },
+          { key: "2", label: "Cập nhật" }
+        ]
+      : []),
+    ...(canDelete ? [{ key: "3", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
 
   const columns: TableProps<UserProps>["columns"] = [
     {
@@ -150,35 +159,39 @@ const UsersPage = () => {
       width: 80,
       align: "center"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleChangeHidden(record);
-              }
-              if (e.key === "2") {
-                handleEdit(record);
-              }
-              if (e.key === "3") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: UserProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleChangeHidden(record);
+                    }
+                    if (e.key === "2") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "3") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onShowSizeChange: PaginationProps["onShowSizeChange"] = (current, pageSize) => {
@@ -210,9 +223,11 @@ const UsersPage = () => {
             setCurrent={setCurrent}
             customerRoles={customerRoles || []}
           />
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm người dùng
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm người dùng
+            </Button>
+          )}
         </div>
       </div>
 

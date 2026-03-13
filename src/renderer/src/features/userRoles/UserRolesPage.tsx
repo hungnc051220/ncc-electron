@@ -7,11 +7,12 @@ import {
   ApiError,
   BulkUpdateRolePermissionsRequest,
   PermissionAction,
-  PermissionMatrixRow,
-  permissionActions
+  permissionActions,
+  PermissionMatrixRow
 } from "@shared/types";
+import { useQueryClient } from "@tanstack/react-query";
 import type { MenuProps, TableProps } from "antd";
-import { Breadcrumb, Button, Checkbox, Layout, Menu, message, Spin, Table } from "antd";
+import { Breadcrumb, Button, Checkbox, Layout, Menu, message, Table } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
@@ -87,9 +88,10 @@ const getRowToggleState = (row: PermissionTreeRow) => {
 const UserRolesPage = () => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [bodyData, setBodyData] = useState<PermissionMatrixRow[]>(buildPermissionMatrix());
+  const queryClient = useQueryClient();
 
-  const { data, isPending } = useCustomerRoles();
-  const { data: rolePermissions, isFetching: isFetchingPermissions } = useRolePermissions(
+  const { data } = useCustomerRoles();
+  const { data: rolePermissions } = useRolePermissions(
     selectedKey ? { roleIds: [Number(selectedKey)] } : undefined
   );
   const updateRolePermissions = useUpdateRolePermissions();
@@ -101,7 +103,9 @@ const UserRolesPage = () => {
   }, [data, selectedKey]);
 
   useEffect(() => {
-    setBodyData(buildPermissionMatrix(rolePermissions?.[0]?.permissions));
+    if (rolePermissions?.[0]) {
+      setBodyData(buildPermissionMatrix(rolePermissions[0].permissions));
+    }
   }, [rolePermissions]);
 
   const items: MenuItem[] = [
@@ -269,6 +273,16 @@ const UserRolesPage = () => {
 
     updateRolePermissions.mutate(payload, {
       onSuccess: () => {
+        queryClient.setQueryData(
+          ["role-permissions", JSON.stringify({ roleIds: [Number(selectedKey)] })],
+          [
+            {
+              roleId: Number(selectedKey),
+              roleName: data?.find((role) => role.id === Number(selectedKey))?.name ?? "",
+              permissions: payload[0].permissions
+            }
+          ]
+        );
         message.success("Lưu thông tin quyền người dùng thành công");
       },
       onError: (error: unknown) => {
@@ -319,7 +333,11 @@ const UserRolesPage = () => {
                       {data?.find((role) => role.id === Number(selectedKey))?.name}
                     </span>
                   </h4>
-                  <Button type="primary" onClick={onUpdate}>
+                  <Button
+                    type="primary"
+                    onClick={onUpdate}
+                    loading={updateRolePermissions.isPending}
+                  >
                     Lưu thay đổi
                   </Button>
                 </div>
@@ -340,10 +358,6 @@ const UserRolesPage = () => {
           </Layout>
         </div>
       </div>
-      <Spin
-        spinning={isPending || isFetchingPermissions || updateRolePermissions.isPending}
-        fullscreen
-      />
     </>
   );
 };

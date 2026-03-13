@@ -1,6 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useShowTimeSlots } from "@renderer/hooks/showTimeSlots/useShowTimeSlots";
 import { formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { DayPartProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
@@ -9,11 +10,6 @@ import { useCallback, useMemo, useState } from "react";
 import ShowTimeSlotDialog from "./components/ShowTimeSlotDialog";
 import DeleteShowTimeSlotDialog from "./components/DeleteShowTimeSlotDialog";
 import { Link } from "react-router";
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: <p className="text-red-500">Xóa</p> }
-];
 
 const ShowTimeSlotsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +27,10 @@ const ShowTimeSlotsPage = () => {
   );
 
   const { data: showTimeSlots, isFetching } = useShowTimeSlots(params);
+  const { can } = usePermission();
+  const canCreate = can("showtime_slots", "create");
+  const canUpdate = can("showtime_slots", "update");
+  const canDelete = can("showtime_slots", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedShowTimeSlot(null);
@@ -60,6 +60,11 @@ const ShowTimeSlotsPage = () => {
       setSelectedShowTimeSlot(null);
     }
   }, []);
+
+  const actionItems = [
+    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
 
   const columns: TableProps<DayPartProps>["columns"] = [
     {
@@ -91,32 +96,36 @@ const ShowTimeSlotsPage = () => {
       key: "toTime",
       dataIndex: "toTime"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: DayPartProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -146,9 +155,11 @@ const ShowTimeSlotsPage = () => {
         />
 
         <div className="flex gap-2 items-center">
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm khung giờ chiếu
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm khung giờ chiếu
+            </Button>
+          )}
         </div>
       </div>
 

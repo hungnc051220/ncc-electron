@@ -1,6 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { useHolidays } from "@renderer/hooks/holidays/useHolidays";
 import { formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { HolidayProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Breadcrumb, Button, DatePicker, Dropdown, Table, Tabs } from "antd";
@@ -21,8 +22,6 @@ const items: TabsProps["items"] = [
     label: "Ngày lễ"
   }
 ];
-
-const actionItems = [{ key: "1", label: <p className="text-red-500">Xóa</p> }];
 
 const formatWeekday = (date: string) => {
   const text = dayjs(date).format("dddd");
@@ -49,6 +48,9 @@ const HolidaysPage = () => {
   );
 
   const { data: holidays, isFetching } = useHolidays(params);
+  const { can } = usePermission();
+  const canUpdate = can("holidays", "update");
+  const canDelete = can("holidays", "delete");
 
   const handleDelete = useCallback((item: HolidayProps) => {
     setEditingItem(item);
@@ -68,6 +70,8 @@ const HolidaysPage = () => {
       setEditingItem(null);
     }
   }, []);
+
+  const actionItems = canDelete ? [{ key: "1", label: <p className="text-red-500">Xóa</p> }] : [];
 
   const columns: TableProps<HolidayProps>["columns"] = [
     {
@@ -96,29 +100,33 @@ const HolidaysPage = () => {
       dataIndex: "dateTypeId",
       render: (value: number) => (value === 1 ? "Ngày thường" : "Ngày lễ")
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: HolidayProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -154,9 +162,11 @@ const HolidaysPage = () => {
             onChange={(date) => setYear(date!)}
             allowClear={false}
           />
-          <Button type="primary" onClick={() => setDialogOpen(true)}>
-            Cập nhật lại ngày
-          </Button>
+          {canUpdate && (
+            <Button type="primary" onClick={() => setDialogOpen(true)}>
+              Cập nhật lại ngày
+            </Button>
+          )}
         </div>
       </div>
 

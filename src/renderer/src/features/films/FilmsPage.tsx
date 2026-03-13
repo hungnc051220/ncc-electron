@@ -12,6 +12,7 @@ import { FilmProps } from "@shared/types";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { Link } from "react-router";
 
 const items: TabsProps["items"] = [
@@ -27,11 +28,6 @@ const items: TabsProps["items"] = [
     key: "FILM_ON_PLAN",
     label: "Phim trên kế hoạch"
   }
-];
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: <p className="text-red-500">Xóa</p> }
 ];
 
 export interface ValuesProps {
@@ -66,6 +62,10 @@ const FilmsPage = () => {
 
   const { data: films, isFetching } = useFilms(params);
   const { data: generalData } = useGeneralData();
+  const { can } = usePermission();
+  const canCreate = can("films", "create");
+  const canUpdate = can("films", "update");
+  const canDelete = can("films", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedFilm(null);
@@ -99,6 +99,11 @@ const FilmsPage = () => {
   const onChange = (page: number) => {
     setCurrent(page);
   };
+
+  const actionItems = [
+    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
 
   const columns: TableProps<FilmProps>["columns"] = [
     {
@@ -173,32 +178,36 @@ const FilmsPage = () => {
       align: "center",
       width: 100
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: FilmProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onSearch = (values: ValuesProps) => {
@@ -234,9 +243,11 @@ const FilmsPage = () => {
             setCurrent={setCurrent}
             manufacturers={generalData?.manufacturers || []}
           />
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm phim
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm phim
+            </Button>
+          )}
         </div>
       </div>
 

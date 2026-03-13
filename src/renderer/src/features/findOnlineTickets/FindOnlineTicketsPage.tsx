@@ -7,11 +7,10 @@ import { OrderDetailProps } from "@shared/types";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import { usePermission } from "@renderer/permissions/usePermission";
 import Filter from "./components/Filter";
 import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
 import { MoreOutlined } from "@ant-design/icons";
-
-const actionItems = [{ key: "1", label: "Xem chi tiết" }];
 
 export interface ValuesProps {
   id?: string;
@@ -47,6 +46,8 @@ const FindOnlineTicketsPage = () => {
   }, [current, pageSize, filterValues]);
 
   const { data: orders, isFetching } = useOrders(params);
+  const { can } = usePermission();
+  const canView = can("find_online_tickets", "view");
 
   const handeViewDetail = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
@@ -149,29 +150,33 @@ const FindOnlineTicketsPage = () => {
       render: (_, record) => <OrderStatusBadge status={record.order.orderStatusId} type="order" />,
       fixed: "right"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handeViewDetail(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(canView
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: OrderDetailProps) => (
+              <Dropdown
+                menu={{
+                  items: [{ key: "1", label: "Xem chi tiết" }],
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handeViewDetail(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onSearch = (values: ValuesProps) => {

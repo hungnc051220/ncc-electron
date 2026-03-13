@@ -6,6 +6,7 @@ import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { buildTicketsFromOrder, cn, formatMoney } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import {
@@ -135,6 +136,10 @@ const Actions = ({
 
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
+  const { can } = usePermission();
+  const canCreate = can("showtimes", "create");
+  const canUpdate = can("showtimes", "update");
+  const canPrint = can("showtimes", "print");
   const { data: discounts } = useDiscounts({ current: 1, pageSize: 20 });
   const discountsById = useMemo(
     () => new Map((discounts?.data || []).map((discount) => [discount.id, discount])),
@@ -201,7 +206,9 @@ const Actions = ({
       if (data.paymentStatus !== 30) return;
 
       message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
-      handlePrint(Number(data.orderId));
+      if (canPrint) {
+        handlePrint(Number(data.orderId));
+      }
       setSelectedSeats([]);
       setSelectedDiscountGroups({});
       queryClient.invalidateQueries({
@@ -212,7 +219,7 @@ const Actions = ({
     });
 
     return cleanup;
-  }, [handlePrint, planScreenId, queryClient, setSelectedSeats]);
+  }, [canPrint, handlePrint, planScreenId, queryClient, setSelectedSeats]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -318,9 +325,11 @@ const Actions = ({
           queryKey: planScreeningsKeys.getDetail(planScreenId)
         });
         queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
-        handlePrint(order.id);
+        if (canPrint) {
+          handlePrint(order.id);
+        }
 
-        if (exportInvoice) {
+        if (exportInvoice && canUpdate) {
           setInvoiceOrderId(order.id);
           setOpenInvoiceDialog(true);
         }
@@ -504,7 +513,7 @@ const Actions = ({
           <Button
             variant="outlined"
             color="danger"
-            disabled={!cancelMode || selectedSeats.length === 0}
+            disabled={!canUpdate || !cancelMode || selectedSeats.length === 0}
             onClick={() => setOpenCancelSeats(true)}
           >
             Huỷ vé
@@ -576,7 +585,7 @@ const Actions = ({
           <Button
             variant="outlined"
             color="green"
-            disabled={disableActions}
+            disabled={disableActions || !canUpdate}
             onClick={onReserveSeats}
           >
             Giữ chỗ
@@ -584,7 +593,7 @@ const Actions = ({
           <Button
             variant="outlined"
             danger
-            disabled={disableActions}
+            disabled={disableActions || !canUpdate}
             onClick={() => onCancelSeats()}
           >
             Hủy giữ
@@ -622,7 +631,8 @@ const Actions = ({
                 createOrder.isPending ||
                 selectedSeats.length === 0 ||
                 createQr.isPending ||
-                cancelMode
+                cancelMode ||
+                !canCreate
               }
             >
               <img src={ticketIcon} width={24} height={24} alt="icon" />
@@ -631,6 +641,7 @@ const Actions = ({
             <Checkbox
               className="mt-1"
               checked={exportInvoice}
+              disabled={!canUpdate}
               onChange={(e) => setExportInvoice(e.target.checked)}
             >
               <span className="text-xs">Xuất hóa đơn</span>

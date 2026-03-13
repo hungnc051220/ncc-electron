@@ -7,6 +7,7 @@ import {
   formatMoney,
   formatNumber
 } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Breadcrumb, Button, Dropdown, message, Table, Tabs } from "antd";
@@ -18,11 +19,6 @@ import { useAuthStore } from "@renderer/store/auth.store";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
-
-const actionItems = [
-  { key: "1", label: "Xem chi tiết" },
-  { key: "2", label: "In vé" }
-];
 
 const items: TabsProps["items"] = [
   {
@@ -56,6 +52,10 @@ const OrderHistoryPage = () => {
   const { posShortName } = useSettingPosStore();
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
   const { data: user } = useUserDetail(userId!);
+  const { can } = usePermission();
+  const canView = can("order_history", "view");
+  const canExport = can("order_history", "export");
+  const canPrint = can("order_history", "print");
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -190,33 +190,44 @@ const OrderHistoryPage = () => {
       fixed: "right"
     },
 
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleViewDetail(record);
-              }
+    ...(canView || canPrint
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: OrderDetailProps) => {
+              const items = [
+                ...(canView ? [{ key: "1", label: "Xem chi tiết" }] : []),
+                ...(canPrint ? [{ key: "2", label: "In vé" }] : [])
+              ];
 
-              if (e.key === "2") {
-                handlePrint(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+              return (
+                <Dropdown
+                  menu={{
+                    items,
+                    onClick: (e) => {
+                      if (e.key === "1") {
+                        handleViewDetail(record);
+                      }
+
+                      if (e.key === "2") {
+                        handlePrint(record);
+                      }
+                    }
+                  }}
+                  arrow
+                  trigger={["click"]}
+                >
+                  <MoreOutlined />
+                </Dropdown>
+              );
+            },
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onSearch = (values: ValuesProps) => {
@@ -285,7 +296,11 @@ const OrderHistoryPage = () => {
             </p>
           </div>
           <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
-          <Button type="primary" disabled={pickedOrderIds.length === 0} onClick={() => {}}>
+          <Button
+            type="primary"
+            disabled={pickedOrderIds.length === 0 || !canExport}
+            onClick={() => {}}
+          >
             Xuất vé điện tử
           </Button>
         </div>

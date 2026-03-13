@@ -1,4 +1,5 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRooms";
 import { formatNumber } from "@renderer/lib/utils";
 import { RoomProps } from "@shared/types";
@@ -10,13 +11,6 @@ import DeleteScreeningRoomDialog from "./components/DeleteScreeningRoomDialog";
 import ScreeningRoomsDialog from "./components/ScreeningRoomsDialog";
 import { Link, useNavigate } from "react-router";
 import ChangeHiddenScreeningRoomDialog from "./components/ChangeHiddenScreeningRoomDialog";
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: "Ẩn/hiện phòng chiếu" },
-  { key: "3", label: "Xem sơ đồ ghế" },
-  { key: "4", label: <p className="text-red-500">Xóa</p> }
-];
 
 const ScreeningRoomsPage = () => {
   const navigate = useNavigate();
@@ -36,6 +30,11 @@ const ScreeningRoomsPage = () => {
   );
 
   const { data: screeningRooms, isFetching } = useScreeningRooms(params);
+  const { can } = usePermission();
+  const canCreate = can("screening_rooms", "create");
+  const canUpdate = can("screening_rooms", "update");
+  const canDelete = can("screening_rooms", "delete");
+  const canConfigure = can("screening_rooms", "configure");
 
   const handleAdd = useCallback(() => {
     setSelectedScreeningRoom(null);
@@ -77,6 +76,17 @@ const ScreeningRoomsPage = () => {
       setSelectedScreeningRoom(null);
     }
   }, []);
+
+  const actionItems = [
+    ...(canUpdate
+      ? [
+          { key: "1", label: "Cập nhật" },
+          { key: "2", label: "Ẩn/hiện phòng chiếu" }
+        ]
+      : []),
+    ...(canConfigure ? [{ key: "3", label: "Xem sơ đồ ghế" }] : []),
+    ...(canDelete ? [{ key: "4", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
 
   const columns: TableProps<RoomProps>["columns"] = [
     {
@@ -156,38 +166,42 @@ const ScreeningRoomsPage = () => {
       align: "center",
       width: 100
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleChangeHidden(record);
-              }
-              if (e.key === "3") {
-                navigate(`/screening-rooms/${record.id}/seat-map`);
-              }
-              if (e.key === "4") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: RoomProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleChangeHidden(record);
+                    }
+                    if (e.key === "3") {
+                      navigate(`/screening-rooms/${record.id}/seat-map`);
+                    }
+                    if (e.key === "4") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -216,9 +230,11 @@ const ScreeningRoomsPage = () => {
         />
 
         <div className="flex gap-2 items-center">
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm phòng chiếu
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm phòng chiếu
+            </Button>
+          )}
         </div>
       </div>
 

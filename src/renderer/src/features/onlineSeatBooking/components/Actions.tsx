@@ -2,6 +2,7 @@ import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { ApiError, ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -59,6 +60,8 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
+  const { can } = usePermission();
+  const canUpdate = can("online_seat_booking", "update");
 
   const updatePlanScreening = useUpdatePlanScreening();
 
@@ -139,7 +142,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
             variant="outlined"
             color="danger"
             className="h-full! font-bold"
-            disabled={selectedSeats.length === 0 || updatePlanScreening.isPending}
+            disabled={selectedSeats.length === 0 || updatePlanScreening.isPending || !canUpdate}
             onClick={() => onUpdateSeatsOnline("offline")}
           >
             Hủy bán online
@@ -149,7 +152,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
             color="primary"
             className="h-full! font-bold"
             onClick={() => onUpdateSeatsOnline("online")}
-            disabled={selectedSeats.length === 0 || updatePlanScreening.isPending}
+            disabled={selectedSeats.length === 0 || updatePlanScreening.isPending || !canUpdate}
           >
             Bán online
           </Button>

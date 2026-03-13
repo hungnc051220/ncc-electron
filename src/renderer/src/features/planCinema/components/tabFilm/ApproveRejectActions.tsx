@@ -1,4 +1,5 @@
 import { useApproveRejectPlanCinema } from "@renderer/hooks/planCinemas/useApproveRejectPlanCinema";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError } from "@shared/types";
 import { Button, message } from "antd";
 import axios from "axios";
@@ -11,6 +12,8 @@ const ApproveRejectActions = ({
   clearSelectedPlan: () => void;
 }) => {
   const approveRejectPlanCinema = useApproveRejectPlanCinema();
+  const { can } = usePermission();
+  const canApprove = can("plan_cinema", "approve");
 
   const onConfirm = (isApproved: boolean) => {
     approveRejectPlanCinema.mutate(
@@ -32,6 +35,10 @@ const ApproveRejectActions = ({
       }
     );
   };
+
+  if (!canApprove) {
+    return null;
+  }
 
   return (
     <>

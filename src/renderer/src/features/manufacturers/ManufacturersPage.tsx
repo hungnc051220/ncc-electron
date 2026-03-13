@@ -1,5 +1,6 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useManufacturers } from "@renderer/hooks/manufacturers/useManufacturers";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ManufacturerProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
@@ -9,11 +10,6 @@ import DeleteManufacturerDialog from "./components/DeleteManufacturerDialog";
 import ManufacturerDialog from "./components/ManufacturerDialog";
 import { formatNumber } from "@renderer/lib/utils";
 import { Link } from "react-router";
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: <p className="text-red-500">Xóa</p> }
-];
 
 const ManufacturersPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +27,10 @@ const ManufacturersPage = () => {
   );
 
   const { data: manufacturers, isFetching } = useManufacturers(params);
+  const { can } = usePermission();
+  const canCreate = can("manufacturers", "create");
+  const canUpdate = can("manufacturers", "update");
+  const canDelete = can("manufacturers", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedManufacturer(null);
@@ -61,6 +61,11 @@ const ManufacturersPage = () => {
     }
   }, []);
 
+  const actionItems = [
+    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
+
   const columns: TableProps<ManufacturerProps>["columns"] = [
     {
       title: "STT",
@@ -86,32 +91,36 @@ const ManufacturersPage = () => {
       key: "address",
       dataIndex: "address"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: ManufacturerProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -141,9 +150,11 @@ const ManufacturersPage = () => {
         />
 
         <div className="flex gap-2 items-center">
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm hãng phim
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm hãng phim
+            </Button>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
 import { formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Dropdown, Table } from "antd";
@@ -9,11 +10,6 @@ import { Link } from "react-router";
 import InvoiceDialog from "./components/InvoiceDialog";
 import { InvoiceStatusBadge } from "./components/InvoiceStatusBadge";
 import UpdateStatusInvoiceDialog from "./components/UpdateStatusInvoiceDialog";
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: "Thay đổi trạng thái" }
-];
 
 const InvoicesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +27,8 @@ const InvoicesPage = () => {
   );
 
   const { data: invoices, isFetching } = useInvoices(params);
+  const { can } = usePermission();
+  const canUpdate = can("invoices", "update");
 
   const handleEdit = useCallback((item: InvoiceProps) => {
     setSelectedItem(item);
@@ -55,6 +53,13 @@ const InvoicesPage = () => {
       setSelectedItem(null);
     }
   }, []);
+
+  const actionItems = canUpdate
+    ? [
+        { key: "1", label: "Cập nhật" },
+        { key: "2", label: "Thay đổi trạng thái" }
+      ]
+    : [];
 
   const columns: TableProps<InvoiceProps>["columns"] = [
     {
@@ -129,32 +134,36 @@ const InvoicesPage = () => {
       render: (status: InvoiceStatus) => <InvoiceStatusBadge status={status} />,
       fixed: "right"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleUpdateStatus(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: InvoiceProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleUpdateStatus(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {

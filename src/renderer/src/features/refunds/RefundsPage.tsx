@@ -7,6 +7,7 @@ import { OrderDetailProps } from "@shared/types";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import { usePermission } from "@renderer/permissions/usePermission";
 import Filter from "./components/Filter";
 import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
 
@@ -44,6 +45,8 @@ const RefundsPage = () => {
   }, [current, pageSize, filterValues]);
 
   const { data: orders, isFetching } = useOrders(params);
+  const { can } = usePermission();
+  const canView = can("refunds", "view");
 
   const handeViewDetail = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
@@ -156,17 +159,21 @@ const RefundsPage = () => {
       fixed: "right",
       align: "right"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 120,
-      render: (_, record) => (
-        <Button type="link" onClick={() => handeViewDetail(record)}>
-          Xem chi tiết
-        </Button>
-      ),
-      fixed: "right"
-    }
+    ...(canView
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 120,
+            render: (_: unknown, record: OrderDetailProps) => (
+              <Button type="link" onClick={() => handeViewDetail(record)}>
+                Xem chi tiết
+              </Button>
+            ),
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onSearch = (values: ValuesProps) => {

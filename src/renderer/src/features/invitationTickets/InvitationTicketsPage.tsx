@@ -3,6 +3,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
@@ -13,11 +14,6 @@ import { useNavigate } from "react-router";
 import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
 import Filter from "./components/Filter";
 import PrintInvitationTicketDialog from "./components/PrintInvitationTicketDialog";
-
-const actionItems = [
-  { key: "1", label: "Xem chi tiết" },
-  { key: "2", label: "Xuất vé mời" }
-];
 
 export interface ValuesProps {
   dateRange?: [string, string];
@@ -33,6 +29,10 @@ const InvitationTicketsPage = () => {
   const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
   const [dialogViewDetailOpen, setDialogViewDetailOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
+  const { can } = usePermission();
+  const canCreate = can("invitation_tickets", "create");
+  const canView = can("invitation_tickets", "view");
+  const canPrint = can("invitation_tickets", "print");
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -81,6 +81,11 @@ const InvitationTicketsPage = () => {
       setSelectedItem(null);
     }
   }, []);
+
+  const actionItems = [
+    ...(canView ? [{ key: "1", label: "Xem chi tiết" }] : []),
+    ...(canPrint ? [{ key: "2", label: "Xuất vé mời" }] : [])
+  ];
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
@@ -186,32 +191,36 @@ const InvitationTicketsPage = () => {
       align: "center",
       fixed: "right"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handeViewDetail(record);
-              }
-              if (e.key === "2") {
-                handlePrint(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: OrderDetailProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handeViewDetail(record);
+                    }
+                    if (e.key === "2") {
+                      handlePrint(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onSearch = (values: ValuesProps) => {
@@ -246,9 +255,11 @@ const InvitationTicketsPage = () => {
         />
         <div className="flex items-center gap-2">
           <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
-          <Button type="primary" onClick={handleViewShowtimes}>
-            Xem sơ đồ vé
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleViewShowtimes}>
+              Xem sơ đồ vé
+            </Button>
+          )}
         </div>
       </div>
 

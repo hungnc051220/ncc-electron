@@ -1,6 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { SeatTypeProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, ColorPicker, Dropdown, Table } from "antd";
@@ -9,11 +10,6 @@ import { useCallback, useMemo, useState } from "react";
 import DeleteSeatTypeDialog from "./components/DeleteSeatTypeDialog";
 import SeatTypesDialog from "./components/SeatTypeDialog";
 import { Link } from "react-router";
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: <p className="text-red-500">Xóa</p> }
-];
 
 const SeatTypesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +27,10 @@ const SeatTypesPage = () => {
   );
 
   const { data: seatTypes, isFetching } = useSeatTypes(params);
+  const { can } = usePermission();
+  const canCreate = can("seat_types", "create");
+  const canUpdate = can("seat_types", "update");
+  const canDelete = can("seat_types", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedSeatType(null);
@@ -60,6 +60,11 @@ const SeatTypesPage = () => {
       setSelectedSeatType(null);
     }
   }, []);
+
+  const actionItems = [
+    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
 
   const columns: TableProps<SeatTypeProps>["columns"] = [
     {
@@ -109,32 +114,36 @@ const SeatTypesPage = () => {
           <img src={value} alt="seat" className="object-cover object-center rounded-md size-20" />
         ) : null
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: SeatTypeProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -164,9 +173,11 @@ const SeatTypesPage = () => {
         />
 
         <div className="flex gap-2 items-center">
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm loại ghế, vị trí
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm loại ghế, vị trí
+            </Button>
+          )}
         </div>
       </div>
 

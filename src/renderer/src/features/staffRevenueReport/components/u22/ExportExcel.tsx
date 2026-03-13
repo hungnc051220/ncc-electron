@@ -1,3 +1,4 @@
+import { usePermission } from "@renderer/permissions/usePermission";
 import { U22UsageProps } from "@shared/types";
 import { Button } from "antd";
 import dayjs from "dayjs";
@@ -23,6 +24,13 @@ const ExportRevenueExcelButton = ({
   totalOrders,
   totalAmount
 }: Props) => {
+  const { can } = usePermission();
+  const canExport = can("staff_revenue_report", "export");
+
+  if (!canExport) {
+    return null;
+  }
+
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Chi tiết");

@@ -1,6 +1,7 @@
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
@@ -29,6 +30,9 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   }, [planCinemaId, roomId, date]);
 
   const { data, isFetching } = usePlanScreenings(params);
+  const { can } = usePermission();
+  const canUpdate = can("plan_cinema", "update");
+  const canDelete = can("plan_cinema", "delete");
 
   const {
     data: rooms,
@@ -157,7 +161,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           </p>
           <Button
             size="small"
-            disabled={selectedRowKeys.length === 0}
+            disabled={selectedRowKeys.length === 0 || !canDelete}
             onClick={handleDeleteFilms}
             variant="outlined"
             color="red"
@@ -193,7 +197,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
             }}
             loading={isFetchingNextPage || isFetchingScreeningRooms}
           />
-          <AddSchedulingDialog planCinemaId={planCinemaId!} />
+          {canUpdate && <AddSchedulingDialog planCinemaId={planCinemaId!} />}
         </div>
       </div>
 
@@ -206,7 +210,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           bordered
           loading={isFetching}
           pagination={false}
-          rowSelection={{ type: "checkbox", ...rowSelection }}
+          rowSelection={canDelete ? { type: "checkbox", ...rowSelection } : undefined}
         />
       </div>
     </div>

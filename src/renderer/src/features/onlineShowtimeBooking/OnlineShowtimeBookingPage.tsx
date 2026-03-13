@@ -1,6 +1,7 @@
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError, PlanScreeningDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { Breadcrumb, DatePicker, message, Switch, Table } from "antd";
@@ -36,6 +37,8 @@ const OnlineShowtimeBookingPage = () => {
   );
 
   const { data, isFetching } = usePlanScreenings(params);
+  const { can } = usePermission();
+  const canUpdate = can("online_showtime_booking", "update");
 
   const updatePlanScreening = useUpdatePlanScreening();
 
@@ -107,6 +110,7 @@ const OnlineShowtimeBookingPage = () => {
             checked={record.isOnlineSelling === 1 ? true : false}
             onChange={() => onChangeSellOnline(record)}
             size="default"
+            disabled={!canUpdate || updatePlanScreening.isPending}
           />
         );
       }

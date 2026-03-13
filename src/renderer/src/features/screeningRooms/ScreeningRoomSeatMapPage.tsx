@@ -5,6 +5,7 @@ import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRo
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { cn } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message, Select, Space, Spin } from "antd";
 import axios from "axios";
@@ -19,6 +20,8 @@ const ScreeningRoomSeatMapPage = () => {
   const navigate = useNavigate();
   const { data: generalData } = useGeneralData();
   const { id } = useParams();
+  const { can } = usePermission();
+  const canConfigure = can("screening_rooms", "configure");
   const [versionCode, setVersionCode] = useState<string>("2D");
   const [seatType, setSeatType] = useState<number | undefined>(undefined);
   const [selectedFloor, setSelectedFloor] = useState<FloorNumber>(1);
@@ -90,7 +93,6 @@ const ScreeningRoomSeatMapPage = () => {
   useEffect(() => {
     if (!floorConfigs.length) return;
     if (!floorConfigs.some((item) => item.floor === selectedFloor)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedFloor(floorConfigs[0].floor);
     }
   }, [floorConfigs, selectedFloor]);
@@ -134,7 +136,6 @@ const ScreeningRoomSeatMapPage = () => {
   }, [screeningRoomChairs, versionCode]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeatAssignments(seatMapByFloor);
     setSelectedSeatKeys([]);
   }, [seatMapByFloor]);
@@ -595,7 +596,7 @@ const ScreeningRoomSeatMapPage = () => {
             toggleContinueSelect={["shift"]}
             ratio={0}
             onSelect={handleSelectSeats}
-            onSelectEnd={handleApplySeatType}
+            onSelectEnd={canConfigure ? handleApplySeatType : undefined}
           />
         </div>
       </div>
@@ -615,6 +616,7 @@ const ScreeningRoomSeatMapPage = () => {
                 onChange={(value) => setVersionCode(value)}
                 className="w-50"
                 placeholder="Chọn phiên bản"
+                disabled={!canConfigure}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -634,6 +636,7 @@ const ScreeningRoomSeatMapPage = () => {
               onChange={(value) => setSeatType(value)}
               className="w-50"
               placeholder="Chọn loại ghế"
+              disabled={!canConfigure}
               optionRender={(option) => (
                 <Space>
                   <div
@@ -649,6 +652,7 @@ const ScreeningRoomSeatMapPage = () => {
             className="h-20"
             type="primary"
             onClick={handleSaveChairs}
+            disabled={!canConfigure}
             loading={createChairs.isPending}
           >
             Cập nhật

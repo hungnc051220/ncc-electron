@@ -6,6 +6,7 @@ import {
   formatMoney,
   formatNumber
 } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, message, Table } from "antd";
@@ -21,13 +22,6 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: "Thiết lập ghế ngồi" },
-  { key: "3", label: "In vé" },
-  { key: "4", label: "Thông tin xuất hóa đơn" }
-];
-
 export interface ValuesProps {
   dateRange?: [string, string];
 }
@@ -38,6 +32,11 @@ const ContractTicketSalesPage = () => {
   const { posShortName } = useSettingPosStore();
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
   const { data: user } = useUserDetail(userId!);
+  const { can } = usePermission();
+  const canCreate = can("contract_ticket_sales", "create");
+  const canUpdate = can("contract_ticket_sales", "update");
+  const canView = can("contract_ticket_sales", "view");
+  const canPrint = can("contract_ticket_sales", "print");
 
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -112,6 +111,17 @@ const ContractTicketSalesPage = () => {
     }
   }, []);
 
+  const actionItems = [
+    ...(canUpdate
+      ? [
+          { key: "1", label: "Cập nhật" },
+          { key: "2", label: "Thiết lập ghế ngồi" }
+        ]
+      : []),
+    ...(canPrint ? [{ key: "3", label: "In vé" }] : []),
+    ...(canView ? [{ key: "4", label: "Thông tin xuất hóa đơn" }] : [])
+  ];
+
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
       title: "STT",
@@ -184,38 +194,42 @@ const ContractTicketSalesPage = () => {
           : "",
       width: 100
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record.order);
-              }
-              if (e.key === "2") {
-                handleUpdateSeat(record.order);
-              }
-              if (e.key === "3") {
-                handlePrint(record);
-              }
-              if (e.key === "4") {
-                handleDetailInvoice(record.order);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: OrderDetailProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record.order);
+                    }
+                    if (e.key === "2") {
+                      handleUpdateSeat(record.order);
+                    }
+                    if (e.key === "3") {
+                      handlePrint(record);
+                    }
+                    if (e.key === "4") {
+                      handleDetailInvoice(record.order);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -251,9 +265,11 @@ const ContractTicketSalesPage = () => {
 
         <div className="flex gap-2 items-center">
           <Filter filterValues={filterValues} setCurrent={setCurrent} onSearch={onSearch} />
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm hợp đồng
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm hợp đồng
+            </Button>
+          )}
         </div>
       </div>
 

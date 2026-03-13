@@ -2,6 +2,7 @@ import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
@@ -43,6 +44,8 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
   const [isSamePrice, setIsSamePrice] = useState(false);
+  const { can } = usePermission();
+  const canUpdate = can("plan_cinema", "update");
 
   const filmId = Form.useWatch("filmId", form);
   const roomId = Form.useWatch("roomId", form);
@@ -226,6 +229,10 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
     form.resetFields();
     setIsSamePrice(false);
   };
+
+  if (!canUpdate) {
+    return null;
+  }
 
   return (
     <>

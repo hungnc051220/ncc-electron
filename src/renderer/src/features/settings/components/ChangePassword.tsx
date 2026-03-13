@@ -1,4 +1,5 @@
 import { useChangePasswordUser } from "@renderer/hooks/users/useChangePasswordUser";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { ApiError } from "@shared/types";
 import type { FormProps } from "antd";
@@ -13,6 +14,8 @@ type FieldType = {
 const ChangePassword = () => {
   const logout = useAuthStore((s) => s.logout);
   const changePassword = useChangePasswordUser();
+  const { can } = usePermission();
+  const canUpdate = can("settings", "update");
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
     changePassword.mutate(values, {
@@ -60,7 +63,11 @@ const ChangePassword = () => {
         </Form.Item>
 
         <Form.Item label={null} className="flex justify-end">
-          <Button type="primary" htmlType="submit" disabled={changePassword.isPending}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            disabled={changePassword.isPending || !canUpdate}
+          >
             Lưu thông tin
           </Button>
         </Form.Item>

@@ -11,6 +11,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useDeletePlanFilm } from "@renderer/hooks/planFilms/useDeletePlanFilm";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useUpdatePlanFilm } from "@renderer/hooks/planFilms/useUpdatePlanCinema";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError, PlanFilmProps } from "@shared/types";
 import type { TableColumnsType, TableProps } from "antd";
 import { Button, message, Table } from "antd";
@@ -44,11 +45,15 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
   );
 
   const { data, isFetching } = usePlanFilms(params);
+  const { can } = usePermission();
+  const canUpdate = can("plan_cinema", "update");
+  const canDelete = can("plan_cinema", "delete");
 
   const updatePlanFilm = useUpdatePlanFilm();
   const deletePlanFilm = useDeletePlanFilm();
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!canUpdate) return;
     if (active.id !== over?.id) {
       const activeIndex = dataSource.findIndex((i) => i.filmId === active.id);
       const overIndex = dataSource.findIndex((i) => i.filmId === over?.id);
@@ -120,14 +125,15 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
 
   const Row: React.FC<Readonly<RowProps>> = (props) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-      id: props["data-row-key"]
+      id: props["data-row-key"],
+      disabled: !canUpdate
     });
 
     const style: React.CSSProperties = {
       ...props.style,
       transform: CSS.Translate.toString(transform),
       transition,
-      cursor: "move",
+      cursor: canUpdate ? "move" : "default",
       ...(isDragging ? { position: "relative", zIndex: 9999 } : {})
     };
 
@@ -182,18 +188,20 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
             size="small"
             variant="outlined"
             color="red"
-            disabled={selectedFilmIds.length === 0}
+            disabled={selectedFilmIds.length === 0 || !canDelete}
             loading={deletePlanFilm.isPending}
             onClick={handleDeleteFilms}
           >
             Xóa
           </Button>
         </div>
-        <AddMovies
-          planCinemaId={planCinemaId!}
-          selectedFilmIds={data.data.map((item) => item.filmId)}
-          planFilms={data.data}
-        />
+        {canUpdate && (
+          <AddMovies
+            planCinemaId={planCinemaId!}
+            selectedFilmIds={data.data.map((item) => item.filmId)}
+            planFilms={data.data}
+          />
+        )}
       </div>
 
       <div className="pt-2 z-0">
@@ -213,7 +221,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
               bordered
               loading={isFetching}
               pagination={false}
-              rowSelection={{ type: "checkbox", ...rowSelection }}
+              rowSelection={canDelete ? { type: "checkbox", ...rowSelection } : undefined}
             />
           </SortableContext>
         </DndContext>

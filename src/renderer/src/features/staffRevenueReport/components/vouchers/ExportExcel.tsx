@@ -1,3 +1,4 @@
+import { usePermission } from "@renderer/permissions/usePermission";
 import { VoucherUsageProps } from "@shared/types";
 import { Button } from "antd";
 import dayjs from "dayjs";
@@ -21,6 +22,13 @@ const ExportRevenueExcelButton = ({
   fileName = "bao-cao-so-luong-voucher.xlsx",
   total
 }: Props) => {
+  const { can } = usePermission();
+  const canExport = can("staff_revenue_report", "export");
+
+  if (!canExport) {
+    return null;
+  }
+
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Chi tiết");

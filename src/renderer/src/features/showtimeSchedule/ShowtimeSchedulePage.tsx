@@ -1,6 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanCinemaProps } from "@shared/types";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { Breadcrumb, DatePicker, Dropdown, Table } from "antd";
@@ -29,6 +30,8 @@ const ShowtimeSchedulePage = () => {
   const [selectedItem, setSelectedItem] = useState<PlanCinemaProps | null>(null);
   const [fromDate, setFromDate] = useState<Dayjs | null>(dayjs().startOf("day"));
   const [toDate, setToDate] = useState<Dayjs | null>(dayjs().endOf("day"));
+  const { can } = usePermission();
+  const canView = can("showtime_schedule", "view");
 
   const params = useMemo(
     () => ({
@@ -81,29 +84,33 @@ const ShowtimeSchedulePage = () => {
       dataIndex: "status",
       render: () => <Check className="size-4 text-green-500" />
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleViewDetail(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(canView
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: PlanCinemaProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleViewDetail(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onRangeChange = (dates: null | (Dayjs | null)[]) => {

@@ -1,4 +1,5 @@
 import { initApi } from "@renderer/api/client";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { AppConfig } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message } from "antd";
@@ -6,6 +7,8 @@ import { useEffect } from "react";
 
 const SettingEndpoint = () => {
   const [form] = Form.useForm<AppConfig>();
+  const { can } = usePermission();
+  const canUpdate = can("settings", "configure");
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -42,7 +45,7 @@ const SettingEndpoint = () => {
         </Form.Item>
 
         <Form.Item label={null} className="flex justify-end">
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="submit" disabled={!canUpdate}>
             Lưu thông tin
           </Button>
         </Form.Item>

@@ -15,13 +15,6 @@ export const PERMISSION_ACTION_LABELS: Record<PermissionAction, string> = {
 
 export const PERMISSION_CATALOG: PermissionDefinition[] = [
   {
-    key: "dashboard",
-    module: "Tổng quan",
-    label: "Trang chủ",
-    route: "/",
-    actions: ["access", "view"]
-  },
-  {
     key: "users",
     module: "Hệ thống",
     label: "Quản lý người dùng",
@@ -69,6 +62,13 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     label: "Hóa đơn điện tử",
     route: "/invoices",
     actions: ["access", "list", "view", "create", "update", "print"]
+  },
+  {
+    key: "revenue_sharing",
+    module: "Quản lý danh sách",
+    label: "Quản lý phân chia doanh thu",
+    route: "/revenue-sharing",
+    actions: ["access", "list", "view", "create", "update", "delete"]
   },
   {
     key: "seat_types",
@@ -250,6 +250,13 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     module: "Thống kê, báo cáo",
     label: "Báo cáo quý",
     route: "/quarterly-report",
+    actions: ["access", "list", "view", "export"]
+  },
+  {
+    key: "yearly_report",
+    module: "Thống kê, báo cáo",
+    label: "Báo cáo năm",
+    route: "/yearly-report",
     actions: ["access", "list", "view", "export"]
   }
 ];

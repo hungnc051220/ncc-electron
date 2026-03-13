@@ -24,6 +24,7 @@ import PlanCinemaPage from "./features/planCinema/PlanCinemaPage";
 import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
 import PrintOnlineTicketsPage from "./features/printOnlineTickets/PrintOnlineTicketsPage";
 import QuarterlyReportPage from "./features/quarterlyReport/QuarterlyReportPage";
+import RevenueSharingPage from "./features/revenueSharing/RevenueSharingPage";
 import RefundsPage from "./features/refunds/RefundsPage";
 import ScreeningRoomSeatMapPage from "./features/screeningRooms/ScreeningRoomSeatMapPage";
 import ScreeningRoomsPage from "./features/screeningRooms/ScreeningRoomsPage";
@@ -41,6 +42,7 @@ import UsersPage from "./features/users/UsersPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedLayout from "./layouts/ProtectedLayout";
 import VouchersPage from "./features/vouchers/VouchersPage";
+import YearlyReportPage from "./features/yearlyReport/YearlyReportPage";
 import PermissionGuard from "./permissions/PermissionGuard";
 
 const withAccess = (permissionKey: string, element: React.ReactNode) => (
@@ -100,6 +102,10 @@ export const router = createHashRouter([
           {
             path: "/seat-types",
             element: withAccess("seat_types", <SeatTypesPage />)
+          },
+          {
+            path: "/revenue-sharing",
+            element: withAccess("revenue_sharing", <RevenueSharingPage />)
           },
           {
             path: "/screening-rooms",
@@ -178,6 +184,10 @@ export const router = createHashRouter([
             element: withAccess("quarterly_report", <QuarterlyReportPage />)
           },
           {
+            path: "/yearly-report",
+            element: withAccess("yearly_report", <YearlyReportPage />)
+          },
+          {
             path: "/ticket-sales-revenue",
             element: withAccess("ticket_sales_revenue", <TicketSalesRevenuePage />)
           },
@@ -213,7 +223,7 @@ export const router = createHashRouter([
       },
       {
         path: "/ticket-sales-diagram/view",
-        element: <TicketSalesDiagramPage />
+        element: withAccess("ticket_sales_revenue", <TicketSalesDiagramPage />)
       },
       {
         path: "/screening-rooms/:id/seat-map",

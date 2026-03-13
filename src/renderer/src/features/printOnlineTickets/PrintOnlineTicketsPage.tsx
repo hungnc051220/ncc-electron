@@ -4,6 +4,7 @@ import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { buildTicketsFromOrder, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
@@ -37,6 +38,9 @@ const PrintOnlineTicketsPage = () => {
   const { posShortName } = useSettingPosStore();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
+  const { can } = usePermission();
+  const canView = can("print_online_tickets", "view");
+  const canPrint = can("print_online_tickets", "print");
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -198,35 +202,40 @@ const PrintOnlineTicketsPage = () => {
       align: "center",
       fixed: "right"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => {
-        const isPrinted = record.order.printedOnUtc;
+    ...(canView || canPrint
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: OrderDetailProps) => {
+              const isPrinted = record.order.printedOnUtc;
+              const items = [
+                ...(canView
+                  ? [{ key: "1", label: "Xem chi tiết", onClick: () => handeViewDetail(record) }]
+                  : []),
+                ...(canPrint
+                  ? [
+                      {
+                        key: "2",
+                        label: isPrinted ? "Cho phép in lại vé" : "In vé",
+                        onClick: () => (isPrinted ? onUnmarkPrinted(record) : onPrint(record))
+                      }
+                    ]
+                  : [])
+              ];
 
-        return (
-          <Dropdown
-            menu={{
-              items: [
-                { key: "1", label: "Xem chi tiết", onClick: () => handeViewDetail(record) },
-                {
-                  key: "2",
-                  label: isPrinted ? "Cho phép in lại vé" : "In vé",
-                  onClick: () => (isPrinted ? onUnmarkPrinted(record) : onPrint(record))
-                }
-              ]
-            }}
-            arrow
-            trigger={["click"]}
-          >
-            <MoreOutlined />
-          </Dropdown>
-        );
-      },
-      align: "center",
-      fixed: "right"
-    }
+              return (
+                <Dropdown menu={{ items }} arrow trigger={["click"]}>
+                  <MoreOutlined />
+                </Dropdown>
+              );
+            },
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onSearch = (values: ValuesProps) => {

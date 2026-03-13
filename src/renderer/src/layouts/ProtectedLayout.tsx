@@ -1,6 +1,5 @@
 import { Outlet, Navigate } from "react-router";
 import { useAuthStore } from "../store/auth.store";
-import PermissionBootstrap from "@renderer/permissions/PermissionBootstrap";
 
 export default function ProtectedLayout() {
   const isAuth = useAuthStore((s) => s.isAuth);
@@ -10,9 +9,5 @@ export default function ProtectedLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  return (
-    <PermissionBootstrap>
-      <Outlet />
-    </PermissionBootstrap>
-  );
+  return <Outlet />;
 }

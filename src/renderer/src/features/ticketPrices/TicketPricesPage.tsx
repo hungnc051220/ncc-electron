@@ -1,6 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useTicketPrices } from "@renderer/hooks/ticketPrices/useTicketPrices";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { TicketPriceProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
@@ -9,11 +10,6 @@ import { useCallback, useMemo, useState } from "react";
 import DeleteTicketPriceDialog from "./components/DeleteTicketPriceDialog";
 import TicketPriceDialog from "./components/TicketPriceDialog";
 import { Link } from "react-router";
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: <p className="text-red-500">Xóa</p> }
-];
 
 const TicketPricesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +27,10 @@ const TicketPricesPage = () => {
   );
 
   const { data: ticketPrices, isFetching } = useTicketPrices(params);
+  const { can } = usePermission();
+  const canCreate = can("ticket_prices", "create");
+  const canUpdate = can("ticket_prices", "update");
+  const canDelete = can("ticket_prices", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedTicketPrice(null);
@@ -60,6 +60,11 @@ const TicketPricesPage = () => {
       setSelectedTicketPrice(null);
     }
   }, []);
+
+  const actionItems = [
+    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
 
   const columns: TableProps<TicketPriceProps>["columns"] = [
     {
@@ -96,32 +101,36 @@ const TicketPricesPage = () => {
       align: "right",
       width: 200
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: TicketPriceProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -151,9 +160,11 @@ const TicketPricesPage = () => {
         />
 
         <div className="flex gap-2 items-center">
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm giá vé
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm giá vé
+            </Button>
+          )}
         </div>
       </div>
 

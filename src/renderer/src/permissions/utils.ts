@@ -21,7 +21,9 @@ export const buildPermissionMatrix = (
   assignments?: PermissionAssignment[],
   definitions: PermissionDefinition[] = PERMISSION_CATALOG
 ): PermissionMatrixRow[] => {
-  const assignmentMap = new Map(assignments?.map((item) => [item.permissionKey, item.actions]) ?? []);
+  const assignmentMap = new Map(
+    assignments?.map((item) => [item.permissionKey, item.actions]) ?? []
+  );
 
   return definitions.map((definition) => {
     const values = createEmptyValues();
@@ -79,18 +81,20 @@ export const legacyMenusToAssignments = (
       return [];
     }
 
-    return [{
-      permissionKey: definition.key,
-      actions: {
-        access: legacy.readOnly || legacy.edit,
-        list: legacy.readOnly,
-        view: legacy.readOnly,
-        create: legacy.edit,
-        update: legacy.edit,
-        delete: legacy.edit,
-        configure: legacy.edit
+    return [
+      {
+        permissionKey: definition.key,
+        actions: {
+          access: legacy.readOnly || legacy.edit,
+          list: legacy.readOnly,
+          view: legacy.readOnly,
+          create: legacy.edit,
+          update: legacy.edit,
+          delete: legacy.edit,
+          configure: legacy.edit
+        }
       }
-    }];
+    ];
   });
 };
 
@@ -128,16 +132,16 @@ export const hasPermission = (
   action: PermissionAction
 ): boolean => {
   if (!assignments?.length) {
-    return true;
+    return false;
   }
 
   const permission = assignments?.find((item) => item.permissionKey === permissionKey);
 
   if (!permission) {
-    return true;
+    return false;
   }
 
-  return permission.actions[action] ?? true;
+  return permission.actions[action] ?? false;
 };
 
 export const canAccessRoute = (
@@ -145,13 +149,13 @@ export const canAccessRoute = (
   route: string
 ): boolean => {
   if (!assignments?.length) {
-    return true;
+    return false;
   }
 
   const permission = PERMISSION_CATALOG.find((item) => item.route === route);
 
   if (!permission) {
-    return true;
+    return false;
   }
 
   return hasPermission(assignments, permission.key, "access");

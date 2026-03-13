@@ -92,7 +92,8 @@ api.interceptors.response.use(
 
         const { access_token, refresh_token: newRefreshToken } = response.data;
 
-        useAuthStore.getState().login(access_token, newRefreshToken);
+        const userId = useAuthStore.getState().userId ?? 0;
+        useAuthStore.getState().login(access_token, newRefreshToken, userId);
         connectSocket(access_token);
 
         processQueue(null, access_token);

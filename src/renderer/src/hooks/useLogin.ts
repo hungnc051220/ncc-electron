@@ -18,7 +18,6 @@ type LoginPayload = {
 
 export const useLogin = () => {
   const login = useAuthStore((s) => s.login);
-  const setUserId = useAuthStore((s) => s.setUserId);
 
   return useMutation({
     mutationFn: async (payload: LoginPayload) => {
@@ -32,8 +31,7 @@ export const useLogin = () => {
     onSuccess: (data) => {
       const decoded = jwtDecode<JwtPayload>(data.access_token);
       const userId = decoded?.user_id;
-      login(data.access_token, data.refresh_token);
-      setUserId(Number(userId));
+      login(data.access_token, data.refresh_token, Number(userId));
       connectSocket(data.access_token);
     },
     onError: (err: AxiosError<ApiError>) => {

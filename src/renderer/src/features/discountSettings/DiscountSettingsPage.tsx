@@ -1,6 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { DiscountProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
@@ -9,11 +10,6 @@ import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import DeleteDiscountDialog from "./components/DeleteDiscountDialog";
 import DiscountSettingsDialog from "./components/DiscountSettingsDialog";
-
-const actionItems = [
-  { key: "1", label: "Cập nhật" },
-  { key: "2", label: <p className="text-red-500">Xóa</p> }
-];
 
 const DiscountSettingsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +27,10 @@ const DiscountSettingsPage = () => {
   );
 
   const { data: discounts, isFetching } = useDiscounts(params);
+  const { can } = usePermission();
+  const canCreate = can("discount_settings", "create");
+  const canUpdate = can("discount_settings", "update");
+  const canDelete = can("discount_settings", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedDiscount(null);
@@ -60,6 +60,11 @@ const DiscountSettingsPage = () => {
       setSelectedDiscount(null);
     }
   }, []);
+
+  const actionItems = [
+    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+  ];
 
   const columns: TableProps<DiscountProps>["columns"] = [
     {
@@ -94,32 +99,36 @@ const DiscountSettingsPage = () => {
       render: (value: number) => (value ? `${formatNumber(value)}%` : ""),
       align: "right"
     },
-    {
-      title: "",
-      key: "operation",
-      width: 50,
-      render: (_, record) => (
-        <Dropdown
-          menu={{
-            items: actionItems,
-            onClick: (e) => {
-              if (e.key === "1") {
-                handleEdit(record);
-              }
-              if (e.key === "2") {
-                handleDelete(record);
-              }
-            }
-          }}
-          arrow
-          trigger={["click"]}
-        >
-          <MoreOutlined />
-        </Dropdown>
-      ),
-      align: "center",
-      fixed: "right"
-    }
+    ...(actionItems.length
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: DiscountProps) => (
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "1") {
+                      handleEdit(record);
+                    }
+                    if (e.key === "2") {
+                      handleDelete(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onChange = (page: number) => {
@@ -149,9 +158,11 @@ const DiscountSettingsPage = () => {
         />
 
         <div className="flex gap-2 items-center">
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm giảm giá
-          </Button>
+          {canCreate && (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm giảm giá
+            </Button>
+          )}
         </div>
       </div>
 

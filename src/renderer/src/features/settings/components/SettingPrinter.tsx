@@ -1,3 +1,4 @@
+import { usePermission } from "@renderer/permissions/usePermission";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import type { FormProps } from "antd";
 import { Button, Form, message, Select } from "antd";
@@ -10,6 +11,8 @@ type FieldType = {
 const SettingPrinter = () => {
   const { printers, selectedPrinter, setSelectedPrinter, fetchPrinters, loading } =
     usePrinterStore();
+  const { can } = usePermission();
+  const canUpdate = can("settings", "update");
 
   useEffect(() => {
     fetchPrinters();
@@ -43,11 +46,12 @@ const SettingPrinter = () => {
               value: p.name
             }))}
             placeholder="Chọn máy in mặc định"
+            disabled={!canUpdate}
           />
         </Form.Item>
 
         <Form.Item label={null} className="flex justify-end">
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="submit" disabled={!canUpdate}>
             Lưu thông tin
           </Button>
         </Form.Item>

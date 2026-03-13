@@ -1,5 +1,6 @@
 import Icon from "@ant-design/icons";
 import { useCreatePlanCinema } from "@renderer/hooks/planCinemas/useCreatePlanCinema";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message, Modal } from "antd";
@@ -15,6 +16,8 @@ type FieldType = {
 const AddPlanCinemaDialog = () => {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
+  const { can } = usePermission();
+  const canCreate = can("plan_cinema", "create");
 
   const createPlanCinema = useCreatePlanCinema();
 
@@ -46,6 +49,10 @@ const AddPlanCinemaDialog = () => {
       }
     });
   };
+
+  if (!canCreate) {
+    return null;
+  }
 
   return (
     <>

@@ -1,3 +1,4 @@
+import { usePermission } from "@renderer/permissions/usePermission";
 import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -28,6 +29,13 @@ const ExportRevenueExcelButton = ({
   totalOnline,
   totalOffline
 }: Props) => {
+  const { can } = usePermission();
+  const canExport = can("staff_revenue_report", "export");
+
+  if (!canExport) {
+    return null;
+  }
+
   const flattenRows = (data: TableRow[]): TableRow[] => {
     const rows: TableRow[] = [];
 

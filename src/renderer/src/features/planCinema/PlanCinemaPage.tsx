@@ -1,5 +1,6 @@
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { cn } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanCinemaProps } from "@shared/types";
 import type { CollapseProps, PaginationProps } from "antd";
 import { Breadcrumb, Button, Collapse, Empty, Pagination, Spin } from "antd";
@@ -33,6 +34,11 @@ const PlanCinemaPage = () => {
   );
 
   const { data, isFetching } = usePlanCinemas(params);
+  const { can } = usePermission();
+  const canCreate = can("plan_cinema", "create");
+  const canUpdate = can("plan_cinema", "update");
+  const canDelete = can("plan_cinema", "delete");
+  const canApprove = can("plan_cinema", "approve");
 
   const plans = data?.data;
 
@@ -143,9 +149,7 @@ const PlanCinemaPage = () => {
           ]}
         />
 
-        <div className="flex gap-2 items-center">
-          <AddPlanCinemaDialog />
-        </div>
+        <div className="flex gap-2 items-center">{canCreate && <AddPlanCinemaDialog />}</div>
       </div>
       <div className="h-full flex flex-col">
         <div className="flex gap-5 flex-1 min-h-0">
@@ -175,28 +179,32 @@ const PlanCinemaPage = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button variant="outlined" color="danger" onClick={() => setOpenDelete(true)}>
-                      Xóa kế hoạch
-                    </Button>
-                    {([0, 2].includes(selectedPlan.status) || selectedPlan.status === null) && (
-                      <SendForApproveActions
-                        planCinemaId={selectedPlan.id}
-                        clearSelectedPlan={clearSelectedPlan}
-                      />
+                    {canDelete && (
+                      <Button variant="outlined" color="danger" onClick={() => setOpenDelete(true)}>
+                        Xóa kế hoạch
+                      </Button>
                     )}
-                    {selectedPlan.status === 3 && (
+                    {canApprove &&
+                      canUpdate &&
+                      ([0, 2].includes(selectedPlan.status) || selectedPlan.status === null) && (
+                        <SendForApproveActions
+                          planCinemaId={selectedPlan.id}
+                          clearSelectedPlan={clearSelectedPlan}
+                        />
+                      )}
+                    {canApprove && selectedPlan.status === 3 && (
                       <ArchivedActions
                         planCinemaId={selectedPlan.id}
                         clearSelectedPlan={clearSelectedPlan}
                       />
                     )}
-                    {selectedPlan.status === 1 && (
+                    {canApprove && selectedPlan.status === 1 && (
                       <ApproveRejectActions
                         planCinemaId={selectedPlan.id}
                         clearSelectedPlan={clearSelectedPlan}
                       />
                     )}
-                    {selectedPlan.status === 4 && (
+                    {canApprove && selectedPlan.status === 4 && (
                       <RestoreActions
                         planCinemaId={selectedPlan.id}
                         clearSelectedPlan={clearSelectedPlan}

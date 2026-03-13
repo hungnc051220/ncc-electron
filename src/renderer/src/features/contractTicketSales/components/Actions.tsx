@@ -7,6 +7,7 @@ import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { buildTicketsFromOrder, formatMoney } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
@@ -71,6 +72,10 @@ const Actions = ({
   const { data: user } = useUserDetail(userId!);
   const { posName } = useSettingPosStore();
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
+  const { can } = usePermission();
+  const canUpdate = can("contract_ticket_sales", "update");
+  const canDelete = can("contract_ticket_sales", "delete");
+  const canPrint = can("contract_ticket_sales", "print");
 
   const setSeatsContractTicketSale = useSetSeatsContractTicketSale();
   const cancelOrder = useCancelOrder();
@@ -198,34 +203,40 @@ const Actions = ({
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="flex gap-3">
-          <Button
-            variant="outlined"
-            color="primary"
-            className="h-full! font-bold"
-            onClick={onUpdateSeat}
-            disabled={selectedSeats.length === 0 || setSeatsContractTicketSale.isPending}
-          >
-            Thêm vé hợp đồng
-          </Button>
+          {canUpdate && (
+            <Button
+              variant="outlined"
+              color="primary"
+              className="h-full! font-bold"
+              onClick={onUpdateSeat}
+              disabled={selectedSeats.length === 0 || setSeatsContractTicketSale.isPending}
+            >
+              Thêm vé hợp đồng
+            </Button>
+          )}
 
-          <Button
-            variant="outlined"
-            color="danger"
-            className="h-full! font-bold"
-            disabled={selectedSeats.length === 0 || setSeatsContractTicketSale.isPending}
-            onClick={onCancelSeats}
-          >
-            Hủy vé hợp đồng
-          </Button>
+          {canDelete && (
+            <Button
+              variant="outlined"
+              color="danger"
+              className="h-full! font-bold"
+              disabled={selectedSeats.length === 0 || setSeatsContractTicketSale.isPending}
+              onClick={onCancelSeats}
+            >
+              Hủy vé hợp đồng
+            </Button>
+          )}
 
-          <Button
-            variant="outlined"
-            color="orange"
-            className="h-full! font-bold"
-            onClick={() => handlePrint(contractOrderId)}
-          >
-            In vé
-          </Button>
+          {canPrint && (
+            <Button
+              variant="outlined"
+              color="orange"
+              className="h-full! font-bold"
+              onClick={() => handlePrint(contractOrderId)}
+            >
+              In vé
+            </Button>
+          )}
         </div>
       </div>
     </div>
