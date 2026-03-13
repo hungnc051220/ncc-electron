@@ -19,7 +19,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     startTransition(() => {
       form.resetFields();
       onSearch({
-        fromDate: dayjs().startOf("quarter").format()
+        fromDate: dayjs().startOf("year").format()
       });
     });
   };
@@ -61,7 +61,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
               const { fromDate } = values;
               setOpen(false);
               onSearch({
-                fromDate: dayjs(fromDate).startOf("quarter").format()
+                fromDate: dayjs(fromDate).startOf("year").format()
               });
             }}
           >
@@ -76,8 +76,8 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           </>
         )}
       >
-        <Form.Item name="fromDate" label="Khoảng thời gian">
-          <DatePicker picker="quarter" className="w-full" allowClear={false} />
+        <Form.Item name="fromDate" label="Năm">
+          <DatePicker picker="year" className="w-full" allowClear={false} />
         </Form.Item>
       </Modal>
     </>

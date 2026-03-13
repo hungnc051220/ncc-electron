@@ -3,20 +3,18 @@ import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { TreeRow } from ".";
-import dayjs from "dayjs";
+import { QUARTERS } from "../yearlyReport.utils";
 
 type Props = {
-  treeData: TreeRow[]; // data của Tree Table
-  rooms: string[]; // ["1","2","3",...]
+  treeData: TreeRow[];
   fileName?: string;
-  fromDate: string;
+  year: number;
 };
 
 const ExportRevenueExcelButton = ({
   treeData,
-  rooms,
-  fileName = "bao-cao-quy-buoi-chieu-phim.xlsx",
-  fromDate
+  fileName = "bao-cao-nam-tong-hop-buoi-chieu.xlsx",
+  year
 }: Props) => {
   const { can } = usePermission();
   const canExport = can("yearly_report", "export");
@@ -27,100 +25,89 @@ const ExportRevenueExcelButton = ({
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Thống kê buổi chiếu");
+    const ws = wb.addWorksheet("Tong hop buoi chieu");
+    const totalColumns = 1 + QUARTERS.length * 3 + 3;
 
-    const totalColumns = 1 + rooms.length;
-
-    // ===== TITLE =====
-    ws.addRow([]);
-    ws.getCell(1, 1).value =
-      `THỐNG KÊ BUỔI CHIẾU THEO PHÒNG - QUÝ ${dayjs(fromDate).quarter()}/${dayjs(fromDate).year()}`;
+    ws.getCell(1, 1).value = `BAO CAO NAM TONG HOP BUOI CHIEU, LUONG KHAN GIA - ${year}`;
     ws.mergeCells(1, 1, 1, totalColumns);
     ws.getRow(1).font = { bold: true, size: 16 };
     ws.getRow(1).alignment = { horizontal: "center" };
 
-    ws.addRow([]);
+    const headerTopRow = 3;
+    const headerBottomRow = 4;
 
-    // ===== HEADER GROUP =====
-    const headerGroupRow = ws.lastRow!.number + 1;
+    ws.mergeCells(headerTopRow, 1, headerBottomRow, 1);
+    ws.getCell(headerTopRow, 1).value = "Hang phim / Phim";
 
-    // cột tên
-    ws.mergeCells(headerGroupRow, 1, headerGroupRow + 1, 1);
-    ws.getCell(headerGroupRow, 1).value = "Hãng phim / Phim";
-
-    // group số buổi chiếu
-    ws.mergeCells(headerGroupRow, 2, headerGroupRow, totalColumns);
-    ws.getCell(headerGroupRow, 2).value = "Số buổi chiếu";
-
-    // ===== HEADER ROOM =====
-    const headerRow = headerGroupRow + 1;
-    const row2 = ws.getRow(headerRow);
-
-    rooms.forEach((r, i) => {
-      row2.getCell(2 + i).value = `P${r}`;
+    QUARTERS.forEach((quarter, index) => {
+      const startCol = 2 + index * 3;
+      ws.mergeCells(headerTopRow, startCol, headerTopRow, startCol + 2);
+      ws.getCell(headerTopRow, startCol).value = `Quy ${quarter}`;
+      ws.getCell(headerBottomRow, startCol).value = "Buoi chieu";
+      ws.getCell(headerBottomRow, startCol + 1).value = "Khan gia";
+      ws.getCell(headerBottomRow, startCol + 2).value = "Doanh thu";
     });
 
-    // style header
-    [headerGroupRow, headerRow].forEach((r) => {
-      ws.getRow(r).font = { bold: true };
-      ws.getRow(r).alignment = {
-        horizontal: "center",
-        vertical: "middle",
-        wrapText: true
-      };
-      ws.getRow(r).height = 28;
+    const totalStartCol = 2 + QUARTERS.length * 3;
+    ws.mergeCells(headerTopRow, totalStartCol, headerTopRow, totalStartCol + 2);
+    ws.getCell(headerTopRow, totalStartCol).value = "Ca nam";
+    ws.getCell(headerBottomRow, totalStartCol).value = "Buoi chieu";
+    ws.getCell(headerBottomRow, totalStartCol + 1).value = "Khan gia";
+    ws.getCell(headerBottomRow, totalStartCol + 2).value = "Doanh thu";
+
+    [headerTopRow, headerBottomRow].forEach((rowIndex) => {
+      ws.getRow(rowIndex).font = { bold: true };
+      ws.getRow(rowIndex).alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     });
 
-    // ===== BODY =====
-    treeData.forEach((group) => {
-      // ===== row hãng (tổng) =====
-      ws.addRow([group.name, ...rooms.map((r) => group[`P${r}`] || "")]);
+    const addDataRow = (row: TreeRow, level = 0) => {
+      const values: (string | number)[] = [" ".repeat(level * 2) + row.name];
 
-      const groupRowIndex = ws.lastRow!.number;
-
-      ws.getRow(groupRowIndex).font = { bold: true };
-
-      // ===== row phim =====
-      group.children?.forEach((film) => {
-        ws.addRow([`   ${film.name}`, ...rooms.map((r) => film[`P${r}`] || "")]);
+      QUARTERS.forEach((quarter) => {
+        values.push(Number(row[`q${quarter}Screenings`] || 0));
+        values.push(Number(row[`q${quarter}Tickets`] || 0));
+        values.push(Number(row[`q${quarter}Revenue`] || 0));
       });
-    });
-    // ===== STYLE =====
-    ws.getColumn(1).width = 45;
-    rooms.forEach((_, i) => {
-      ws.getColumn(2 + i).width = 10;
-    });
 
-    // freeze header + first column
-    ws.views = [
-      {
-        state: "frozen",
-        ySplit: headerRow,
-        xSplit: 1
-      }
-    ];
+      values.push(Number(row.totalScreenings || 0));
+      values.push(Number(row.totalTicketsSold || 0));
+      values.push(Number(row.totalRevenue || 0));
 
-    // border
-    const startRow = headerGroupRow;
-    const endRow = ws.lastRow!.number;
-    const endCol = totalColumns;
+      const excelRow = ws.addRow(values);
+      excelRow.font = row.isSummary ? { bold: true } : {};
+      excelRow.getCell(1).alignment = { horizontal: "left", indent: level * 2 };
 
-    for (let r = startRow; r <= endRow; r++) {
-      for (let c = 1; c <= endCol; c++) {
-        ws.getCell(r, c).border = {
+      row.children?.forEach((child) => addDataRow(child, level + 1));
+    };
+
+    treeData.forEach((row) => addDataRow(row));
+
+    ws.getColumn(1).width = 42;
+    for (let column = 2; column <= totalColumns; column += 1) {
+      ws.getColumn(column).width = 14;
+    }
+
+    ws.eachRow((row, rowNumber) => {
+      row.eachCell((cell, colNumber) => {
+        cell.border = {
           top: { style: "thin" },
           left: { style: "thin" },
           bottom: { style: "thin" },
           right: { style: "thin" }
         };
-
-        ws.getCell(r, c).alignment = {
+        cell.alignment = {
           vertical: "middle",
-          horizontal: c === 1 ? "left" : "center",
+          horizontal: colNumber === 1 ? "left" : "right",
           wrapText: true
         };
-      }
-    }
+
+        if (rowNumber >= 5 && colNumber > 1) {
+          cell.numFmt = "#,##0";
+        }
+      });
+    });
+
+    ws.views = [{ state: "frozen", ySplit: 4, xSplit: 1 }];
 
     const buf = await wb.xlsx.writeBuffer();
     saveAs(new Blob([buf]), fileName);

@@ -331,3 +331,41 @@ export interface RoomReport {
 export interface MonthlyReportRoomProps {
   data: RoomReport[];
 }
+
+export type YearlyReportType = "PLAN" | "REVENUE_VIET" | "REVENUE_PARTNER" | "SUMMARY";
+
+export interface YearlyReportQuarterDetail {
+  screenings?: number;
+  tickets?: number;
+  revenue?: number;
+  partnerRevenue?: number;
+  totalRevenue?: number;
+}
+
+export interface YearlyReportFilmDetail {
+  filmName: string;
+  quarters: Partial<Record<1 | 2 | 3 | 4, YearlyReportQuarterDetail>>;
+  totalScreenings?: number;
+  totalTicketsSold?: number;
+  totalRevenue: number;
+  totalPartnerRevenue?: number;
+}
+
+export interface YearlyReportManufacturerDetail {
+  manufacturerName: string;
+  films: YearlyReportFilmDetail[];
+}
+
+export interface YearlyReportDetailResponse {
+  data: YearlyReportManufacturerDetail[];
+}
+
+export interface YearlyReportSummaryItem {
+  manufacturerId: number;
+  manufacturerName: string;
+  totalFilms: number;
+  totalPlans: number;
+  totalTicketsSold: number;
+  totalRevenue: number;
+  totalSharedRevenue: number;
+}

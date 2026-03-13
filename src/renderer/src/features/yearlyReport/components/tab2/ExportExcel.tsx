@@ -3,20 +3,18 @@ import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { TreeRow } from ".";
-import dayjs from "dayjs";
+import { QUARTERS } from "../yearlyReport.utils";
 
 type Props = {
-  treeData: TreeRow[]; // data của Tree Table
-  allPrices: number[]; // ["1","2","3",...]
+  treeData: TreeRow[];
   fileName?: string;
-  fromDate: string;
+  year: number;
 };
 
 const ExportRevenueExcelButton = ({
   treeData,
-  allPrices,
-  fileName = "bao-cao-quy-doanh-thu-theo-tung-loai-ve.xlsx",
-  fromDate
+  fileName = "bao-cao-nam-doanh-thu-phim-viet.xlsx",
+  year
 }: Props) => {
   const { can } = usePermission();
   const canExport = can("yearly_report", "export");
@@ -27,142 +25,70 @@ const ExportRevenueExcelButton = ({
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Chi tiết");
+    const ws = wb.addWorksheet("Doanh thu phim Viet");
+    const totalColumns = 1 + QUARTERS.length * 3 + 3;
 
-    // ================= TITLE =================
-    ws.addRow([]);
-    ws.getCell(1, 1).value =
-      `BÁO CÁO DOANH THU VÉ THEO TỪNG LOẠI VÉ - QUÝ ${dayjs(fromDate).quarter()}/${dayjs(fromDate).year()}`;
-    ws.mergeCells(1, 1, 1, 4 + allPrices.length * 4 + 2); // tổng số cột
+    ws.getCell(1, 1).value = `BAO CAO NAM DOANH THU PHIM VIET - ${year}`;
+    ws.mergeCells(1, 1, 1, totalColumns);
     ws.getRow(1).font = { bold: true, size: 16 };
-    ws.getRow(1).alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(1).alignment = { horizontal: "center" };
 
-    ws.addRow([]);
+    const headerTopRow = 3;
+    const headerBottomRow = 4;
 
-    ws.getCell(2, 1).value = `Ngày in: ${dayjs().format("DD/MM/YYYY HH:mm")}`;
-    ws.mergeCells(2, 1, 2, 4 + allPrices.length * 4 + 2);
-    ws.getRow(2).alignment = { horizontal: "right" };
+    ws.mergeCells(headerTopRow, 1, headerBottomRow, 1);
+    ws.getCell(headerTopRow, 1).value = "Hang phim / Phim";
 
-    ws.addRow([]);
-
-    // ================= HEADER =================
-    const headerStartRow = ws.lastRow!.number + 1;
-    // ---- Fixed columns (merge dọc 4 dòng) ----
-    ws.mergeCells(headerStartRow, 1, headerStartRow + 3, 1);
-    ws.mergeCells(headerStartRow, 2, headerStartRow + 3, 2);
-    ws.mergeCells(headerStartRow, 3, headerStartRow + 3, 3);
-    ws.mergeCells(headerStartRow, 4, headerStartRow + 3, 4);
-
-    ws.getCell(headerStartRow, 1).value = "Hãng phim / Phim";
-    ws.getCell(headerStartRow, 2).value = "Ngày";
-    ws.getCell(headerStartRow, 3).value = "Giờ";
-    ws.getCell(headerStartRow, 4).value = "Version";
-
-    // ---- Price group ----
-    const priceGroupStartCol = 5;
-    const priceGroupEndCol = 4 + allPrices.length * 4 + 2; // +2 cho cột Tổng
-
-    ws.mergeCells(headerStartRow, priceGroupStartCol, headerStartRow, priceGroupEndCol);
-
-    ws.getCell(headerStartRow, priceGroupStartCol).value = "Loại giá vé (Đơn vị tính: 1.000đ)";
-
-    let colIndex = priceGroupStartCol;
-
-    allPrices.forEach((p) => {
-      // Giá
-      ws.mergeCells(headerStartRow + 1, colIndex, headerStartRow + 1, colIndex + 3);
-      ws.getCell(headerStartRow + 1, colIndex).value = (p / 1000).toString();
-
-      // Online
-      ws.mergeCells(headerStartRow + 2, colIndex, headerStartRow + 2, colIndex + 1);
-      ws.getCell(headerStartRow + 2, colIndex).value = "Online";
-
-      // Offline
-      ws.mergeCells(headerStartRow + 2, colIndex + 2, headerStartRow + 2, colIndex + 3);
-      ws.getCell(headerStartRow + 2, colIndex + 2).value = "Offline";
-
-      // Vé / Tiền
-      ws.getCell(headerStartRow + 3, colIndex).value = "Vé";
-      ws.getCell(headerStartRow + 3, colIndex + 1).value = "Tiền";
-      ws.getCell(headerStartRow + 3, colIndex + 2).value = "Vé";
-      ws.getCell(headerStartRow + 3, colIndex + 3).value = "Tiền";
-
-      colIndex += 4;
+    QUARTERS.forEach((quarter, index) => {
+      const startCol = 2 + index * 3;
+      ws.mergeCells(headerTopRow, startCol, headerTopRow, startCol + 2);
+      ws.getCell(headerTopRow, startCol).value = `Quy ${quarter}`;
+      ws.getCell(headerBottomRow, startCol).value = "Buoi chieu";
+      ws.getCell(headerBottomRow, startCol + 1).value = "Khan gia";
+      ws.getCell(headerBottomRow, startCol + 2).value = "Doanh thu";
     });
 
-    const totalStart = colIndex;
-    ws.mergeCells(headerStartRow + 1, totalStart, headerStartRow + 2, totalStart + 1);
-    ws.getCell(headerStartRow + 1, totalStart).value = "Tổng";
-    ws.getCell(headerStartRow + 3, totalStart).value = "Vé";
-    ws.getCell(headerStartRow + 3, totalStart + 1).value = "Tiền";
+    const totalStartCol = 2 + QUARTERS.length * 3;
+    ws.mergeCells(headerTopRow, totalStartCol, headerTopRow, totalStartCol + 2);
+    ws.getCell(headerTopRow, totalStartCol).value = "Ca nam";
+    ws.getCell(headerBottomRow, totalStartCol).value = "Buoi chieu";
+    ws.getCell(headerBottomRow, totalStartCol + 1).value = "Khan gia";
+    ws.getCell(headerBottomRow, totalStartCol + 2).value = "Doanh thu";
 
-    // ===== HEADER STYLE =====
-    for (let r = headerStartRow; r <= headerStartRow + 3; r++) {
-      const row = ws.getRow(r);
-      row.font = { bold: true };
-      row.alignment = {
-        vertical: "middle",
-        horizontal: "center",
-        wrapText: true
-      };
-      row.height = 28;
-    }
+    [headerTopRow, headerBottomRow].forEach((rowIndex) => {
+      ws.getRow(rowIndex).font = { bold: true };
+      ws.getRow(rowIndex).alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    });
 
-    // ================= DATA =================
+    const addDataRow = (row: TreeRow, level = 0) => {
+      const values: (string | number)[] = [" ".repeat(level * 2) + row.name];
 
-    const dataStartRow = headerStartRow + 4;
-
-    function addRow(row: TreeRow, level: number) {
-      const r: (string | number)[] = [
-        row.name || "",
-        row.date || "",
-        row.time || "",
-        row.version || ""
-      ];
-
-      allPrices.forEach((p) => {
-        r.push(row[`price_${p}_online`]?.tickets || "");
-        r.push(row[`price_${p}_online`]?.revenue || "");
-        r.push(row[`price_${p}_offline`]?.tickets || "");
-        r.push(row[`price_${p}_offline`]?.revenue || "");
+      QUARTERS.forEach((quarter) => {
+        values.push(Number(row[`q${quarter}Screenings`] || 0));
+        values.push(Number(row[`q${quarter}Tickets`] || 0));
+        values.push(Number(row[`q${quarter}Revenue`] || 0));
       });
 
-      r.push(row.totalTickets || "");
-      r.push(row.totalRevenue || "");
+      values.push(Number(row.totalScreenings || 0));
+      values.push(Number(row.totalTicketsSold || 0));
+      values.push(Number(row.totalRevenue || 0));
 
-      const excelRow = ws.addRow(r);
+      const excelRow = ws.addRow(values);
+      excelRow.font = row.isSummary ? { bold: true } : {};
+      excelRow.getCell(1).alignment = { horizontal: "left", indent: level * 2 };
 
-      excelRow.getCell(1).alignment = {
-        vertical: "middle",
-        horizontal: "left",
-        indent: level * 2
-      };
+      row.children?.forEach((child) => addDataRow(child, level + 1));
+    };
 
-      if (level === 0) {
-        excelRow.font = { bold: true };
-        excelRow.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFEFEFEF" }
-        };
-      } else if (level === 1) {
-        excelRow.font = { bold: true };
-      }
+    treeData.forEach((row) => addDataRow(row));
 
-      row.children?.forEach((c) => addRow(c, level + 1));
+    ws.getColumn(1).width = 42;
+    for (let column = 2; column <= totalColumns; column += 1) {
+      ws.getColumn(column).width = 14;
     }
 
-    treeData.forEach((m) => addRow(m, 0));
-
-    // ================= STYLE =================
-
-    ws.columns.forEach((c) => {
-      c.width = 14;
-    });
-    ws.getColumn(1).width = 45;
-
-    ws.eachRow((row) => {
-      row.eachCell((cell, cn) => {
+    ws.eachRow((row, rowNumber) => {
+      row.eachCell((cell, colNumber) => {
         cell.border = {
           top: { style: "thin" },
           left: { style: "thin" },
@@ -171,33 +97,17 @@ const ExportRevenueExcelButton = ({
         };
         cell.alignment = {
           vertical: "middle",
-          horizontal: cn === 1 ? "left" : "center", //
+          horizontal: colNumber === 1 ? "left" : "right",
           wrapText: true
         };
+
+        if (rowNumber >= 5 && colNumber > 1) {
+          cell.numFmt = "#,##0";
+        }
       });
     });
 
-    // format money
-    ws.eachRow((row, rn) => {
-      if (rn >= dataStartRow) {
-        row.eachCell((cell, cn) => {
-          if (cn >= 6 && typeof cell.value === "number") {
-            cell.numFmt = "#,##0";
-          }
-        });
-      }
-    });
-
-    // freeze header (3 dòng header + 3 dòng title)
-    ws.views = [
-      {
-        state: "frozen",
-        ySplit: 6,
-        xSplit: 1
-      }
-    ];
-
-    // ================= SAVE =================
+    ws.views = [{ state: "frozen", ySplit: 4, xSplit: 1 }];
 
     const buf = await wb.xlsx.writeBuffer();
     saveAs(new Blob([buf]), fileName);

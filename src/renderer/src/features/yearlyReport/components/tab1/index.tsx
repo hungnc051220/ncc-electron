@@ -1,5 +1,6 @@
-import { useReportQuarterly } from "@renderer/hooks/reports/useReportQuarterly";
-import { Film, Manufacturer, MonthlyReportPlanProps } from "@shared/types";
+import { useReportYearly } from "@renderer/hooks/reports/useReportYearly";
+import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { YearlyReportFilmDetail, YearlyReportManufacturerDetail } from "@shared/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
@@ -8,6 +9,7 @@ import { useMemo, useState } from "react";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
+import { getQuarterDetail, normalizeYearlyDetailData, QUARTERS } from "../yearlyReport.utils";
 
 export interface ValuesProps {
   fromDate: string;
@@ -17,125 +19,183 @@ export interface TreeRow {
   key: string;
   name: string;
   isSummary?: boolean;
-  [key: string]: string | number | TreeRow[] | boolean | undefined;
   children?: TreeRow[];
+  [key: string]: string | number | boolean | TreeRow[] | undefined;
 }
+
+const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
+  1: "Quý I",
+  2: "Quý II",
+  3: "Quý III",
+  4: "Quý IV"
+};
+
+const renderValue = (value: number | undefined, isMoney = false) => {
+  if (!value) return "";
+  return isMoney ? formatMoney(value) : formatNumber(value);
+};
+
+const buildFilmRow = (film: YearlyReportFilmDetail, key: string): TreeRow => {
+  const row: TreeRow = {
+    key,
+    name: film.filmName,
+    totalScreenings: film.totalScreenings || 0,
+    totalTicketsSold: film.totalTicketsSold || 0,
+    totalRevenue: film.totalRevenue || 0
+  };
+
+  QUARTERS.forEach((quarter) => {
+    const detail = getQuarterDetail(film.quarters, quarter);
+    row[`q${quarter}Screenings`] = detail.screenings || 0;
+    row[`q${quarter}Tickets`] = detail.tickets || 0;
+    row[`q${quarter}Revenue`] = detail.revenue || 0;
+  });
+
+  return row;
+};
+
+const buildManufacturerRow = (
+  manufacturer: YearlyReportManufacturerDetail,
+  key: string
+): TreeRow => {
+  const children = manufacturer.films.map((film, index) => buildFilmRow(film, `${key}-f-${index}`));
+
+  const row: TreeRow = {
+    key,
+    name: manufacturer.manufacturerName,
+    isSummary: true,
+    totalScreenings: 0,
+    totalTicketsSold: 0,
+    totalRevenue: 0,
+    children
+  };
+
+  QUARTERS.forEach((quarter) => {
+    row[`q${quarter}Screenings`] = 0;
+    row[`q${quarter}Tickets`] = 0;
+    row[`q${quarter}Revenue`] = 0;
+  });
+
+  children.forEach((child) => {
+    row.totalScreenings = Number(row.totalScreenings || 0) + Number(child.totalScreenings || 0);
+    row.totalTicketsSold = Number(row.totalTicketsSold || 0) + Number(child.totalTicketsSold || 0);
+    row.totalRevenue = Number(row.totalRevenue || 0) + Number(child.totalRevenue || 0);
+
+    QUARTERS.forEach((quarter) => {
+      row[`q${quarter}Screenings`] =
+        Number(row[`q${quarter}Screenings`] || 0) + Number(child[`q${quarter}Screenings`] || 0);
+      row[`q${quarter}Tickets`] =
+        Number(row[`q${quarter}Tickets`] || 0) + Number(child[`q${quarter}Tickets`] || 0);
+      row[`q${quarter}Revenue`] =
+        Number(row[`q${quarter}Revenue`] || 0) + Number(child[`q${quarter}Revenue`] || 0);
+    });
+  });
+
+  return row;
+};
 
 const Tab1 = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
-    fromDate: dayjs().startOf("quarter").format()
+    fromDate: dayjs().startOf("year").format()
   });
 
-  const params = useMemo(() => {
-    const { fromDate } = filterValues;
-    const payload = {
-      year: dayjs(fromDate).year(),
-      quarter: dayjs(fromDate).quarter(),
-      reportType: "PLAN"
-    };
-    return payload;
-  }, [filterValues]);
+  const params = useMemo(
+    () => ({
+      year: dayjs(filterValues.fromDate).year(),
+      reportType: "PLAN" as const
+    }),
+    [filterValues.fromDate]
+  );
 
-  const { data, isFetching } = useReportQuarterly(params);
-  const formatData = data as MonthlyReportPlanProps;
+  const { data, isFetching } = useReportYearly(params);
 
-  const getAllRooms = (data: Manufacturer[]) => {
-    const set = new Set<string>();
-    data.forEach((m) => m.films.forEach((f) => f.rooms.forEach((r) => set.add(r.roomName))));
-    return Array.from(set).sort((a, b) => Number(a) - Number(b));
-  };
+  const treeData = useMemo(
+    () =>
+      normalizeYearlyDetailData(data).map((item, index) =>
+        buildManufacturerRow(item, `m-${index}`)
+      ),
+    [data]
+  );
 
-  const sumByRooms = (films: Film[], rooms: string[]): Record<string, number> => {
-    const result: Record<string, number> = {};
-
-    rooms.forEach((r) => {
-      result[`P${r}`] = 0;
-    });
-
-    films.forEach((f) => {
-      f.rooms.forEach((r) => {
-        const key = `P${r.roomName}`;
-        result[key] += r.total;
-      });
-    });
-
-    return result;
-  };
-
-  const buildTreeTableData = (data: Manufacturer[], rooms: string[]): TreeRow[] => {
-    return data.map((m, mIndex) => {
-      const groupTotals = sumByRooms(m.films, rooms);
-      return {
-        key: `m-${mIndex}`,
-        name: m.manufacturerName,
-        isSummary: true,
-        ...groupTotals,
-        children: m.films.map((f, fIndex) => {
-          const row: TreeRow = {
-            key: `m-${mIndex}-f-${fIndex}`,
-            name: f.filmName
-          };
-
-          rooms.forEach((r) => {
-            row[`P${r}`] = "";
-          });
-
-          f.rooms.forEach((r) => {
-            row[`P${r.roomName}`] = r.total;
-          });
-
-          return row;
-        })
-      };
-    });
-  };
-
-  const buildColumns = (rooms: string[]): ColumnsType<TreeRow> => {
-    const roomCols = rooms.map((r) => ({
-      title: `P${r}`,
-      dataIndex: `P${r}`,
-      key: `P${r}`,
-      align: "center" as const,
-      width: 80,
-      render: (v: number) => v || ""
-    }));
-
-    return [
+  const columns = useMemo<ColumnsType<TreeRow>>(
+    () => [
       {
         title: "Hãng phim / Phim",
         dataIndex: "name",
         key: "name",
         fixed: "left",
-        width: 350
+        width: 360
       },
+      ...QUARTERS.map((quarter) => ({
+        title: quarterTitleMap[quarter],
+        children: [
+          {
+            title: "Buổi chiếu",
+            dataIndex: `q${quarter}Screenings`,
+            key: `q${quarter}Screenings`,
+            align: "right" as const,
+            width: 110,
+            render: (value: number | undefined) => renderValue(value)
+          },
+          {
+            title: "Khán giả",
+            dataIndex: `q${quarter}Tickets`,
+            key: `q${quarter}Tickets`,
+            align: "right" as const,
+            width: 110,
+            render: (value: number | undefined) => renderValue(value)
+          },
+          {
+            title: "Doanh thu",
+            dataIndex: `q${quarter}Revenue`,
+            key: `q${quarter}Revenue`,
+            align: "right" as const,
+            width: 140,
+            render: (value: number | undefined) => renderValue(value, true)
+          }
+        ]
+      })),
       {
-        title: "Số buổi chiếu",
-        children: roomCols
+        title: "Cả năm",
+        children: [
+          {
+            title: "Buổi chiếu",
+            dataIndex: "totalScreenings",
+            key: "totalScreenings",
+            align: "right",
+            width: 110,
+            render: (value: number | undefined) => renderValue(value)
+          },
+          {
+            title: "Khán giả",
+            dataIndex: "totalTicketsSold",
+            key: "totalTicketsSold",
+            align: "right",
+            width: 110,
+            render: (value: number | undefined) => renderValue(value)
+          },
+          {
+            title: "Doanh thu",
+            dataIndex: "totalRevenue",
+            key: "totalRevenue",
+            align: "right",
+            width: 140,
+            render: (value: number | undefined) => renderValue(value, true)
+          }
+        ],
+        fixed: "right"
       }
-    ];
-  };
-
-  const rooms = useMemo(() => getAllRooms(formatData?.data || []), [formatData]);
-
-  const dataSource = useMemo(
-    () => buildTreeTableData(formatData?.data || [], rooms),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data?.data, rooms]
+    ],
+    []
   );
-
-  const columns = useMemo(() => buildColumns(rooms), [rooms]);
 
   const items: TabsProps["items"] = [
     {
       key: "1",
       label: "Chi tiết",
-      children: <TabRevenue tableData={dataSource} columns={columns} isFetching={isFetching} />
+      children: <TabRevenue tableData={treeData} columns={columns} isFetching={isFetching} />
     }
   ];
-
-  const onSearch = (values: ValuesProps) => {
-    setFilterValues(values);
-  };
 
   return (
     <div className="pb-6">
@@ -145,13 +205,9 @@ const Tab1 = () => {
         type="card"
         size="small"
         tabBarExtraContent={
-          <div className="flex justify-end mb-2 gap-3">
-            <Filter filterValues={filterValues} onSearch={onSearch} />
-            <ExportRevenueExcelButton
-              treeData={dataSource}
-              rooms={rooms}
-              fromDate={filterValues.fromDate!}
-            />
+          <div className="mb-2 flex justify-end gap-3">
+            <Filter filterValues={filterValues} onSearch={setFilterValues} />
+            <ExportRevenueExcelButton treeData={treeData} year={params.year} />
           </div>
         }
       />

@@ -15,18 +15,10 @@ const TabRevenue = ({ tableData, columns, isFetching }: TabRevenueProps) => {
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 450px)" }}
+      scroll={{ x: "max-content", y: "calc(100vh - 375px)" }}
       loading={isFetching}
       pagination={false}
-      expandable={{
-        defaultExpandAllRows: false,
-        indentSize: 18
-      }}
-      rowClassName={(row) => {
-        if (row.version && !row.channel) return "bg-gray-50 dark:bg-app-bg font-medium";
-        if (row.name && row.children) return "font-semibold";
-        return "";
-      }}
+      rowClassName={(row) => (row.isSummary ? "bg-gray-100 dark:bg-app-bg font-bold" : "")}
     />
   );
 };

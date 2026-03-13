@@ -1,6 +1,6 @@
-import { useReportQuarterly } from "@renderer/hooks/reports/useReportQuarterly";
-import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import { MonthlyReportRoomProps, RoomReport } from "@shared/types";
+import { useReportYearly } from "@renderer/hooks/reports/useReportYearly";
+import { formatMoney } from "@renderer/lib/utils";
+import { YearlyReportFilmDetail, YearlyReportManufacturerDetail } from "@shared/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
@@ -9,268 +9,164 @@ import { useMemo, useState } from "react";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
+import { getQuarterDetail, normalizeYearlyDetailData, QUARTERS } from "../yearlyReport.utils";
 
 export interface ValuesProps {
   fromDate: string;
 }
 
-export interface TimeTreeRow {
+export interface TreeRow {
   key: string;
-  label: string;
-
-  totalV?: number;
-  totalT?: number;
-  totalTickets?: number;
-  totalRevenue?: number;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
-
-  children?: TimeTreeRow[];
+  name: string;
+  isSummary?: boolean;
+  children?: TreeRow[];
+  [key: string]: string | number | boolean | TreeRow[] | undefined;
 }
+
+const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
+  1: "Quý I",
+  2: "Quý II",
+  3: "Quý III",
+  4: "Quý IV"
+};
+
+const renderMoney = (value: number | undefined) => {
+  if (!value) return "";
+  return formatMoney(value);
+};
+
+const buildFilmRow = (film: YearlyReportFilmDetail, key: string): TreeRow => {
+  const row: TreeRow = {
+    key,
+    name: film.filmName,
+    totalPartnerRevenue: film.totalPartnerRevenue || 0,
+    totalRevenue: film.totalRevenue || 0
+  };
+
+  QUARTERS.forEach((quarter) => {
+    const detail = getQuarterDetail(film.quarters, quarter);
+    row[`q${quarter}PartnerRevenue`] = detail.partnerRevenue || 0;
+    row[`q${quarter}Revenue`] = detail.totalRevenue || 0;
+  });
+
+  return row;
+};
+
+const buildManufacturerRow = (
+  manufacturer: YearlyReportManufacturerDetail,
+  key: string
+): TreeRow => {
+  const children = manufacturer.films.map((film, index) => buildFilmRow(film, `${key}-f-${index}`));
+
+  const row: TreeRow = {
+    key,
+    name: manufacturer.manufacturerName,
+    isSummary: true,
+    totalPartnerRevenue: 0,
+    totalRevenue: 0,
+    children
+  };
+
+  QUARTERS.forEach((quarter) => {
+    row[`q${quarter}PartnerRevenue`] = 0;
+    row[`q${quarter}Revenue`] = 0;
+  });
+
+  children.forEach((child) => {
+    row.totalPartnerRevenue =
+      Number(row.totalPartnerRevenue || 0) + Number(child.totalPartnerRevenue || 0);
+    row.totalRevenue = Number(row.totalRevenue || 0) + Number(child.totalRevenue || 0);
+
+    QUARTERS.forEach((quarter) => {
+      row[`q${quarter}PartnerRevenue`] =
+        Number(row[`q${quarter}PartnerRevenue`] || 0) +
+        Number(child[`q${quarter}PartnerRevenue`] || 0);
+      row[`q${quarter}Revenue`] =
+        Number(row[`q${quarter}Revenue`] || 0) + Number(child[`q${quarter}Revenue`] || 0);
+    });
+  });
+
+  return row;
+};
 
 const Tab3 = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
-    fromDate: dayjs().startOf("quarter").format()
+    fromDate: dayjs().startOf("year").format()
   });
 
-  const params = useMemo(() => {
-    const { fromDate } = filterValues;
-    const payload = {
-      year: dayjs(fromDate).year(),
-      quarter: dayjs(fromDate).quarter(),
-      reportType: "ROOM"
-    };
-    return payload;
-  }, [filterValues]);
+  const params = useMemo(
+    () => ({
+      year: dayjs(filterValues.fromDate).year(),
+      reportType: "REVENUE_PARTNER" as const
+    }),
+    [filterValues.fromDate]
+  );
 
-  const { data, isFetching } = useReportQuarterly(params);
-  const formatData = data as MonthlyReportRoomProps;
+  const { data, isFetching } = useReportYearly(params);
 
-  function collectAllTimes(data: RoomReport[]) {
-    const set = new Set<string>();
+  const treeData = useMemo(
+    () =>
+      normalizeYearlyDetailData(data).map((item, index) =>
+        buildManufacturerRow(item, `m-${index}`)
+      ),
+    [data]
+  );
 
-    data.forEach((r) =>
-      r.projectDates.forEach((d) => d.projectTimes.forEach((t) => set.add(t.projectTime)))
-    );
-
-    return Array.from(set).sort(); // ["10:30","14:00",...]
-  }
-
-  function mapToFullTimeTree(data: RoomReport[], allTimes: string[]): TimeTreeRow[] {
-    return data.map((room) => {
-      const roomRow: TimeTreeRow = {
-        key: `room-${room.roomName}`,
-        label: `Phòng ${room.roomName}`,
-        totalV: 0,
-        totalT: 0,
-        totalTickets: 0,
-        totalRevenue: 0,
-        children: []
-      };
-
-      allTimes.forEach((t) => {
-        roomRow[`${t}_V`] = 0;
-        roomRow[`${t}_T`] = 0;
-        roomRow[`${t}_C`] = 0;
-        roomRow[`${t}_R`] = 0;
-      });
-
-      room.projectDates.forEach((d) => {
-        const dateRow: TimeTreeRow = {
-          key: `room-${room.roomName}-${d.projectDate}`,
-          label: d.projectDate,
-          totalV: 0,
-          totalT: 0,
-          totalTickets: 0,
-          totalRevenue: 0,
-          children: []
-        };
-
-        const onlineRow: TimeTreeRow = {
-          key: `${dateRow.key}-online`,
-          label: "Online",
-          totalV: 0,
-          totalT: 0,
-          totalTickets: 0,
-          totalRevenue: 0
-        };
-
-        const offlineRow: TimeTreeRow = {
-          key: `${dateRow.key}-offline`,
-          label: "Offline",
-          totalV: 0,
-          totalT: 0,
-          totalTickets: 0,
-          totalRevenue: 0
-        };
-
-        // init all time columns
-        allTimes.forEach((t) => {
-          dateRow[`${t}_V`] = 0;
-          dateRow[`${t}_T`] = 0;
-          dateRow[`${t}_C`] = 0;
-          dateRow[`${t}_R`] = 0;
-
-          onlineRow[`${t}_V`] = 0;
-          onlineRow[`${t}_T`] = 0;
-          onlineRow[`${t}_C`] = 0;
-          onlineRow[`${t}_R`] = 0;
-
-          offlineRow[`${t}_V`] = 0;
-          offlineRow[`${t}_T`] = 0;
-          offlineRow[`${t}_C`] = 0;
-          offlineRow[`${t}_R`] = 0;
-        });
-
-        d.projectTimes.forEach((t) => {
-          t.details.forEach((det) => {
-            const target = det.isOnline ? onlineRow : offlineRow;
-
-            // ---- channel row ----
-            target[`${t.projectTime}_V`] += det.quantityV;
-            target[`${t.projectTime}_T`] += det.quantityT;
-            target[`${t.projectTime}_C`] += det.conQuantity;
-            target[`${t.projectTime}_R`] += det.orderTotal;
-
-            // ---- date row (sum online + offline) ----
-            dateRow[`${t.projectTime}_V`] += det.quantityV;
-            dateRow[`${t.projectTime}_T`] += det.quantityT;
-            dateRow[`${t.projectTime}_C`] += det.conQuantity;
-            dateRow[`${t.projectTime}_R`] += det.orderTotal;
-
-            // ---- totals ----
-            target.totalV! += det.quantityV;
-            target.totalT! += det.quantityT;
-            target.totalTickets! += det.conQuantity;
-            target.totalRevenue! += det.orderTotal;
-
-            dateRow.totalV! += det.quantityV;
-            dateRow.totalT! += det.quantityT;
-            dateRow.totalTickets! += det.conQuantity;
-            dateRow.totalRevenue! += det.orderTotal;
-          });
-        });
-
-        // ===== SUM DATE → ROOM =====
-
-        allTimes.forEach((t) => {
-          roomRow[`${t}_V`] += dateRow[`${t}_V`] || 0;
-          roomRow[`${t}_T`] += dateRow[`${t}_T`] || 0;
-          roomRow[`${t}_C`] += dateRow[`${t}_C`] || 0;
-          roomRow[`${t}_R`] += dateRow[`${t}_R`] || 0;
-        });
-
-        roomRow.totalV! += dateRow.totalV || 0;
-        roomRow.totalT! += dateRow.totalT || 0;
-        roomRow.totalTickets! += dateRow.totalTickets || 0;
-        roomRow.totalRevenue! += dateRow.totalRevenue || 0;
-
-        dateRow.children!.push(onlineRow, offlineRow);
-        roomRow.children!.push(dateRow);
-      });
-
-      return roomRow;
-    });
-  }
-
-  function buildColumns(allTimes: string[]): ColumnsType<TimeTreeRow> {
-    return [
+  const columns = useMemo<ColumnsType<TreeRow>>(
+    () => [
       {
-        title: "Phòng / Ngày / Kênh",
-        dataIndex: "label",
+        title: "Đối tác / Phim",
+        dataIndex: "name",
+        key: "name",
         fixed: "left",
-        width: 200,
-        render: (v: string) => {
-          // nếu là ngày YYYY-MM-DD → format
-          if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
-            return dayjs(v).format("DD/MM/YYYY");
-          }
-
-          return <div className="whitespace-pre-wrap">{v}</div>;
-        }
+        width: 360
       },
-      {
-        title: "Suất chiếu",
-        children: allTimes.map((t) => ({
-          title: t,
-          children: [
-            {
-              title: "Vé V",
-              dataIndex: `${t}_V`,
-              align: "right" as const,
-              width: 80,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
-            },
-            {
-              title: "Vé T",
-              dataIndex: `${t}_T`,
-              align: "right" as const,
-              width: 80,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
-            },
-            {
-              title: "Tổng vé",
-              dataIndex: `${t}_C`,
-              align: "right" as const,
-              width: 90,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
-            },
-            {
-              title: "Doanh thu",
-              dataIndex: `${t}_R`,
-              align: "right" as const,
-              width: 120,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatMoney(v) : "")
-            }
-          ]
-        }))
-      },
-      {
-        title: "Tổng",
+      ...QUARTERS.map((quarter) => ({
+        title: quarterTitleMap[quarter],
         children: [
           {
-            title: "Vé V",
-            dataIndex: "totalV",
-            align: "right",
-            width: 80,
-            render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
+            title: "DT đối tác",
+            dataIndex: `q${quarter}PartnerRevenue`,
+            key: `q${quarter}PartnerRevenue`,
+            align: "right" as const,
+            width: 150,
+            render: (value: number | undefined) => renderMoney(value)
           },
           {
-            title: "Vé T",
-            dataIndex: "totalT",
+            title: "Tổng doanh thu",
+            dataIndex: `q${quarter}Revenue`,
+            key: `q${quarter}Revenue`,
+            align: "right" as const,
+            width: 150,
+            render: (value: number | undefined) => renderMoney(value)
+          }
+        ]
+      })),
+      {
+        title: "Cả năm",
+        children: [
+          {
+            title: "DT đối tác",
+            dataIndex: "totalPartnerRevenue",
+            key: "totalPartnerRevenue",
             align: "right",
-            width: 80,
-            render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
+            width: 150,
+            render: (value: number | undefined) => renderMoney(value)
           },
           {
-            title: "Tổng vé",
-            dataIndex: "totalTickets",
-            align: "right",
-            width: 90,
-            render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
-          },
-          {
-            title: "Doanh thu",
+            title: "Tổng doanh thu",
             dataIndex: "totalRevenue",
+            key: "totalRevenue",
             align: "right",
-            width: 130,
-            render: (v) => (typeof v === "number" && v !== 0 ? formatMoney(v) : "")
+            width: 150,
+            render: (value: number | undefined) => renderMoney(value)
           }
         ],
         fixed: "right"
       }
-    ];
-  }
-
-  const allTimes = useMemo(() => collectAllTimes(formatData?.data || []), [formatData]);
-
-  const treeData = useMemo(
-    () => mapToFullTimeTree(formatData?.data || [], allTimes),
-    [formatData, allTimes]
+    ],
+    []
   );
-
-  const columns = useMemo(() => buildColumns(allTimes), [allTimes]);
 
   const items: TabsProps["items"] = [
     {
@@ -280,10 +176,6 @@ const Tab3 = () => {
     }
   ];
 
-  const onSearch = (values: ValuesProps) => {
-    setFilterValues(values);
-  };
-
   return (
     <div className="pb-6">
       <Tabs
@@ -292,13 +184,9 @@ const Tab3 = () => {
         type="card"
         size="small"
         tabBarExtraContent={
-          <div className="flex justify-end mb-2 gap-3">
-            <Filter filterValues={filterValues} onSearch={onSearch} />
-            <ExportRevenueExcelButton
-              treeData={treeData}
-              allTimes={allTimes}
-              fromDate={filterValues.fromDate!}
-            />
+          <div className="mb-2 flex justify-end gap-3">
+            <Filter filterValues={filterValues} onSearch={setFilterValues} />
+            <ExportRevenueExcelButton treeData={treeData} year={params.year} />
           </div>
         }
       />

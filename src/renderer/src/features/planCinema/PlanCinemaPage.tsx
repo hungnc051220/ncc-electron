@@ -2,9 +2,10 @@ import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { cn } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanCinemaProps } from "@shared/types";
-import type { CollapseProps, PaginationProps } from "antd";
-import { Breadcrumb, Button, Collapse, Empty, Pagination, Spin } from "antd";
+import type { CollapseProps, PaginationProps, TimeRangePickerProps } from "antd";
+import { Breadcrumb, Button, Collapse, DatePicker, Empty, Pagination, Spin } from "antd";
 import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import DeletePlanDialog from "./components/DeletePlanCinemaDialog";
 import ApproveRejectActions from "./components/tabFilm/ApproveRejectActions";
@@ -15,12 +16,33 @@ import ArchivedActions from "./components/tabFilm/ArchivedActions";
 import TabsList from "./components/TabsList";
 import RestoreActions from "./components/tabFilm/RestoreActions";
 
+const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
+];
+
 const PlanCinemaPage = () => {
   const [activeKey, setActiveKey] = useState<string | string[]>("0");
   const [current, setCurrent] = useState(1);
   const [openDelete, setOpenDelete] = useState(false);
+  const [fromDate, setFromDate] = useState<Dayjs | null>(null);
+  const [toDate, setToDate] = useState<Dayjs | null>(null);
 
   const onOpenChange = (open: boolean) => setOpenDelete(open);
+
+  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
+    if (dates) {
+      setFromDate(dates[0]);
+      setToDate(dates[1]);
+    } else {
+      setFromDate(null);
+      setToDate(null);
+    }
+  };
 
   const [selectedPlan, setSelectedPlan] = useState<PlanCinemaProps | undefined>(undefined);
 
@@ -28,9 +50,11 @@ const PlanCinemaPage = () => {
     () => ({
       current,
       pageSize: 20,
-      activeKey: activeKey[0]
+      activeKey: activeKey[0],
+      fromDate: activeKey[0] === "4" && fromDate ? dayjs(fromDate).format() : undefined,
+      toDate: activeKey[0] === "4" && toDate ? dayjs(toDate).format() : undefined
     }),
-    [current, activeKey]
+    [current, activeKey, fromDate, toDate]
   );
 
   const { data, isFetching } = usePlanCinemas(params);
@@ -123,7 +147,18 @@ const PlanCinemaPage = () => {
           Kế hoạch lưu trữ
         </div>
       ),
-      children: planItems
+      children: (
+        <>
+          <RangePicker
+            defaultValue={[fromDate, toDate]}
+            format="DD/MM/YYYY"
+            onChange={onRangeChange}
+            presets={rangePresets}
+            className="mb-3"
+          />
+          {planItems}
+        </>
+      )
     }
   ];
 

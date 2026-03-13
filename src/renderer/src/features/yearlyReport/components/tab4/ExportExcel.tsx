@@ -1,27 +1,19 @@
 import { usePermission } from "@renderer/permissions/usePermission";
+import { YearlyReportSummaryItem } from "@shared/types";
 import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { TimeTreeRow } from ".";
-import dayjs from "dayjs";
-
-function cellValue(v?: number) {
-  if (!v || v === 0) return "";
-  return v;
-}
 
 type Props = {
-  treeData: TimeTreeRow[];
-  allTimes: string[];
+  tableData: YearlyReportSummaryItem[];
   fileName?: string;
-  fromDate: string;
+  year: number;
 };
 
 const ExportRevenueExcelButton = ({
-  treeData,
-  allTimes,
-  fileName = "bao-cao-quy-suat-chieu-theo-phong.xlsx",
-  fromDate
+  tableData,
+  fileName = "bao-cao-nam-tong-hop-so-lieu.xlsx",
+  year
 }: Props) => {
   const { can } = usePermission();
   const canExport = can("yearly_report", "export");
@@ -32,160 +24,62 @@ const ExportRevenueExcelButton = ({
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Chi tiết");
+    const ws = wb.addWorksheet("Tong hop");
 
-    // ================= TITLE =================
-    ws.addRow([]);
-    ws.getCell(1, 1).value =
-      `BÁO CÁO SUẤT CHIẾU THEO PHÒNG - QUÝ ${dayjs(fromDate).quarter()}/${dayjs(fromDate).year()}`;
-    ws.mergeCells(1, 1, 1, 1 + allTimes.length * 4 + 4);
+    ws.getCell(1, 1).value = `BAO CAO NAM TONG HOP SO LIEU PHIM CHIEU - ${year}`;
+    ws.mergeCells(1, 1, 1, 6);
     ws.getRow(1).font = { bold: true, size: 16 };
     ws.getRow(1).alignment = { horizontal: "center" };
 
-    ws.addRow([]);
-    ws.getCell(2, 1).value = `Ngày in: ${dayjs().format("DD/MM/YYYY HH:mm")}`;
-    ws.mergeCells(2, 1, 2, 1 + allTimes.length * 4 + 4);
-    ws.getRow(2).alignment = { horizontal: "right" };
+    ws.addRow([
+      "Don vi phat hanh",
+      "Tong phim",
+      "Tong buoi chieu",
+      "Tong khan gia",
+      "Tong doanh thu",
+      "DT chia se"
+    ]);
 
-    ws.addRow([]);
+    ws.getRow(2).font = { bold: true };
+    ws.getRow(2).alignment = { horizontal: "center", vertical: "middle" };
 
-    // ================= HEADER =================
-    const headerStartRow = ws.lastRow!.number + 1;
-
-    // ---- Fixed column ----
-    ws.mergeCells(headerStartRow, 1, headerStartRow + 3, 1);
-    ws.getCell(headerStartRow, 1).value = "Phòng / Ngày / Kênh";
-
-    // ---- Suất chiếu group ----
-    const timeStartCol = 2;
-    const timeEndCol = 1 + allTimes.length * 4;
-
-    ws.mergeCells(headerStartRow, timeStartCol, headerStartRow, timeEndCol);
-    ws.getCell(headerStartRow, timeStartCol).value = "Suất chiếu";
-
-    let col = timeStartCol;
-
-    allTimes.forEach((t) => {
-      ws.mergeCells(headerStartRow + 1, col, headerStartRow + 1, col + 3);
-      ws.getCell(headerStartRow + 1, col).value = t;
-
-      ws.getCell(headerStartRow + 2, col).value = "Vé V";
-      ws.getCell(headerStartRow + 2, col + 1).value = "Vé T";
-      ws.getCell(headerStartRow + 2, col + 2).value = "Tổng vé";
-      ws.getCell(headerStartRow + 2, col + 3).value = "Doanh thu";
-
-      col += 4;
+    tableData.forEach((item) => {
+      ws.addRow([
+        item.manufacturerName,
+        item.totalFilms,
+        item.totalPlans,
+        item.totalTicketsSold,
+        item.totalRevenue,
+        item.totalSharedRevenue
+      ]);
     });
 
-    // ---- Total ----
-    const totalStart = col;
-
-    ws.mergeCells(headerStartRow, totalStart, headerStartRow + 1, totalStart + 3);
-    ws.getCell(headerStartRow, totalStart).value = "Tổng";
-
-    ws.getCell(headerStartRow + 2, totalStart).value = "Vé V";
-    ws.getCell(headerStartRow + 2, totalStart + 1).value = "Vé T";
-    ws.getCell(headerStartRow + 2, totalStart + 2).value = "Tổng vé";
-    ws.getCell(headerStartRow + 2, totalStart + 3).value = "Doanh thu";
-
-    // ---- Header style ----
-    for (let r = headerStartRow; r <= headerStartRow + 2; r++) {
-      ws.getRow(r).eachCell((cell, cn) => {
-        cell.font = { bold: true };
-        cell.alignment = {
-          vertical: "middle",
-          horizontal: cn === 1 ? "left" : "center",
-          wrapText: true
-        };
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFF2F2F2" }
-        };
-      });
+    ws.getColumn(1).width = 40;
+    for (let column = 2; column <= 6; column += 1) {
+      ws.getColumn(column).width = 16;
     }
 
-    // ================= DATA =================
-    function addRow(row: TimeTreeRow, level: number) {
-      const r: (string | number)[] = [];
-
-      let label = row.label;
-
-      // format ngày
-      if (/^\d{4}-\d{2}-\d{2}/.test(label)) {
-        label = dayjs(label).format("DD/MM/YYYY");
-      }
-
-      r.push(" ".repeat(level * 3) + label);
-
-      allTimes.forEach((t) => {
-        r.push(cellValue(row[`${t}_V`] as number));
-        r.push(cellValue(row[`${t}_T`] as number));
-        r.push(cellValue(row[`${t}_C`] as number));
-        r.push(cellValue(row[`${t}_R`] as number));
-      });
-
-      r.push(cellValue(row.totalV));
-      r.push(cellValue(row.totalT));
-      r.push(cellValue(row.totalTickets));
-      r.push(cellValue(row.totalRevenue));
-
-      const excelRow = ws.addRow(r);
-
-      // style by level
-      if (level === 0) {
-        excelRow.font = { bold: true };
-        excelRow.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFEFEFEF" }
-        };
-      } else if (level === 1) {
-        excelRow.font = { bold: true };
-      }
-
-      excelRow.getCell(1).alignment = { horizontal: "left", indent: level * 2 };
-
-      row.children?.forEach((c) => addRow(c, level + 1));
-    }
-
-    treeData.forEach((r) => addRow(r, 0));
-
-    // ================= BORDER + FORMAT =================
-    ws.eachRow((row) => {
-      row.eachCell((cell, cn) => {
+    ws.eachRow((row, rowNumber) => {
+      row.eachCell((cell, colNumber) => {
         cell.border = {
           top: { style: "thin" },
           left: { style: "thin" },
           bottom: { style: "thin" },
           right: { style: "thin" }
         };
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: colNumber === 1 ? "left" : "right",
+          wrapText: true
+        };
 
-        if (cn > 1 && typeof cell.value === "number") {
-          if (cn % 4 === 1 || cn % 4 === 2 || cn % 4 === 3) {
-            cell.numFmt = "#,##0";
-          } else {
-            cell.numFmt = "#,##0";
-          }
+        if (rowNumber >= 3 && colNumber > 1) {
+          cell.numFmt = "#,##0";
         }
       });
     });
 
-    // ===== COLUMN WIDTH =====
-    ws.getColumn(1).width = 28; // cột tên rộng ra
-
-    for (let i = 2; i <= 1 + allTimes.length * 4 + 4; i++) {
-      ws.getColumn(i).width = 14;
-    }
-
-    // ================= FREEZE =================
-    ws.views = [
-      {
-        state: "frozen",
-        ySplit: headerStartRow + 3,
-        xSplit: 1
-      }
-    ];
+    ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1 }];
 
     const buf = await wb.xlsx.writeBuffer();
     saveAs(new Blob([buf]), fileName);

@@ -1,4 +1,8 @@
-import { ReportQuarterlyDto, ReportRevenueByFilmDto } from "@renderer/api/reportsApi";
+import {
+  ReportQuarterlyDto,
+  ReportRevenueByFilmDto,
+  ReportYearlyDto
+} from "@renderer/api/reportsApi";
 
 export const reportsKeys = {
   getReportRevenueByFilm: (dto: ReportRevenueByFilmDto) => ["report-revenue-by-film", dto] as const,
@@ -10,6 +14,7 @@ export const reportsKeys = {
   getReportVoucherUsage: (dto: ReportRevenueByFilmDto) => ["report-voucher-usage", dto] as const,
   getReportMonthly: (dto: ReportRevenueByFilmDto) => ["report-monthly", dto] as const,
   getReportQuarterly: (dto: ReportQuarterlyDto) => ["report-quarterly", dto] as const,
+  getReportYearly: (dto: ReportYearlyDto) => ["report-yearly", dto] as const,
   getReportTicketSalesRevenue: (dto: ReportRevenueByFilmDto) =>
     ["report-ticket-sales-revenue", dto] as const
 };
