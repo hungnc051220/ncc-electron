@@ -197,7 +197,13 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
             }}
             loading={isFetchingNextPage || isFetchingScreeningRooms}
           />
-          {canUpdate && <AddSchedulingDialog planCinemaId={planCinemaId!} />}
+          {canUpdate && (
+            <AddSchedulingDialog
+              planCinemaId={planCinemaId!}
+              selectedRoomId={roomId}
+              selectedDate={date}
+            />
+          )}
         </div>
       </div>
 

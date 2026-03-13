@@ -1,23 +1,12 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
-import { usersApi } from "@renderer/api/users.api";
 import { useDebounce } from "@renderer/hooks/useDebounce";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import type { TimeRangePickerProps } from "antd";
-import { Button, DatePicker, Form, Modal, Select } from "antd";
+import { Button, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
 import { startTransition, useMemo, useState } from "react";
-import { ValuesProps } from ".";
-
-const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
+import { ValuesProps } from "../RevenueSharingPage";
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
@@ -28,25 +17,10 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const [searchText, setSearchText] = useState<string>("");
-  const debouncedSearch = useDebounce(searchText, 500);
-
-  const {
-    data: users,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage
-  } = useInfiniteQuery({
-    queryKey: ["users", debouncedSearch],
-    queryFn: ({ pageParam = 1 }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: debouncedSearch }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
-  });
+  const [searchTextManufacturer, setSearchTextManufacturer] = useState<string>("");
+  const [searchTextFilm, setSearchTextFilm] = useState<string>("");
+  const debouncedSearchManufacturer = useDebounce(searchTextManufacturer, 500);
+  const debouncedSearchFilm = useDebounce(searchTextFilm, 500);
 
   const {
     data: manufacturers,
@@ -55,8 +29,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     isFetching: isFetchingManufacturers,
     isFetchingNextPage: isFetchingNextPageManufacturers
   } = useInfiniteQuery({
-    queryKey: ["manufacturers"],
-    queryFn: ({ pageParam = 1 }) => manufacturersApi.getAll({ current: pageParam, pageSize: 20 }),
+    queryKey: ["manufacturers", debouncedSearchManufacturer],
+    queryFn: ({ pageParam = 1 }) =>
+      manufacturersApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        name: debouncedSearchManufacturer
+      }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {
       const currentPage = pages.length;
@@ -71,25 +50,15 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     isFetching: isFetchingFilms,
     isFetchingNextPage: isFetchingNextPageFilms
   } = useInfiniteQuery({
-    queryKey: ["films"],
-    queryFn: ({ pageParam = 1 }) => filmsApi.getAll({ current: pageParam, pageSize: 20 }),
+    queryKey: ["films", debouncedSearchFilm],
+    queryFn: ({ pageParam = 1 }) =>
+      filmsApi.getAll({ current: pageParam, pageSize: 20, filmName: debouncedSearchFilm }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {
       const currentPage = pages.length;
       return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
     }
   });
-
-  const options = useMemo(() => {
-    return (
-      users?.pages.flatMap((page) =>
-        page.data.map((user) => ({
-          value: user.id,
-          label: user?.customerFirstName || user.username
-        }))
-      ) ?? []
-    );
-  }, [users]);
 
   const manufacturerOptions = useMemo(() => {
     return (
@@ -117,12 +86,10 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      // setSearchText("");
+      setSearchTextManufacturer("");
+      setSearchTextFilm("");
       queryClient.removeQueries({
         queryKey: ["users", "infinite"]
-      });
-      onSearch({
-        dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
       });
     });
   };
@@ -173,31 +140,12 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           </>
         )}
       >
-        <Form.Item name="userId" label="Nhân viên">
+        <Form.Item name="manufacturerId" label="Hãng phim">
           <Select
             showSearch={{
               filterOption: false,
-              onSearch: (value) => setSearchText(value)
+              onSearch: (value) => setSearchTextManufacturer(value)
             }}
-            loading={isFetching || isFetchingNextPage}
-            options={options}
-            placeholder="Chọn nhân viên"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPage &&
-                !isFetchingNextPage &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPage();
-              }
-            }}
-            allowClear
-          />
-        </Form.Item>
-
-        <Form.Item name="manufacturerId" label="Hãng phim">
-          <Select
             loading={isFetchingManufacturers || isFetchingNextPageManufacturers}
             options={manufacturerOptions}
             placeholder="Chọn hãng phim"
@@ -217,6 +165,10 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
 
         <Form.Item name="filmId" label="Phim">
           <Select
+            showSearch={{
+              filterOption: false,
+              onSearch: (value) => setSearchTextFilm(value)
+            }}
             loading={isFetchingFilms || isFetchingNextPageFilms}
             options={filmOptions}
             placeholder="Chọn phim"
@@ -232,9 +184,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             }}
             allowClear
           />
-        </Form.Item>
-        <Form.Item name="dateRange" label="Khoảng thời gian">
-          <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
         </Form.Item>
       </Modal>
     </>

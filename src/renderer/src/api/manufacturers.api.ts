@@ -5,6 +5,7 @@ import queryString from "query-string";
 export interface ManufacturersQuery {
   current: number;
   pageSize: number;
+  name?: string;
 }
 
 export interface ManufacturerDto {
@@ -23,9 +24,13 @@ export interface ManufacturerDto {
 
 export const manufacturersApi = {
   getAll: async (params: ManufacturersQuery): Promise<ApiResponse<ManufacturerProps>> => {
-    const { current, pageSize } = params;
+    const { current, pageSize, name } = params;
 
     const filter: Record<string, unknown> = {};
+
+    if (name) {
+      filter.name = { like: `%${name}%` };
+    }
 
     const queryObject: Record<string, unknown> = {
       current,

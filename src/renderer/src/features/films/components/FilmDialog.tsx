@@ -53,12 +53,12 @@ const ageAboveOptions = [
   },
   {
     value: 18,
-    label: "K18"
+    label: "T18"
   }
 ];
 
 const ageAboveLabelMap = {
-  0: "Phim được phổ biến đến người xem dưới 13 tuổi và có người bảo hộ đi kèm (Độ tuổi yêu cầu 0)",
+  0: "Phim được phổ biến đến người xem dưới 13 tuổi và có người bảo hộ đi kèm",
   1: "Phim được phép phổ biến đến người xem ở mọi độ tuổi",
   13: "Phim được phổ biến đến người xem từ đủ 13 tuổi trở lên (13+)",
   16: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (16+)",

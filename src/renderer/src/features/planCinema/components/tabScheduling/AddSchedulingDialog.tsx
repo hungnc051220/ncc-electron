@@ -38,9 +38,15 @@ type FieldType = {
 
 interface AddSchedulingDialogProps {
   planCinemaId: number;
+  selectedRoomId?: number;
+  selectedDate: Dayjs | null;
 }
 
-const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
+const AddSchedulingDialog = ({
+  planCinemaId,
+  selectedRoomId,
+  selectedDate
+}: AddSchedulingDialogProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
   const [isSamePrice, setIsSamePrice] = useState(false);
@@ -60,6 +66,14 @@ const AddSchedulingDialog = ({ planCinemaId }: AddSchedulingDialogProps) => {
     pageSize: 100,
     planCinemaId
   });
+
+  useEffect(() => {
+    form.setFieldValue("roomId", selectedRoomId);
+  }, [selectedRoomId, form]);
+
+  useEffect(() => {
+    form.setFieldValue("projectDate", selectedDate);
+  }, [selectedDate, form]);
 
   const {
     data: rooms,
