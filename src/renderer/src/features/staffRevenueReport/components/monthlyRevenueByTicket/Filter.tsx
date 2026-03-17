@@ -1,10 +1,9 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { usersApi } from "@renderer/api/users.api";
-import { useDebounce } from "@renderer/hooks/useDebounce";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useState } from "react";
 import { ValuesProps } from ".";
 
 interface FilterProps {
@@ -15,42 +14,22 @@ interface FilterProps {
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const [searchText, setSearchText] = useState<string>("");
-  const debouncedSearch = useDebounce(searchText, 500);
 
-  const {
-    data: users,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage
-  } = useInfiniteQuery({
-    queryKey: ["users", debouncedSearch],
-    queryFn: ({ pageParam = 1 }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: debouncedSearch }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
+  const userSelect = useInfiniteSelectOptions({
+    queryKey: ["users"],
+    queryFn: ({ pageParam, searchText }) =>
+      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: searchText }),
+    mapOption: (user) => ({
+      value: user.id,
+      label: user.customerFirstName || user.username
+    })
   });
-
-  const options = useMemo(() => {
-    return (
-      users?.pages.flatMap((page) =>
-        page.data.map((user) => ({
-          value: user.id,
-          label: user?.customerFirstName || user.username
-        }))
-      ) ?? []
-    );
-  }, [users]);
 
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      setSearchText("");
+      userSelect.resetSearch();
       onSearch({
         fromDate: dayjs().startOf("month").format()
       });
@@ -107,21 +86,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           <Select
             showSearch={{
               filterOption: false,
-              onSearch: (value) => setSearchText(value)
+              onSearch: userSelect.onSearch
             }}
-            loading={isFetching || isFetchingNextPage}
-            options={options}
+            loading={userSelect.loading}
+            options={userSelect.options}
             placeholder="Chọn nhân viên"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPage &&
-                !isFetchingNextPage &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPage();
-              }
-            }}
+            onPopupScroll={userSelect.onPopupScroll}
+            onClear={userSelect.onClear}
             allowClear
           />
         </Form.Item>

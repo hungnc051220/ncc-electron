@@ -31,6 +31,8 @@ interface SeatsProps {
   cancelMode?: boolean;
   isCustomerView?: boolean;
   screenMode?: ScreenMode;
+  maxSelectableSeats?: number;
+  onSelectionLimitReached?: () => void;
   syncedSelectedFloor?: number | null;
   onSelectedFloorChange?: (floor: number) => void;
 }
@@ -49,6 +51,8 @@ const Seats = ({
   cancelMode,
   isCustomerView,
   screenMode = "normal",
+  maxSelectableSeats,
+  onSelectionLimitReached,
   syncedSelectedFloor,
   onSelectedFloorChange
 }: SeatsProps) => {
@@ -272,12 +276,17 @@ const Seats = ({
         const isAlreadySelected = prev.find((s) => getSeatUniqueKey(s) === seatUniqueKey);
         if (isAlreadySelected) {
           return prev.filter((s) => getSeatUniqueKey(s) !== seatUniqueKey);
-        } else {
-          return [...prev, seat];
         }
+
+        if (maxSelectableSeats && prev.length >= maxSelectableSeats) {
+          onSelectionLimitReached?.();
+          return prev;
+        }
+
+        return [...prev, seat];
       });
     },
-    [selectingSeatKeysByOther, setSelectedSeats]
+    [maxSelectableSeats, onSelectionLimitReached, selectingSeatKeysByOther, setSelectedSeats]
   );
 
   const handleSelectoSelect = useCallback(
@@ -286,6 +295,7 @@ const Seats = ({
 
       setSelectedSeats((prev) => {
         const newSelected = new Set(prev.map((s) => getSeatUniqueKey(s)));
+        let hasReachedLimit = false;
 
         // Thêm ghế mới
         e.added.forEach((el) => {
@@ -296,6 +306,10 @@ const Seats = ({
             !newSelected.has(uniqueKey) &&
             !selectingSeatKeysByOther.has(uniqueKey)
           ) {
+            if (maxSelectableSeats && newSelected.size >= maxSelectableSeats) {
+              hasReachedLimit = true;
+              return;
+            }
             newSelected.add(uniqueKey);
           }
         });
@@ -309,16 +323,22 @@ const Seats = ({
         });
 
         // Convert back to array
-        return Array.from(newSelected)
+        const nextSelected = Array.from(newSelected)
           .map((uniqueKey) => seatMap[uniqueKey])
           .filter(Boolean);
+
+        if (hasReachedLimit) {
+          onSelectionLimitReached?.();
+        }
+
+        return nextSelected;
       });
 
       setTimeout(() => {
         isSelectingRef.current = false;
       }, 100);
     },
-    [seatMap, selectingSeatKeysByOther, setSelectedSeats]
+    [maxSelectableSeats, onSelectionLimitReached, seatMap, selectingSeatKeysByOther, setSelectedSeats]
   );
 
   const calculateSeatSize = useCallback(() => {

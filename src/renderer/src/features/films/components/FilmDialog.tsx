@@ -62,7 +62,7 @@ const ageAboveLabelMap = {
   1: "Phim được phép phổ biến đến người xem ở mọi độ tuổi",
   13: "Phim được phổ biến đến người xem từ đủ 13 tuổi trở lên (13+)",
   16: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (16+)",
-  18: "Phim được phổ biến đến người xem từ đủ 16 tuổi trở lên (18+)"
+  18: "Phim được phổ biến đến người xem từ đủ 18 tuổi trở lên (18+)"
 };
 
 export interface FieldValues {
@@ -186,7 +186,6 @@ const FilmDialog = ({
         showOnHomePage: true,
         versionCode: versions.length > 0 ? versions[0].versionCode : undefined,
         countryId: countries.length > 0 ? countries[0].id : undefined,
-        manufacturerId: manufactureres.length > 0 ? manufactureres[0].id : undefined,
         languageCode: languages.length > 0 ? languages[0].languageCode : undefined,
         statusCode: filmStatuses.length > 0 ? filmStatuses[0].statusCode : undefined,
         published: true,

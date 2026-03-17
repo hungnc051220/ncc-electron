@@ -1,11 +1,10 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
-import { useDebounce } from "@renderer/hooks/useDebounce";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { Button, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useState } from "react";
 import { ValuesProps } from "../RevenueSharingPage";
 
 interface FilterProps {
@@ -14,83 +13,39 @@ interface FilterProps {
 }
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
-  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const [searchTextManufacturer, setSearchTextManufacturer] = useState<string>("");
-  const [searchTextFilm, setSearchTextFilm] = useState<string>("");
-  const debouncedSearchManufacturer = useDebounce(searchTextManufacturer, 500);
-  const debouncedSearchFilm = useDebounce(searchTextFilm, 500);
 
-  const {
-    data: manufacturers,
-    fetchNextPage: fetchNextPageManufacturers,
-    hasNextPage: hasNextPageManufacturers,
-    isFetching: isFetchingManufacturers,
-    isFetchingNextPage: isFetchingNextPageManufacturers
-  } = useInfiniteQuery({
-    queryKey: ["manufacturers", debouncedSearchManufacturer],
-    queryFn: ({ pageParam = 1 }) =>
+  const manufacturerSelect = useInfiniteSelectOptions({
+    queryKey: ["manufacturers"],
+    queryFn: ({ pageParam, searchText }) =>
       manufacturersApi.getAll({
         current: pageParam,
         pageSize: 20,
-        name: debouncedSearchManufacturer
+        name: searchText
       }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.name
+    })
   });
 
-  const {
-    data: films,
-    fetchNextPage: fetchNextPageFilms,
-    hasNextPage: hasNextPageFilms,
-    isFetching: isFetchingFilms,
-    isFetchingNextPage: isFetchingNextPageFilms
-  } = useInfiniteQuery({
-    queryKey: ["films", debouncedSearchFilm],
-    queryFn: ({ pageParam = 1 }) =>
-      filmsApi.getAll({ current: pageParam, pageSize: 20, filmName: debouncedSearchFilm }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
+  const filmSelect = useInfiniteSelectOptions({
+    queryKey: ["films"],
+    queryFn: ({ pageParam, searchText }) =>
+      filmsApi.getAll({ current: pageParam, pageSize: 20, filmName: searchText }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.filmName
+    })
   });
-
-  const manufacturerOptions = useMemo(() => {
-    return (
-      manufacturers?.pages.flatMap((page) =>
-        page.data.map((item) => ({
-          value: item.id,
-          label: item.name
-        }))
-      ) ?? []
-    );
-  }, [manufacturers]);
-
-  const filmOptions = useMemo(() => {
-    return (
-      films?.pages.flatMap((page) =>
-        page.data.map((item) => ({
-          value: item.id,
-          label: item.filmName
-        }))
-      ) ?? []
-    );
-  }, [films]);
 
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      setSearchTextManufacturer("");
-      setSearchTextFilm("");
-      queryClient.removeQueries({
-        queryKey: ["users", "infinite"]
-      });
+      manufacturerSelect.resetSearch();
+      filmSelect.resetSearch();
     });
   };
 
@@ -144,21 +99,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           <Select
             showSearch={{
               filterOption: false,
-              onSearch: (value) => setSearchTextManufacturer(value)
+              onSearch: manufacturerSelect.onSearch
             }}
-            loading={isFetchingManufacturers || isFetchingNextPageManufacturers}
-            options={manufacturerOptions}
+            loading={manufacturerSelect.loading}
+            options={manufacturerSelect.options}
             placeholder="Chọn hãng phim"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPageManufacturers &&
-                !isFetchingNextPageManufacturers &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPageManufacturers();
-              }
-            }}
+            onPopupScroll={manufacturerSelect.onPopupScroll}
+            onClear={manufacturerSelect.onClear}
             allowClear
           />
         </Form.Item>
@@ -167,21 +114,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           <Select
             showSearch={{
               filterOption: false,
-              onSearch: (value) => setSearchTextFilm(value)
+              onSearch: filmSelect.onSearch
             }}
-            loading={isFetchingFilms || isFetchingNextPageFilms}
-            options={filmOptions}
+            loading={filmSelect.loading}
+            options={filmSelect.options}
             placeholder="Chọn phim"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPageFilms &&
-                !isFetchingNextPageFilms &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPageFilms();
-              }
-            }}
+            onPopupScroll={filmSelect.onPopupScroll}
+            onClear={filmSelect.onClear}
             allowClear
           />
         </Form.Item>

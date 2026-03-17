@@ -37,9 +37,9 @@ const RevenueSharingPage = () => {
 
   const { data: cancellationReasons, isFetching } = useCancellationReasons(params);
   const { can } = usePermission();
-  const canCreate = can("cancellation_reasons", "create");
-  const canUpdate = can("cancellation_reasons", "update");
-  const canDelete = can("cancellation_reasons", "delete");
+  const canCreate = can("revenue_sharing", "create");
+  const canUpdate = can("revenue_sharing", "update");
+  const canDelete = can("revenue_sharing", "delete");
 
   const handleAdd = useCallback(() => {
     setSelectedCancellationReason(null);
@@ -189,7 +189,7 @@ const RevenueSharingPage = () => {
 
       <Table
         rowKey={(record) => record.id}
-        dataSource={cancellationReasons?.data || []}
+        dataSource={[]}
         columns={columns}
         bordered
         size="small"

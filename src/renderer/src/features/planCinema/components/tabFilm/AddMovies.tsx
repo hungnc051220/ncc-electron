@@ -6,6 +6,7 @@ import { ApiError, FilmProps, PlanFilmProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Button, Input, message, Modal, Table } from "antd";
 import axios from "axios";
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 
 type TableRowSelection<T extends object = object> = TableProps<T>["rowSelection"];
@@ -30,7 +31,8 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
     () => ({
       current,
       pageSize,
-      filmName: debouncedSearch
+      filmName: debouncedSearch,
+      sortBy: "premieredDay.desc"
     }),
     [current, pageSize, debouncedSearch]
   );
@@ -57,13 +59,22 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
     {
       title: "Phiên bản",
       key: "versionCode",
-      dataIndex: "versionCode"
+      dataIndex: "versionCode",
+      width: 100
     },
     {
       title: "Thời lượng",
       key: "duration",
       dataIndex: "duration",
-      render: (value: number) => `${value} phút`
+      render: (value: number) => `${value} phút`,
+      width: 100
+    },
+    {
+      title: "Ngày khởi chiếu",
+      key: "premieredDay",
+      dataIndex: "premieredDay",
+      width: 150,
+      render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY")
     },
     {
       title: "Giá cộng thêm",
@@ -71,7 +82,7 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
       dataIndex: "proposedPrice",
       render: (value: number) => formatMoney(value),
       align: "right",
-      width: 200
+      width: 150
     }
   ];
 
@@ -148,7 +159,7 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
         title="Thêm phim cho kế hoạch"
         open={open}
         onCancel={onCancel}
-        width={1000}
+        width="80%"
         centered
         onOk={() => {
           if (pickedFilmIds.length > 0) {
@@ -174,7 +185,7 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
             columns={columns}
             bordered
             size="small"
-            scroll={{ x: "max-content", y: 500 }}
+            scroll={{ y: 500 }}
             loading={isFetching}
             pagination={{
               current,

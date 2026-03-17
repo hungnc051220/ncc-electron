@@ -1,10 +1,9 @@
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
-import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { formatMoney } from "@renderer/lib/utils";
-import { ApiError, OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
-import { Button, Checkbox, message, Modal } from "antd";
-import axios from "axios";
+import { OrderDetailProps, PaymentStatus } from "@shared/types";
+import { Button, Checkbox, Modal } from "antd";
 import dayjs from "dayjs";
+import { useLocation, useNavigate } from "react-router";
 
 interface OrderDialogProps {
   open: boolean;
@@ -13,7 +12,8 @@ interface OrderDialogProps {
 }
 
 const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogProps) => {
-  const updateStatusOrder = useUpdateOrder();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const getChairs = () => {
     const chairsF1 = selectedItem?.order?.items?.map((item) => item.listChairValueF1) || [];
@@ -25,31 +25,25 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
 
   const onChangeStatusOrder = () => {
     if (!selectedItem) return;
-    updateStatusOrder.mutate(
-      {
-        id: selectedItem?.order.id,
-        dto: {
-          orderStatusId: OrderStatus.COMPLETED,
-          paymentStatusId: PaymentStatus.PAID,
-          shippingStatusId: selectedItem.order.shippingStatusId
-        }
-      },
-      {
-        onSuccess: () => {
-          message.success("Thay đổi trạng thái đơn hàng thành công");
+
+    if (selectedItem.order.paymentStatusId === PaymentStatus.PAID) {
+      Modal.confirm({
+        title: "Cảnh báo đổi ghế",
+        content: "Đã tránh hiện tượng trùng ghế, bạn phải chọn lại toàn bộ ghế cho khách hàng",
+        okText: "Xác nhận",
+        cancelText: "Hủy",
+        onOk: () => {
           onOpenChange(false);
-        },
-        onError: (error: unknown) => {
-          let msg = "Thay đổi trạng thái đơn hàng thất bại";
+          const searchParams = new URLSearchParams({
+            callbackUrl: "/order-history/swap-seats",
+            id: String(selectedItem.order.id),
+            returnTo: `${location.pathname}${location.search}`
+          });
 
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          navigate(`/showtimes?${searchParams.toString()}`);
         }
-      }
-    );
+      });
+    }
   };
 
   return (
@@ -61,13 +55,8 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
       footer={(_, { CancelBtn }) => (
         <>
           <CancelBtn />
-          {selectedItem?.order.paymentStatusId !== PaymentStatus.PAID && (
-            <Button
-              variant="solid"
-              color="green"
-              onClick={onChangeStatusOrder}
-              loading={updateStatusOrder.isPending}
-            >
+          {selectedItem?.order.paymentStatusId === PaymentStatus.PAID && (
+            <Button variant="solid" color="green" onClick={onChangeStatusOrder}>
               Chuyển sang thành công
             </Button>
           )}

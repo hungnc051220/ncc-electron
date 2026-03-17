@@ -9,6 +9,7 @@ import { ordersKeys } from "./keys";
 import { useCancelOrder } from "./useCancelOrder";
 import { useCreateOrder } from "./useCreateOrder";
 import { useCreateQrOrder } from "./useCreateQrOrder";
+import { useSwapSeats } from "./useSwapSeats";
 import { useCreateInvoice } from "../invoices/useCreateInvoice";
 
 const createWrapper = () => {
@@ -149,6 +150,42 @@ describe("order and invoice mutations", () => {
     );
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: invoicesKeys.all
+    });
+  });
+
+  it("swaps seats and invalidates the orders cache", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const swapSpy = vi.spyOn(ordersApi, "swapSeats").mockResolvedValue({ success: true });
+
+    const { result } = renderHook(() => useSwapSeats(), { wrapper });
+
+    await result.current.mutateAsync({
+      orderId: 77,
+      planScreenId: 10,
+      newListChairIndexF1: "1,2",
+      newListChairIndexF2: "",
+      newListChairIndexF3: "",
+      newListChairValueF1: "A1,A2",
+      newListChairValueF2: "",
+      newListChairValueF3: ""
+    });
+
+    expect(swapSpy).toHaveBeenCalledWith(
+      {
+        orderId: 77,
+        planScreenId: 10,
+        newListChairIndexF1: "1,2",
+        newListChairIndexF2: "",
+        newListChairIndexF3: "",
+        newListChairValueF1: "A1,A2",
+        newListChairValueF2: "",
+        newListChairValueF3: ""
+      },
+      expect.anything()
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ordersKeys.all
     });
   });
 });

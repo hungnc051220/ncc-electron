@@ -20,6 +20,7 @@ export interface ManufacturerDto {
   address?: string;
   fax?: string;
   url?: string;
+  isHidden?: boolean;
 }
 
 export const manufacturersApi = {

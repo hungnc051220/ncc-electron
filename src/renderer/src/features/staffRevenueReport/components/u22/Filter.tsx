@@ -1,13 +1,11 @@
 import { FilterOutlined } from "@ant-design/icons";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { usersApi } from "@renderer/api/users.api";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useState } from "react";
 import { ValuesProps } from ".";
-import { useDebounce } from "@renderer/hooks/useDebounce";
-import { usersApi } from "@renderer/api/users.api";
-// import { useDebounce } from "@renderer/hooks/useDebounce";
 
 const { RangePicker } = DatePicker;
 
@@ -24,49 +22,23 @@ interface FilterProps {
 }
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
-  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-
-  const [searchText, setSearchText] = useState<string>("");
-  const debouncedSearch = useDebounce(searchText, 500);
-
-  const {
-    data: users,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage
-  } = useInfiniteQuery({
-    queryKey: ["users", debouncedSearch],
-    queryFn: ({ pageParam = 1 }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: debouncedSearch }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
+  const userSelect = useInfiniteSelectOptions({
+    queryKey: ["users"],
+    queryFn: ({ pageParam, searchText }) =>
+      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: searchText }),
+    mapOption: (user) => ({
+      value: user.id,
+      label: user.customerFirstName || user.username
+    })
   });
-
-  const options = useMemo(() => {
-    return (
-      users?.pages.flatMap((page) =>
-        page.data.map((user) => ({
-          value: user.id,
-          label: user?.customerFirstName || user.username
-        }))
-      ) ?? []
-    );
-  }, [users]);
 
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      // setSearchText("");
-      queryClient.removeQueries({
-        queryKey: ["users", "infinite"]
-      });
+      userSelect.resetSearch();
       onSearch({
         dateRange: [
           dayjs().startOf("day").format("YYYY-MM-DDTHH:mm:ssZ"),
@@ -126,21 +98,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           <Select
             showSearch={{
               filterOption: false,
-              onSearch: (value) => setSearchText(value)
+              onSearch: userSelect.onSearch
             }}
-            loading={isFetching || isFetchingNextPage}
-            options={options}
+            loading={userSelect.loading}
+            options={userSelect.options}
             placeholder="Chọn nhân viên"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPage &&
-                !isFetchingNextPage &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPage();
-              }
-            }}
+            onPopupScroll={userSelect.onPopupScroll}
+            onClear={userSelect.onClear}
             allowClear
           />
         </Form.Item>

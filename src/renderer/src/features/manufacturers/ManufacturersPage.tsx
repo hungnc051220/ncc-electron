@@ -4,12 +4,13 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { ManufacturerProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
-import { PlusIcon } from "lucide-react";
+import { Check, PlusIcon, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteManufacturerDialog from "./components/DeleteManufacturerDialog";
 import ManufacturerDialog from "./components/ManufacturerDialog";
 import { formatNumber } from "@renderer/lib/utils";
 import { Link } from "react-router";
+import ChangeHiddenManufacturerDialog from "./components/ChangeHiddenManufacturerDialog";
 
 const ManufacturersPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -17,6 +18,7 @@ const ManufacturersPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerProps | null>(null);
+  const [changeHiddenDialogOpen, setChangeHiddenDialogOpen] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -61,9 +63,26 @@ const ManufacturersPage = () => {
     }
   }, []);
 
+  const handleChangeHidden = useCallback((item: ManufacturerProps) => {
+    setSelectedManufacturer(item);
+    setChangeHiddenDialogOpen(true);
+  }, []);
+
+  const handleChangeHiddenDialogClose = useCallback((open: boolean) => {
+    setChangeHiddenDialogOpen(open);
+    if (!open) {
+      setSelectedManufacturer(null);
+    }
+  }, []);
+
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+    ...(canUpdate
+      ? [
+          { key: "1", label: "Cập nhật" },
+          { key: "2", label: "Ẩn/hiện hãng phim" }
+        ]
+      : []),
+    ...(canDelete ? [{ key: "3", label: <p className="text-red-500">Xóa</p> }] : [])
   ];
 
   const columns: TableProps<ManufacturerProps>["columns"] = [
@@ -91,6 +110,22 @@ const ManufacturersPage = () => {
       key: "address",
       dataIndex: "address"
     },
+    {
+      title: "Ẩn/Hiện",
+      key: "isHidden",
+      dataIndex: "isHidden",
+      render: (value: boolean) => (
+        <div className="flex items-center justify-center">
+          {!value ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <X className="size-4 text-red-500" />
+          )}
+        </div>
+      ),
+      align: "center",
+      width: 100
+    },
     ...(actionItems.length
       ? [
           {
@@ -106,6 +141,9 @@ const ManufacturersPage = () => {
                       handleEdit(record);
                     }
                     if (e.key === "2") {
+                      handleChangeHidden(record);
+                    }
+                    if (e.key === "3") {
                       handleDelete(record);
                     }
                   }
@@ -192,6 +230,14 @@ const ManufacturersPage = () => {
           onOpenChange={handleDeleteDialogClose}
           id={selectedManufacturer.id}
           name={selectedManufacturer.name}
+        />
+      )}
+      {changeHiddenDialogOpen && selectedManufacturer && (
+        <ChangeHiddenManufacturerDialog
+          name={selectedManufacturer.name}
+          manufacturer={selectedManufacturer}
+          onOpenChange={handleChangeHiddenDialogClose}
+          open={changeHiddenDialogOpen}
         />
       )}
     </div>

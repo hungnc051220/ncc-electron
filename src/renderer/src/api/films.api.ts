@@ -9,6 +9,7 @@ export interface FilmsQuery {
   manufacturerId?: number;
   premieredDay?: string;
   tabCode?: string;
+  sortBy?: string;
 }
 
 export interface FilmDto {
@@ -51,7 +52,7 @@ export interface FilmDto {
 
 export const filmsApi = {
   getAll: async (params: FilmsQuery): Promise<ApiResponse<FilmProps>> => {
-    const { current, pageSize, tabCode, filmName, manufacturerId, premieredDay } = params;
+    const { current, pageSize, tabCode, filmName, manufacturerId, premieredDay, sortBy } = params;
 
     const filter: Record<string, unknown> = {};
 
@@ -71,7 +72,7 @@ export const filmsApi = {
       current,
       pageSize,
       tabCode,
-      sort: "createdOnUtc.desc"
+      sort: sortBy || "createdOnUtc.desc"
     };
 
     if (Object.keys(filter).length > 0) {

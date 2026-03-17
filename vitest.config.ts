@@ -15,6 +15,14 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/renderer/src/test/setup.ts"],
     css: true,
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/out/**",
+      "**/e2e/**",
+      "playwright.config.ts",
+      "vite.playwright.config.ts"
+    ],
     restoreMocks: true,
     clearMocks: true,
     mockReset: true,

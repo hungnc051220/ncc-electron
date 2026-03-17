@@ -20,6 +20,7 @@ import MonthlyReportPage from "./features/monthlyReport/MonthlyReportPage";
 import OnlineSeatBookingDetailPage from "./features/onlineSeatBooking/OnlineSeatBookingDetailPage";
 import OnlineShowtimeBookingPage from "./features/onlineShowtimeBooking/OnlineShowtimeBookingPage";
 import OrderHistoryPage from "./features/orderHistory/OrderHistoryPage";
+import OrderHistorySwapSeatsPage from "./features/orderHistory/OrderHistorySwapSeatsPage";
 import PlanCinemaPage from "./features/planCinema/PlanCinemaPage";
 import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
 import PrintOnlineTicketsPage from "./features/printOnlineTickets/PrintOnlineTicketsPage";
@@ -220,6 +221,10 @@ export const router = createHashRouter([
       {
         path: "/online-seat-booking/create",
         element: withAccess("online_seat_booking", <OnlineSeatBookingDetailPage />)
+      },
+      {
+        path: "/order-history/swap-seats/:id",
+        element: withAccess("order_history", <OrderHistorySwapSeatsPage />)
       },
       {
         path: "/ticket-sales-diagram/view",

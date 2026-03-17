@@ -52,10 +52,17 @@ const AddSchedulingDialog = ({
   const [isSamePrice, setIsSamePrice] = useState(false);
   const { can } = usePermission();
   const canUpdate = can("plan_cinema", "update");
+  const defaultFormValues = useMemo(
+    () => ({
+      roomId: selectedRoomId,
+      projectDate: selectedDate,
+      isOnlineSelling: true
+    }),
+    [selectedRoomId, selectedDate]
+  );
 
   const filmId = Form.useWatch("filmId", form);
   const roomId = Form.useWatch("roomId", form);
-  const versionCode = Form.useWatch("versionCode", form);
   const projectDate = Form.useWatch("projectDate", form);
   const projectTime = Form.useWatch("projectTime", form);
 
@@ -67,13 +74,24 @@ const AddSchedulingDialog = ({
     planCinemaId
   });
 
-  useEffect(() => {
-    form.setFieldValue("roomId", selectedRoomId);
-  }, [selectedRoomId, form]);
+  const selectedFilm = useMemo(
+    () => films?.data?.find((film) => film.filmId === filmId),
+    [filmId, films]
+  );
+
+  const resetForm = () => {
+    form.resetFields();
+    form.setFieldsValue(defaultFormValues);
+    setIsSamePrice(false);
+  };
 
   useEffect(() => {
-    form.setFieldValue("projectDate", selectedDate);
-  }, [selectedDate, form]);
+    if (!open) return;
+    form.setFieldsValue({
+      roomId: selectedRoomId,
+      projectDate: selectedDate
+    });
+  }, [selectedRoomId, selectedDate, form, open]);
 
   const {
     data: rooms,
@@ -94,22 +112,20 @@ const AddSchedulingDialog = ({
 
   const { data: planPricing } = useTicketPricesByPlan({
     roomId,
-    versionCode,
+    versionCode: selectedFilm?.film.versionCode ?? "",
     date: projectDate ? dayjs(projectDate).format() : undefined
   });
 
   useEffect(() => {
-    if (filmId) {
-      form.setFieldValue(
-        "versionCode",
-        films?.data?.find((film) => film.filmId === filmId)?.film.versionCode
-      );
-      form.setFieldValue(
-        "duration",
-        films?.data?.find((film) => film.filmId === filmId)?.film.duration
-      );
+    if (selectedFilm) {
+      form.setFieldValue("versionCode", selectedFilm.film.versionCode);
+      form.setFieldValue("duration", selectedFilm.film.duration);
+      return;
     }
-  }, [filmId, form, films]);
+
+    form.setFieldValue("versionCode", undefined);
+    form.setFieldValue("duration", undefined);
+  }, [form, selectedFilm]);
 
   const filmOptions = useMemo(() => {
     return (
@@ -132,13 +148,13 @@ const AddSchedulingDialog = ({
   }, [rooms]);
 
   useEffect(() => {
-    if (planPricing) {
+    if (planPricing && open) {
       form.setFieldValue("priceOfPosition1", planPricing?.[0] || "");
       form.setFieldValue("priceOfPosition2", planPricing?.[1] || "");
       form.setFieldValue("priceOfPosition3", planPricing?.[2] || "");
       form.setFieldValue("priceOfPosition4", planPricing?.[3] || "");
     }
-  }, [planPricing, form]);
+  }, [planPricing, form, open]);
 
   const buildUniformPriceValue = (source: string | undefined, uniformPrice: number): string => {
     if (!source) return `${uniformPrice}`;
@@ -172,13 +188,10 @@ const AddSchedulingDialog = ({
     if (projectTime && filmId) {
       form.setFieldValue(
         "endTime",
-        dayjs(projectTime).add(
-          films?.data.find((film) => film.filmId === filmId)?.film.duration ?? 0,
-          "minute"
-        )
+        dayjs(projectTime).add(selectedFilm?.film.duration ?? 0, "minute")
       );
     }
-  }, [projectTime, form, filmId, films]);
+  }, [projectTime, form, filmId, selectedFilm]);
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
     const uniformPrice = Number(values.price);
@@ -222,7 +235,7 @@ const AddSchedulingDialog = ({
       {
         onSuccess: () => {
           message.success("Thêm ca chiếu vào kế hoạch thành công");
-          form.resetFields();
+          resetForm();
           setOpen(false);
         },
         onError: (error: unknown) => {
@@ -240,8 +253,7 @@ const AddSchedulingDialog = ({
 
   const onCancel = () => {
     setOpen(false);
-    form.resetFields();
-    setIsSamePrice(false);
+    resetForm();
   };
 
   if (!canUpdate) {
@@ -250,7 +262,14 @@ const AddSchedulingDialog = ({
 
   return (
     <>
-      <Button variant="outlined" color="primary" onClick={() => setOpen(true)}>
+      <Button
+        variant="outlined"
+        color="primary"
+        onClick={() => {
+          resetForm();
+          setOpen(true);
+        }}
+      >
         Thêm ca chiếu mới
       </Button>
       <Modal
@@ -266,16 +285,7 @@ const AddSchedulingDialog = ({
         }}
         width={800}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-          initialValues={{
-            projectDate: dayjs(),
-            projectTime: dayjs(),
-            isOnlineSelling: true
-          }}
-        >
+        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={defaultFormValues}>
           <div className="grid grid-cols-2 gap-3">
             <Form.Item<FieldType>
               name="filmId"

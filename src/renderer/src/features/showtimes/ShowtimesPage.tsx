@@ -21,6 +21,7 @@ const ShowtimesPage = () => {
   const tick = useRealtimeClock();
   const callbackUrl = searchParams.get("callbackUrl");
   const id = searchParams.get("id");
+  const returnTo = searchParams.get("returnTo");
 
   const [date, setDate] = useQueryState("date", {
     defaultValue: dayjs().format("YYYY-MM-DD")
@@ -84,22 +85,31 @@ const ShowtimesPage = () => {
       render: (showtimes: DetailPlanScreeningProps[]) => (
         <div className="flex flex-nowrap gap-3">
           {showtimes.map((s) => {
-            const selected = dayjs(date, "YYYY-MM-DD");
-            const isPastDay = selected.isBefore(dayjs(), "day");
-            const isPast = dayjs(s.projectTime).add(7, "hour").isAfter(dayjs());
-            const isToday = dayjs(selected).isSame(dayjs(), "day");
+            const now = dayjs();
+            const selectedDate = dayjs(date, "YYYY-MM-DD");
+            const isPastDay = selectedDate.isBefore(now, "day");
+            const isToday = selectedDate.isSame(now, "day");
+            const isFutureShowtime = dayjs(s.projectTime).add(7, "hour").isAfter(now);
 
             return (
               <Button
                 key={s.projectTime}
                 type="default"
-                danger={isPastDay || (!isPast && isToday)}
+                danger={isPastDay || (!isFutureShowtime && isToday)}
                 className="min-w-15"
                 size="small"
                 onClick={() => {
                   startTransition(() => {
                     if (callbackUrl && id) {
-                      navigate(`${callbackUrl}/${id}?plan-screening=${s.planScreeningsId}`);
+                      const nextSearchParams = new URLSearchParams({
+                        "plan-screening": String(s.planScreeningsId)
+                      });
+
+                      if (returnTo) {
+                        nextSearchParams.set("returnTo", returnTo);
+                      }
+
+                      navigate(`${callbackUrl}/${id}?${nextSearchParams.toString()}`);
                     } else {
                       navigate(`/plan-screening/${s.planScreeningsId}`);
                     }

@@ -34,7 +34,7 @@ import InvoiceDialog from "../../invoices/components/InvoiceDialog";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
 
-const paymentTypes = [
+export const paymentTypes = [
   {
     value: PaymentType.VIETQR,
     label: "Quét VietQR"
@@ -49,9 +49,9 @@ type FieldType = {
   cancelReasonId: number;
 };
 
-const getSeatDiscountKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
+export const getSeatDiscountKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
 
-const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
+export const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
   const floors = [1, 2, 3] as const;
 
   return floors.reduce<
@@ -87,14 +87,16 @@ const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
   }, {});
 };
 
-const calculateSeatDiscount = (seat: ListSeat, discount?: DiscountProps) => {
+export const calculateSeatDiscount = (seat: ListSeat, discount?: DiscountProps) => {
   if (!discount) return 0;
 
+  const maxDiscount = seat.price || 0;
+
   if (discount.discountRate) {
-    return (seat.price * discount.discountRate) / 100;
+    return Math.min((seat.price * discount.discountRate) / 100, maxDiscount);
   }
 
-  return discount.discountAmount || 0;
+  return Math.min(discount.discountAmount || 0, maxDiscount);
 };
 
 interface ActionsProps {

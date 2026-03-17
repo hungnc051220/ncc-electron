@@ -105,6 +105,17 @@ export interface SelectingChairsDto {
   selectingChairIndexF3: string;
 }
 
+export interface SwapSeatsDto {
+  orderId: number;
+  planScreenId: number;
+  newListChairIndexF1: string;
+  newListChairIndexF2: string;
+  newListChairIndexF3: string;
+  newListChairValueF1: string;
+  newListChairValueF2: string;
+  newListChairValueF3: string;
+}
+
 export const ordersApi = {
   getAll: async (params: OrdersQuery): Promise<ApiResponse<OrderDetailProps>> => {
     const {
@@ -199,6 +210,10 @@ export const ordersApi = {
   },
   update: async (id: number, dto: OrderUpdateStatusDto) => {
     const res = await api.put(`/api/pos/order/${id}/status`, dto);
+    return res.data;
+  },
+  swapSeats: async (dto: SwapSeatsDto) => {
+    const res = await api.patch("/api/pos/order/swap-seats", dto);
     return res.data;
   },
   cancelReserve: async (dto: OrderCancelReserveDto) => {

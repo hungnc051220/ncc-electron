@@ -127,6 +127,7 @@ export interface ManufacturerProps {
   url: string;
   createdUser: string;
   updatedUser: string;
+  isHidden: boolean;
 }
 
 export interface FilmLanguageProps {

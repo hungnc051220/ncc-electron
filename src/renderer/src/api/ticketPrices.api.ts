@@ -17,7 +17,7 @@ export interface TicketPriceDto {
 
 export interface TicketPriceByPlanDto {
   roomId: number;
-  versionCode: number;
+  versionCode: string;
   date?: string;
 }
 
