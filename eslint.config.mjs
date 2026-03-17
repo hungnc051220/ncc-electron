@@ -31,7 +31,8 @@ export default defineConfig(
       "@typescript-eslint/semi": ["error", "always"],
       quotes: ["error", "double"],
       "react/prop-types": "off",
-      "react-hooks/set-state-in-effect": "off"
+      "react-hooks/set-state-in-effect": "off",
+      "react-refresh/only-export-components": "off"
     }
   },
   eslintConfigPrettier

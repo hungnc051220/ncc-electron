@@ -6073,6 +6073,11 @@ react-selecto@^1.26.3:
   dependencies:
     selecto "~1.26.3"
 
+react-simple-keyboard@^3.8.175:
+  version "3.8.175"
+  resolved "https://registry.yarnpkg.com/react-simple-keyboard/-/react-simple-keyboard-3.8.175.tgz#0fcc036da51d25614ad79ec90195c14ca984ffd5"
+  integrity sha512-iCMdFwdmakQ/xwB5D6t0JNuD6zq9l3k3s5eTtIkj4bwRH3CfRORm9QEjCBOnRIhCFLwztee7u7hsufzlOhMdZA==
+
 react@^19.2.1:
   version "19.2.4"
   resolved "https://registry.yarnpkg.com/react/-/react-19.2.4.tgz#438e57baa19b77cb23aab516cf635cd0579ee09a"
@@ -6503,6 +6508,11 @@ signal-exit@^4.0.1, signal-exit@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-4.1.0.tgz#952188c1cbd546070e2dd20d0f41c0ae0530cb04"
   integrity sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==
+
+simple-keyboard@^3.8.121:
+  version "3.8.121"
+  resolved "https://registry.yarnpkg.com/simple-keyboard/-/simple-keyboard-3.8.121.tgz#ef332ae6e1fb796a6f6dfeb0554862afd318caf9"
+  integrity sha512-QxMpOO1T6uEYm9gwB8tuO1cu2fibIgolgAflfOis6XlvDp5is78mQu/OrjotJbe8yEZ/11TRpi23RHiQ7bI1rg==
 
 simple-update-notifier@2.0.0:
   version "2.0.0"

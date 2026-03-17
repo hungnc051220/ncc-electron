@@ -2,7 +2,7 @@ import { useCreateUser } from "@renderer/hooks/users/useCreateUser";
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select } from "antd";
-import { ApiError, CustomerRoleProps, ManufacturerProps, UserProps } from "../../../types";
+import { ApiError, CustomerRoleProps, ManufacturerProps, UserProps } from "@shared/types";
 import { UserDto } from "@renderer/api/users.api";
 import axios from "axios";
 interface UserDialogProps {

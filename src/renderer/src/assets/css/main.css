@@ -29,6 +29,246 @@
     @apply bg-[url(/images/auth-bg.png)];
   }
 
+  .login-card {
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.98), rgb(248 250 252 / 0.95)), white;
+    border-radius: 16px;
+    transition: transform 220ms ease;
+  }
+
+  .login-card__hero {
+    background:
+      linear-gradient(
+        135deg,
+        rgb(255 255 255 / 0.14),
+        rgb(255 255 255 / 0.02) 42%,
+        transparent 60%
+      ),
+      radial-gradient(circle at top left, rgb(96 165 250 / 0.24), transparent 34%),
+      radial-gradient(circle at bottom right, rgb(14 165 233 / 0.18), transparent 30%),
+      linear-gradient(160deg, rgb(4 26 58 / 0.96), rgb(10 37 78 / 0.94) 52%, rgb(15 23 42 / 0.96));
+    border: 1px solid rgb(255 255 255 / 0.08);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.18),
+      inset 0 -1px 0 rgb(255 255 255 / 0.04),
+      0 24px 60px rgb(2 6 23 / 0.24);
+    backdrop-filter: blur(18px) saturate(130%);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+  }
+
+  .dark .login-card {
+    background: linear-gradient(135deg, rgb(15 23 42 / 0.94), rgb(30 41 59 / 0.9));
+    border: 1px solid rgb(148 163 184 / 0.14);
+    box-shadow:
+      0 24px 60px rgb(2 6 23 / 0.36),
+      inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
+
+  .dark .login-card__hero {
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.02) 42%, transparent 60%),
+      radial-gradient(circle at top left, rgb(96 165 250 / 0.2), transparent 34%),
+      radial-gradient(circle at bottom right, rgb(14 165 233 / 0.14), transparent 30%),
+      linear-gradient(160deg, rgb(2 6 23 / 0.96), rgb(15 23 42 / 0.95) 52%, rgb(30 41 59 / 0.96));
+    border-color: rgb(255 255 255 / 0.06);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      inset 0 -1px 0 rgb(255 255 255 / 0.03),
+      0 24px 60px rgb(2 6 23 / 0.34);
+  }
+
+  .login-focus-chip {
+    @apply flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-4 text-left transition-all duration-200;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  .login-focus-chip:hover {
+    @apply border-white/20 bg-white/12;
+  }
+
+  .login-focus-chip.is-active {
+    @apply border-cyan-300/65 bg-cyan-300/18;
+    box-shadow:
+      0 18px 40px rgb(8 145 178 / 0.18),
+      inset 0 1px 0 rgb(255 255 255 / 0.18);
+  }
+
+  .login-focus-chip__icon {
+    @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white;
+  }
+
+  .login-input-active.ant-input-outlined,
+  .login-input-active.ant-input-affix-wrapper {
+    border-color: rgb(37 99 235 / 0.9) !important;
+    box-shadow: 0 0 0 4px rgb(37 99 235 / 0.12) !important;
+  }
+
+  .login-keyboard-backdrop {
+    display: none;
+  }
+
+  .login-keyboard-shell {
+    @apply mb-3 mt-3 rounded-[22px] border border-slate-200 bg-slate-100 p-2 shadow-inner shadow-slate-300/20;
+  }
+
+  .dark .login-keyboard-shell {
+    background: linear-gradient(180deg, rgb(15 23 42 / 0.94), rgb(30 41 59 / 0.92));
+    border-color: rgb(71 85 105 / 0.8);
+    box-shadow:
+      0 12px 32px rgb(2 6 23 / 0.26),
+      inset 0 1px 0 rgb(255 255 255 / 0.05);
+  }
+
+  .dark .login-keyboard-shell .login-keyboard-theme {
+    background: transparent !important;
+  }
+
+  .dark .login-keyboard-shell .login-keyboard-theme .hg-row .hg-button {
+    background: linear-gradient(180deg, rgb(51 65 85), rgb(30 41 59)) !important;
+    color: rgb(241 245 249) !important;
+    border: 1px solid rgb(71 85 105 / 0.9) !important;
+    box-shadow:
+      0 8px 20px rgb(2 6 23 / 0.2),
+      inset 0 1px 0 rgb(255 255 255 / 0.04) !important;
+  }
+
+  .dark .login-keyboard-shell .login-keyboard-theme .hg-row .hg-button:hover {
+    background: linear-gradient(180deg, rgb(71 85 105), rgb(51 65 85)) !important;
+  }
+
+  .dark .login-keyboard-shell .login-keyboard-theme .hg-row .hg-button:active {
+    background: linear-gradient(180deg, rgb(30 41 59), rgb(15 23 42)) !important;
+  }
+
+  .dark .login-keyboard-shell .login-keyboard-theme .hg-button.hg-functionBtn {
+    background: linear-gradient(180deg, rgb(67 56 202), rgb(55 48 163)) !important;
+    border-color: rgb(129 140 248 / 0.55) !important;
+    color: white !important;
+  }
+
+  .dark .login-keyboard-shell .login-keyboard-theme .hg-button[data-skbtn="{enter}"] {
+    background: linear-gradient(180deg, rgb(59 130 246), rgb(37 99 235)) !important;
+    border-color: rgb(96 165 250 / 0.6) !important;
+    color: white !important;
+  }
+
+  .dark .login-keyboard-shell .login-keyboard-theme .hg-button[data-skbtn="{bksp}"] {
+    background: linear-gradient(180deg, rgb(71 85 105), rgb(51 65 85)) !important;
+  }
+
+  .login-keyboard-drawer {
+    display: none;
+  }
+
+  .login-keyboard-drawer-header {
+    display: none;
+  }
+
+  .login-keyboard-drawer-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+
+  .login-keyboard-drawer-field {
+    @apply mt-1 text-sm font-semibold text-slate-900;
+  }
+
+  .login-keyboard-drawer-close {
+    @apply flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600;
+  }
+
+  .dark .login-keyboard-drawer-label {
+    @apply text-slate-400;
+  }
+
+  .dark .login-keyboard-drawer-field {
+    @apply text-slate-100;
+  }
+
+  .dark .login-keyboard-drawer-close {
+    @apply border-slate-600 bg-slate-800 text-slate-100;
+  }
+
+  .invoice-keyboard-drawer {
+    position: fixed;
+    right: 20px;
+    bottom: 12px;
+    left: 20px;
+    z-index: 1200;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 24px 24px 18px 18px;
+    background: linear-gradient(180deg, rgb(248 250 252), rgb(241 245 249));
+    box-shadow:
+      0 -12px 32px rgb(15 23 42 / 0.18),
+      inset 0 1px 0 rgb(255 255 255 / 0.6);
+    padding: 10px;
+    transform: translateY(calc(100% + 24px));
+    transition: transform 220ms ease;
+  }
+
+  .invoice-keyboard-drawer.is-open {
+    transform: translateY(0);
+  }
+
+  .invoice-keyboard-drawer__header {
+    @apply mb-3 flex items-center justify-between gap-3 px-2 pt-1;
+  }
+
+  .invoice-keyboard-drawer__title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+
+  .invoice-keyboard-drawer__close {
+    @apply flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600;
+  }
+
+  .invoice-keyboard-drawer .invoice-keyboard-theme {
+    font-size: 14px;
+  }
+
+  .invoice-keyboard-drawer .invoice-keyboard-theme .hg-button {
+    height: 44px;
+  }
+
+  .dark .invoice-keyboard-drawer {
+    background: linear-gradient(180deg, rgb(15 23 42 / 0.96), rgb(30 41 59 / 0.94));
+    border-color: rgb(71 85 105 / 0.8);
+    box-shadow:
+      0 -12px 32px rgb(2 6 23 / 0.32),
+      inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
+
+  .dark .invoice-keyboard-drawer__title {
+    @apply text-slate-400;
+  }
+
+  .dark .invoice-keyboard-drawer__close {
+    @apply border-slate-600 bg-slate-800 text-slate-100;
+  }
+
+  .dark .invoice-keyboard-drawer .invoice-keyboard-theme {
+    background: transparent !important;
+  }
+
+  .dark .invoice-keyboard-drawer .invoice-keyboard-theme .hg-row .hg-button {
+    background: linear-gradient(180deg, rgb(51 65 85), rgb(30 41 59)) !important;
+    color: rgb(241 245 249) !important;
+    border: 1px solid rgb(71 85 105 / 0.9) !important;
+    box-shadow:
+      0 8px 20px rgb(2 6 23 / 0.2),
+      inset 0 1px 0 rgb(255 255 255 / 0.04) !important;
+  }
+
+  .dark .invoice-keyboard-drawer .invoice-keyboard-theme .hg-button.hg-functionBtn {
+    background: linear-gradient(180deg, rgb(67 56 202), rgb(55 48 163)) !important;
+    border-color: rgb(129 140 248 / 0.55) !important;
+    color: white !important;
+  }
+
+  .dark .invoice-keyboard-drawer .invoice-keyboard-theme .hg-button[data-skbtn="{enter}"] {
+    background: linear-gradient(180deg, rgb(59 130 246), rgb(37 99 235)) !important;
+    border-color: rgb(96 165 250 / 0.6) !important;
+    color: white !important;
+  }
+
   a {
     color: inherit !important;
     text-decoration: none;
@@ -36,5 +276,88 @@
 
   .selecto-selection {
     display: none !important;
+  }
+
+  @media (max-width: 1024px), (max-height: 768px) {
+    .login-card {
+      max-width: 500px;
+    }
+
+    .login-keyboard-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: block;
+      background: rgb(15 23 42 / 0.36);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+
+    .login-keyboard-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .login-keyboard-inline {
+      display: none;
+    }
+
+    .login-keyboard-drawer {
+      display: block;
+    }
+
+    .login-keyboard-drawer {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      left: 12px;
+      z-index: 40;
+      margin: 0;
+      border-radius: 24px 24px 18px 18px;
+      background: linear-gradient(180deg, rgb(248 250 252), rgb(241 245 249));
+      box-shadow:
+        0 -12px 32px rgb(15 23 42 / 0.18),
+        inset 0 1px 0 rgb(255 255 255 / 0.6);
+      transform: translateY(calc(100% + 24px));
+      transition: transform 220ms ease;
+    }
+
+    .login-keyboard-drawer.is-drawer-open {
+      transform: translateY(0);
+    }
+
+    .login-card__hero {
+      padding: 20px;
+    }
+
+    .login-card.is-password-focused {
+      transform: translateY(-80px);
+    }
+
+    .login-card__hero p {
+      max-width: none;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .login-focus-list {
+      display: none;
+    }
+
+    .login-keyboard-drawer .hg-theme-default {
+      zoom: 0.84;
+      transform-origin: center bottom;
+      font-size: 14px;
+    }
+
+    .login-keyboard-drawer-header {
+      @apply mb-3 flex items-center justify-between gap-3 px-2 pt-1;
+      display: flex;
+    }
+
+    .login-keyboard-drawer .hg-theme-default .hg-button {
+      height: 44px;
+    }
   }
 }

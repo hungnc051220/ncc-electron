@@ -601,6 +601,7 @@ const Actions = ({
             Hủy giữ
           </Button>
         </div>
+
         <div className="flex gap-3">
           <div className="flex flex-col">
             <Checkbox checked={vipCard} onChange={(e) => setVipCard(e.target.checked)}>
@@ -694,6 +695,7 @@ const Actions = ({
             }
           }}
           orderId={invoiceOrderId}
+          enableVirtualKeyboardDrawer
         />
       )}
     </div>

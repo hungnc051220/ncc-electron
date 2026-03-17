@@ -3,10 +3,11 @@ import { useAvailableVouchersForPos } from "@renderer/hooks/vouchers/useAvailabl
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { BatchProps, ListSeat } from "@shared/types";
 import type { DescriptionsProps } from "antd";
+import type { InputRef } from "antd";
 import { Button, Radio, Descriptions, Input, message, Modal, Space, Table } from "antd";
 import { InputStatus } from "antd/es/_util/statusUtils";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { TableProps } from "antd";
 
 interface VipCardDialogProps {
@@ -64,6 +65,7 @@ const VipCardDialog = ({
   const [status, setStatus] = useState<InputStatus>("");
   const [voucherType, setVoucherType] = useState<"campaign" | "u22">("campaign");
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+  const cardInputRef = useRef<InputRef>(null);
 
   const { data, isFetching, refetch } = useCustomer({
     current: 1,
@@ -121,11 +123,10 @@ const VipCardDialog = ({
   );
 
   const isU22Member = customer?.currentCardId === 12;
-  const voucherItems = vouchers?.items || [];
+  const voucherItems = useMemo(() => vouchers?.items ?? [], [vouchers?.items]);
 
   useEffect(() => {
     if (!isU22Member && voucherType === "u22") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVoucherType("campaign");
     }
   }, [isU22Member, voucherType]);
@@ -133,7 +134,6 @@ const VipCardDialog = ({
   useEffect(() => {
     const defaultBatchId = voucherItems.find((item) => item.vouchers?.length > 0)?.batchId ?? null;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedBatchId((current) => {
       if (
         current &&
@@ -145,6 +145,16 @@ const VipCardDialog = ({
       return defaultBatchId;
     });
   }, [voucherItems]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const focusTimer = window.setTimeout(() => {
+      cardInputRef.current?.focus();
+    }, 100);
+
+    return () => window.clearTimeout(focusTimer);
+  }, [open]);
 
   const selectedVoucherCode = useMemo(() => {
     if (!selectedBatchId) return undefined;
@@ -253,6 +263,7 @@ const VipCardDialog = ({
           <p>Số thẻ</p>
           <Space.Compact className="flex-1">
             <Input
+              ref={cardInputRef}
               placeholder="Nhập số thẻ"
               value={searchText}
               onChange={(e) => {
