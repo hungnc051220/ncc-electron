@@ -1,6 +1,7 @@
 import { useCreateInvoice } from "@renderer/hooks/invoices/useCreateInvoice";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
 import { useUpdateInvoice } from "@renderer/hooks/invoices/useUpdateInvoice";
+import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { ApiError, InvoiceProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select } from "antd";
@@ -167,10 +168,6 @@ const InvoiceDialog = ({
     updateFieldValue(field, e.target.value);
   };
 
-  const handleKeyboardChange = (input: string) => {
-    updateFieldValue(activeField, input.replace(/[\t\n\r]/g, ""));
-  };
-
   const handleKeyboardKeyPress = (button: string) => {
     if (button === "{shift}" || button === "{lock}") {
       setLayoutName((current) => (current === "default" ? "shift" : "default"));
@@ -192,7 +189,13 @@ const InvoiceDialog = ({
 
     if (button === "{enter}") {
       form.submit();
+      return;
     }
+
+    const currentValue = String(
+      keyboardInputs[activeField] ?? form.getFieldValue(activeField) ?? ""
+    );
+    updateFieldValue(activeField, applyVirtualKeyboardButton(currentValue, button));
   };
 
   const inputProps = (field: KeyboardField, placeholder: string) => ({
@@ -359,7 +362,6 @@ const InvoiceDialog = ({
             theme="hg-theme-default invoice-keyboard-theme"
             layoutName={layoutName}
             inputName={String(activeField)}
-            onChange={handleKeyboardChange}
             onKeyPress={handleKeyboardKeyPress}
             layout={{
               default: [

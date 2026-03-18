@@ -2,6 +2,7 @@ import { generalDataApi } from "@renderer/api/generalData.api";
 import { usersApi } from "@renderer/api/users.api";
 import LoginSettingsPopup from "@renderer/components/LoginSettingsPopup";
 import { usersKeys } from "@renderer/hooks/users/keys";
+import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { JwtPayload } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Form, Image, Input } from "antd";
@@ -27,7 +28,10 @@ export default function Login() {
   const navigate = useNavigate();
   const isAuth = useAuthStore((s) => s.isAuth);
   const [form] = Form.useForm<LoginForm>();
-  const keyboardRef = useRef<{
+  const inlineKeyboardRef = useRef<{
+    setInput: (input: string, inputName?: string) => void;
+  } | null>(null);
+  const drawerKeyboardRef = useRef<{
     setInput: (input: string, inputName?: string) => void;
   } | null>(null);
   const [activeField, setActiveField] = useState<keyof LoginForm>("username");
@@ -64,16 +68,13 @@ export default function Login() {
     const nextValues = { ...keyboardInputs, [field]: value };
     setKeyboardInputs(nextValues);
     form.setFieldsValue(nextValues);
-    keyboardRef.current?.setInput(value, field);
+    inlineKeyboardRef.current?.setInput(value, field);
+    drawerKeyboardRef.current?.setInput(value, field);
     form.validateFields([field]).catch(() => undefined);
   };
 
   const handleInputChange = (field: keyof LoginForm) => (e: ChangeEvent<HTMLInputElement>) => {
     updateFieldValue(field, e.target.value);
-  };
-
-  const handleKeyboardChange = (input: string) => {
-    updateFieldValue(activeField, input.replace(/[\t\n\r]/g, ""));
   };
 
   const handleKeyboardKeyPress = (button: string) => {
@@ -89,7 +90,11 @@ export default function Login() {
 
     if (button === "{enter}") {
       form.submit();
+      return;
     }
+
+    const currentValue = keyboardInputs[activeField] ?? "";
+    updateFieldValue(activeField, applyVirtualKeyboardButton(currentValue, button));
   };
 
   const openKeyboardDrawer = (field: keyof LoginForm) => {
@@ -218,12 +223,11 @@ export default function Login() {
               <div className="login-keyboard-shell login-keyboard-inline">
                 <Keyboard
                   keyboardRef={(instance) => {
-                    keyboardRef.current = instance;
+                    inlineKeyboardRef.current = instance;
                   }}
                   theme="hg-theme-default login-keyboard-theme"
                   layoutName={layoutName}
                   inputName={activeField}
-                  onChange={handleKeyboardChange}
                   onKeyPress={handleKeyboardKeyPress}
                   layout={{
                     default: [
@@ -281,12 +285,11 @@ export default function Login() {
         </div>
         <Keyboard
           keyboardRef={(instance) => {
-            keyboardRef.current = instance;
+            drawerKeyboardRef.current = instance;
           }}
           theme="hg-theme-default login-keyboard-theme"
           layoutName={layoutName}
           inputName={activeField}
-          onChange={handleKeyboardChange}
           onKeyPress={handleKeyboardKeyPress}
           layout={{
             default: [
