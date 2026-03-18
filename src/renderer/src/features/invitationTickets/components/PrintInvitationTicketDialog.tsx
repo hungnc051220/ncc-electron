@@ -263,9 +263,6 @@ const PrintInvitationTicketDialog = ({
         >
           <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
-        <Form.Item name="note" label="Ghi chú" className="col-span-2">
-          <Input.TextArea rows={5} placeholder="Nhập ghi chú" />
-        </Form.Item>
         {image ? (
           <img
             src={image}

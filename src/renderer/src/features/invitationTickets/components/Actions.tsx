@@ -11,7 +11,7 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, ListSeat, OrderDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, message } from "antd";
+import { Button, Descriptions, Input, message } from "antd";
 import axios from "axios";
 import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
 import PrintInvitationTicketDialog from "./PrintInvitationTicketDialog";
@@ -70,6 +70,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
 
   const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
+  const [note, setNote] = useState("");
 
   const handleDialogPrintClose = useCallback((open: boolean) => {
     setDialogPrintOpen(open);
@@ -124,6 +125,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
       paymentMethodSystemName: "POS",
       posName,
       posShortName,
+      note,
       ...buildSeatFieldsByFloor(selectedSeats)
     };
 
@@ -193,6 +195,15 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
       <div className="p-2 flex gap-6 max-w-5xl mx-auto">
         <div className="flex-1 bg-app-bg-container py-2 px-4 rounded-md">
           <Descriptions size="small" items={items} column={2} />
+        </div>
+        <div>
+          <p className="text-sm">Ghi chú</p>
+          <Input.TextArea
+            placeholder="Nhập ghi chú"
+            rows={2}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
         </div>
         <div className="flex gap-3">
           {canCreate && (

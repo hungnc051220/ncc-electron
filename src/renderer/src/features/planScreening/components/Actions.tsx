@@ -576,14 +576,18 @@ const Actions = ({
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="text-xs">
+          <Checkbox
+            className="mt-1"
+            checked={exportInvoice}
+            disabled={!canUpdate}
+            onChange={(e) => setExportInvoice(e.target.checked)}
+          >
+            <span className="text-xs">Xuất hóa đơn</span>
+          </Checkbox>
           <p className="text-gray-500">Tiền vừa bán:</p>
           <p className="font-bold text-red-500 text-sm">{formatMoney(Number(lastTotal) || 0)}</p>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div></div>
-          <Button variant="outlined" color="pink" disabled={disableActions}>
-            Đổi quà
-          </Button>
+        <div className="grid grid-cols-1 gap-2">
           <Button
             variant="outlined"
             color="green"
@@ -621,7 +625,8 @@ const Actions = ({
             <Button
               type="primary"
               size="large"
-              className="flex w-full"
+              className="flex flex-col w-full h-full gap-1"
+              style={{ height: "72px !important" }}
               onClick={() => {
                 if (vipCard) {
                   setOpenVipCardDialog(true);
@@ -638,17 +643,9 @@ const Actions = ({
                 !canCreate
               }
             >
-              <img src={ticketIcon} width={24} height={24} alt="icon" />
+              <img src={ticketIcon} width={28} height={28} alt="icon" />
               <span className="text-base font-bold">In vé</span>
             </Button>
-            <Checkbox
-              className="mt-1"
-              checked={exportInvoice}
-              disabled={!canUpdate}
-              onChange={(e) => setExportInvoice(e.target.checked)}
-            >
-              <span className="text-xs">Xuất hóa đơn</span>
-            </Checkbox>
           </div>
         </div>
       </div>

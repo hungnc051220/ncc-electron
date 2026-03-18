@@ -40,6 +40,7 @@ export interface OrderDto {
   memberCardCode?: string;
   discountGroups?: DiscountGroup[];
   voucherCode?: string;
+  note?: string;
 }
 
 export interface DiscountGroup {

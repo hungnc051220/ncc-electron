@@ -174,6 +174,11 @@ const InvitationTicketsPage = () => {
       render: (_, record) => dayjs(record.order.createdOnUtc).format("DD/MM/YYYY")
     },
     {
+      title: "Ghi chú",
+      key: "note",
+      dataIndex: "note"
+    },
+    {
       title: "Xuất vé mời qua email",
       key: "isPrinted",
       dataIndex: "isPrinted",
