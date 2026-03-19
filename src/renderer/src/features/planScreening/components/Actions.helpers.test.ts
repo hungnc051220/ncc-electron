@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DiscountProps, ListSeat } from "@shared/types";
 import { buildSeatFieldsByFloor, calculateSeatDiscount, getSeatDiscountKey } from "./Actions";
+import { getPlanScreeningDateTime, isPlanScreeningLocked } from "@renderer/lib/utils";
 
 const createSeat = (overrides: Partial<ListSeat> = {}): ListSeat => ({
   seat: "A1",
@@ -36,6 +37,15 @@ const createDiscount = (overrides: Partial<DiscountProps> = {}): DiscountProps =
 });
 
 describe("plan screening action helpers", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-19T12:00:00+07:00"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("builds seat keys from floor and seat index", () => {
     expect(getSeatDiscountKey(createSeat({ floor: 2, seat: "15" }))).toBe("2-15");
   });
@@ -76,5 +86,20 @@ describe("plan screening action helpers", () => {
 
   it("returns zero when no discount is applied", () => {
     expect(calculateSeatDiscount(createSeat(), undefined)).toBe(0);
+  });
+
+  it("builds screening datetime from project date and project time", () => {
+    expect(getPlanScreeningDateTime("2026-03-20", "2026-03-19T10:00:00.000Z")?.format()).toBe(
+      "2026-03-20T17:00:00+07:00"
+    );
+  });
+
+  it("does not lock future screenings on March 20, 2026 while current date is March 19, 2026", () => {
+    expect(isPlanScreeningLocked("2026-03-20", "2026-03-19T10:00:00.000Z")).toBe(false);
+    expect(isPlanScreeningLocked("2026-03-20", "10:00:00")).toBe(false);
+  });
+
+  it("locks screenings that already passed on March 19, 2026", () => {
+    expect(isPlanScreeningLocked("2026-03-19", "10:00:00")).toBe(true);
   });
 });

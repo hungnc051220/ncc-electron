@@ -31,6 +31,46 @@ export const decodeToken = (token: string) => {
 export const formatMoney = (price: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
 
+const extractTimePart = (projectTime?: string) => {
+  if (!projectTime) return undefined;
+
+  const parsedTime = dayjs(projectTime);
+  if (parsedTime.isValid()) {
+    return parsedTime.format("HH:mm:ss");
+  }
+
+  const matchedTime = projectTime.match(/\b\d{2}:\d{2}(:\d{2})?\b/);
+  return matchedTime
+    ? matchedTime[0].length === 5
+      ? `${matchedTime[0]}:00`
+      : matchedTime[0]
+    : undefined;
+};
+
+export const getPlanScreeningDateTime = (projectDate?: string, projectTime?: string) => {
+  if (!projectTime) return undefined;
+
+  const timePart = extractTimePart(projectTime);
+  if (!timePart) {
+    const parsedTime = dayjs(projectTime);
+    return parsedTime.isValid() ? parsedTime : undefined;
+  }
+
+  if (!projectDate) {
+    const parsedTime = dayjs(projectTime);
+    return parsedTime.isValid() ? parsedTime : dayjs(`${dayjs().format("YYYY-MM-DD")}T${timePart}`);
+  }
+
+  return dayjs(`${dayjs(projectDate).format("YYYY-MM-DD")}T${timePart}`);
+};
+
+export const isPlanScreeningLocked = (projectDate?: string, projectTime?: string) => {
+  const screeningDateTime = getPlanScreeningDateTime(projectDate, projectTime);
+  if (!screeningDateTime?.isValid()) return false;
+
+  return !screeningDateTime.isAfter(dayjs());
+};
+
 export function formatNumber(x: number) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }

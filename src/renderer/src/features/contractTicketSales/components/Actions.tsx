@@ -6,12 +6,12 @@ import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
-import { buildTicketsFromOrder, formatMoney } from "@renderer/lib/utils";
+import { buildTicketsFromOrder, formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ApiError, ListSeat } from "@shared/types";
+import { ApiError, ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message } from "antd";
@@ -55,6 +55,7 @@ const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
 };
 
 interface ActionsProps {
+  data: PlanScreeningDetailProps;
   contractOrderId: number;
   planScreeningId: number;
   selectedSeats: ListSeat[];
@@ -62,6 +63,7 @@ interface ActionsProps {
 }
 
 const Actions = ({
+  data,
   contractOrderId,
   planScreeningId,
   selectedSeats,
@@ -79,6 +81,7 @@ const Actions = ({
 
   const setSeatsContractTicketSale = useSetSeatsContractTicketSale();
   const cancelOrder = useCancelOrder();
+  const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -134,6 +137,11 @@ const Actions = ({
   ];
 
   const onUpdateSeat = () => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     const floorNo = selectedSeats[0]?.floor || 1;
     const body: SetSeatsContractTicketSaleDto = {
       planScreenId: planScreeningId,
@@ -169,6 +177,11 @@ const Actions = ({
   };
 
   const onCancelSeats = () => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     const body: CancelOrderDto = {
       planScreenId: planScreeningId,
       cancelReasonId: 0,
@@ -209,7 +222,11 @@ const Actions = ({
               color="primary"
               className="h-full! font-bold"
               onClick={onUpdateSeat}
-              disabled={selectedSeats.length === 0 || setSeatsContractTicketSale.isPending}
+              disabled={
+                selectedSeats.length === 0 ||
+                setSeatsContractTicketSale.isPending ||
+                isPlanScreeningPast
+              }
             >
               Thêm vé hợp đồng
             </Button>
@@ -220,7 +237,11 @@ const Actions = ({
               variant="outlined"
               color="danger"
               className="h-full! font-bold"
-              disabled={selectedSeats.length === 0 || setSeatsContractTicketSale.isPending}
+              disabled={
+                selectedSeats.length === 0 ||
+                setSeatsContractTicketSale.isPending ||
+                isPlanScreeningPast
+              }
               onClick={onCancelSeats}
             >
               Hủy vé hợp đồng

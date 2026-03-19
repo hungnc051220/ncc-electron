@@ -4,11 +4,11 @@ import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
-import { formatMoney } from "@renderer/lib/utils";
+import { formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ApiError, ListSeat, OrderDetailProps } from "@shared/types";
+import { ApiError, ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, Input, message } from "antd";
@@ -53,12 +53,13 @@ const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
 };
 
 interface ActionsProps {
+  data: PlanScreeningDetailProps;
   planScreeningId: number;
   selectedSeats: ListSeat[];
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
 }
 
-const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsProps) => {
+const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: ActionsProps) => {
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
@@ -81,6 +82,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
 
   const createOrder = useCreateOrder();
   const cancelOrder = useCancelOrder();
+  const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -115,6 +117,11 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   ];
 
   const onBooking = () => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     if (!posName || !posShortName) return;
 
     const floorNo = selectedSeats[0]?.floor || 1;
@@ -163,6 +170,11 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
   };
 
   const onCancelSeats = () => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     const body: CancelOrderDto = {
       planScreenId: planScreeningId,
       cancelReasonId: 0,
@@ -212,7 +224,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
               color="primary"
               className="h-full! font-bold"
               onClick={onBooking}
-              disabled={selectedSeats.length === 0 || createOrder.isPending}
+              disabled={selectedSeats.length === 0 || createOrder.isPending || isPlanScreeningPast}
             >
               Thêm vé mời
             </Button>
@@ -223,7 +235,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats }: ActionsPr
               variant="outlined"
               color="danger"
               className="h-full! font-bold"
-              disabled={selectedSeats.length === 0 || createOrder.isPending}
+              disabled={selectedSeats.length === 0 || createOrder.isPending || isPlanScreeningPast}
               onClick={onCancelSeats}
             >
               Hủy vé mời

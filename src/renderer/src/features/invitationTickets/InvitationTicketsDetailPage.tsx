@@ -28,6 +28,7 @@ const InvitationTicketsDetailPage = () => {
         />
         {data && (
           <Actions
+            data={data}
             planScreeningId={Number(planScreeningId)}
             selectedSeats={selectedSeats}
             setSelectedSeats={setSelectedSeats}

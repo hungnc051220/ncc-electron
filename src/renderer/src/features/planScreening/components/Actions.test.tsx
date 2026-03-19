@@ -227,8 +227,8 @@ const createSeat = (overrides: Partial<ListSeat> = {}): ListSeat => ({
 const createPlanScreening = (): PlanScreeningDetailProps => ({
   id: 1,
   planCinemaId: 1,
-  projectDate: "2026-03-16",
-  projectTime: "2026-03-16T10:00:00.000Z",
+  projectDate: "2026-03-20",
+  projectTime: "2026-03-20T10:00:00.000Z",
   filmId: 1,
   roomId: 1,
   daypartId: 1,
@@ -572,5 +572,26 @@ describe("Actions", () => {
         queryKey: ["plan-screening", 33]
       });
     });
+  });
+
+  it("disables ticket actions when the screening time has passed", () => {
+    renderWithProviders(
+      <Actions
+        data={{
+          ...createPlanScreening(),
+          projectDate: "2026-03-16",
+          projectTime: "2026-03-16T00:00:00.000Z"
+        }}
+        planScreenId={1}
+        selectedSeats={[createSeat()]}
+        setSelectedSeats={vi.fn()}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /hủy giữ/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
   });
 });

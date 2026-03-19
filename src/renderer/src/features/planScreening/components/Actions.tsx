@@ -5,7 +5,7 @@ import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
-import { buildTicketsFromOrder, cn, formatMoney } from "@renderer/lib/utils";
+import { buildTicketsFromOrder, cn, formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
@@ -179,6 +179,7 @@ const Actions = ({
   const createOrder = useCreateOrder();
   const createQr = useCreateQrOrder();
   const cancelOrder = useCancelOrder();
+  const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
 
   const lastTotal = sessionStorage.getItem("lastTotal");
 
@@ -269,6 +270,11 @@ const Actions = ({
   }, [selectedDiscountGroups, selectedSeats]);
 
   const onBooking = (params?: { memberCardCode?: string; voucherCode?: string }) => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     if (!posName || !posShortName) return;
     const floorNo = selectedSeats[0]?.floor || 1;
 
@@ -349,6 +355,11 @@ const Actions = ({
   };
 
   const onReserveSeats = () => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     if (!posName || !posShortName) return;
     const floorNo = selectedSeats[0]?.floor || 1;
 
@@ -440,6 +451,11 @@ const Actions = ({
   };
 
   const onCancelOrder = (orderIds: number[]) => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     cancelOrder.mutate(
       {
         planScreenId,
@@ -471,6 +487,11 @@ const Actions = ({
   };
 
   const onCancelSeats = (cancelReasonId?: number) => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
     const body: CancelOrderDto = {
       planScreenId,
       cancelReasonId: cancelReasonId || 1,
@@ -498,7 +519,7 @@ const Actions = ({
     });
   };
 
-  const disableActions = createOrder.isPending || cancelOrder.isPending;
+  const disableActions = createOrder.isPending || cancelOrder.isPending || isPlanScreeningPast;
 
   return (
     <div
@@ -515,7 +536,7 @@ const Actions = ({
           <Button
             variant="outlined"
             color="danger"
-            disabled={!canUpdate || !cancelMode || selectedSeats.length === 0}
+            disabled={!canUpdate || !cancelMode || selectedSeats.length === 0 || isPlanScreeningPast}
             onClick={() => setOpenCancelSeats(true)}
           >
             Huỷ vé
@@ -579,7 +600,7 @@ const Actions = ({
           <Checkbox
             className="mt-1"
             checked={exportInvoice}
-            disabled={!canUpdate}
+            disabled={!canUpdate || isPlanScreeningPast}
             onChange={(e) => setExportInvoice(e.target.checked)}
           >
             <span className="text-xs">Xuất hóa đơn</span>
@@ -640,7 +661,8 @@ const Actions = ({
                 selectedSeats.length === 0 ||
                 createQr.isPending ||
                 cancelMode ||
-                !canCreate
+                !canCreate ||
+                isPlanScreeningPast
               }
             >
               <img src={ticketIcon} width={28} height={28} alt="icon" />

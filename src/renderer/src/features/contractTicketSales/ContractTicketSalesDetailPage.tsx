@@ -31,6 +31,7 @@ const ContractTicketSalesDetailPage = () => {
         />
         {data && (
           <Actions
+            data={data}
             contractOrderId={Number(id)}
             planScreeningId={Number(planScreeningId)}
             selectedSeats={selectedSeats}
