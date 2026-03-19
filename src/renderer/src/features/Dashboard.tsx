@@ -22,16 +22,21 @@ const Dashboard = () => {
   const dateFormat = `${date.format("dddd")}, ngày ${date.format("D [tháng] M [năm] YYYY")}`;
 
   return (
-    <main className="relative flex-1 overflow-hidden h-full">
+    <main className="relative flex-1 overflow-hidden h-full text-black dark:text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.14),transparent_32%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))]" />
-        <div className="absolute -top-16 left-8 h-40 w-40 rounded-full bg-red-200/40 blur-3xl" />
-        <div className="absolute top-24 right-0 h-56 w-56 rounded-full bg-sky-200/40 blur-3xl" />
-        <div className="absolute bottom-10 left-1/3 h-44 w-44 rounded-full bg-amber-100/40 blur-3xl" />
+        <div className="absolute inset-0 bg-app-bg" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.1),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] dark:bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.1),transparent_30%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
+        <div className="absolute -top-16 left-8 h-40 w-40 rounded-full bg-red-200/35 blur-3xl dark:bg-rose-500/12" />
+        <div className="absolute top-24 right-0 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-500/10" />
+        <div className="absolute bottom-10 left-1/3 h-44 w-44 rounded-full bg-amber-100/30 blur-3xl dark:bg-indigo-500/10" />
       </div>
 
-      <div className="absolute right-0 bottom-0">
-        <img src={bgDashboard} alt="bg-dashboard" className="h-full w-full object-cover" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 flex w-[36vw] min-w-[320px] max-w-[520px] items-end justify-end opacity-100 dark:opacity-70">
+        <img
+          src={bgDashboard}
+          alt="bg-dashboard"
+          className="h-auto max-h-[88%] w-full object-contain object-bottom-right brightness-150 contrast-110 saturate-125 dark:brightness-160 dark:contrast-110"
+        />
       </div>
 
       <div className="relative mx-auto flex h-full max-w-7xl px-4 py-8 lg:py-10">
@@ -46,7 +51,7 @@ const Dashboard = () => {
               <p className="text-trunks text-sm xl:text-base capitalize">{dateFormat}</p>
             </div>
             <div>
-              <div className="rounded-[14px] border border-white/70 bg-white/80 py-2 px-3 font-bold text-sm shadow-sm xl:text-base">
+              <div className="rounded-[14px] border border-white/70 bg-white/80 py-2 px-3 font-bold text-sm shadow-sm xl:text-base dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.8)]">
                 Máy: {posName}
               </div>
             </div>
