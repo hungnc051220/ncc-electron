@@ -4,7 +4,6 @@ import DeleteUserDialog from "@renderer/features/users/components/DeleteUserDial
 import Filter from "@renderer/features/users/components/Filter";
 import UserDialog from "@renderer/features/users/components/UserDialog";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
-import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useUsers } from "@renderer/hooks/users/useUsers";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
@@ -40,7 +39,6 @@ const UsersPage = () => {
 
   const { data: users, isFetching } = useUsers(params);
   const { data: customerRoles, isFetching: isFetchingCustomerRoles } = useCustomerRoles();
-  const { data: generalData } = useGeneralData();
   const { can } = usePermission();
   const canCreate = can("users", "create");
   const canUpdate = can("users", "update");
@@ -258,7 +256,6 @@ const UsersPage = () => {
           editingUser={selectedUser}
           customerRoles={customerRoles || []}
           isFetchingCustomerRoles={isFetchingCustomerRoles}
-          manufactureres={generalData?.manufacturers || []}
         />
       )}
       {selectedUser && (

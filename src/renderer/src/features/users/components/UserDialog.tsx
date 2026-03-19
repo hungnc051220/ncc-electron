@@ -1,8 +1,10 @@
+import { manufacturersApi } from "@renderer/api/manufacturers.api";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useCreateUser } from "@renderer/hooks/users/useCreateUser";
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select } from "antd";
-import { ApiError, CustomerRoleProps, ManufacturerProps, UserProps } from "@shared/types";
+import { ApiError, CustomerRoleProps, UserProps } from "@shared/types";
 import { UserDto } from "@renderer/api/users.api";
 import axios from "axios";
 interface UserDialogProps {
@@ -11,7 +13,6 @@ interface UserDialogProps {
   editingUser?: UserProps | null;
   customerRoles: CustomerRoleProps[];
   isFetchingCustomerRoles: boolean;
-  manufactureres: ManufacturerProps[];
 }
 
 const UserDialog = ({
@@ -19,14 +20,28 @@ const UserDialog = ({
   onOpenChange,
   editingUser,
   customerRoles,
-  isFetchingCustomerRoles,
-  manufactureres
+  isFetchingCustomerRoles
 }: UserDialogProps) => {
   const [form] = Form.useForm();
   const isEdit = !!editingUser;
 
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const manufacturerSelect = useInfiniteSelectOptions({
+    queryKey: ["manufacturers"],
+    queryFn: ({ pageParam, searchText }) =>
+      manufacturersApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        name: searchText,
+        isHidden: false
+      }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.fullName
+    }),
+    prefetchAll: true
+  });
 
   const onOk = () => form.submit();
   const onCancel = () => onOpenChange(false);
@@ -133,10 +148,14 @@ const UserDialog = ({
               allowClear
               className="w-full"
               placeholder="Chọn hãng phát hành"
-              options={manufactureres?.map((item) => ({
-                value: item.id,
-                label: item.fullName
-              }))}
+              showSearch={{
+                filterOption: false,
+                onSearch: manufacturerSelect.onSearch
+              }}
+              loading={manufacturerSelect.loading}
+              options={manufacturerSelect.options}
+              onPopupScroll={manufacturerSelect.onPopupScroll}
+              onClear={manufacturerSelect.onClear}
             />
           </Form.Item>
           <Form.Item name="address" label="Địa chỉ">

@@ -1,7 +1,9 @@
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
+import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import type { UploadRequestOption } from "@rc-component/upload/lib/interface";
 import { useCreateFilm } from "@renderer/hooks/films/useCreateFilm";
 import { useUpdateFilm } from "@renderer/hooks/films/useUpdateFilm";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useFilmCategories } from "@renderer/hooks/useFilmCategories";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { formatter } from "@renderer/lib/utils";
@@ -11,8 +13,7 @@ import {
   FilmProps,
   FilmStatusProps,
   FilmVersionProps,
-  FilmLanguageProps,
-  ManufacturerProps
+  FilmLanguageProps
 } from "@shared/types";
 import type { FormProps, GetProp, UploadProps } from "antd";
 import {
@@ -108,7 +109,6 @@ interface FilmDialogProps {
   onOpenChange: (open: boolean) => void;
   editingFilm?: FilmProps | null;
   versions: FilmVersionProps[];
-  manufactureres: ManufacturerProps[];
   countries: CountryProps[];
   languages: FilmLanguageProps[];
   filmStatuses: FilmStatusProps[];
@@ -119,7 +119,6 @@ const FilmDialog = ({
   onOpenChange,
   editingFilm,
   versions,
-  manufactureres,
   countries,
   languages,
   filmStatuses
@@ -128,6 +127,21 @@ const FilmDialog = ({
   const isEdit = !!editingFilm;
 
   const { data: categories } = useFilmCategories({ current: 1, pageSize: 100 });
+  const manufacturerSelect = useInfiniteSelectOptions({
+    queryKey: ["manufacturers"],
+    queryFn: ({ pageParam, searchText }) =>
+      manufacturersApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        name: searchText,
+        isHidden: false
+      }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.fullName
+    }),
+    prefetchAll: true
+  });
 
   const createFilm = useCreateFilm();
   const updateFilm = useUpdateFilm();
@@ -344,10 +358,15 @@ const FilmDialog = ({
               <Select
                 className="w-full"
                 placeholder="Chọn hãng phát hành"
-                options={manufactureres?.map((item) => ({
-                  value: item.id,
-                  label: item.fullName
-                }))}
+                showSearch={{
+                  filterOption: false,
+                  onSearch: manufacturerSelect.onSearch
+                }}
+                loading={manufacturerSelect.loading}
+                options={manufacturerSelect.options}
+                onPopupScroll={manufacturerSelect.onPopupScroll}
+                onClear={manufacturerSelect.onClear}
+                allowClear
               />
             </Form.Item>
 

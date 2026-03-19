@@ -35,7 +35,11 @@ export const manufacturersApi = {
     }
 
     if (isHidden !== undefined) {
-      filter.isHidden = isHidden;
+      if (isHidden) {
+        filter.isHidden = true;
+      } else {
+        filter.or = [{ isHidden: false }, { isHidden: null }];
+      }
     }
 
     const queryObject: Record<string, unknown> = {

@@ -11,8 +11,10 @@ import type { Dayjs } from "dayjs";
 import { FilmProps } from "@shared/types";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useFilms } from "@renderer/hooks/films/useFilms";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { usePermission } from "@renderer/permissions/usePermission";
+import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import { Link } from "react-router";
 
 const items: TabsProps["items"] = [
@@ -62,10 +64,33 @@ const FilmsPage = () => {
 
   const { data: films, isFetching } = useFilms(params);
   const { data: generalData } = useGeneralData();
+  const manufacturerSelect = useInfiniteSelectOptions({
+    queryKey: ["manufacturers"],
+    queryFn: ({ pageParam, searchText }) =>
+      manufacturersApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        name: searchText,
+        isHidden: false
+      }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.name
+    }),
+    prefetchAll: true
+  });
   const { can } = usePermission();
   const canCreate = can("films", "create");
   const canUpdate = can("films", "update");
   const canDelete = can("films", "delete");
+
+  const manufacturerMap = useMemo(
+    () =>
+      new Map(
+        manufacturerSelect.items.map((manufacturer) => [manufacturer.id, manufacturer.name] as const)
+      ),
+    [manufacturerSelect.items]
+  );
 
   const handleAdd = useCallback(() => {
     setSelectedFilm(null);
@@ -132,7 +157,7 @@ const FilmsPage = () => {
       title: "Hãng phát hành",
       key: "manufacturerId",
       dataIndex: "manufacturerId",
-      render: (value: number) => generalData?.manufacturers.find((m) => m.id === value)?.name || ""
+      render: (value: number) => manufacturerMap.get(value) || ""
     },
     {
       title: "Ngày khởi chiếu",
@@ -241,7 +266,7 @@ const FilmsPage = () => {
             onSearch={onSearch}
             filterValues={filterValues}
             setCurrent={setCurrent}
-            manufacturers={generalData?.manufacturers || []}
+            manufacturers={manufacturerSelect.items}
           />
           {canCreate && (
             <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
@@ -268,7 +293,7 @@ const FilmsPage = () => {
         bordered
         size="small"
         scroll={{ x: "max-content", y: "calc(100vh - 315px)" }}
-        loading={isFetching}
+        loading={isFetching || manufacturerSelect.loading}
         pagination={{
           current,
           onChange,
@@ -288,7 +313,6 @@ const FilmsPage = () => {
           onOpenChange={handleDialogClose}
           editingFilm={selectedFilm}
           versions={generalData?.filmVersions || []}
-          manufactureres={generalData?.manufacturers || []}
           countries={generalData?.countries || []}
           languages={generalData?.languages || []}
           filmStatuses={generalData?.filmStatuses || []}

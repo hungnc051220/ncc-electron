@@ -1,7 +1,7 @@
 import { useDebounce } from "@renderer/hooks/useDebounce";
 import { ApiResponse } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { type UIEvent, useMemo, useState } from "react";
+import { type UIEvent, useEffect, useMemo, useState } from "react";
 
 type SelectOption = {
   value: number | string;
@@ -13,13 +13,15 @@ interface UseInfiniteSelectOptionsParams<TItem> {
   queryFn: (params: { pageParam: number; searchText: string }) => Promise<ApiResponse<TItem>>;
   mapOption: (item: TItem) => SelectOption;
   debounceMs?: number;
+  prefetchAll?: boolean;
 }
 
 export const useInfiniteSelectOptions = <TItem>({
   queryKey,
   queryFn,
   mapOption,
-  debounceMs = 500
+  debounceMs = 500,
+  prefetchAll = false
 }: UseInfiniteSelectOptionsParams<TItem>) => {
   const [searchText, setSearchText] = useState("");
   const debouncedSearchText = useDebounce(searchText, debounceMs);
@@ -38,7 +40,18 @@ export const useInfiniteSelectOptions = <TItem>({
     return data?.pages.flatMap((page) => page.data.map(mapOption)) ?? [];
   }, [data, mapOption]);
 
+  const items = useMemo(() => {
+    return data?.pages.flatMap((page) => page.data) ?? [];
+  }, [data]);
+
+  useEffect(() => {
+    if (prefetchAll && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [prefetchAll, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   return {
+    items,
     options,
     loading: isFetching || isFetchingNextPage,
     onSearch: (value: string) => setSearchText(value),

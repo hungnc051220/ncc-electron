@@ -38,7 +38,8 @@ export const invoicesApi = {
 
     const queryObject: Record<string, unknown> = {
       current,
-      pageSize
+      pageSize,
+      order: "createdAt.desc"
     };
 
     if (Object.keys(filter).length > 0) {

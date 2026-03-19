@@ -10,6 +10,7 @@ import { Link } from "react-router";
 import InvoiceDialog from "./components/InvoiceDialog";
 import { InvoiceStatusBadge } from "./components/InvoiceStatusBadge";
 import UpdateStatusInvoiceDialog from "./components/UpdateStatusInvoiceDialog";
+import dayjs from "dayjs";
 
 const InvoicesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -74,7 +75,8 @@ const InvoicesPage = () => {
       title: "Loại hóa đơn",
       key: "invoiceType",
       dataIndex: "invoiceType",
-      render: (value: string) => (value === "personal" ? "Cá nhân" : "Đơn vị")
+      render: (value: string) => (value === "personal" ? "Cá nhân" : "Đơn vị"),
+      fixed: "left"
     },
     {
       title: "Mã vé",
@@ -126,6 +128,18 @@ const InvoicesPage = () => {
       title: "Hợp đồng số",
       key: "contractCode",
       dataIndex: "contractCode"
+    },
+    {
+      title: "Ngày tạo",
+      key: "createdAt",
+      dataIndex: "createdAt",
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
+    },
+    {
+      title: "Ngày sửa",
+      key: "updatedAt",
+      dataIndex: "updatedAt",
+      render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "")
     },
     {
       title: "Trạng thái",
