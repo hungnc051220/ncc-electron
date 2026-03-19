@@ -369,3 +369,93 @@ export interface YearlyReportSummaryItem {
   totalRevenue: number;
   totalSharedRevenue: number;
 }
+
+export interface ReportRevenueSharingProps {
+  id: number;
+  sharingRateId: number;
+  manufacturerId: number;
+  filmId: number;
+  fromDate: string;
+  toDate: string;
+  rate: number;
+  totalRevenue: number;
+  sharedRevenue: number;
+  totalTickets: number;
+  createdOnUtc: string;
+  updatedOnUtc: string;
+  manufacturerName: string;
+  filmName: string;
+  VersionCode: string;
+}
+
+export interface RevenueSharingDetailPriceItem {
+  price: number;
+  totalQuantity: number;
+}
+
+export interface RevenueSharingDetailPlanScreen {
+  planScreenId: number;
+  projectDate: string;
+  projectTime: string;
+  roomName: string;
+  isOnline: boolean;
+  totalQuantity: number;
+  totalInvitationQuantity: number;
+  totalContractQuantity: number;
+  totalSale: number;
+  actualSale: number;
+  prices: RevenueSharingDetailPriceItem[];
+}
+
+export interface RevenueSharingDetailSummaryItem {
+  isOnline?: boolean | null;
+  totalQuantity?: number | null;
+  totalInvitationQuantity?: number | null;
+  totalContractQuantity?: number | null;
+  totalSale?: number | null;
+  actualSale?: number | null;
+  prices?: RevenueSharingDetailPriceItem[] | null;
+}
+
+export interface RevenueSharingPreviousMonthSummary {
+  monthLabel?: string | null;
+  totalTickets?: number | null;
+  totalRevenue?: number | null;
+}
+
+export interface RevenueSharingCancellationItem {
+  date: string;
+  quantity: number;
+  totalValue: number;
+}
+
+export interface RevenueSharingWeekItem {
+  weekLabel?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  totalQuantity?: number | null;
+  totalSale?: number | null;
+  sharingRate?: number | null;
+  sharedRevenue?: number | null;
+  contractQuantity?: number | null;
+  contractSale?: number | null;
+  cancellations?: RevenueSharingCancellationItem[] | null;
+}
+
+export interface ReportRevenueSharingDetailResponse {
+  filmId: number;
+  filmName?: string | null;
+  versionCode?: string | null;
+  manufacturerId: number;
+  manufacturerName?: string | null;
+  premieredDate?: string | null;
+  detail?: {
+    planScreens?: RevenueSharingDetailPlanScreen[] | null;
+    priceHeaders?: number[] | null;
+    totalRevenueOnline?: RevenueSharingDetailSummaryItem | null;
+    totalRevenueOffline?: RevenueSharingDetailSummaryItem | null;
+    totalRevenue?: RevenueSharingDetailSummaryItem | null;
+  } | null;
+  previousMonthSummary?: RevenueSharingPreviousMonthSummary | null;
+  revenueSharingWeeks?: RevenueSharingWeekItem[] | null;
+}

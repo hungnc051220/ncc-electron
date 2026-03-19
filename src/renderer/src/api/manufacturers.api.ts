@@ -6,6 +6,7 @@ export interface ManufacturersQuery {
   current: number;
   pageSize: number;
   name?: string;
+  isHidden?: boolean;
 }
 
 export interface ManufacturerDto {
@@ -25,12 +26,16 @@ export interface ManufacturerDto {
 
 export const manufacturersApi = {
   getAll: async (params: ManufacturersQuery): Promise<ApiResponse<ManufacturerProps>> => {
-    const { current, pageSize, name } = params;
+    const { current, pageSize, name, isHidden } = params;
 
     const filter: Record<string, unknown> = {};
 
     if (name) {
       filter.name = { like: `%${name}%` };
+    }
+
+    if (isHidden !== undefined) {
+      filter.isHidden = isHidden;
     }
 
     const queryObject: Record<string, unknown> = {

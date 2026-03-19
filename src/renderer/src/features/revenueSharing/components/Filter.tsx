@@ -22,7 +22,8 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       manufacturersApi.getAll({
         current: pageParam,
         pageSize: 20,
-        name: searchText
+        name: searchText,
+        isHidden: false
       }),
     mapOption: (item) => ({
       value: item.id,

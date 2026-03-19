@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, FilmProps, UserProps } from "@shared/types";
+import { ApiResponse, FilmProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface FilmsQuery {
@@ -88,7 +88,7 @@ export const filmsApi = {
 
     return res.data;
   },
-  getDetail: async (id: number): Promise<UserProps> => {
+  getDetail: async (id: number): Promise<FilmProps> => {
     const res = await api.get(`/api/pos/v1/films/${id}`);
     return res.data;
   },

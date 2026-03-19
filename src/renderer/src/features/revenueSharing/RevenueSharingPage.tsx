@@ -1,17 +1,17 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
-import { useCancellationReasons } from "@renderer/hooks/cancellationReasons/useCancellationReasons";
-import { formatNumber } from "@renderer/lib/utils";
+import { useReportRevenueSharing } from "@renderer/hooks/reports/useReportRevenueSharing";
+import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { CancellationReasonProps } from "@shared/types";
-import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { ApiError, ReportRevenueSharingProps } from "@shared/types";
+import type { TableProps } from "antd";
+import { Breadcrumb, Button, Dropdown, Table, message } from "antd";
+import axios from "axios";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import CancellationReasonDialog from "./components/RevenueSharingDialog";
-import DeleteCancellationReasonDialog from "./components/DeleteRevenueSharingDialog";
 import { Link } from "react-router";
+import { exportRevenueSharingExcel } from "./components/ExportExcel";
 import Filter from "./components/Filter";
-import ExportButton from "./components/ExportExcel";
+import RevenueSharingDialog from "./components/RevenueSharingDialog";
 
 export interface ValuesProps {
   manufacturerId?: number;
@@ -20,74 +20,114 @@ export interface ValuesProps {
 
 const RevenueSharingPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [current, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [selectedCancellationReason, setSelectedCancellationReason] =
-    useState<CancellationReasonProps | null>(null);
+  const [selectedRevenueSharing, setSelectedRevenueSharing] =
+    useState<ReportRevenueSharingProps | null>(null);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
-  const params = useMemo(
-    () => ({
-      current,
-      pageSize
-    }),
-    [current, pageSize]
-  );
-
-  const { data: cancellationReasons, isFetching } = useCancellationReasons(params);
+  const { data: revenueSharings, isFetching } = useReportRevenueSharing({
+    manufacturerIds: filterValues.manufacturerId ? [filterValues.manufacturerId] : undefined,
+    filmIds: filterValues.filmId ? [filterValues.filmId] : undefined
+  });
   const { can } = usePermission();
   const canCreate = can("revenue_sharing", "create");
   const canUpdate = can("revenue_sharing", "update");
-  const canDelete = can("revenue_sharing", "delete");
+  const canExport = can("revenue_sharing", "export");
 
   const handleAdd = useCallback(() => {
-    setSelectedCancellationReason(null);
+    setSelectedRevenueSharing(null);
     setDialogOpen(true);
   }, []);
 
-  const handleEdit = useCallback((item: CancellationReasonProps) => {
-    setSelectedCancellationReason(item);
+  const handleEdit = useCallback((item: ReportRevenueSharingProps) => {
+    setSelectedRevenueSharing(item);
     setDialogOpen(true);
-  }, []);
-
-  const handleDelete = useCallback((item: CancellationReasonProps) => {
-    setSelectedCancellationReason(item);
-    setDeleteDialogOpen(true);
   }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
-      setSelectedCancellationReason(null);
+      setSelectedRevenueSharing(null);
     }
   }, []);
 
-  const handleDeleteDialogClose = useCallback((open: boolean) => {
-    setDeleteDialogOpen(open);
-    if (!open) {
-      setSelectedCancellationReason(null);
+  const handleExport = useCallback(async (item: ReportRevenueSharingProps) => {
+    const messageKey = `export-revenue-sharing-${item.filmId}`;
+
+    message.open({
+      key: messageKey,
+      type: "loading",
+      content: "Đang xuất file excel...",
+      duration: 0
+    });
+
+    try {
+      await exportRevenueSharingExcel(item);
+      message.open({
+        key: messageKey,
+        type: "success",
+        content: "Xuất file excel thành công"
+      });
+    } catch (error) {
+      let msg = "Xuất excel thất bại";
+
+      if (axios.isAxiosError<ApiError>(error)) {
+        msg = error.response?.data?.message ?? msg;
+      } else if (error instanceof Error && error.message) {
+        msg = error.message;
+      }
+
+      message.open({
+        key: messageKey,
+        type: "error",
+        content: msg
+      });
     }
   }, []);
 
   const actionItems = [
     ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+    ...(canExport ? [{ key: "2", label: "Xuất excel" }] : [])
   ];
 
-  const columns: TableProps<CancellationReasonProps>["columns"] = [
+  const groupedRevenueSharings = useMemo(() => {
+    if (!revenueSharings) {
+      return [];
+    }
+
+    const grouped = new Map<number, ReportRevenueSharingProps>();
+
+    revenueSharings.forEach((item) => {
+      const existing = grouped.get(item.filmId);
+
+      if (!existing) {
+        grouped.set(item.filmId, { ...item });
+        return;
+      }
+
+      grouped.set(item.filmId, {
+        ...existing,
+        totalRevenue: existing.totalRevenue + item.totalRevenue,
+        sharedRevenue: existing.sharedRevenue + item.sharedRevenue,
+        totalTickets: existing.totalTickets + item.totalTickets
+      });
+    });
+
+    return Array.from(grouped.values());
+  }, [revenueSharings]);
+
+  const columns: TableProps<ReportRevenueSharingProps>["columns"] = [
     {
       title: "STT",
       key: "no",
       align: "center",
-      render: (_, __, index) => (current - 1) * pageSize + index + 1,
+      render: (_, __, index) => index + 1,
       width: 50,
       fixed: "left"
     },
     {
       title: "Hãng phim",
-      key: "manufacturer",
-      dataIndex: "manufacturer"
+      key: "manufacturerName",
+      dataIndex: "manufacturerName"
     },
     {
       title: "Tên phim",
@@ -102,17 +142,23 @@ const RevenueSharingPage = () => {
     {
       title: "Doanh thu NCC",
       key: "revenueNCC",
-      dataIndex: "revenueNCC"
+      dataIndex: "revenueNCC",
+      render: (_, record) => formatMoney(record.totalRevenue - record.sharedRevenue),
+      align: "right"
     },
     {
       title: "Doanh thu chủ phim",
-      key: "revenueManufacturer",
-      dataIndex: "revenueManufacturer"
+      key: "sharedRevenue",
+      dataIndex: "sharedRevenue",
+      render: (value: number) => formatMoney(value),
+      align: "right"
     },
     {
       title: "Doanh thu",
-      key: "revenue",
-      dataIndex: "revenue"
+      key: "totalRevenue",
+      dataIndex: "totalRevenue",
+      render: (value: number) => formatMoney(value),
+      align: "right"
     },
     ...(actionItems.length
       ? [
@@ -120,7 +166,7 @@ const RevenueSharingPage = () => {
             title: "",
             key: "operation",
             width: 50,
-            render: (_: unknown, record: CancellationReasonProps) => (
+            render: (_: unknown, record: ReportRevenueSharingProps) => (
               <Dropdown
                 menu={{
                   items: actionItems,
@@ -129,7 +175,7 @@ const RevenueSharingPage = () => {
                       handleEdit(record);
                     }
                     if (e.key === "2") {
-                      handleDelete(record);
+                      handleExport(record);
                     }
                   }
                 }}
@@ -145,15 +191,6 @@ const RevenueSharingPage = () => {
         ]
       : [])
   ];
-
-  const onChange = (page: number) => {
-    setCurrent(page);
-  };
-
-  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (current, pageSize) => {
-    setCurrent(current);
-    setPageSize(pageSize);
-  };
 
   const onSearch = (values: ValuesProps) => {
     setFilterValues(values);
@@ -178,7 +215,6 @@ const RevenueSharingPage = () => {
 
         <div className="flex gap-2 items-center">
           <Filter filterValues={filterValues} onSearch={onSearch} />
-          <ExportButton />
           {canCreate && (
             <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
               Thêm mới
@@ -188,39 +224,27 @@ const RevenueSharingPage = () => {
       </div>
 
       <Table
-        rowKey={(record) => record.id}
-        dataSource={[]}
+        rowKey={(record) => record.filmId}
+        dataSource={groupedRevenueSharings}
         columns={columns}
         bordered
         size="small"
         scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
-          current,
-          onChange,
-          total: cancellationReasons?.total || 0,
+          total: groupedRevenueSharings.length,
           size: "middle",
-          pageSize,
           pageSizeOptions: [20, 50, 100],
           showSizeChanger: true,
-          onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
         }}
       />
 
       {dialogOpen && (
-        <CancellationReasonDialog
+        <RevenueSharingDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
-          editingCancellationReason={selectedCancellationReason}
-        />
-      )}
-      {selectedCancellationReason && deleteDialogOpen && (
-        <DeleteCancellationReasonDialog
-          open={deleteDialogOpen}
-          onOpenChange={handleDeleteDialogClose}
-          id={selectedCancellationReason.id}
-          name={selectedCancellationReason.reason}
+          editingRevenueSharing={selectedRevenueSharing}
         />
       )}
     </div>

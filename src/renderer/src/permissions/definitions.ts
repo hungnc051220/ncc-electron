@@ -68,7 +68,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     module: "Quản lý danh sách",
     label: "Quản lý phân chia doanh thu",
     route: "/revenue-sharing",
-    actions: ["access", "list", "view", "create", "update", "delete"]
+    actions: ["access", "list", "view", "create", "update", "delete", "export"]
   },
   {
     key: "seat_types",

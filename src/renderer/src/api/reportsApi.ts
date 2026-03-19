@@ -7,6 +7,8 @@ import {
   ReportMonthlyRevenueTicketByStaffProps,
   ReportRevenueFilmByStaffProps,
   ReportRevenueFilmProps,
+  ReportRevenueSharingDetailResponse,
+  ReportRevenueSharingProps,
   ReportRevenueStaffProps,
   ReportU22UsageProps,
   ReportVoucherUsageProps,
@@ -33,6 +35,18 @@ export interface ReportQuarterlyDto {
 export interface ReportYearlyDto {
   year: number;
   reportType: YearlyReportType;
+}
+
+export interface ReportRevenueSharingDto {
+  fromDate?: string;
+  toDate?: string;
+  manufacturerIds?: number[];
+  filmIds?: number[];
+}
+
+export interface ReportRevenueSharingDetailDto {
+  filmId: number;
+  manufacturerId: number;
 }
 
 export const reportsApi = {
@@ -86,6 +100,18 @@ export const reportsApi = {
     dto: ReportRevenueByFilmDto
   ): Promise<ReportRevenueFilmProps | ReportRevenueStaffProps> => {
     const res = await api.post("/api/reports/revenue", dto);
+    return res.data;
+  },
+  getReportRevenueSharing: async (
+    dto?: ReportRevenueSharingDto
+  ): Promise<ReportRevenueSharingProps[]> => {
+    const res = await api.post("/api/reports/revenue-sharing", dto);
+    return res.data;
+  },
+  getReportRevenueSharingDetails: async (
+    dto: ReportRevenueSharingDetailDto
+  ): Promise<ReportRevenueSharingDetailResponse> => {
+    const res = await api.post("/api/reports/revenue-sharing-details", dto);
     return res.data;
   }
 };

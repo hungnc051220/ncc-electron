@@ -1,15 +1,20 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
-import { useCreateCancellationReason } from "@renderer/hooks/cancellationReasons/useCreateCancellationReason";
-import { useUpdateCancellationReason } from "@renderer/hooks/cancellationReasons/useUpdateCancellationReason";
-import { ApiError, CancellationReasonProps } from "@shared/types";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import type { FormProps, TimeRangePickerProps } from "antd";
-import { Button, DatePicker, Form, InputNumber, message, Modal, Select, Space } from "antd";
-import axios from "axios";
+import { SharingRateDto } from "@renderer/api/sharingRates.api";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
+import { useCreateSharingRate } from "@renderer/hooks/sharingRates/useCreateSharingRate";
+import { useDeleteSharingRate } from "@renderer/hooks/sharingRates/useDeleteSharingRate";
+import { useSharingRates } from "@renderer/hooks/sharingRates/useSharingRates";
+import { useUpdateSharingRate } from "@renderer/hooks/sharingRates/useUpdateSharingRate";
+import { ApiError, ReportRevenueSharingProps } from "@shared/types";
+import { useQuery } from "@tanstack/react-query";
+import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { useMemo } from "react";
+import type { FormProps, TimeRangePickerProps } from "antd";
+import { Button, DatePicker, Form, InputNumber, Modal, Select, Space, message } from "antd";
+import axios from "axios";
+import { useEffect, useMemo } from "react";
 
 const { RangePicker } = DatePicker;
 
@@ -20,194 +25,350 @@ const rangePresets: TimeRangePickerProps["presets"] = [
   { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
 ];
 
+type SharingRateFormItem = {
+  id?: number;
+  dateRange?: [Dayjs, Dayjs];
+  rate?: number;
+};
+
+type SelectOption = {
+  value: number;
+  label: string;
+};
+
 type FieldType = {
-  reason: string;
+  manufacturerId?: number;
+  filmId?: number;
+  sharingRates: SharingRateFormItem[];
 };
 
 interface RevenueSharingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingCancellationReason?: CancellationReasonProps | null;
+  editingRevenueSharing?: ReportRevenueSharingProps | null;
 }
+
+const emptyRow: SharingRateFormItem = {
+  dateRange: undefined,
+  rate: undefined
+};
 
 const RevenueSharingDialog = ({
   open,
   onOpenChange,
-  editingCancellationReason
+  editingRevenueSharing
 }: RevenueSharingDialogProps) => {
-  const [form] = Form.useForm();
-  const isEdit = !!editingCancellationReason;
+  const [form] = Form.useForm<FieldType>();
+  const isEdit = !!editingRevenueSharing;
+  const selectedFilmId = Form.useWatch("filmId", form);
+  const selectedManufacturerId = Form.useWatch("manufacturerId", form);
 
-  const {
-    data: manufacturers,
-    fetchNextPage: fetchNextPageManufacturers,
-    hasNextPage: hasNextPageManufacturers,
-    isFetching: isFetchingManufacturers,
-    isFetchingNextPage: isFetchingNextPageManufacturers
-  } = useInfiniteQuery({
+  const manufacturerSelect = useInfiniteSelectOptions({
     queryKey: ["manufacturers"],
-    queryFn: ({ pageParam = 1 }) => manufacturersApi.getAll({ current: pageParam, pageSize: 20 }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
+    queryFn: ({ pageParam, searchText }) =>
+      manufacturersApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        name: searchText
+      }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.name
+    })
+  });
+
+  const filmSelect = useInfiniteSelectOptions({
+    queryKey: ["films"],
+    queryFn: ({ pageParam, searchText }) =>
+      filmsApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        filmName: searchText
+      }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.filmName
+    })
+  });
+
+  const { data: selectedFilmDetail } = useQuery({
+    queryKey: ["film-detail", selectedFilmId],
+    queryFn: () => filmsApi.getDetail(selectedFilmId!),
+    enabled: open && !!selectedFilmId
   });
 
   const {
-    data: films,
-    fetchNextPage: fetchNextPageFilms,
-    hasNextPage: hasNextPageFilms,
-    isFetching: isFetchingFilms,
-    isFetchingNextPage: isFetchingNextPageFilms
-  } = useInfiniteQuery({
-    queryKey: ["films"],
-    queryFn: ({ pageParam = 1 }) => filmsApi.getAll({ current: pageParam, pageSize: 20 }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
-  });
+    data: sharingRatesResponse,
+    isFetching: isFetchingSharingRates,
+    refetch: refetchSharingRates
+  } = useSharingRates(
+    {
+      current: 1,
+      pageSize: 100,
+      filmId: selectedFilmId
+    },
+    open && !!selectedFilmId
+  );
 
   const manufacturerOptions = useMemo(() => {
-    return (
-      manufacturers?.pages.flatMap((page) =>
-        page.data.map((item) => ({
-          value: item.id,
-          label: item.name
-        }))
-      ) ?? []
+    const editingOption =
+      editingRevenueSharing?.manufacturerId && editingRevenueSharing.manufacturerName
+        ? {
+            value: editingRevenueSharing.manufacturerId,
+            label: editingRevenueSharing.manufacturerName
+          }
+        : null;
+    const selectedOption =
+      selectedManufacturerId && editingOption?.value !== selectedManufacturerId
+        ? ((manufacturerSelect.options.find((item) => item.value === selectedManufacturerId) as
+            | SelectOption
+            | undefined) ?? null)
+        : null;
+
+    return [editingOption, selectedOption, ...manufacturerSelect.options].filter(
+      (option, index, arr): option is SelectOption =>
+        !!option && arr.findIndex((item) => item?.value === option.value) === index
     );
-  }, [manufacturers]);
+  }, [editingRevenueSharing, manufacturerSelect.options, selectedManufacturerId]);
 
   const filmOptions = useMemo(() => {
-    return (
-      films?.pages.flatMap((page) =>
-        page.data.map((item) => ({
-          value: item.id,
-          label: item.filmName
-        }))
-      ) ?? []
+    const editingOption =
+      editingRevenueSharing?.filmId && editingRevenueSharing.filmName
+        ? {
+            value: editingRevenueSharing.filmId,
+            label: editingRevenueSharing.filmName
+          }
+        : null;
+    const selectedOption =
+      selectedFilmId && selectedFilmDetail
+        ? {
+            value: selectedFilmDetail.id,
+            label: selectedFilmDetail.filmName
+          }
+        : null;
+
+    return [editingOption, selectedOption, ...filmSelect.options].filter(
+      (option, index, arr): option is SelectOption =>
+        !!option && arr.findIndex((item) => item?.value === option.value) === index
     );
-  }, [films]);
+  }, [editingRevenueSharing, filmSelect.options, selectedFilmDetail, selectedFilmId]);
 
-  const createCancellationReason = useCreateCancellationReason();
-  const updateCancellationReason = useUpdateCancellationReason();
+  const createSharingRate = useCreateSharingRate();
+  const updateSharingRate = useUpdateSharingRate();
+  const deleteSharingRate = useDeleteSharingRate();
 
-  const onOk = () => form.submit();
-  const onCancel = () => onOpenChange(false);
-
-  const getInitialValues = (): FieldType | undefined => {
-    if (!editingCancellationReason) {
-      return {
-        reason: ""
-      };
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      return;
     }
+
+    if (!isEdit) {
+      form.setFieldsValue({
+        manufacturerId: undefined,
+        filmId: undefined,
+        sharingRates: [emptyRow]
+      });
+    }
+  }, [open, isEdit, form]);
+
+  useEffect(() => {
+    if (!open || !editingRevenueSharing) {
+      return;
+    }
+
+    form.setFieldsValue({
+      manufacturerId: editingRevenueSharing.manufacturerId,
+      filmId: editingRevenueSharing.filmId
+    });
+  }, [open, editingRevenueSharing, form]);
+
+  useEffect(() => {
+    if (!open || !selectedFilmId || !sharingRatesResponse) {
+      return;
+    }
+
+    const sharingRates = [...sharingRatesResponse.data]
+      .sort((a, b) => dayjs(a.fromDate).valueOf() - dayjs(b.fromDate).valueOf())
+      .map((item) => ({
+        id: item.id,
+        dateRange: [dayjs(item.fromDate), dayjs(item.toDate)] as [Dayjs, Dayjs],
+        rate: item.rate
+      }));
+
+    form.setFieldValue("sharingRates", sharingRates.length ? sharingRates : [emptyRow]);
+  }, [open, selectedFilmId, sharingRatesResponse, form]);
+
+  const onCancel = () => {
+    form.resetFields();
+    manufacturerSelect.resetSearch();
+    filmSelect.resetSearch();
+    onOpenChange(false);
+  };
+
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (axios.isAxiosError<ApiError>(error)) {
+      return error.response?.data?.message ?? fallback;
+    }
+
+    if (error instanceof Error) {
+      return error.message || fallback;
+    }
+
+    return fallback;
+  };
+
+  const toDto = (
+    manufacturerId: number,
+    filmId: number,
+    item: SharingRateFormItem
+  ): SharingRateDto => {
+    const [fromDate, toDate] = item.dateRange ?? [];
+
+    if (!fromDate || !toDate) {
+      throw new Error("Thiếu khoảng thời gian chia doanh thu");
+    }
+
     return {
-      reason: editingCancellationReason.reason
+      manufacturerId,
+      filmId,
+      fromDate: fromDate.startOf("day").toISOString(),
+      toDate: toDate.endOf("day").toISOString(),
+      rate: Number(item.rate)
     };
   };
 
-  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
-    if (!isEdit) {
-      createCancellationReason.mutate(values, {
-        onSuccess: () => {
-          message.success("Thêm lý do hủy vé thành công");
-          onCancel();
-        },
-        onError: (error: unknown) => {
-          let msg = "Thêm lý do hủy vé thất bại";
+  const handleRemove = (index: number, remove: (index: number | number[]) => void) => {
+    const item = form.getFieldValue(["sharingRates", index]) as SharingRateFormItem | undefined;
 
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
+    if (!item?.id) {
+      remove(index);
+      return;
+    }
 
-          message.error(msg);
-        }
-      });
-    } else {
-      updateCancellationReason.mutate(
-        {
-          id: editingCancellationReason.id,
-          dto: values
-        },
-        {
-          onSuccess: () => {
-            message.success("Cập nhật lý do hủy vé thành công");
-            onCancel();
-          },
-          onError: (error: unknown) => {
-            let msg = "Cập nhật lý do hủy vé thất bại";
+    deleteSharingRate.mutate(item.id, {
+      onSuccess: async () => {
+        message.success("Xóa mốc chia doanh thu thành công");
+        remove(index);
+        await refetchSharingRates();
+      },
+      onError: (error: unknown) => {
+        message.error(getErrorMessage(error, "Xóa mốc chia doanh thu thất bại"));
+      }
+    });
+  };
 
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
+  const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
+    const manufacturerId = values.manufacturerId ?? editingRevenueSharing?.manufacturerId;
+    const filmId = values.filmId ?? editingRevenueSharing?.filmId;
 
-            message.error(msg);
-          }
-        }
+    if (!manufacturerId || !filmId) {
+      message.error("Vui lòng chọn hãng phim và phim");
+      return;
+    }
+
+    const sharingRates = values.sharingRates ?? [];
+    const existingItems = sharingRates.filter((item) => item.id);
+    const newItems = sharingRates.filter((item) => !item.id);
+
+    if (!existingItems.length && !newItems.length) {
+      message.error("Vui lòng thêm ít nhất một mốc chia doanh thu");
+      return;
+    }
+
+    try {
+      await Promise.all(
+        existingItems.map((item) =>
+          updateSharingRate.mutateAsync({
+            id: item.id!,
+            dto: toDto(manufacturerId, filmId, item)
+          })
+        )
+      );
+
+      if (newItems.length) {
+        await createSharingRate.mutateAsync({
+          data: newItems.map((item) => toDto(manufacturerId, filmId, item))
+        });
+      }
+
+      message.success(
+        isEdit ? "Cập nhật chia doanh thu thành công" : "Thêm chia doanh thu thành công"
+      );
+      onCancel();
+    } catch (error) {
+      message.error(
+        getErrorMessage(
+          error,
+          isEdit ? "Cập nhật chia doanh thu thất bại" : "Thêm chia doanh thu thất bại"
+        )
       );
     }
   };
 
+  const isSubmitting =
+    createSharingRate.isPending || updateSharingRate.isPending || deleteSharingRate.isPending;
+
   return (
     <Modal
       open={open}
-      title={isEdit ? "Cập nhật" : "Thêm mới"}
-      onOk={onOk}
-      onCancel={() => onOpenChange(false)}
+      title={isEdit ? "Cập nhật chia doanh thu" : "Thêm chia doanh thu"}
+      onOk={() => form.submit()}
+      onCancel={onCancel}
       okButtonProps={{
-        loading: createCancellationReason.isPending || updateCancellationReason.isPending
+        loading: isSubmitting || isFetchingSharingRates
       }}
       cancelButtonProps={{
-        disabled: createCancellationReason.isPending || updateCancellationReason.isPending
+        disabled: isSubmitting
       }}
-      width={800}
+      width={900}
+      destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>
+      <Form form={form} layout="vertical" onFinish={onFinish}>
         <div className="grid grid-cols-2 gap-x-3">
-          <Form.Item name="manufacturerId" label="Hãng phim">
+          <Form.Item
+            name="manufacturerId"
+            label="Hãng phim"
+            rules={[{ required: true, message: "Vui lòng chọn hãng phim" }]}
+          >
             <Select
-              loading={isFetchingManufacturers || isFetchingNextPageManufacturers}
+              showSearch={{
+                filterOption: false,
+                onSearch: manufacturerSelect.onSearch
+              }}
+              loading={manufacturerSelect.loading}
               options={manufacturerOptions}
               placeholder="Chọn hãng phim"
-              onPopupScroll={(e) => {
-                const target = e.target as HTMLElement;
-                if (
-                  hasNextPageManufacturers &&
-                  !isFetchingNextPageManufacturers &&
-                  target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-                ) {
-                  fetchNextPageManufacturers();
-                }
-              }}
-              allowClear
+              disabled={isEdit}
+              onPopupScroll={manufacturerSelect.onPopupScroll}
+              onClear={manufacturerSelect.onClear}
+              allowClear={!isEdit}
             />
           </Form.Item>
 
-          <Form.Item name="filmId" label="Phim">
+          <Form.Item
+            name="filmId"
+            label="Phim"
+            rules={[{ required: true, message: "Vui lòng chọn phim" }]}
+          >
             <Select
-              loading={isFetchingFilms || isFetchingNextPageFilms}
+              showSearch={{
+                filterOption: false,
+                onSearch: filmSelect.onSearch
+              }}
+              loading={filmSelect.loading}
               options={filmOptions}
               placeholder="Chọn phim"
-              onPopupScroll={(e) => {
-                const target = e.target as HTMLElement;
-                if (
-                  hasNextPageFilms &&
-                  !isFetchingNextPageFilms &&
-                  target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-                ) {
-                  fetchNextPageFilms();
-                }
-              }}
-              allowClear
+              disabled={isEdit}
+              onPopupScroll={filmSelect.onPopupScroll}
+              onClear={filmSelect.onClear}
+              allowClear={!isEdit}
             />
           </Form.Item>
         </div>
 
-        <div className="bg-primary/10 p-4 rounded-lg border border-dashed border-primary">
-          <Form.List name="users">
+        <div className="rounded-lg border border-dashed border-primary bg-primary/10 p-4">
+          <Form.List name="sharingRates">
             {(fields, { add, remove }) => (
               <>
                 {fields.map(({ key, name, ...restField }, index) => (
@@ -215,40 +376,57 @@ const RevenueSharingDialog = ({
                     key={key}
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      width: "100%"
+                      alignItems: "flex-start",
+                      width: "100%",
+                      marginBottom: 12
                     }}
-                    align="baseline"
+                    align="start"
                   >
-                    <p className="text-sm mr-4">Lần {index + 1}</p>
+                    <p className="min-w-12 pt-2 text-sm">Lần {index + 1}</p>
+
+                    <Form.Item {...restField} name={[name, "id"]} hidden>
+                      <InputNumber />
+                    </Form.Item>
+
                     <Form.Item
                       {...restField}
                       label="Khoảng thời gian"
-                      name={[name, "first"]}
-                      rules={[{ required: true, message: "Missing first name" }]}
+                      name={[name, "dateRange"]}
+                      rules={[{ required: true, message: "Vui lòng chọn khoảng thời gian" }]}
+                      className="flex-1"
                     >
-                      <RangePicker format="DD/MM/YYYY" presets={rangePresets} />
+                      <RangePicker format="DD/MM/YYYY" presets={rangePresets} className="w-full" />
                     </Form.Item>
+
                     <Form.Item
                       {...restField}
                       label="Phần trăm chủ phim"
-                      name={[name, "last"]}
-                      rules={[{ required: true, message: "Nhập % chủ phim" }]}
+                      name={[name, "rate"]}
+                      rules={[{ required: true, message: "Vui lòng nhập % chủ phim" }]}
+                      className="w-48"
                     >
                       <InputNumber
                         placeholder="Nhập % chủ phim"
                         min={0}
                         max={100}
                         className="w-full"
-                        suffix="%"
+                        addonAfter="%"
                       />
                     </Form.Item>
-                    <MinusCircleOutlined onClick={() => remove(name)} />
+
+                    <Button
+                      type="text"
+                      danger
+                      icon={<MinusCircleOutlined />}
+                      className="mt-8"
+                      onClick={() => handleRemove(name, remove)}
+                    />
                   </Space>
                 ))}
+
                 <Form.Item noStyle>
-                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                    Thêm số lần
+                  <Button type="dashed" onClick={() => add(emptyRow)} block icon={<PlusOutlined />}>
+                    Thêm mốc chia doanh thu
                   </Button>
                 </Form.Item>
               </>

@@ -1,6 +1,7 @@
 import {
   ReportQuarterlyDto,
   ReportRevenueByFilmDto,
+  ReportRevenueSharingDto,
   ReportYearlyDto
 } from "@renderer/api/reportsApi";
 
@@ -16,5 +17,6 @@ export const reportsKeys = {
   getReportQuarterly: (dto: ReportQuarterlyDto) => ["report-quarterly", dto] as const,
   getReportYearly: (dto: ReportYearlyDto) => ["report-yearly", dto] as const,
   getReportTicketSalesRevenue: (dto: ReportRevenueByFilmDto) =>
-    ["report-ticket-sales-revenue", dto] as const
+    ["report-ticket-sales-revenue", dto] as const,
+  getReportRevenueSharing: (dto?: ReportRevenueSharingDto) => ["report-sharing", dto] as const
 };
