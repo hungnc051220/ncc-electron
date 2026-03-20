@@ -2,6 +2,7 @@ import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
+import { getPlanScreeningDateTime } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ApiError } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -196,6 +197,10 @@ const AddSchedulingDialog = ({
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
     const uniformPrice = Number(values.price);
     const hasUniformPrice = isSamePrice && Number.isFinite(uniformPrice);
+    const screeningDateTime = getPlanScreeningDateTime(
+      dayjs(values.projectDate).format("YYYY-MM-DD"),
+      dayjs(values.projectTime).format()
+    );
     const normalizedPriceOfPosition1 = hasUniformPrice
       ? planPricing?.[0]
         ? buildUniformPriceValue(planPricing[0], uniformPrice)
@@ -220,7 +225,7 @@ const AddSchedulingDialog = ({
     const body = {
       planCinemaId,
       projectDate: dayjs(values.projectDate).format("YYYY-MM-DD"),
-      projectTime: dayjs(values.projectTime).format(),
+      projectTime: screeningDateTime?.format() ?? dayjs(values.projectTime).format(),
       filmId: values.filmId,
       roomId: values.roomId,
       priceOfPosition1: normalizedPriceOfPosition1,

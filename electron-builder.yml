@@ -33,6 +33,7 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  icon: build/icon.png
   target:
     - AppImage
     - snap
@@ -46,5 +47,3 @@ publish:
   provider: github
   owner: hungnc051220
   repo: ncc-electron
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/

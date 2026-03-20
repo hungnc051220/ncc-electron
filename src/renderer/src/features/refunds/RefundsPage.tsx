@@ -1,15 +1,17 @@
-import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Table } from "antd";
-import { useCallback, useMemo, useState } from "react";
-import dayjs from "dayjs";
-import { Link } from "react-router";
-import { OrderDetailProps } from "@shared/types";
-import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
-import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import Filter from "./components/Filter";
+import { OrderDetailProps, OrderStatus } from "@shared/types";
+import type { PaginationProps, TableProps } from "antd";
+import { MoreOutlined } from "@ant-design/icons";
+import { Breadcrumb, Dropdown, Table } from "antd";
+import dayjs from "dayjs";
+import { useCallback, useMemo, useState } from "react";
+import { Link } from "react-router";
 import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
+import Filter from "./components/Filter";
+import RefundStatusBadge from "./components/RefundStatusBadge";
+import UpdateRefundStatusDialog from "./components/UpdateRefundStatusDialog";
 
 export interface ValuesProps {
   id?: string;
@@ -24,13 +26,13 @@ const RefundsPage = () => {
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
   const [dialogViewDetailOpen, setDialogViewDetailOpen] = useState(false);
+  const [dialogUpdateRefundStatusOpen, setDialogUpdateRefundStatusOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
     const filtered = filterEmptyValues(rest as Record<string, unknown>);
-
-    filtered.isOnline = true;
+    filtered.orderStatusId = OrderStatus.CANCELLED;
 
     if (dateRange && dateRange.length === 2) {
       filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
@@ -47,25 +49,43 @@ const RefundsPage = () => {
   const { data: orders, isFetching } = useOrders(params);
   const { can } = usePermission();
   const canView = can("refunds", "view");
+  const canUpdate = can("refunds", "update");
 
   const handeViewDetail = useCallback((item: OrderDetailProps) => {
     setSelectedItem(item);
     setDialogViewDetailOpen(true);
   }, []);
 
+  const handleOpenUpdateRefundStatus = useCallback((item: OrderDetailProps) => {
+    setSelectedItem(item);
+    setDialogUpdateRefundStatusOpen(true);
+  }, []);
+
   const handleDialogViewDetailClose = useCallback((open: boolean) => {
     setDialogViewDetailOpen(open);
-    if (!open) {
+    if (!open && !dialogUpdateRefundStatusOpen) {
       setSelectedItem(null);
     }
-  }, []);
+  }, [dialogUpdateRefundStatusOpen]);
+
+  const handleDialogUpdateRefundStatusClose = useCallback((open: boolean) => {
+    setDialogUpdateRefundStatusOpen(open);
+    if (!open && !dialogViewDetailOpen) {
+      setSelectedItem(null);
+    }
+  }, [dialogViewDetailOpen]);
+
+  const actionItems = [
+    ...(canView ? [{ key: "view-detail", label: "Xem chi tiết" }] : []),
+    ...(canUpdate ? [{ key: "update-refund-status", label: "Cập nhật trạng thái huỷ" }] : [])
+  ];
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
       title: "STT",
       key: "no",
       align: "center",
-      render: (_, __, index) => (current - 1) * 100 + index + 1,
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
       width: 50,
       fixed: "left"
     },
@@ -132,25 +152,6 @@ const RefundsPage = () => {
       dataIndex: "order",
       render: (_, record) => record.order.items?.map((item) => item.listChairValueF1).join(", ")
     },
-
-    {
-      title: "Trạng thái thanh toán",
-      key: "paymentStatus",
-      dataIndex: "order",
-      render: (_, record) => (
-        <OrderStatusBadge status={record.order.paymentStatusId} type="payment" />
-      ),
-      fixed: "right"
-    },
-    {
-      title: "Trạng thái đơn",
-      key: "orderStatus",
-      dataIndex: "order",
-      render: (_, record) => (
-        <OrderStatusBadge status={record.order.paymentStatusId} type="order" />
-      ),
-      fixed: "right"
-    },
     {
       title: "Số tiền đã hoàn",
       key: "refundedAmount",
@@ -159,17 +160,39 @@ const RefundsPage = () => {
       fixed: "right",
       align: "right"
     },
-    ...(canView
+    {
+      title: "Trạng thái xử lý",
+      key: "refundStatusId",
+      dataIndex: "order",
+      render: (_, record) => <RefundStatusBadge status={record.order.refundStatusId} />
+    },
+    ...(actionItems.length
       ? [
           {
             title: "",
             key: "operation",
-            width: 120,
+            width: 50,
             render: (_: unknown, record: OrderDetailProps) => (
-              <Button type="link" onClick={() => handeViewDetail(record)}>
-                Xem chi tiết
-              </Button>
+              <Dropdown
+                menu={{
+                  items: actionItems,
+                  onClick: (e) => {
+                    if (e.key === "view-detail") {
+                      handeViewDetail(record);
+                    }
+
+                    if (e.key === "update-refund-status") {
+                      handleOpenUpdateRefundStatus(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
             ),
+            align: "center" as const,
             fixed: "right" as const
           }
         ]
@@ -233,6 +256,13 @@ const RefundsPage = () => {
         <OrderHistoryDialog
           open={dialogViewDetailOpen}
           onOpenChange={handleDialogViewDetailClose}
+          selectedItem={selectedItem}
+        />
+      )}
+      {dialogUpdateRefundStatusOpen && selectedItem && (
+        <UpdateRefundStatusDialog
+          open={dialogUpdateRefundStatusOpen}
+          onOpenChange={handleDialogUpdateRefundStatusClose}
           selectedItem={selectedItem}
         />
       )}

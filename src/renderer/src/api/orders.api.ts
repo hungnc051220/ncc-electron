@@ -3,7 +3,9 @@ import {
   ApiResponse,
   OrderDetailProps,
   OrderResponseProps,
-  QrCodeResponseProps
+  PaymentStatus,
+  QrCodeResponseProps,
+  RefundStatus
 } from "@shared/types";
 import queryString from "query-string";
 
@@ -20,6 +22,8 @@ export interface OrdersQuery {
   toDate?: string;
   isInvitation?: boolean;
   orderStatusId?: number;
+  paymentStatusId?: PaymentStatus;
+  refundStatusId?: RefundStatus;
 }
 
 export interface OrderDto {
@@ -93,6 +97,10 @@ export interface OrderRefundDto {
   refundedAmount: number;
 }
 
+export interface OrderUpdateRefundStatusDto {
+  refundStatusId: RefundStatus;
+}
+
 export interface OrderPrintedQuery {
   orderId: number;
   posShortName?: string;
@@ -131,7 +139,8 @@ export const ordersApi = {
       fromDate,
       toDate,
       isInvitation,
-      orderStatusId
+      orderStatusId,
+      paymentStatusId
     } = params;
 
     const filter: Record<string, unknown> = {};
@@ -148,7 +157,7 @@ export const ordersApi = {
       filter.customerEmail = email;
     }
 
-    if (isOnline) {
+    if (isOnline !== undefined) {
       filter.isOnline = isOnline;
       filter.IsInvitation = false;
       filter.IsContract = false;
@@ -173,6 +182,10 @@ export const ordersApi = {
 
     if (orderStatusId) {
       filter.orderStatusId = orderStatusId;
+    }
+
+    if (paymentStatusId) {
+      filter.paymentStatusId = paymentStatusId;
     }
 
     const queryObject: Record<string, unknown> = {
@@ -245,6 +258,10 @@ export const ordersApi = {
   },
   refund: async (dto: OrderRefundDto[]) => {
     const res = await api.patch("/api/pos/order/refund", dto);
+    return res.data;
+  },
+  updateRefundStatus: async (id: number, dto: OrderUpdateRefundStatusDto) => {
+    const res = await api.patch(`/api/pos/order/${id}/refund-status`, dto);
     return res.data;
   },
   selectingChairs: async (operation: "add" | "remove", dto: SelectingChairsDto) => {

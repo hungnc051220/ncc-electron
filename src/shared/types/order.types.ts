@@ -96,6 +96,7 @@ export interface OrderResponseProps {
   eTicketUrl: string;
   items: OrderItem[];
   note?: string;
+  refundStatusId?: RefundStatus;
 }
 
 export interface OrderItem {
@@ -221,6 +222,12 @@ export enum PaymentStatus {
   REFUNDED = 40,
   VOIDED = 50,
   FAIL = 60
+}
+
+export enum RefundStatus {
+  PENDING = 10,
+  ONLINE = 20,
+  CASH = 30
 }
 
 export interface BookingTicketBodyProps {

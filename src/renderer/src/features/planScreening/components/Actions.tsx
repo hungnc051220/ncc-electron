@@ -47,6 +47,7 @@ export const paymentTypes = [
 
 type FieldType = {
   cancelReasonId: number;
+  isRefund: boolean;
 };
 
 export const getSeatDiscountKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
@@ -486,7 +487,7 @@ const Actions = ({
     );
   };
 
-  const onCancelSeats = (cancelReasonId?: number) => {
+  const onCancelSeats = (values?: FieldType) => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
       return;
@@ -494,8 +495,8 @@ const Actions = ({
 
     const body: CancelOrderDto = {
       planScreenId,
-      cancelReasonId: cancelReasonId || 1,
-      isRefund: true,
+      cancelReasonId: values?.cancelReasonId || 1,
+      isRefund: values?.isRefund || false,
       ...buildSeatFieldsByFloor(selectedSeats)
     };
 
@@ -536,7 +537,9 @@ const Actions = ({
           <Button
             variant="outlined"
             color="danger"
-            disabled={!canUpdate || !cancelMode || selectedSeats.length === 0 || isPlanScreeningPast}
+            disabled={
+              !canUpdate || !cancelMode || selectedSeats.length === 0 || isPlanScreeningPast
+            }
             onClick={() => setOpenCancelSeats(true)}
           >
             Huỷ vé
@@ -560,7 +563,7 @@ const Actions = ({
                 name="basic"
                 style={{ maxWidth: 600 }}
                 onFinish={(values) => {
-                  onCancelSeats(values.cancelReasonId);
+                  onCancelSeats(values);
                 }}
                 autoComplete="off"
                 layout="vertical"
@@ -590,6 +593,10 @@ const Actions = ({
                 }}
                 allowClear
               />
+            </Form.Item>
+
+            <Form.Item<FieldType> name="isRefund" valuePropName="checked">
+              <Checkbox>Huỷ vé hoàn tiền</Checkbox>
             </Form.Item>
           </Modal>
         </div>

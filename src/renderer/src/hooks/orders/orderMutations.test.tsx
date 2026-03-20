@@ -10,6 +10,7 @@ import { useCancelOrder } from "./useCancelOrder";
 import { useCreateOrder } from "./useCreateOrder";
 import { useCreateQrOrder } from "./useCreateQrOrder";
 import { useSwapSeats } from "./useSwapSeats";
+import { useUpdateRefundStatusOrder } from "./useUpdateRefundStatusOrder";
 import { useCreateInvoice } from "../invoices/useCreateInvoice";
 
 const createWrapper = () => {
@@ -184,6 +185,30 @@ describe("order and invoice mutations", () => {
       },
       expect.anything()
     );
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ordersKeys.all
+    });
+  });
+
+  it("updates refund status and invalidates the orders cache", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const updateRefundStatusSpy = vi
+      .spyOn(ordersApi, "updateRefundStatus")
+      .mockResolvedValue({ success: true });
+
+    const { result } = renderHook(() => useUpdateRefundStatusOrder(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 77,
+      dto: {
+        refundStatusId: 20
+      }
+    });
+
+    expect(updateRefundStatusSpy).toHaveBeenCalledWith(77, {
+      refundStatusId: 20
+    });
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ordersKeys.all
     });
