@@ -28,7 +28,9 @@ const fallbackConfig = {
 const RefundStatusBadge = ({ status }: RefundStatusBadgeProps) => {
   const config = status ? refundStatusConfig[status] : fallbackConfig;
 
-  return <Tag color={config?.color ?? fallbackConfig.color}>{config?.label ?? fallbackConfig.label}</Tag>;
+  return (
+    <Tag color={config?.color ?? fallbackConfig.color}>{config?.label ?? fallbackConfig.label}</Tag>
+  );
 };
 
 export default RefundStatusBadge;

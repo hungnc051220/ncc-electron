@@ -61,19 +61,25 @@ const RefundsPage = () => {
     setDialogUpdateRefundStatusOpen(true);
   }, []);
 
-  const handleDialogViewDetailClose = useCallback((open: boolean) => {
-    setDialogViewDetailOpen(open);
-    if (!open && !dialogUpdateRefundStatusOpen) {
-      setSelectedItem(null);
-    }
-  }, [dialogUpdateRefundStatusOpen]);
+  const handleDialogViewDetailClose = useCallback(
+    (open: boolean) => {
+      setDialogViewDetailOpen(open);
+      if (!open && !dialogUpdateRefundStatusOpen) {
+        setSelectedItem(null);
+      }
+    },
+    [dialogUpdateRefundStatusOpen]
+  );
 
-  const handleDialogUpdateRefundStatusClose = useCallback((open: boolean) => {
-    setDialogUpdateRefundStatusOpen(open);
-    if (!open && !dialogViewDetailOpen) {
-      setSelectedItem(null);
-    }
-  }, [dialogViewDetailOpen]);
+  const handleDialogUpdateRefundStatusClose = useCallback(
+    (open: boolean) => {
+      setDialogUpdateRefundStatusOpen(open);
+      if (!open && !dialogViewDetailOpen) {
+        setSelectedItem(null);
+      }
+    },
+    [dialogViewDetailOpen]
+  );
 
   const actionItems = [
     ...(canView ? [{ key: "view-detail", label: "Xem chi tiết" }] : []),

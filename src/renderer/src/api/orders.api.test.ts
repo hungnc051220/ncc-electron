@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { api } from "@renderer/api/client";
+import { RefundStatus } from "@shared/types";
 import { ordersApi } from "./orders.api";
 
 describe("ordersApi", () => {
@@ -121,5 +122,22 @@ describe("ordersApi", () => {
     expect(patchSpy).toHaveBeenCalledWith(
       "/api/pos/order/unmark-print?orderId=99&posShortName=POS-01"
     );
+  });
+
+  it("calls refund status endpoint with GET query params", async () => {
+    const getSpy = vi.spyOn(api, "get").mockResolvedValue({
+      data: { success: true }
+    });
+
+    await ordersApi.updateRefundStatus({
+      id: 77,
+      RefundStatusId: RefundStatus.CASH
+    });
+
+    const requestedUrl = getSpy.mock.calls[0][0];
+
+    expect(requestedUrl).toContain("/api/pos/order/refund?");
+    expect(requestedUrl).toContain("id=77");
+    expect(requestedUrl).toContain("RefundStatusId=30");
   });
 });

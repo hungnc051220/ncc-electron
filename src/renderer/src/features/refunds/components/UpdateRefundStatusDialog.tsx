@@ -1,4 +1,3 @@
-import { OrderUpdateRefundStatusDto } from "@renderer/api/orders.api";
 import { useUpdateRefundStatusOrder } from "@renderer/hooks/orders/useUpdateRefundStatusOrder";
 import { ApiError, OrderDetailProps, RefundStatus } from "@shared/types";
 import type { FormProps } from "antd";
@@ -9,6 +8,10 @@ interface UpdateRefundStatusDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedItem?: OrderDetailProps | null;
+}
+
+interface UpdateRefundStatusFormValues {
+  refundStatusId: RefundStatus;
 }
 
 const refundStatusOptions = [
@@ -22,23 +25,23 @@ const UpdateRefundStatusDialog = ({
   onOpenChange,
   selectedItem
 }: UpdateRefundStatusDialogProps) => {
-  const [form] = Form.useForm<OrderUpdateRefundStatusDto>();
+  const [form] = Form.useForm<UpdateRefundStatusFormValues>();
   const updateRefundStatusOrder = useUpdateRefundStatusOrder();
 
   const onOk = () => form.submit();
   const onCancel = () => onOpenChange(false);
 
-  const getInitialValues = (): OrderUpdateRefundStatusDto => ({
+  const getInitialValues = (): UpdateRefundStatusFormValues => ({
     refundStatusId: selectedItem?.order.refundStatusId ?? RefundStatus.PENDING
   });
 
-  const onFinish: FormProps<OrderUpdateRefundStatusDto>["onFinish"] = (values) => {
+  const onFinish: FormProps<UpdateRefundStatusFormValues>["onFinish"] = (values) => {
     if (!selectedItem) return;
 
     updateRefundStatusOrder.mutate(
       {
         id: selectedItem.order.id,
-        dto: values
+        RefundStatusId: values.refundStatusId
       },
       {
         onSuccess: () => {
@@ -76,16 +79,12 @@ const UpdateRefundStatusDialog = ({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>
-        <Form.Item<OrderUpdateRefundStatusDto>
+        <Form.Item<UpdateRefundStatusFormValues>
           name="refundStatusId"
           label="Trạng thái"
           rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
         >
-          <Select
-            options={refundStatusOptions}
-            placeholder="Chọn trạng thái"
-            className="w-full"
-          />
+          <Select options={refundStatusOptions} placeholder="Chọn trạng thái" className="w-full" />
         </Form.Item>
       </Form>
     </Modal>

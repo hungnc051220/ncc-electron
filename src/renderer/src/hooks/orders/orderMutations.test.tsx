@@ -201,13 +201,12 @@ describe("order and invoice mutations", () => {
 
     await result.current.mutateAsync({
       id: 77,
-      dto: {
-        refundStatusId: 20
-      }
+      RefundStatusId: 20
     });
 
-    expect(updateRefundStatusSpy).toHaveBeenCalledWith(77, {
-      refundStatusId: 20
+    expect(updateRefundStatusSpy).toHaveBeenCalledWith({
+      id: 77,
+      RefundStatusId: 20
     });
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ordersKeys.all

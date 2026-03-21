@@ -97,8 +97,9 @@ export interface OrderRefundDto {
   refundedAmount: number;
 }
 
-export interface OrderUpdateRefundStatusDto {
-  refundStatusId: RefundStatus;
+export interface OrderRefundQuery {
+  id: number;
+  RefundStatusId: RefundStatus;
 }
 
 export interface OrderPrintedQuery {
@@ -256,12 +257,12 @@ export const ordersApi = {
     const res = await api.patch(`/api/pos/order/unmark-print?${query}`);
     return res.data;
   },
-  refund: async (dto: OrderRefundDto[]) => {
-    const res = await api.patch("/api/pos/order/refund", dto);
-    return res.data;
-  },
-  updateRefundStatus: async (id: number, dto: OrderUpdateRefundStatusDto) => {
-    const res = await api.patch(`/api/pos/order/${id}/refund-status`, dto);
+  updateRefundStatus: async (params: OrderRefundQuery) => {
+    const query = queryString.stringify(params, {
+      skipEmptyString: true,
+      skipNull: true
+    });
+    const res = await api.get(`/api/pos/order/refund?${query}`);
     return res.data;
   },
   selectingChairs: async (operation: "add" | "remove", dto: SelectingChairsDto) => {
