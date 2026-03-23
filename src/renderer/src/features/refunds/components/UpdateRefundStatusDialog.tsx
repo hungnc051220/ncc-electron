@@ -38,27 +38,44 @@ const UpdateRefundStatusDialog = ({
   const onFinish: FormProps<UpdateRefundStatusFormValues>["onFinish"] = (values) => {
     if (!selectedItem) return;
 
-    updateRefundStatusOrder.mutate(
-      {
-        id: selectedItem.order.id,
-        RefundStatusId: values.refundStatusId
+    Modal.confirm({
+      title: "Xác nhận đổi trạng thái hoàn tiền",
+      content: (
+        <div>
+          <p>Bạn có chắc chắn muốn đổi trạng thái hoàn tiền cho đơn hàng này?</p>
+          <p className="mt-2 text-red-500 font-medium">Thao tác không thể thu hồi.</p>
+        </div>
+      ),
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      okButtonProps: {
+        danger: true,
+        loading: updateRefundStatusOrder.isPending
       },
-      {
-        onSuccess: () => {
-          message.success("Cập nhật trạng thái hoàn tiền thành công");
-          onCancel();
-        },
-        onError: (error: unknown) => {
-          let msg = "Cập nhật trạng thái hoàn tiền thất bại";
+      onOk: () => {
+        updateRefundStatusOrder.mutate(
+          {
+            id: selectedItem.order.id,
+            RefundStatusId: values.refundStatusId
+          },
+          {
+            onSuccess: () => {
+              message.success("Cập nhật trạng thái hoàn tiền thành công");
+              onCancel();
+            },
+            onError: (error: unknown) => {
+              let msg = "Cập nhật trạng thái hoàn tiền thất bại";
 
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
+              if (axios.isAxiosError<ApiError>(error)) {
+                msg = error.response?.data?.message ?? msg;
+              }
+
+              message.error(msg);
+            }
           }
-
-          message.error(msg);
-        }
+        );
       }
-    );
+    });
   };
 
   return (

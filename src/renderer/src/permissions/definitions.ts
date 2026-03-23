@@ -26,7 +26,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     module: "Hệ thống",
     label: "Phân quyền nhóm người dùng",
     route: "/user-roles",
-    actions: ["access", "list", "view", "update", "configure"]
+    actions: ["access", "list", "view", "create", "update", "delete"]
   },
   {
     key: "machine_serials",

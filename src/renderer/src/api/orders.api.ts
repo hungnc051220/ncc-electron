@@ -24,6 +24,7 @@ export interface OrdersQuery {
   orderStatusId?: number;
   paymentStatusId?: PaymentStatus;
   refundStatusId?: RefundStatus;
+  isRefund?: boolean;
 }
 
 export interface OrderDto {
@@ -141,7 +142,8 @@ export const ordersApi = {
       toDate,
       isInvitation,
       orderStatusId,
-      paymentStatusId
+      paymentStatusId,
+      isRefund
     } = params;
 
     const filter: Record<string, unknown> = {};
@@ -163,6 +165,10 @@ export const ordersApi = {
       filter.IsInvitation = false;
       filter.IsContract = false;
       filter.Deleted = 0;
+    }
+
+    if (isRefund) {
+      filter.refundStatusId = { ne: null };
     }
 
     if (barCode) {

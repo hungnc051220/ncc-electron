@@ -1,9 +1,9 @@
+import { MoreOutlined } from "@ant-design/icons";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { OrderDetailProps, OrderStatus } from "@shared/types";
+import { OrderDetailProps, RefundStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { MoreOutlined } from "@ant-design/icons";
 import { Breadcrumb, Dropdown, Table } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
@@ -32,7 +32,6 @@ const RefundsPage = () => {
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
     const filtered = filterEmptyValues(rest as Record<string, unknown>);
-    filtered.orderStatusId = OrderStatus.CANCELLED;
 
     if (dateRange && dateRange.length === 2) {
       filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
@@ -42,6 +41,7 @@ const RefundsPage = () => {
     return {
       current,
       pageSize,
+      isRefund: true,
       ...filtered
     };
   }, [current, pageSize, filterValues]);
@@ -80,11 +80,6 @@ const RefundsPage = () => {
     },
     [dialogViewDetailOpen]
   );
-
-  const actionItems = [
-    ...(canView ? [{ key: "view-detail", label: "Xem chi tiết" }] : []),
-    ...(canUpdate ? [{ key: "update-refund-status", label: "Cập nhật trạng thái huỷ" }] : [])
-  ];
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
@@ -172,32 +167,45 @@ const RefundsPage = () => {
       dataIndex: "order",
       render: (_, record) => <RefundStatusBadge status={record.order.refundStatusId} />
     },
-    ...(actionItems.length
+    ...(canView || canUpdate
       ? [
           {
             title: "",
             key: "operation",
             width: 50,
-            render: (_: unknown, record: OrderDetailProps) => (
-              <Dropdown
-                menu={{
-                  items: actionItems,
-                  onClick: (e) => {
-                    if (e.key === "view-detail") {
-                      handeViewDetail(record);
-                    }
+            render: (_: unknown, record: OrderDetailProps) => {
+              const actionItems = [
+                ...(canView ? [{ key: "view-detail", label: "Xem chi tiết" }] : []),
+                ...(canUpdate && record.order.refundStatusId === RefundStatus.PENDING
+                  ? [{ key: "update-refund-status", label: "Cập nhật trạng thái huỷ" }]
+                  : [])
+              ];
 
-                    if (e.key === "update-refund-status") {
-                      handleOpenUpdateRefundStatus(record);
+              if (!actionItems.length) {
+                return null;
+              }
+
+              return (
+                <Dropdown
+                  menu={{
+                    items: actionItems,
+                    onClick: (e) => {
+                      if (e.key === "view-detail") {
+                        handeViewDetail(record);
+                      }
+
+                      if (e.key === "update-refund-status") {
+                        handleOpenUpdateRefundStatus(record);
+                      }
                     }
-                  }
-                }}
-                arrow
-                trigger={["click"]}
-              >
-                <MoreOutlined />
-              </Dropdown>
-            ),
+                  }}
+                  arrow
+                  trigger={["click"]}
+                >
+                  <MoreOutlined />
+                </Dropdown>
+              );
+            },
             align: "center" as const,
             fixed: "right" as const
           }

@@ -649,12 +649,12 @@ const Actions = ({
               </div>
             </Checkbox.Group>
           </div>
-          <div className="flex flex-col">
+          <div>
             <Button
               type="primary"
               size="large"
               className="flex flex-col w-full h-full gap-1"
-              style={{ height: "72px !important" }}
+              style={{ height: 72 }}
               onClick={() => {
                 if (vipCard) {
                   setOpenVipCardDialog(true);

@@ -136,25 +136,9 @@ const TabActivityLog = () => {
       render: (model) => dataTypes.find((item) => item.value === model)?.label || model
     },
     {
-      title: "Người tạo",
-      dataIndex: "createdBy",
-      key: "createdBy"
-    },
-    {
-      title: "Ngày tạo",
-      dataIndex: "createdAt",
-      key: "createdAt"
-    },
-    {
       title: "Người cập nhật",
-      dataIndex: "user",
-      key: "user",
-      render: (_, { user }) => {
-        const fullName = [user?.customerFirstName, user?.customerLastName]
-          .filter(Boolean)
-          .join(" ");
-        return fullName || user?.username || "";
-      }
+      dataIndex: "username",
+      key: "username"
     },
     {
       title: "Ngày cập nhật",

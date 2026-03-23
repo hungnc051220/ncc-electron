@@ -121,8 +121,10 @@ const UsersPage = () => {
     },
     {
       title: "Họ và tên",
-      key: "customerFirstName",
-      dataIndex: "customerFirstName"
+      key: "fullName",
+      dataIndex: "fullName",
+      render: (_, record) =>
+        [record.customerFirstName, record.customerLastName].filter(Boolean).join(" ")
     },
     {
       title: "Tên đăng nhập",
@@ -138,6 +140,11 @@ const UsersPage = () => {
       title: "Email",
       key: "email",
       dataIndex: "email"
+    },
+    {
+      title: "Địa chỉ",
+      key: "address",
+      dataIndex: "address"
     },
     {
       title: "Hiển thị",

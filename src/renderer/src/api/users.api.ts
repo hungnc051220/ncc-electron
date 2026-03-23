@@ -13,6 +13,7 @@ export interface UserDto {
   id?: number;
   roleIds: number[];
   customerFirstName: string;
+  customerLastName: string;
   manufacturerId: number;
   address?: string;
   email: string;

@@ -125,7 +125,8 @@ const OrderHistoryPage = () => {
       title: "Tên khách hàng",
       key: "customerName",
       dataIndex: "customerName",
-      render: (_, record) => record.order.customerFirstName
+      render: (_, record) =>
+        [record.order.customerFirstName, record.order.customerLastName].filter(Boolean).join(" ")
     },
     {
       title: "Số điện thoại",

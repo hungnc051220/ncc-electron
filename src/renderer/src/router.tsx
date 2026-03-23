@@ -4,6 +4,7 @@ import CancellationReasonsPage from "./features/cancellationReasons/Cancellation
 import CancellationTicketsPage from "./features/cancellationTickets/CancellationTicketsPage";
 import ContractTicketSalesDetailPage from "./features/contractTicketSales/ContractTicketSalesDetailPage";
 import ContractTicketSalesPage from "./features/contractTicketSales/ContractTicketSalesPage";
+import CustomerRolesPage from "./features/customerRoles/CustomerRolesPage";
 import Dashboard from "./features/Dashboard";
 import DiscountSettingsPage from "./features/discountSettings/DiscountSettingsPage";
 import FilmsPage from "./features/films/FilmsPage";
@@ -75,6 +76,10 @@ export const router = createHashRouter([
           {
             path: "/users",
             element: withAccess("users", <UsersPage />)
+          },
+          {
+            path: "/customer-roles",
+            element: withAccess("user_roles", <CustomerRolesPage />)
           },
           {
             path: "/user-roles",

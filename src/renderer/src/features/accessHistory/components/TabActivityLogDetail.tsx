@@ -220,11 +220,7 @@ const parseAuditValue = (value: unknown): AuditValue | undefined => {
     }
   }
 
-  if (
-    typeof value === "boolean" ||
-    typeof value === "number" ||
-    typeof value === "object"
-  ) {
+  if (typeof value === "boolean" || typeof value === "number" || typeof value === "object") {
     return value as AuditValue;
   }
 
@@ -303,7 +299,9 @@ const formatFieldLabel = (key: string) => {
     return `Ghế bán online tầng ${onlineChairFloorMatch[1]}`;
   }
 
-  const chairFloorMatch = normalizedKey.match(/^(?:number|quantity|total)?\s*chair\s+[a-z]\s+(\d+)$/);
+  const chairFloorMatch = normalizedKey.match(
+    /^(?:number|quantity|total)?\s*chair\s+[a-z]\s+(\d+)$/
+  );
   if (chairFloorMatch) {
     return `Ghế tầng ${chairFloorMatch[1]}`;
   }
@@ -526,15 +524,9 @@ const TabActivityLogDetail = () => {
     },
     {
       title: "Người cập nhật",
-      dataIndex: "user",
-      key: "user",
-      render: (_, { user }) => {
-        const fullName = [user?.customerFirstName, user?.customerLastName]
-          .filter(Boolean)
-          .join(" ");
-        return fullName || user?.username || "";
-      },
-      width: 200
+      dataIndex: "username",
+      key: "username",
+      width: 150
     },
     {
       title: "Ngày cập nhật",

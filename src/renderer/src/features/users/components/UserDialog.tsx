@@ -54,6 +54,7 @@ const UserDialog = ({
       email: editingUser.email,
       manufacturerId: editingUser.manufacturerId,
       customerFirstName: editingUser.customerFirstName,
+      customerLastName: editingUser.customerLastName,
       address: editingUser.address,
       mobile: editingUser.mobile
     };
@@ -135,13 +136,22 @@ const UserDialog = ({
             />
           </Form.Item>
 
-          <Form.Item<UserDto>
-            name="customerFirstName"
-            label="Họ và tên"
-            rules={[{ required: true, message: "Hãy nhập họ và tên" }]}
-          >
-            <Input placeholder="Nhập họ và tên" />
-          </Form.Item>
+          <div className="grid grid-cols-2 gap-x-3">
+            <Form.Item<UserDto>
+              name="customerFirstName"
+              label="Họ"
+              rules={[{ required: true, message: "Hãy nhập họ" }]}
+            >
+              <Input placeholder="Nhập họ" />
+            </Form.Item>
+            <Form.Item<UserDto>
+              name="customerLastName"
+              label="Tên"
+              rules={[{ required: true, message: "Hãy nhập tên" }]}
+            >
+              <Input placeholder="Nhập tên" />
+            </Form.Item>
+          </div>
 
           <Form.Item name="manufacturerId" label="Hãng phát hành">
             <Select

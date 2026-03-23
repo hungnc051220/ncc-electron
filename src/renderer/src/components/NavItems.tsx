@@ -30,6 +30,11 @@ const NavItems = () => {
           permissionKey: "users"
         },
         {
+          label: <Link to="/customer-roles">Quản lý nhóm người dùng</Link>,
+          key: "customer-roles",
+          permissionKey: "user_roles"
+        },
+        {
           label: <Link to="/user-roles">Phân nhóm quyền người dùng</Link>,
           key: "user-roles",
           permissionKey: "user_roles"

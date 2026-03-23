@@ -11,6 +11,15 @@ import {
   permissionApiEndpoints
 } from "@shared/types";
 
+export interface CustomerRoleDto {
+  name: string;
+  freeShipping: boolean;
+  taxExempt: boolean;
+  active: boolean;
+  isSystemRole: boolean;
+  systemName: string;
+}
+
 export const customerRolesApi = {
   getAll: async (): Promise<CustomerRoleProps[]> => {
     const res = await api.get("/api/pos/customer-role");
@@ -18,6 +27,18 @@ export const customerRolesApi = {
   },
   getDetail: async (id: number): Promise<CustomerRoleProps> => {
     const res = await api.get(`/api/pos/customer-role/${id}`);
+    return res.data;
+  },
+  create: async (dto: CustomerRoleDto): Promise<CustomerRoleProps> => {
+    const res = await api.post("/api/pos/customer-role", dto);
+    return res.data;
+  },
+  update: async (id: number, dto: CustomerRoleDto): Promise<CustomerRoleProps> => {
+    const res = await api.patch(`/api/pos/customer-role/${id}`, dto);
+    return res.data;
+  },
+  delete: async (id: number) => {
+    const res = await api.delete(`/api/pos/customer-role/${id}`);
     return res.data;
   },
   getPermissionCatalog: async (): Promise<PermissionCatalogResponse> => {
