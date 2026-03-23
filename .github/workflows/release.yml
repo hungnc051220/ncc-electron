@@ -71,9 +71,9 @@ jobs:
         run: |
           yarn build
           npx electron-builder --win --publish never `
-            -c.extraMetadata.version=${{ steps.meta.outputs.version }} `
-            -c.extraMetadata.releaseChannel=${{ steps.meta.outputs.channel }} `
-            -c.publish.channel=${{ steps.meta.outputs.channel }}
+            --config.extraMetadata.version=${{ steps.meta.outputs.version }} `
+            --config.extraMetadata.releaseChannel=${{ steps.meta.outputs.channel }} `
+            --config.publish.channel=${{ steps.meta.outputs.channel }}
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
