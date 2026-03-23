@@ -22,6 +22,9 @@ const Store = (ElectronStore as any).default ?? ElectronStore;
 
 const store = new Store();
 let currentTheme: AppTheme = store.get("theme", "light") as AppTheme;
+const appReleaseChannel = process.env.APP_RELEASE_CHANNEL ?? "latest";
+const enablePackagedDevTools = process.env.APP_ENABLE_DEVTOOLS === "true";
+const shouldEnableDevTools = is.dev || enablePackagedDevTools;
 
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
@@ -42,6 +45,7 @@ const printService = createPrintService();
 
 function setupUpdater(win: BrowserWindow) {
   const isDev = !app.isPackaged;
+  const isDevReleaseChannel = appReleaseChannel === "dev";
 
   ipcMain.handle("app:get-version", () => app.getVersion());
 
@@ -62,6 +66,8 @@ function setupUpdater(win: BrowserWindow) {
 
   if (isDev) return;
 
+  autoUpdater.channel = isDevReleaseChannel ? "dev" : "latest";
+  autoUpdater.allowPrerelease = isDevReleaseChannel;
   autoUpdater.autoDownload = false;
 
   autoUpdater.on("update-available", (info) => {
@@ -81,6 +87,40 @@ function setupUpdater(win: BrowserWindow) {
   });
 
   autoUpdater.checkForUpdates();
+}
+
+function configureDebugTools(win: BrowserWindow, openOnStart = false) {
+  if (!shouldEnableDevTools) {
+    return;
+  }
+
+  win.webContents.on("before-input-event", (event, input) => {
+    const key = input.key.toLowerCase();
+    const toggleWithShortcut =
+      input.type === "keyDown" &&
+      (key === "f12" || ((input.control || input.meta) && input.shift && key === "i"));
+
+    if (!toggleWithShortcut) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (win.webContents.isDevToolsOpened()) {
+      win.webContents.closeDevTools();
+      return;
+    }
+
+    win.webContents.openDevTools({ mode: "detach" });
+  });
+
+  if (openOnStart) {
+    win.once("ready-to-show", () => {
+      if (!win.isDestroyed()) {
+        win.webContents.openDevTools({ mode: "detach" });
+      }
+    });
+  }
 }
 
 function loadRenderer(win: BrowserWindow, route: string) {
@@ -184,10 +224,13 @@ function createWindow(): void {
     icon,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
-      sandbox: false
+      sandbox: false,
+      devTools: shouldEnableDevTools
     },
     kiosk: true
   });
+
+  configureDebugTools(mainWindow, enablePackagedDevTools);
 
   mainWindow.on("ready-to-show", () => {
     mainWindow?.show();
@@ -243,9 +286,12 @@ function createCustomerWindow(planScreeningId: number) {
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
-      sandbox: false
+      sandbox: false,
+      devTools: shouldEnableDevTools
     }
   });
+
+  configureDebugTools(customerWindow);
 
   loadRenderer(customerWindow, `/plan-screening/${planScreeningId}?view=customer`);
 
