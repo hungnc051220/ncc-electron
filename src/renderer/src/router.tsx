@@ -46,6 +46,7 @@ import ProtectedLayout from "./layouts/ProtectedLayout";
 import VouchersPage from "./features/vouchers/VouchersPage";
 import YearlyReportPage from "./features/yearlyReport/YearlyReportPage";
 import PermissionGuard from "./permissions/PermissionGuard";
+import RouteErrorPage from "./components/RouteErrorPage";
 
 const withAccess = (permissionKey: string, element: React.ReactNode) => (
   <PermissionGuard permissionKey={permissionKey} fallbackPath="/403">
@@ -56,14 +57,17 @@ const withAccess = (permissionKey: string, element: React.ReactNode) => (
 export const router = createHashRouter([
   {
     path: "/login",
-    element: <Login />
+    element: <Login />,
+    errorElement: <RouteErrorPage />
   },
   {
     path: "/",
     element: <ProtectedLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       {
         element: <DashboardLayout />,
+        errorElement: <RouteErrorPage />,
         children: [
           {
             index: true,
@@ -213,7 +217,15 @@ export const router = createHashRouter([
       },
       {
         path: "/plan-screening/:id",
-        element: withAccess("plan_screening", <PlanScreeningPage />)
+        element: (
+          <PermissionGuard
+            permissionKey="plan_screening"
+            fallbackPath="/403"
+            allowInCustomerMode
+          >
+            <PlanScreeningPage />
+          </PermissionGuard>
+        )
       },
       {
         path: "/contract-ticket-sales/:id",
@@ -243,6 +255,7 @@ export const router = createHashRouter([
   },
   {
     path: "*",
-    element: <Navigate to="/" />
+    element: <Navigate to="/" />,
+    errorElement: <RouteErrorPage />
   }
 ]);

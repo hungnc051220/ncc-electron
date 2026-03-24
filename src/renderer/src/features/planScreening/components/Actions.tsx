@@ -195,6 +195,21 @@ const Actions = ({
         const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posName);
 
         await window.api?.printTickets(tickets, selectedPrinter);
+        await ordersApi.markPrinted({
+          orderId,
+          posShortName
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: planScreeningsKeys.getDetail(planScreenId)
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ordersKeys.getOrdersByScreening(planScreenId)
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ordersKeys.getDetail(orderId)
+          })
+        ]);
 
         message.success("In vé thành công");
       } catch (error) {
@@ -202,7 +217,7 @@ const Actions = ({
         message.error("In vé thất bại");
       }
     },
-    [queryClient, selectedPrinter, user, posName]
+    [planScreenId, posShortName, queryClient, selectedPrinter, user, posName]
   );
 
   useEffect(() => {
@@ -708,6 +723,7 @@ const Actions = ({
           onBooking={onBooking}
           planScreenId={planScreenId}
           selectedSeats={selectedSeats}
+          hasSeatTypeDiscount={Object.keys(selectedDiscountGroups).length > 0}
         />
       )}
 

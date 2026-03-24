@@ -97,6 +97,27 @@ export interface OrderResponseProps {
   items: OrderItem[];
   note?: string;
   refundStatusId?: RefundStatus;
+  cancelTicket?: CancellationTicketProps;
+  seller?: SellerProps;
+  printer?: SellerProps;
+  invitationTickets: InvitationTicketProps;
+}
+
+export interface SellerProps {
+  id: number;
+  customerLastName: string;
+  customerFirstName: string;
+  username: string;
+}
+
+export interface InvitationTicketProps {
+  id: number;
+  orderId: number;
+  receivedEmail: string;
+  createdAt: string;
+  status: string;
+  urlTicket: string;
+  createdBy: string;
 }
 
 export interface OrderItem {

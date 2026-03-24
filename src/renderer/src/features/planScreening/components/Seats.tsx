@@ -154,10 +154,7 @@ const Seats = ({
 
   const selectedFloor = useMemo(() => {
     if (availableFloors.length === 0) return 1;
-    if (
-      typeof syncedSelectedFloor === "number" &&
-      availableFloors.includes(syncedSelectedFloor)
-    ) {
+    if (typeof syncedSelectedFloor === "number" && availableFloors.includes(syncedSelectedFloor)) {
       return syncedSelectedFloor;
     }
     if (userSelectedFloor && availableFloors.includes(userSelectedFloor)) {
@@ -338,7 +335,13 @@ const Seats = ({
         isSelectingRef.current = false;
       }, 100);
     },
-    [maxSelectableSeats, onSelectionLimitReached, seatMap, selectingSeatKeysByOther, setSelectedSeats]
+    [
+      maxSelectableSeats,
+      onSelectionLimitReached,
+      seatMap,
+      selectingSeatKeysByOther,
+      setSelectedSeats
+    ]
   );
 
   const calculateSeatSize = useCallback(() => {

@@ -8,6 +8,7 @@ type PermissionGuardProps = {
   permissionKey: string;
   action?: PermissionAction;
   fallbackPath?: string;
+  allowInCustomerMode?: boolean;
   children: ReactNode;
 };
 
@@ -15,13 +16,15 @@ const PermissionGuard = ({
   permissionKey,
   action = "access",
   fallbackPath = "/",
+  allowInCustomerMode = false,
   children
 }: PermissionGuardProps) => {
   const { can } = usePermission();
   const location = useLocation();
+  const isCustomerMode = window.location.hash.includes("view=customer");
   const allowed = can(permissionKey, action);
 
-  if (!allowed) {
+  if (!allowed && !(allowInCustomerMode && isCustomerMode)) {
     return (
       <Navigate to={fallbackPath} replace state={{ from: location.pathname + location.search }} />
     );

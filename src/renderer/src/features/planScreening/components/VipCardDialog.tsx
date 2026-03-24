@@ -17,6 +17,7 @@ interface VipCardDialogProps {
   onBooking: (params?: { memberCardCode?: string; voucherCode?: string }) => void;
   planScreenId: number;
   selectedSeats: ListSeat[];
+  hasSeatTypeDiscount: boolean;
 }
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
@@ -52,18 +53,45 @@ const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
   }, {});
 };
 
+const formatVoucherValue = (voucher?: BatchProps) => {
+  if (!voucher) return "-";
+
+  const isPercentType =
+    voucher.valueTypeName?.includes("%") ||
+    voucher.valueTypeName?.toLowerCase().includes("phần trăm") ||
+    voucher.valueTypeName?.toLowerCase().includes("phan tram");
+
+  return isPercentType ? `${voucher.discountValue}%` : formatMoney(voucher.discountValue);
+};
+
+const calculateVoucherDiscount = (totalPrice: number, voucher?: BatchProps) => {
+  if (!voucher) return 0;
+
+  const isPercentType =
+    voucher.valueTypeName?.includes("%") ||
+    voucher.valueTypeName?.toLowerCase().includes("phần trăm") ||
+    voucher.valueTypeName?.toLowerCase().includes("phan tram");
+
+  if (isPercentType) {
+    return Math.min((totalPrice * voucher.discountValue) / 100, totalPrice);
+  }
+
+  return Math.min(voucher.discountValue || 0, totalPrice);
+};
+
 const VipCardDialog = ({
   open,
   onCancel,
   totalPrice,
   onBooking,
   planScreenId,
-  selectedSeats
+  selectedSeats,
+  hasSeatTypeDiscount
 }: VipCardDialogProps) => {
   const [searchText, setSearchText] = useState<string | undefined>(undefined);
   const [lastSearched, setLastSearched] = useState<string | null>(null);
   const [status, setStatus] = useState<InputStatus>("");
-  const [voucherType, setVoucherType] = useState<"campaign" | "u22">("campaign");
+  const [voucherType, setVoucherType] = useState<"campaign" | "u22" | "none">("campaign");
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const cardInputRef = useRef<InputRef>(null);
 
@@ -78,6 +106,7 @@ const VipCardDialog = ({
 
     return data.data[0];
   }, [data]);
+  const isCustomerSearched = Boolean(customer);
 
   const seatFields = useMemo(() => buildSeatFieldsByFloor(selectedSeats), [selectedSeats]);
 
@@ -119,7 +148,7 @@ const VipCardDialog = ({
       planScreenId,
       ...seatFields
     },
-    Boolean(customer?.id)
+    Boolean(customer?.id) && !hasSeatTypeDiscount
   );
 
   const isU22Member = customer?.currentCardId === 12;
@@ -130,6 +159,20 @@ const VipCardDialog = ({
       setVoucherType("campaign");
     }
   }, [isU22Member, voucherType]);
+
+  useEffect(() => {
+    if (hasSeatTypeDiscount) {
+      setVoucherType("none");
+      setSelectedBatchId(null);
+    }
+  }, [hasSeatTypeDiscount]);
+
+  useEffect(() => {
+    if (!isCustomerSearched) {
+      setSelectedBatchId(null);
+      setVoucherType(hasSeatTypeDiscount ? "none" : "campaign");
+    }
+  }, [hasSeatTypeDiscount, isCustomerSearched]);
 
   useEffect(() => {
     const defaultBatchId = voucherItems.find((item) => item.vouchers?.length > 0)?.batchId ?? null;
@@ -147,6 +190,12 @@ const VipCardDialog = ({
   }, [voucherItems]);
 
   useEffect(() => {
+    if (open) {
+      setVoucherType(hasSeatTypeDiscount ? "none" : "campaign");
+    }
+  }, [hasSeatTypeDiscount, open]);
+
+  useEffect(() => {
     if (!open) return;
 
     const focusTimer = window.setTimeout(() => {
@@ -157,10 +206,32 @@ const VipCardDialog = ({
   }, [open]);
 
   const selectedVoucherCode = useMemo(() => {
-    if (!selectedBatchId) return undefined;
+    if (!selectedBatchId || voucherType === "none") return undefined;
 
     return voucherItems.find((item) => item.batchId === selectedBatchId)?.vouchers?.[0]?.code;
-  }, [selectedBatchId, voucherItems]);
+  }, [selectedBatchId, voucherItems, voucherType]);
+
+  const selectedVoucher = useMemo(() => {
+    if (!selectedBatchId || voucherType === "none") return undefined;
+
+    return voucherItems.find((item) => item.batchId === selectedBatchId);
+  }, [selectedBatchId, voucherItems, voucherType]);
+
+  const discountAmount = useMemo(() => {
+    const baseTotal = totalPrice || 0;
+
+    if (voucherType === "none" || hasSeatTypeDiscount) {
+      return 0;
+    }
+
+    if (voucherType === "campaign") {
+      return calculateVoucherDiscount(baseTotal, selectedVoucher);
+    }
+
+    return 0;
+  }, [hasSeatTypeDiscount, selectedVoucher, totalPrice, voucherType]);
+
+  const finalAmount = useMemo(() => (totalPrice || 0) - discountAmount, [discountAmount, totalPrice]);
 
   const columns: TableProps<BatchProps>["columns"] = [
     {
@@ -179,12 +250,8 @@ const VipCardDialog = ({
     {
       title: "Giá trị",
       key: "discountValue",
-      dataIndex: "discountValue"
-    },
-    {
-      title: "Loại",
-      key: "valueTypeName",
-      dataIndex: "valueTypeName"
+      render: (_, record) => formatVoucherValue(record),
+      align: "right"
     },
     {
       title: "Bắt đầu từ",
@@ -207,14 +274,20 @@ const VipCardDialog = ({
       return;
     }
 
-    if (voucherType === "campaign" && !selectedVoucherCode) {
+    if (!hasSeatTypeDiscount && voucherType === "campaign" && !selectedVoucherCode) {
       message.error("Chưa chọn voucher áp dụng");
       return;
     }
 
     onBooking({
       memberCardCode: searchText,
-      voucherCode: voucherType === "u22" ? "U22Ticket" : selectedVoucherCode
+      voucherCode: hasSeatTypeDiscount
+        ? undefined
+        : voucherType === "none"
+          ? undefined
+        : voucherType === "u22"
+          ? "U22Ticket"
+          : selectedVoucherCode
     });
     onCancel();
   };
@@ -269,6 +342,7 @@ const VipCardDialog = ({
               onChange={(e) => {
                 setSearchText(e.target.value);
                 setStatus("");
+                setLastSearched(null);
               }}
               status={status}
               onPressEnter={onSearch}
@@ -286,13 +360,31 @@ const VipCardDialog = ({
           onChange={(e) => setVoucherType(e.target.value)}
           className="flex flex-col gap-2"
         >
-          <Radio value="campaign">Áp dụng chương trình khuyến mãi</Radio>
-          <Radio value="u22" disabled={!isU22Member}>
+          <Radio value="campaign" disabled={!isCustomerSearched || hasSeatTypeDiscount}>
+            Áp dụng chương trình khuyến mãi
+          </Radio>
+          <Radio value="u22" disabled={!isCustomerSearched || hasSeatTypeDiscount || !isU22Member}>
             Áp dụng ưu đãi cho thành viên U22
+          </Radio>
+          <Radio value="none" disabled={!isCustomerSearched}>
+            Không áp dụng khuyến mãi
           </Radio>
         </Radio.Group>
 
-        {voucherType === "campaign" && (
+        {!isCustomerSearched && (
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            Nhập số thẻ và tìm kiếm khách hàng để chọn hình thức áp dụng khuyến mãi.
+          </div>
+        )}
+
+        {isCustomerSearched && hasSeatTypeDiscount && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Đã áp dụng giảm giá theo loại vé ở ngoài. Chỉ được áp mã khách hàng, không thể dùng
+            thêm voucher hoặc ưu đãi U22.
+          </div>
+        )}
+
+        {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "campaign" && (
           <Table
             rowKey={(record) => record.batchId}
             dataSource={voucherItems}
@@ -333,8 +425,12 @@ const VipCardDialog = ({
                 <p className="text-primary font-semibold">{formatMoney(totalPrice || 0)}</p>
               </div>
               <div className="flex justify-between">
+                <p>Tiền khuyến mãi:</p>
+                <p className="text-green-600 font-semibold">{formatMoney(discountAmount)}</p>
+              </div>
+              <div className="flex justify-between">
                 <p>Tiền thanh toán sau khuyến mãi:</p>
-                <p className="text-red-500 font-semibold">{formatMoney(totalPrice || 0)}</p>
+                <p className="text-red-500 font-semibold">{formatMoney(finalAmount)}</p>
               </div>
             </div>
           </div>

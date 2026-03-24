@@ -65,11 +65,11 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
     >
       <div className="grid grid-cols-3 gap-4">
         <div className="py-3 px-4">
-          <p className="text-sm text-trunks">Order Info-Merchant ID</p>
+          <p className="text-sm text-trunks">Mã thanh toán</p>
           <p>{selectedItem?.order.id || "-"}</p>
         </div>
         <div className="py-3 px-4">
-          <p className="text-sm text-trunks">Mã Barcode</p>
+          <p className="text-sm text-trunks">Mã vé</p>
           <p>{selectedItem?.order.barCode || "-"}</p>
         </div>
         <div className="py-3 px-4">
@@ -105,6 +105,10 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
         <div className="py-3 px-4">
           <p className="text-sm text-trunks">Tên phim</p>
           <p>{selectedItem?.film?.filmName}</p>
+        </div>
+        <div className="py-3 px-4">
+          <p className="text-sm text-trunks">Phòng chiếu</p>
+          <p>{selectedItem?.room?.name}</p>
         </div>
         <div className="py-3 px-4">
           <p className="text-sm text-trunks">Ngày chiếu</p>

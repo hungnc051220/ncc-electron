@@ -105,10 +105,19 @@ const RefundsPage = () => {
       fixed: "left"
     },
     {
-      title: "Thời gian mua",
+      title: "Thời gian hủy vé",
       key: "createdOnUtc",
       dataIndex: "order",
-      render: (_, { order }) => dayjs(order.createdOnUtc).format("HH:mm DD/MM/YYYY")
+      render: (_, { order }) =>
+        order?.cancelTicket?.createdOnUtc
+          ? dayjs(order.cancelTicket.createdOnUtc).format("HH:mm DD/MM/YYYY")
+          : ""
+    },
+    {
+      title: "Lý do hủy vé",
+      key: "reason",
+      dataIndex: "order",
+      render: (_, { order }) => order?.cancelTicket?.reason
     },
     {
       title: "Tên khách hàng",
@@ -128,6 +137,12 @@ const RefundsPage = () => {
       key: "customerEmail",
       dataIndex: "order",
       render: (order) => order.customerEmail
+    },
+    {
+      title: "Phòng chiếu",
+      key: "roomName",
+      dataIndex: "room",
+      render: (room) => room?.name
     },
     {
       title: "Ngày chiếu",
@@ -165,7 +180,8 @@ const RefundsPage = () => {
       title: "Trạng thái xử lý",
       key: "refundStatusId",
       dataIndex: "order",
-      render: (_, record) => <RefundStatusBadge status={record.order.refundStatusId} />
+      render: (_, record) => <RefundStatusBadge status={record.order.refundStatusId} />,
+      fixed: "right"
     },
     ...(canView || canUpdate
       ? [

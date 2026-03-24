@@ -160,32 +160,42 @@ const InvitationTicketsPage = () => {
     {
       title: "Người tạo",
       key: "createdBy",
-      dataIndex: "createdBy"
+      dataIndex: "order",
+      render: (order) =>
+        [order?.seller?.customerFirstName, order?.seller?.customerLastName]
+          .filter(Boolean)
+          .join(" ")
     },
     {
-      title: "Người nhận",
-      key: "receiver",
-      dataIndex: "receiver"
-    },
-    {
-      title: "Ngày tạo",
+      title: "Thời gian tạo",
       key: "createdAt",
       dataIndex: "createdAt",
-      render: (_, record) => dayjs(record.order.createdOnUtc).format("DD/MM/YYYY")
+      render: (_, record) => dayjs(record.order.createdOnUtc).format("HH:mm DD/MM/YYYY")
     },
     {
       title: "Ghi chú",
       key: "note",
-      dataIndex: "note"
+      dataIndex: "order",
+      render: (order) => order?.note
+    },
+    {
+      title: "Thời gian xuất vé",
+      key: "createdAt",
+      render: (_, record) => {
+        return record.order?.invitationTickets?.createdAt
+          ? dayjs(record.order.invitationTickets.createdAt).format("HH:mm DD/MM/YYYY")
+          : "";
+      },
+      align: "center",
+      fixed: "right"
     },
     {
       title: "Xuất vé mời qua email",
-      key: "isPrinted",
-      dataIndex: "isPrinted",
+      key: "invitationTickets",
       render: (_, record) => {
         return (
           <div className="flex justify-center">
-            {record.order?.printedOnUtc ? (
+            {record.order?.invitationTickets?.status === "sent" ? (
               <Check className="size-4 text-green-500" />
             ) : (
               <X className="size-4 text-red-500" />

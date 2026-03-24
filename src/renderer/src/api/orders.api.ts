@@ -3,6 +3,7 @@ import {
   ApiResponse,
   OrderDetailProps,
   OrderResponseProps,
+  OrderStatus,
   PaymentStatus,
   QrCodeResponseProps,
   RefundStatus
@@ -169,6 +170,7 @@ export const ordersApi = {
 
     if (isRefund) {
       filter.refundStatusId = { ne: null };
+      filter.orderStatusId = OrderStatus.CANCELLED;
     }
 
     if (barCode) {

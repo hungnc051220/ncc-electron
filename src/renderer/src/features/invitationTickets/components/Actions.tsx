@@ -5,15 +5,28 @@ import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
+import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Input, message } from "antd";
+import { Button, Descriptions, Input, Modal, message } from "antd";
+import type { TextAreaRef } from "antd/es/input/TextArea";
 import axios from "axios";
-import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import {
+  ChangeEvent,
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useMemo,
+  useRef,
+  useState
+} from "react";
+import Keyboard from "react-simple-keyboard";
+import "react-simple-keyboard/build/css/index.css";
 import PrintInvitationTicketDialog from "./PrintInvitationTicketDialog";
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
@@ -61,6 +74,10 @@ interface ActionsProps {
 
 const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: ActionsProps) => {
   const queryClient = useQueryClient();
+  const keyboardRef = useRef<{
+    setInput: (input: string, inputName?: string) => void;
+  } | null>(null);
+  const inputRef = useRef<TextAreaRef | null>(null);
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
   const { posName, posShortName } = useSettingPosStore();
@@ -70,14 +87,23 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
   const canPrint = can("invitation_tickets", "print");
 
   const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
   const [note, setNote] = useState("");
+  const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   const handleDialogPrintClose = useCallback((open: boolean) => {
     setDialogPrintOpen(open);
     if (!open) {
       setSelectedItem(null);
     }
+  }, []);
+
+  const handleNoteModalClose = useCallback(() => {
+    setNoteModalOpen(false);
+    setIsKeyboardOpen(false);
+    setLayoutName("default");
   }, []);
 
   const createOrder = useCreateOrder();
@@ -116,6 +142,36 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
     }
   ];
 
+  const openNoteModal = () => {
+    setNoteModalOpen(true);
+  };
+
+  const handleNoteChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNote(value);
+    keyboardRef.current?.setInput(value, "note");
+  };
+
+  const handleKeyboardKeyPress = (button: string) => {
+    if (button === "{shift}" || button === "{lock}") {
+      setLayoutName((current) => (current === "default" ? "shift" : "default"));
+      return;
+    }
+
+    if (button === "{enter}") {
+      setNote((current) => {
+        const nextValue = `${current}\n`;
+        keyboardRef.current?.setInput(nextValue, "note");
+        return nextValue;
+      });
+      return;
+    }
+
+    const nextValue = applyVirtualKeyboardButton(note, button);
+    setNote(nextValue);
+    keyboardRef.current?.setInput(nextValue, "note");
+  };
+
   const onBooking = () => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
@@ -153,6 +209,9 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
         queryClient.invalidateQueries({
           queryKey: planScreeningsKeys.getDetail(planScreeningId)
         });
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.getOrdersByScreening(planScreeningId)
+        });
         queryClient.refetchQueries({
           queryKey: ordersKeys.all
         });
@@ -188,6 +247,9 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
       onSuccess: () => {
         setSelectedSeats([]);
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.getOrdersByScreening(planScreeningId)
+        });
         message.success("Huỷ vé mời thành công");
       },
       onError: (error: unknown) => {
@@ -208,14 +270,11 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
         <div className="flex-1 bg-app-bg-container py-2 px-4 rounded-md">
           <Descriptions size="small" items={items} column={2} />
         </div>
-        <div>
+        <div className="min-w-56">
           <p className="text-sm">Ghi chú</p>
-          <Input.TextArea
-            placeholder="Nhập ghi chú"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
+          <Button className="w-full text-left justify-start" onClick={openNoteModal}>
+            {note.trim() ? note : "Nhập ghi chú"}
+          </Button>
         </div>
         <div className="flex gap-3">
           {canCreate && (
@@ -251,6 +310,76 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
           selectedItem={selectedItem}
         />
       )}
+
+      <Modal
+        open={noteModalOpen}
+        title="Nhập ghi chú"
+        onOk={handleNoteModalClose}
+        onCancel={handleNoteModalClose}
+        okText="Xong"
+        cancelText="Đóng"
+        width={680}
+        style={{ top: 20 }}
+        className="invoice-dialog-with-keyboard"
+        afterOpenChange={(open) => {
+          if (!open) return;
+
+          window.setTimeout(() => {
+            setIsKeyboardOpen(true);
+            window.requestAnimationFrame(() => {
+              inputRef.current?.focus();
+            });
+          }, 120);
+        }}
+      >
+        <div className="space-y-3">
+          <Input.TextArea
+            ref={inputRef}
+            value={note}
+            rows={5}
+            placeholder="Nhập ghi chú vé mời"
+            onFocus={() => setIsKeyboardOpen(true)}
+            onChange={handleNoteChange}
+          />
+          <div className={`invoice-keyboard-drawer ${isKeyboardOpen ? "is-open" : ""}`}>
+            <div className="invoice-keyboard-drawer__header">
+              <span className="invoice-keyboard-drawer__title">Bàn phím ảo</span>
+              <button
+                type="button"
+                onClick={() => setIsKeyboardOpen(false)}
+                className="invoice-keyboard-drawer__close"
+              >
+                <ChevronDown size={18} />
+              </button>
+            </div>
+            <Keyboard
+              keyboardRef={(instance) => {
+                keyboardRef.current = instance;
+              }}
+              theme="hg-theme-default invoice-keyboard-theme"
+              layoutName={layoutName}
+              inputName="note"
+              onKeyPress={handleKeyboardKeyPress}
+              layout={{
+                default: [
+                  "` 1 2 3 4 5 6 7 8 9 0 - = {bksp}",
+                  "{tab} q w e r t y u i o p [ ] \\",
+                  "{lock} a s d f g h j k l ; '",
+                  "{shift} z x c v b n m , . / {shift}",
+                  ".com @ {space} {enter}"
+                ],
+                shift: [
+                  "~ ! @ # $ % ^ & * ( ) _ + {bksp}",
+                  "{tab} Q W E R T Y U I O P { } |",
+                  '{lock} A S D F G H J K L : "',
+                  "{shift} Z X C V B N M < > ? {shift}",
+                  ".com @ {space} {enter}"
+                ]
+              }}
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -46,11 +46,11 @@ const CancellationTicketsPage = () => {
       fixed: "left"
     },
     {
-      title: "Ngày hủy",
+      title: "Thời gian hủy",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
-      render: (value: string) => dayjs(value).utc().format("DD/MM/YYYY"),
-      width: 100
+      render: (value: string) => dayjs(value).format("HH:mm DD/MM/YYYY"),
+      width: 150
     },
     {
       title: "Phim",

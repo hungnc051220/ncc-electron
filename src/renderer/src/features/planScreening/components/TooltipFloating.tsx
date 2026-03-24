@@ -1,5 +1,5 @@
 import { formatMoney } from "@renderer/lib/utils";
-import { ListSeat, OrderResponseProps } from "@shared/types";
+import { ListSeat, OrderResponseProps, SellerProps } from "@shared/types";
 import dayjs from "dayjs";
 import { useLayoutEffect, useRef, useState } from "react";
 
@@ -71,6 +71,17 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
     return parsed.isValid() ? parsed.format("HH:mm DD/MM/YYYY") : "--";
   };
 
+  const getActorDisplayName = (person?: SellerProps) => {
+    if (!person) return undefined;
+
+    const fullName = [person.customerFirstName, person.customerLastName]
+      .map((value) => value?.trim())
+      .filter(Boolean)
+      .join(" ");
+
+    return fullName || person.username?.trim() || undefined;
+  };
+
   const itemMatchedSeat = order?.items?.find((item) => {
     const floorKey =
       seat.floor === 1
@@ -87,19 +98,25 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
   });
 
   const actorName =
-    findByKeys(order, ["createdBy", "userName", "userFullName", "createdUser"]) ?? "--";
+    getActorDisplayName(order?.seller) ??
+    findByKeys(order, ["createdBy", "userName", "userFullName", "createdUser"]) ??
+    "--";
 
   const inviterName =
-    findByKeys(order, ["inviterName", "inviter", "createdBy", "userName", "createdUser"]) ?? "--";
+    getActorDisplayName(order?.seller) ??
+    findByKeys(order, ["inviterName", "inviter", "createdBy", "userName", "createdUser"]) ??
+    "--";
 
   const printedBy =
+    getActorDisplayName(order?.printer) ??
     findByKeys(order, [
       "printingUserName",
       "printedBy",
       "printedByName",
       "printingUser",
       "printedUserName"
-    ]) ?? "--";
+    ]) ??
+    "--";
 
   const ticketPrice = itemMatchedSeat?.unitPriceInclTax ?? seat.price ?? 0;
   const seatInfo = seat.positionName?.trim() || labelSeatByType[seat.type] || "Ghế";
@@ -130,7 +147,8 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
         <>
           <p className="font-semibold mb-1 text-sm">Vé mời</p>
           <p>Người mời: {inviterName}</p>
-          <p>Thời gian: {formatDateTime(order.createdOnUtc)}</p>
+          <p>Thời gian tạo: {formatDateTime(order.createdOnUtc)}</p>
+          <p>Thời gian xuất vé: {formatDateTime(order.invitationTickets?.createdAt)}</p>
           <div className="my-2 border border-dashed" />
           <p>{seatInfo}</p>
           <p>Giá ghế: {formatMoney(ticketPrice)}</p>

@@ -121,6 +121,16 @@ const OrderHistoryPage = () => {
       dataIndex: "createdOnUtc",
       render: (_, record) => dayjs(record.order.createdOnUtc).format("DD/MM/YYYY")
     },
+    ...(activeKey === "2"
+      ? [
+          {
+            title: "Máy bán",
+            key: "posName",
+            dataIndex: "posName",
+            render: (_, record) => record.order.items?.[0]?.posName
+          }
+        ]
+      : []),
     {
       title: "Tên khách hàng",
       key: "customerName",
@@ -145,6 +155,12 @@ const OrderHistoryPage = () => {
       key: "filmName",
       dataIndex: "filmName",
       render: (_, record) => record.film?.filmName
+    },
+    {
+      title: "Phòng chiếu",
+      key: "roomName",
+      dataIndex: "room",
+      render: (room) => room?.name
     },
     {
       title: "Ngày chiếu",
