@@ -25,10 +25,18 @@ export interface UpdateInfo {
   version: string;
 }
 
+export interface UpdateDownloadProgress {
+  percent: number;
+  transferred: number;
+  total: number;
+  bytesPerSecond: number;
+}
+
 export interface UpdaterContextType {
   version: string;
   progress: number;
   manualCheck: () => Promise<void>;
+  showVersionInfo: () => Promise<void>;
 }
 
 export interface CurrentSeatState {

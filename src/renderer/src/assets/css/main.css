@@ -282,6 +282,41 @@
     text-decoration: none;
   }
 
+  .version-info-modal .ant-modal-container {
+    padding: 0 !important;
+    overflow: hidden;
+    border-radius: 22px;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .version-info-modal .ant-modal-container {
+    padding: 0 !important;
+  }
+
+  .version-info-modal .ant-modal-close {
+    top: 12px !important;
+    right: 12px !important;
+    color: white !important;
+    background: rgb(255 255 255 / 0.16) !important;
+    border-radius: 999px !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    backdrop-filter: blur(6px);
+  }
+
+  .version-info-modal .ant-modal-close:hover {
+    background: rgb(255 255 255 / 0.24) !important;
+    color: white !important;
+  }
+
+  .dark .version-info-modal .ant-modal-content {
+    box-shadow: none !important;
+  }
+
   .selecto-selection {
     display: none !important;
   }

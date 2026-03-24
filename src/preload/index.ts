@@ -7,6 +7,7 @@ import {
   PlanScreeningDetailProps,
   QrState,
   SeatTypeProps,
+  UpdateDownloadProgress,
   UpdateInfo
 } from "@shared/types";
 
@@ -64,9 +65,21 @@ const api: PreloadAPI = {
     return () => ipcRenderer.removeListener("update:available", handler);
   },
 
-  onProgress: (cb) => ipcRenderer.on("update:progress", (_, percent) => cb(percent)),
-  onReady: (cb: () => void) => ipcRenderer.on("update:ready", cb),
-  onError: (cb: (msg: string) => void) => ipcRenderer.on("update:error", (_, msg) => cb(msg)),
+  onProgress: (cb) => {
+    const handler = (_: unknown, progress: UpdateDownloadProgress) => cb(progress);
+    ipcRenderer.on("update:progress", handler);
+    return () => ipcRenderer.removeListener("update:progress", handler);
+  },
+  onReady: (cb: () => void) => {
+    const handler = () => cb();
+    ipcRenderer.on("update:ready", handler);
+    return () => ipcRenderer.removeListener("update:ready", handler);
+  },
+  onError: (cb: (msg: string) => void) => {
+    const handler = (_: unknown, msg: string) => cb(msg);
+    ipcRenderer.on("update:error", handler);
+    return () => ipcRenderer.removeListener("update:error", handler);
+  },
   getPrinters: () => ipcRenderer.invoke("get-printers"),
   sendThemeUpdate: (theme) => ipcRenderer.send("theme:update", theme),
 

@@ -6,6 +6,7 @@ import {
   PrintTicketPayload,
   QrState,
   SeatTypeProps,
+  UpdateDownloadProgress,
   UpdateInfo
 } from "@shared/types";
 
@@ -41,10 +42,10 @@ export interface PreloadAPI {
   checkUpdate(): Promise<UpdateInfo | null>;
   startDownload(): Promise<void>;
   install(): Promise<void>;
-  onAvailable(cb: (info: UpdateInfo) => void): void;
-  onProgress(cb: (percent: number) => void): void;
-  onReady(cb: () => void): void;
-  onError(cb: (msg: string) => void): void;
+  onAvailable(cb: (info: UpdateInfo) => void): () => void;
+  onProgress(cb: (progress: UpdateDownloadProgress) => void): () => void;
+  onReady(cb: () => void): () => void;
+  onError(cb: (msg: string) => void): () => void;
   getPrinters: () => Promise<Electron.PrinterInfo[]>;
   sendThemeUpdate: (theme: AppTheme) => void;
   requestTheme: () => void;

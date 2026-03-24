@@ -15,7 +15,7 @@ type NavConfig = {
 };
 
 const NavItems = () => {
-  const { manualCheck } = useUpdater();
+  const { showVersionInfo } = useUpdater();
   const [current, setCurrent] = useState("");
   const { can } = usePermission();
 
@@ -45,9 +45,9 @@ const NavItems = () => {
           permissionKey: "machine_serials"
         },
         {
-          label: "Kiểm tra phiên bản",
+          label: "Thông tin phiên bản",
           key: "check-update",
-          onClick: manualCheck
+          onClick: showVersionInfo
         }
       ]
     },

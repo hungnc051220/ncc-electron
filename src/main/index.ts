@@ -75,7 +75,12 @@ function setupUpdater(win: BrowserWindow) {
   });
 
   autoUpdater.on("download-progress", (p) => {
-    win.webContents.send("update:progress", Math.round(p.percent));
+    win.webContents.send("update:progress", {
+      percent: Math.round(p.percent),
+      transferred: p.transferred,
+      total: p.total,
+      bytesPerSecond: p.bytesPerSecond
+    });
   });
 
   autoUpdater.on("update-downloaded", () => {
