@@ -397,13 +397,13 @@ app.whenReady().then(() => {
         throw new Error("No tickets to print");
       }
 
+      if (!printerName) {
+        throw new Error("No printer selected");
+      }
+
       return printService.enqueue(async () => {
         for (const ticket of tickets) {
-          try {
-            await printService.printSingleTicket(ticket, printerName);
-          } catch (err) {
-            console.error("Failed printing ticket:", err);
-          }
+          await printService.printSingleTicket(ticket, printerName);
         }
       });
     }

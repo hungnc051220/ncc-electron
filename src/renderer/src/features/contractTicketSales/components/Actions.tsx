@@ -7,6 +7,7 @@ import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { getPrintErrorMessage } from "@renderer/lib/print";
 import { buildTicketsFromOrder, formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -74,6 +75,7 @@ const Actions = ({
   selectedSeats,
   setSelectedSeats
 }: ActionsProps) => {
+  const printMessageKey = `contract-ticket-sales-print-${contractOrderId}`;
   const [form] = Form.useForm<FieldType>();
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
@@ -126,6 +128,11 @@ const Actions = ({
   const handlePrint = useCallback(
     async (orderId: number) => {
       try {
+        message.loading({
+          key: printMessageKey,
+          content: "Đang in vé..."
+        });
+
         const orderDetail = await queryClient.fetchQuery({
           queryKey: ordersKeys.getDetail(orderId),
           queryFn: () => ordersApi.getDetail(orderId)
@@ -135,13 +142,20 @@ const Actions = ({
 
         await window.api?.printTickets(tickets, selectedPrinter);
 
-        message.success("In vé thành công");
+        message.success({
+          key: printMessageKey,
+          content: "In vé thành công"
+        });
       } catch (error) {
         console.error(error);
-        message.error("In vé thất bại");
+        message.error({
+          key: printMessageKey,
+          content: getPrintErrorMessage(error),
+          duration: 4
+        });
       }
     },
-    [queryClient, selectedPrinter, user, posName]
+    [posName, printMessageKey, queryClient, selectedPrinter, user]
   );
 
   const items: DescriptionsProps["items"] = [

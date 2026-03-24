@@ -3,6 +3,7 @@ import { useMarkPrintedOrder } from "@renderer/hooks/orders/useMarkPrintedOrder"
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { getPrintErrorMessage } from "@renderer/lib/print";
 import { buildTicketsFromOrder, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -66,12 +67,27 @@ const PrintOnlineTicketsPage = () => {
   const unmarkPrintedOrder = useUnmarkPrintedOrder();
 
   const onPrint = async (orderDetail: OrderDetailProps) => {
+    const messageKey = `print-online-ticket-${orderDetail.order.id}`;
+
+    message.loading({
+      key: messageKey,
+      content: "Đang in vé..."
+    });
+
     try {
       const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posShortName);
       await window.api.printTickets(tickets, selectedPrinter);
-      message.success("In vé thành công");
-    } catch {
-      message.error("In vé thất bại");
+      message.success({
+        key: messageKey,
+        content: "In vé thành công"
+      });
+    } catch (error) {
+      message.error({
+        key: messageKey,
+        content: getPrintErrorMessage(error),
+        duration: 4
+      });
+      return;
     }
 
     await markPrintedOrder.mutateAsync(

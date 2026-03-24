@@ -589,6 +589,12 @@ describe("Actions", () => {
       expect(mocks.messageSuccess).toHaveBeenCalledWith(
         "Thanh toán thành công! Đang cập nhật dữ liệu..."
       );
+      expect(sessionStorage.getItem("lastTotal")).toBe("100000");
+      expect(
+        screen.getAllByText(
+          (content) => content.replace(/\s/g, "") === formatMoney(100000).replace(/\s/g, "")
+        )
+      ).not.toHaveLength(0);
       expect(window.api?.sendQrClose).toHaveBeenCalled();
       expect(screen.queryByTestId("qr-dialog")).not.toBeInTheDocument();
       expect(mocks.invalidateQueries).toHaveBeenCalledWith({

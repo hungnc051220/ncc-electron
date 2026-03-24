@@ -1,5 +1,6 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useContractTicketSales } from "@renderer/hooks/contractTicketSales/useContractTicketSales";
+import { getPrintErrorMessage } from "@renderer/lib/print";
 import {
   buildTicketsFromOrder,
   filterEmptyValues,
@@ -101,10 +102,11 @@ const ContractTicketSalesPage = () => {
           content: "In vé thành công",
           key: messageKey
         });
-      } catch {
+      } catch (error) {
         message.error({
-          content: "In vé thất bại",
-          key: messageKey
+          content: getPrintErrorMessage(error),
+          key: messageKey,
+          duration: 4
         });
       }
     },

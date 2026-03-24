@@ -70,6 +70,7 @@ const Seats = ({
   const selectoRef = useRef<Selecto>(null);
   const isSelectingRef = useRef(false);
   const mainContainerRef = useRef<HTMLDivElement>(null);
+  const [dragContainer, setDragContainer] = useState<HTMLDivElement | null>(null);
   const [seatSize, setSeatSize] = useState<number | null>(null);
   const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(null);
   const [hoverSeat, setHoverSeat] = useState<ListSeat | null>(null);
@@ -597,7 +598,10 @@ const Seats = ({
 
         <div
           className="mt-2 flex-1 flex justify-center items-center min-h-0"
-          ref={seatContainerRef}
+          ref={(node) => {
+            seatContainerRef.current = node;
+            setDragContainer(node);
+          }}
         >
           <div
             className="space-y-1 flex flex-col items-center px-2"
@@ -625,26 +629,28 @@ const Seats = ({
         </div>
 
         {/* React-Selecto với cấu hình tối ưu */}
-        <Selecto
-          key={`selecto-${selectedFloor}`}
-          ref={selectoRef}
-          dragContainer=".seat-row"
-          selectableTargets={[".selectable-seat"]}
-          hitRate={0}
-          selectByClick={false}
-          selectFromInside={true}
-          toggleContinueSelect={["shift"]}
-          ratio={0}
-          onSelectStart={() => {
-            isSelectingRef.current = true;
-          }}
-          onSelect={handleSelectoSelect}
-          onSelectEnd={() => {
-            setTimeout(() => {
-              isSelectingRef.current = false;
-            }, 100);
-          }}
-        />
+        {seatSize !== null && (
+          <Selecto
+            key={`selecto-${selectedFloor}`}
+            ref={selectoRef}
+            dragContainer={dragContainer ?? undefined}
+            selectableTargets={[".selectable-seat"]}
+            hitRate={0}
+            selectByClick={false}
+            selectFromInside={true}
+            toggleContinueSelect={["shift"]}
+            ratio={0}
+            onSelectStart={() => {
+              isSelectingRef.current = true;
+            }}
+            onSelect={handleSelectoSelect}
+            onSelectEnd={() => {
+              setTimeout(() => {
+                isSelectingRef.current = false;
+              }, 100);
+            }}
+          />
+        )}
       </div>
 
       {hoverSeat && tooltipPos && (

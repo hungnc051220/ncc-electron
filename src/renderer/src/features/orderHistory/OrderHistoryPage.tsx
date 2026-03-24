@@ -1,6 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
+import { getPrintErrorMessage } from "@renderer/lib/print";
 import {
   buildTicketsFromOrder,
   filterEmptyValues,
@@ -77,12 +78,26 @@ const OrderHistoryPage = () => {
   const { data: orders, isFetching } = useOrders(params);
 
   const handlePrint = async (orderDetail: OrderDetailProps) => {
+    const messageKey = `order-history-print-${orderDetail.order.id}`;
+
+    message.loading({
+      key: messageKey,
+      content: "Đang in vé..."
+    });
+
     try {
       const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posShortName);
       await window.api.printTickets(tickets, selectedPrinter);
-      message.success("In vé thành công");
-    } catch {
-      message.error("In vé thất bại");
+      message.success({
+        key: messageKey,
+        content: "In vé thành công"
+      });
+    } catch (error) {
+      message.error({
+        key: messageKey,
+        content: getPrintErrorMessage(error),
+        duration: 4
+      });
     }
   };
 

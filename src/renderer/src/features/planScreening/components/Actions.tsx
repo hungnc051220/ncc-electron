@@ -26,6 +26,7 @@ import axios from "axios";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { getPrintErrorMessage } from "@renderer/lib/print";
 import { onOrderPaymentUpdated } from "@renderer/socket/socket";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState } from "react";
@@ -118,6 +119,7 @@ const Actions = ({
   cancelMode,
   setCancelMode
 }: ActionsProps) => {
+  const printMessageKey = "plan-screening-print";
   const [form] = Form.useForm();
   const [searchParams] = useSearchParams();
   const { posName, posShortName } = useSettingPosStore();
@@ -137,6 +139,7 @@ const Actions = ({
   const [invoiceOrderId, setInvoiceOrderId] = useState<number | undefined>(undefined);
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
+  const [lastSaleTotal, setLastSaleTotal] = useState(() => Number(sessionStorage.getItem("lastTotal")) || 0);
 
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
@@ -185,11 +188,19 @@ const Actions = ({
   const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
   const [isCancelReservePending, setIsCancelReservePending] = useState(false);
 
-  const lastTotal = sessionStorage.getItem("lastTotal");
+  const syncLastSaleTotal = useCallback((total: number) => {
+    sessionStorage.setItem("lastTotal", total.toString());
+    setLastSaleTotal(total);
+  }, []);
 
   const handlePrint = useCallback(
     async (orderId: number) => {
       try {
+        message.loading({
+          key: printMessageKey,
+          content: "Đang in vé..."
+        });
+
         const orderDetail = await queryClient.fetchQuery({
           queryKey: ordersKeys.getDetail(orderId),
           queryFn: () => ordersApi.getDetail(orderId)
@@ -214,10 +225,17 @@ const Actions = ({
           })
         ]);
 
-        message.success("In vé thành công");
+        message.success({
+          key: printMessageKey,
+          content: "In vé thành công"
+        });
       } catch (error) {
         console.error(error);
-        message.error("In vé thất bại");
+        message.error({
+          key: printMessageKey,
+          content: getPrintErrorMessage(error),
+          duration: 4
+        });
       }
     },
     [planScreenId, posShortName, queryClient, selectedPrinter, user, posName]
@@ -226,6 +244,10 @@ const Actions = ({
   useEffect(() => {
     const cleanup = onOrderPaymentUpdated((data) => {
       if (data.paymentStatus !== 30) return;
+
+      if (qrData && String(qrData.orderId) === String(data.orderId)) {
+        syncLastSaleTotal(qrData.orderTotal);
+      }
 
       message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
       if (canPrint) {
@@ -241,7 +263,7 @@ const Actions = ({
     });
 
     return cleanup;
-  }, [canPrint, handlePrint, planScreenId, queryClient, setSelectedSeats]);
+  }, [canPrint, handlePrint, planScreenId, qrData, queryClient, setSelectedSeats, syncLastSaleTotal]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -344,7 +366,7 @@ const Actions = ({
           return;
         }
 
-        sessionStorage.setItem("lastTotal", order.orderTotal.toString());
+        syncLastSaleTotal(order.orderTotal);
         message.success("Tạo đơn thành công");
         setSelectedSeats([]);
         setSelectedDiscountGroups({});
@@ -698,7 +720,7 @@ const Actions = ({
             <span className="text-xs">Xuất hóa đơn</span>
           </Checkbox>
           <p className="text-gray-500">Tiền vừa bán:</p>
-          <p className="font-bold text-red-500 text-sm">{formatMoney(Number(lastTotal) || 0)}</p>
+          <p className="font-bold text-red-500 text-sm">{formatMoney(lastSaleTotal)}</p>
         </div>
         <div className="grid grid-cols-1 gap-1.5">
           <Button
