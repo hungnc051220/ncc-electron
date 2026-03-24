@@ -2,7 +2,7 @@ import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanSc
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { useThemeStore } from "@renderer/store/theme.store";
 import { ListSeat, PlanScreeningDetailProps, QrState, SeatTypeProps } from "@shared/types";
-import { Spin } from "antd";
+import { Button, Result, Spin } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import Actions from "./components/Actions";
@@ -146,7 +146,6 @@ const PlanScreeningPage = () => {
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectingSeatsByOther({});
 
     const parseSeatIndexes = (value: string, floor: number) =>
@@ -264,12 +263,66 @@ const PlanScreeningPage = () => {
     };
   }, [id, isCustomerMode, posName]);
 
-  if (!id && !data) return null;
-
   const renderData = isCustomerMode ? customerData : data;
   const renderSeatTypes = isCustomerMode ? customerSeatTypes : seatTypes;
 
-  if (!renderData) return null;
+  if (!id) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-app-bg p-4">
+        <Result
+          status="warning"
+          title="Không tìm thấy mã suất chiếu"
+          subTitle="Không xác định được dữ liệu để hiển thị sơ đồ ghế."
+          extra={
+            !isCustomerMode ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  sessionStorage.removeItem("lastTotal");
+                  window.history.back();
+                }}
+              >
+                Quay lại
+              </Button>
+            ) : null
+          }
+        />
+      </div>
+    );
+  }
+
+  if (!renderData) {
+    if (isFetching) {
+      return (
+        <Spin spinning>
+          <div className="h-screen" />
+        </Spin>
+      );
+    }
+
+    return (
+      <div className="flex h-screen items-center justify-center bg-app-bg p-4">
+        <Result
+          status="error"
+          title="Không tải được dữ liệu suất chiếu"
+          subTitle="Có thể kết nối mạng hoặc API đang gặp sự cố. Bạn vẫn có thể quay lại để thử lại sau."
+          extra={
+            !isCustomerMode ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  sessionStorage.removeItem("lastTotal");
+                  window.history.back();
+                }}
+              >
+                Quay lại
+              </Button>
+            ) : null
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <Spin spinning={isFetching}>

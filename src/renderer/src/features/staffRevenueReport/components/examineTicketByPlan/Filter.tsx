@@ -3,10 +3,11 @@ import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import { usersApi } from "@renderer/api/users.api";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
+import { useQuery } from "@tanstack/react-query";
 import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { ValuesProps } from ".";
 
 const { RangePicker } = DatePicker;
@@ -24,8 +25,12 @@ interface FilterProps {
 }
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<ValuesProps>();
   const [open, setOpen] = useState(false);
+  const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | undefined>(
+    filterValues.manufacturerId
+  );
+  const [selectedFilmId, setSelectedFilmId] = useState<number | undefined>(filterValues.filmId);
 
   const userSelect = useInfiniteSelectOptions({
     queryKey: ["users"],
@@ -49,23 +54,115 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     mapOption: (item) => ({
       value: item.id,
       label: item.name
-    })
+    }),
+    prefetchAll: true
   });
 
   const filmSelect = useInfiniteSelectOptions({
-    queryKey: ["films"],
+    queryKey: ["films", selectedManufacturerId],
     queryFn: ({ pageParam, searchText }) =>
-      filmsApi.getAll({ current: pageParam, pageSize: 20, filmName: searchText }),
+      filmsApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        filmName: searchText,
+        manufacturerId: selectedManufacturerId
+      }),
     mapOption: (item) => ({
       value: item.id,
       label: item.filmName
     })
   });
 
+  const { data: selectedFilmDetail } = useQuery({
+    queryKey: ["staff-examine-ticket-film-detail", selectedFilmId],
+    queryFn: () => filmsApi.getDetail(selectedFilmId!),
+    enabled: open && !!selectedFilmId
+  });
+
+  const manufacturerOptions = useMemo(() => {
+    const selectedOption =
+      selectedManufacturerId
+        ? ((manufacturerSelect.options.find((item) => item.value === selectedManufacturerId) as
+            | { value: number; label: string }
+            | undefined) ?? null)
+        : null;
+
+    return [selectedOption, ...manufacturerSelect.options].filter(
+      (option, index, arr): option is { value: number; label: string } =>
+        !!option && arr.findIndex((item) => item?.value === option.value) === index
+    );
+  }, [manufacturerSelect.options, selectedManufacturerId]);
+
+  const filmOptions = useMemo(() => {
+    const selectedOption =
+      selectedFilmId && selectedFilmDetail
+        ? {
+            value: selectedFilmDetail.id,
+            label: selectedFilmDetail.filmName
+          }
+        : null;
+
+    return [selectedOption, ...filmSelect.options].filter(
+      (option, index, arr): option is { value: number; label: string } =>
+        !!option && arr.findIndex((item) => item?.value === option.value) === index
+    );
+  }, [filmSelect.options, selectedFilmDetail, selectedFilmId]);
+
+  useEffect(() => {
+    form.setFieldsValue(filterValues);
+    setSelectedManufacturerId(filterValues.manufacturerId);
+    setSelectedFilmId(filterValues.filmId);
+  }, [filterValues, form]);
+
+  useEffect(() => {
+    if (!open || !selectedFilmDetail?.manufacturerId) {
+      return;
+    }
+
+    if (selectedManufacturerId !== selectedFilmDetail.manufacturerId) {
+      setSelectedManufacturerId(selectedFilmDetail.manufacturerId);
+      form.setFieldValue("manufacturerId", selectedFilmDetail.manufacturerId);
+    }
+  }, [open, selectedFilmDetail, selectedManufacturerId, form]);
+
+  const handleManufacturerChange = (value: number | undefined) => {
+    setSelectedManufacturerId(value);
+    manufacturerSelect.onClear();
+    filmSelect.resetSearch();
+
+    if (!value) {
+      setSelectedFilmId(undefined);
+      form.setFieldsValue({
+        manufacturerId: undefined,
+        filmId: undefined
+      });
+      return;
+    }
+
+    if (selectedFilmDetail?.manufacturerId && selectedFilmDetail.manufacturerId !== value) {
+      setSelectedFilmId(undefined);
+      form.setFieldsValue({
+        manufacturerId: value,
+        filmId: undefined
+      });
+      return;
+    }
+
+    form.setFieldValue("manufacturerId", value);
+  };
+
+  const handleFilmChange = (value: number | undefined) => {
+    setSelectedFilmId(value);
+    filmSelect.onClear();
+    form.setFieldValue("filmId", value);
+  };
+
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
+      setSelectedManufacturerId(undefined);
+      setSelectedFilmId(undefined);
       userSelect.resetSearch();
       manufacturerSelect.resetSearch();
       filmSelect.resetSearch();
@@ -146,10 +243,11 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
               onSearch: manufacturerSelect.onSearch
             }}
             loading={manufacturerSelect.loading}
-            options={manufacturerSelect.options}
+            options={manufacturerOptions}
             placeholder="Chọn hãng phim"
             onPopupScroll={manufacturerSelect.onPopupScroll}
-            onClear={manufacturerSelect.onClear}
+            onClear={() => handleManufacturerChange(undefined)}
+            onChange={handleManufacturerChange}
             allowClear
           />
         </Form.Item>
@@ -161,10 +259,11 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
               onSearch: filmSelect.onSearch
             }}
             loading={filmSelect.loading}
-            options={filmSelect.options}
+            options={filmOptions}
             placeholder="Chọn phim"
             onPopupScroll={filmSelect.onPopupScroll}
-            onClear={filmSelect.onClear}
+            onClear={() => handleFilmChange(undefined)}
+            onChange={handleFilmChange}
             allowClear
           />
         </Form.Item>

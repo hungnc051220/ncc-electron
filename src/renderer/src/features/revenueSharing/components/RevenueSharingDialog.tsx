@@ -14,7 +14,7 @@ import dayjs from "dayjs";
 import type { FormProps, TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, InputNumber, Modal, Select, Space, message } from "antd";
 import axios from "axios";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const { RangePicker } = DatePicker;
 
@@ -60,8 +60,12 @@ const RevenueSharingDialog = ({
 }: RevenueSharingDialogProps) => {
   const [form] = Form.useForm<FieldType>();
   const isEdit = !!editingRevenueSharing;
-  const selectedFilmId = Form.useWatch("filmId", form);
-  const selectedManufacturerId = Form.useWatch("manufacturerId", form);
+  const [selectedFilmId, setSelectedFilmId] = useState<number | undefined>(
+    editingRevenueSharing?.filmId
+  );
+  const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | undefined>(
+    editingRevenueSharing?.manufacturerId
+  );
 
   const manufacturerSelect = useInfiniteSelectOptions({
     queryKey: ["manufacturers"],
@@ -75,16 +79,18 @@ const RevenueSharingDialog = ({
     mapOption: (item) => ({
       value: item.id,
       label: item.name
-    })
+    }),
+    prefetchAll: true
   });
 
   const filmSelect = useInfiniteSelectOptions({
-    queryKey: ["films"],
+    queryKey: ["films", selectedManufacturerId],
     queryFn: ({ pageParam, searchText }) =>
       filmsApi.getAll({
         current: pageParam,
         pageSize: 20,
-        filmName: searchText
+        filmName: searchText,
+        manufacturerId: selectedManufacturerId
       }),
     mapOption: (item) => ({
       value: item.id,
@@ -165,6 +171,8 @@ const RevenueSharingDialog = ({
     }
 
     if (!isEdit) {
+      setSelectedManufacturerId(undefined);
+      setSelectedFilmId(undefined);
       form.setFieldsValue({
         manufacturerId: undefined,
         filmId: undefined,
@@ -182,7 +190,28 @@ const RevenueSharingDialog = ({
       manufacturerId: editingRevenueSharing.manufacturerId,
       filmId: editingRevenueSharing.filmId
     });
+    setSelectedManufacturerId(editingRevenueSharing.manufacturerId);
+    setSelectedFilmId(editingRevenueSharing.filmId);
   }, [open, editingRevenueSharing, form]);
+
+  useEffect(() => {
+    if (!open || !selectedFilmDetail?.manufacturerId) {
+      return;
+    }
+
+    if (selectedManufacturerId !== selectedFilmDetail.manufacturerId) {
+      setSelectedManufacturerId(selectedFilmDetail.manufacturerId);
+      form.setFieldValue("manufacturerId", selectedFilmDetail.manufacturerId);
+    }
+  }, [open, selectedFilmDetail, selectedManufacturerId, form]);
+
+  useEffect(() => {
+    if (!open || selectedFilmId) {
+      return;
+    }
+
+    form.setFieldValue("sharingRates", [emptyRow]);
+  }, [open, selectedFilmId, form]);
 
   useEffect(() => {
     if (!open || !selectedFilmId || !sharingRatesResponse) {
@@ -200,8 +229,48 @@ const RevenueSharingDialog = ({
     form.setFieldValue("sharingRates", sharingRates.length ? sharingRates : [emptyRow]);
   }, [open, selectedFilmId, sharingRatesResponse, form]);
 
+  const handleManufacturerChange = (value: number | undefined) => {
+    setSelectedManufacturerId(value);
+    manufacturerSelect.onClear();
+    filmSelect.resetSearch();
+
+    if (!value) {
+      setSelectedFilmId(undefined);
+      form.setFieldsValue({
+        manufacturerId: undefined,
+        filmId: undefined,
+        sharingRates: [emptyRow]
+      });
+      return;
+    }
+
+    if (selectedFilmDetail?.manufacturerId && selectedFilmDetail.manufacturerId !== value) {
+      setSelectedFilmId(undefined);
+      form.setFieldsValue({
+        manufacturerId: value,
+        filmId: undefined,
+        sharingRates: [emptyRow]
+      });
+      return;
+    }
+
+    form.setFieldValue("manufacturerId", value);
+  };
+
+  const handleFilmChange = (value: number | undefined) => {
+    setSelectedFilmId(value);
+    filmSelect.onClear();
+    form.setFieldValue("filmId", value);
+
+    if (!value) {
+      form.setFieldValue("sharingRates", [emptyRow]);
+    }
+  };
+
   const onCancel = () => {
     form.resetFields();
+    setSelectedManufacturerId(undefined);
+    setSelectedFilmId(undefined);
     manufacturerSelect.resetSearch();
     filmSelect.resetSearch();
     onOpenChange(false);
@@ -342,7 +411,8 @@ const RevenueSharingDialog = ({
               placeholder="Chọn hãng phim"
               disabled={isEdit}
               onPopupScroll={manufacturerSelect.onPopupScroll}
-              onClear={manufacturerSelect.onClear}
+              onClear={() => handleManufacturerChange(undefined)}
+              onChange={handleManufacturerChange}
               allowClear={!isEdit}
             />
           </Form.Item>
@@ -362,7 +432,8 @@ const RevenueSharingDialog = ({
               placeholder="Chọn phim"
               disabled={isEdit}
               onPopupScroll={filmSelect.onPopupScroll}
-              onClear={filmSelect.onClear}
+              onClear={() => handleFilmChange(undefined)}
+              onChange={handleFilmChange}
               allowClear={!isEdit}
             />
           </Form.Item>

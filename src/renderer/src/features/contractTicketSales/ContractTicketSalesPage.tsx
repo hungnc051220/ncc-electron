@@ -86,12 +86,26 @@ const ContractTicketSalesPage = () => {
 
   const handlePrint = useCallback(
     async (item: OrderDetailProps) => {
+      const messageKey = `print-contract-ticket-${item.order?.id ?? "unknown"}`;
+
+      message.loading({
+        content: "Đang in vé, vui lòng chờ...",
+        key: messageKey,
+        duration: 0
+      });
+
       try {
         const tickets = await buildTicketsFromOrder(item, user?.fullname, posShortName);
         await window.api.printTickets(tickets, selectedPrinter);
-        message.success("In vé thành công");
+        message.success({
+          content: "In vé thành công",
+          key: messageKey
+        });
       } catch {
-        message.error("In vé thất bại");
+        message.error({
+          content: "In vé thất bại",
+          key: messageKey
+        });
       }
     },
     [posShortName, selectedPrinter, user]

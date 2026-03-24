@@ -4,6 +4,7 @@ import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
+import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { buildTicketsFromOrder, cn, formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -180,7 +181,9 @@ const Actions = ({
   const createOrder = useCreateOrder();
   const createQr = useCreateQrOrder();
   const cancelOrder = useCancelOrder();
+  const { data: screeningOrders } = useOrdersByScreening(planScreenId);
   const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
+  const [isCancelReservePending, setIsCancelReservePending] = useState(false);
 
   const lastTotal = sessionStorage.getItem("lastTotal");
 
@@ -535,7 +538,74 @@ const Actions = ({
     });
   };
 
-  const disableActions = createOrder.isPending || cancelOrder.isPending || isPlanScreeningPast;
+  const onCancelReserve = async () => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
+    const selectedSeatCodes = new Set(
+      selectedSeats.map((seat) => `${seat.floor}-${seat.code.trim().toUpperCase()}`)
+    );
+    const orderIds = Array.from(
+      new Set(
+        (screeningOrders || [])
+          .filter((order) =>
+            order.items.some((item) =>
+              [item.listChairValueF1, item.listChairValueF2, item.listChairValueF3].some(
+                (seatValues, floorIndex) =>
+                  (seatValues || "")
+                    .split(",")
+                    .map((seat) => seat.trim())
+                    .filter(Boolean)
+                    .some(
+                      (seatCode) =>
+                        selectedSeatCodes.has(`${floorIndex + 1}-${seatCode.toUpperCase()}`)
+                    )
+              )
+            )
+          )
+          .map((order) => order.id)
+      )
+    );
+
+    if (orderIds.length === 0) {
+      message.error("Không xác định được đơn giữ chỗ của các ghế đã chọn");
+      return;
+    }
+
+    setIsCancelReservePending(true);
+
+    try {
+      await ordersApi.cancelReserve({
+        listChairIndexF1: selectedSeats.filter((seat) => seat.floor === 1).map((seat) => seat.seat),
+        listChairIndexF2: selectedSeats.filter((seat) => seat.floor === 2).map((seat) => seat.seat),
+        listChairIndexF3: selectedSeats.filter((seat) => seat.floor === 3).map((seat) => seat.seat),
+        orderIds
+      });
+
+      setSelectedSeats([]);
+      setSelectedDiscountGroups({});
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) }),
+        queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) })
+      ]);
+      message.success("Huỷ giữ chỗ thành công");
+    } catch (error) {
+      let msg = "Huỷ giữ chỗ thất bại";
+
+      if (axios.isAxiosError<ApiError>(error)) {
+        msg = error.response?.data?.message ?? msg;
+      }
+
+      message.error(msg);
+    } finally {
+      setIsCancelReservePending(false);
+    }
+  };
+
+  const disableActions =
+    createOrder.isPending || cancelOrder.isPending || isCancelReservePending || isPlanScreeningPast;
 
   return (
     <div
@@ -630,7 +700,7 @@ const Actions = ({
           <p className="text-gray-500">Tiền vừa bán:</p>
           <p className="font-bold text-red-500 text-sm">{formatMoney(Number(lastTotal) || 0)}</p>
         </div>
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 gap-1.5">
           <Button
             variant="outlined"
             color="green"
@@ -643,9 +713,9 @@ const Actions = ({
             variant="outlined"
             danger
             disabled={disableActions || !canUpdate}
-            onClick={() => onCancelSeats()}
+            onClick={() => void onCancelReserve()}
           >
-            Hủy giữ
+            Huỷ giữ
           </Button>
         </div>
 

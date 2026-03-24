@@ -2,8 +2,11 @@
 
 import { useCreateInvitationTicket } from "@renderer/hooks/invitationTickets/useCreateInvitationTicket";
 import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
+import { ordersKeys } from "@renderer/hooks/orders/keys";
+import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
-import { ApiError, OrderDetailProps } from "@shared/types";
+import { OrderDetailProps } from "@shared/types";
+import { useQueryClient } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Button, Checkbox, Form, Input, message, Modal, Select, Space } from "antd";
 import axios from "axios";
@@ -46,11 +49,30 @@ interface PrintInvitationTicketDialogProps {
   selectedItem?: OrderDetailProps | null;
 }
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (!axios.isAxiosError(error)) {
+    return fallback;
+  }
+
+  const responseMessage = error.response?.data?.message;
+
+  if (Array.isArray(responseMessage)) {
+    return responseMessage[0] ?? fallback;
+  }
+
+  if (typeof responseMessage === "string") {
+    return responseMessage;
+  }
+
+  return fallback;
+};
+
 const PrintInvitationTicketDialog = ({
   open,
   onOpenChange,
   selectedItem
 }: PrintInvitationTicketDialogProps) => {
+  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const uploadImage = useUploadImage();
@@ -147,50 +169,57 @@ const PrintInvitationTicketDialog = ({
 
     const outputPath = await getOutputPath(values);
 
-    if (outputPath && values.title && values.receivedEmail) {
-      const file = await filePathToFile(outputPath, selectedItem.order.barCode);
-      if (file) {
-        await uploadImage.mutateAsync(file, {
-          onSuccess: (imageUrl) => {
-            createInvitationTicket.mutateAsync(
-              {
-                orderId: selectedItem.order.id,
-                receivedEmail: values.receivedEmail,
-                status: "sent",
-                urlTicket: imageUrl,
-                title: values.title
-              },
-              {
-                onSuccess: () => {
-                  message.success("Gửi mail thành công");
-                },
-                onError: (error: unknown) => {
-                  let msg = "Gửi mail thất bại";
-
-                  if (axios.isAxiosError<ApiError>(error)) {
-                    msg = error.response?.data?.message ?? msg;
-                  }
-
-                  message.error(msg);
-                }
-              }
-            );
-          },
-          onError: (error: unknown) => {
-            let msg = "Tải ảnh thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
-            return;
-          }
-        });
-      }
+    if (!outputPath) {
+      return;
     }
-    message.success("Xuất vé thành công");
-    onOpenChange(false);
+
+    if (!values.title || !values.receivedEmail) {
+      message.success("Xuất vé thành công");
+      onOpenChange(false);
+      return;
+    }
+
+    try {
+      const file = await filePathToFile(outputPath, selectedItem.order.barCode);
+      let imageUrl = "";
+
+      try {
+        imageUrl = await uploadImage.mutateAsync(file);
+      } catch (error: unknown) {
+        message.error(getApiErrorMessage(error, "Tải ảnh thất bại"));
+        return;
+      }
+
+      try {
+        await createInvitationTicket.mutateAsync({
+          orderId: selectedItem.order.id,
+          receivedEmail: values.receivedEmail,
+          status: "sent",
+          urlTicket: imageUrl,
+          title: values.title
+        });
+      } catch (error: unknown) {
+        message.error(getApiErrorMessage(error, "Xuất vé mời qua email thất bại"));
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: planScreeningsKeys.getDetail(selectedItem.planScreening.id)
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.getOrdersByScreening(selectedItem.planScreening.id)
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.all
+        })
+      ]);
+
+      message.success("Xuất vé mời qua email thành công");
+      onOpenChange(false);
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Xuất vé thành công nhưng xử lý tệp thất bại"));
+    }
   };
 
   const image = Form.useWatch("background", form);
@@ -202,9 +231,9 @@ const PrintInvitationTicketDialog = ({
       open={open}
       okButtonProps={{
         htmlType: "submit",
-        autoFocus: true,
-        disabled: createInvitationTicket.isPending || uploadImage.isPending || loading
+        autoFocus: true
       }}
+      confirmLoading={createInvitationTicket.isPending || uploadImage.isPending || loading}
       cancelButtonProps={{
         disabled: createInvitationTicket.isPending || uploadImage.isPending || loading
       }}
@@ -232,7 +261,30 @@ const PrintInvitationTicketDialog = ({
             loading={isFetchingBackgrounds}
           />
         </Form.Item>
-        <Form.Item name="receivedEmail" label="Email người nhận">
+        <Form.Item
+          name="receivedEmail"
+          label="Email người nhận"
+          dependencies={["title"]}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const title = getFieldValue("title");
+
+                if (value && !title) {
+                  return Promise.reject(
+                    new Error("Nhập tiêu đề email khi đã điền email người nhận")
+                  );
+                }
+
+                if (value && !/\S+@\S+\.\S+/.test(value)) {
+                  return Promise.reject(new Error("Email người nhận không hợp lệ"));
+                }
+
+                return Promise.resolve();
+              }
+            })
+          ]}
+        >
           <Input placeholder="Nhập email người nhận" />
         </Form.Item>
 
@@ -250,7 +302,26 @@ const PrintInvitationTicketDialog = ({
           </Space.Compact>
         </Form.Item>
 
-        <Form.Item name="title" label="Tiêu đề email">
+        <Form.Item
+          name="title"
+          label="Tiêu đề email"
+          dependencies={["receivedEmail"]}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const receivedEmail = getFieldValue("receivedEmail");
+
+                if (receivedEmail && !value?.trim()) {
+                  return Promise.reject(
+                    new Error("Nhập tiêu đề email khi đã điền email người nhận")
+                  );
+                }
+
+                return Promise.resolve();
+              }
+            })
+          ]}
+        >
           <Input placeholder="Nhập tiêu đề email" />
         </Form.Item>
         <Form.Item name="sendZaloOA" label={null} valuePropName="checked">

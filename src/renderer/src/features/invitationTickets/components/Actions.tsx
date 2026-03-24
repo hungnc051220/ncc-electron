@@ -1,4 +1,5 @@
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
+import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
@@ -10,9 +11,9 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Input, Modal, message } from "antd";
+import { Button, Descriptions, Form, Input, Modal, Select, message } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import axios from "axios";
 import { ChevronDown } from "lucide-react";
@@ -72,7 +73,12 @@ interface ActionsProps {
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
 }
 
+type FieldType = {
+  cancelReasonId: number;
+};
+
 const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: ActionsProps) => {
+  const [cancelForm] = Form.useForm<FieldType>();
   const queryClient = useQueryClient();
   const keyboardRef = useRef<{
     setInput: (input: string, inputName?: string) => void;
@@ -92,6 +98,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
   const [note, setNote] = useState("");
   const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [openCancelSeats, setOpenCancelSeats] = useState(false);
 
   const handleDialogPrintClose = useCallback((open: boolean) => {
     setDialogPrintOpen(open);
@@ -109,6 +116,34 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
   const createOrder = useCreateOrder();
   const cancelOrder = useCancelOrder();
   const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
+
+  const {
+    data: cancellationReasons,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["cancellation-reasons"],
+    queryFn: ({ pageParam = 1 }) =>
+      cancellationReasonsApi.getAll({ current: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
+
+  const cancelReasonOptions = useMemo(() => {
+    return (
+      cancellationReasons?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.reason
+        }))
+      ) ?? []
+    );
+  }, [cancellationReasons]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -228,7 +263,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
     });
   };
 
-  const onCancelSeats = () => {
+  const onCancelSeats = (values: FieldType) => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
       return;
@@ -236,16 +271,14 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
 
     const body: CancelOrderDto = {
       planScreenId: planScreeningId,
-      cancelReasonId: 0,
-      notes: "Huỷ đơn",
-      isRefund: true,
-      cancelReasonMsg: "Huỷ đơn",
+      cancelReasonId: values.cancelReasonId,
       ...buildSeatFieldsByFloor(selectedSeats)
     };
 
     cancelOrder.mutate(body, {
       onSuccess: () => {
         setSelectedSeats([]);
+        setOpenCancelSeats(false);
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
         queryClient.invalidateQueries({
           queryKey: ordersKeys.getOrdersByScreening(planScreeningId)
@@ -295,7 +328,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
               color="danger"
               className="h-full! font-bold"
               disabled={selectedSeats.length === 0 || createOrder.isPending || isPlanScreeningPast}
-              onClick={onCancelSeats}
+              onClick={() => setOpenCancelSeats(true)}
             >
               Hủy vé mời
             </Button>
@@ -310,6 +343,54 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
           selectedItem={selectedItem}
         />
       )}
+
+      <Modal
+        title="Xác nhận hủy vé"
+        open={openCancelSeats}
+        onOk={() => {
+          cancelForm.submit();
+        }}
+        onCancel={() => setOpenCancelSeats(false)}
+        okButtonProps={{
+          loading: cancelOrder.isPending
+        }}
+        cancelButtonProps={{
+          disabled: cancelOrder.isPending
+        }}
+        modalRender={(dom) => (
+          <Form<FieldType>
+            form={cancelForm}
+            onFinish={onCancelSeats}
+            autoComplete="off"
+            layout="vertical"
+          >
+            {dom}
+          </Form>
+        )}
+      >
+        <Form.Item<FieldType>
+          name="cancelReasonId"
+          label="Lý do hủy vé"
+          rules={[{ required: true, message: "Chọn lý do hủy vé" }]}
+        >
+          <Select
+            loading={isFetching || isFetchingNextPage}
+            options={cancelReasonOptions}
+            placeholder="Chọn lý do hủy vé"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
+            allowClear
+          />
+        </Form.Item>
+      </Modal>
 
       <Modal
         open={noteModalOpen}

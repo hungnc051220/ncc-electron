@@ -12,10 +12,19 @@ import Actions from "./Actions";
 let paymentUpdatedHandler:
   | ((payload: { paymentStatus: number; orderId: string }) => void)
   | undefined;
+let screeningOrdersMock: Array<{
+  id: number;
+  items: Array<{
+    listChairValueF1?: string;
+    listChairValueF2?: string;
+    listChairValueF3?: string;
+  }>;
+}> = [];
 const mocks = vi.hoisted(() => ({
   createOrderMutate: vi.fn(),
   createQrMutateAsync: vi.fn(),
   cancelOrderMutate: vi.fn(),
+  cancelReserve: vi.fn(),
   messageSuccess: vi.fn(),
   messageError: vi.fn(),
   invalidateQueries: vi.fn()
@@ -77,6 +86,12 @@ vi.mock("@renderer/hooks/orders/useCreateQrOrder", () => ({
   useCreateQrOrder: () => ({
     mutateAsync: mocks.createQrMutateAsync,
     isPending: false
+  })
+}));
+
+vi.mock("@renderer/hooks/orders/useOrdersByScreening", () => ({
+  useOrdersByScreening: () => ({
+    data: screeningOrdersMock
   })
 }));
 
@@ -172,6 +187,12 @@ vi.mock("../../invoices/components/InvoiceDialog", () => ({
   default: () => null
 }));
 
+vi.mock("@renderer/api/orders.api", () => ({
+  ordersApi: {
+    cancelReserve: mocks.cancelReserve
+  }
+}));
+
 const queryClientMock = {
   invalidateQueries: mocks.invalidateQueries
 };
@@ -227,8 +248,8 @@ const createSeat = (overrides: Partial<ListSeat> = {}): ListSeat => ({
 const createPlanScreening = (): PlanScreeningDetailProps => ({
   id: 1,
   planCinemaId: 1,
-  projectDate: "2026-03-20",
-  projectTime: "2026-03-20T10:00:00.000Z",
+  projectDate: "2099-03-20",
+  projectTime: "2099-03-20T10:00:00.000Z",
   filmId: 1,
   roomId: 1,
   daypartId: 1,
@@ -339,9 +360,11 @@ const getMoneyTexts = (amount: number) =>
 describe("Actions", () => {
   beforeEach(() => {
     paymentUpdatedHandler = undefined;
+    screeningOrdersMock = [];
     mocks.createOrderMutate.mockReset();
     mocks.createQrMutateAsync.mockReset();
     mocks.cancelOrderMutate.mockReset();
+    mocks.cancelReserve.mockReset();
     mocks.messageSuccess.mockReset();
     mocks.messageError.mockReset();
     mocks.invalidateQueries.mockReset();
@@ -591,7 +614,44 @@ describe("Actions", () => {
     );
 
     expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /hủy giữ/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /huỷ giữ/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
+  });
+
+  it("cancels reserved seats with all matching order ids", async () => {
+    screeningOrdersMock = [
+      {
+        id: 201,
+        items: [{ listChairValueF1: "A1" }]
+      },
+      {
+        id: 202,
+        items: [{ listChairValueF1: "A2" }]
+      }
+    ];
+    mocks.cancelReserve.mockResolvedValue(undefined);
+
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={[createSeat({ seat: "1", code: "A1" }), createSeat({ seat: "2", code: "A2" })]}
+        setSelectedSeats={vi.fn()}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /huỷ giữ/i }));
+
+    await waitFor(() => {
+      expect(mocks.cancelReserve).toHaveBeenCalledWith({
+        listChairIndexF1: ["1", "2"],
+        listChairIndexF2: [],
+        listChairIndexF3: [],
+        orderIds: [201, 202]
+      });
+      expect(mocks.messageSuccess).toHaveBeenCalledWith("Huỷ giữ chỗ thành công");
+    });
   });
 });

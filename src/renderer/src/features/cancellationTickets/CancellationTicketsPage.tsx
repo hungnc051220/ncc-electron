@@ -53,6 +53,25 @@ const CancellationTicketsPage = () => {
       width: 150
     },
     {
+      title: "Tên khách hàng",
+      key: "customerName",
+      dataIndex: "order",
+      render: (order) =>
+        [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" ")
+    },
+    {
+      title: "Số điện thoại",
+      key: "customerPhone",
+      dataIndex: "order",
+      render: (order) => order?.customerPhone
+    },
+    {
+      title: "Email",
+      key: "customerEmail",
+      dataIndex: "order",
+      render: (order) => order?.customerEmail
+    },
+    {
       title: "Phim",
       key: "filmName",
       dataIndex: "filmName",

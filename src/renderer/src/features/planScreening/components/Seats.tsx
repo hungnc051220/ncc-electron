@@ -10,7 +10,16 @@ import {
 } from "@shared/types";
 import { Button, Tag } from "antd";
 import dayjs from "dayjs";
-import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { useNavigate } from "react-router";
 import Selecto from "react-selecto";
 import Seat from "./Seat";
@@ -61,7 +70,7 @@ const Seats = ({
   const selectoRef = useRef<Selecto>(null);
   const isSelectingRef = useRef(false);
   const mainContainerRef = useRef<HTMLDivElement>(null);
-  const [seatSize, setSeatSize] = useState(44);
+  const [seatSize, setSeatSize] = useState<number | null>(null);
   const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(null);
   const [hoverSeat, setHoverSeat] = useState<ListSeat | null>(null);
   const [tooltipPos, setTooltipPos] = useState<TooltipPosition | null>(null);
@@ -346,10 +355,11 @@ const Seats = ({
 
   const calculateSeatSize = useCallback(() => {
     const container = seatContainerRef.current;
-    if (!container || !seats) return;
+    if (!container || !seats) return null;
 
     const usableWidth = Math.floor(container.clientWidth);
     const usableHeight = Math.floor(container.clientHeight);
+    if (!usableWidth || !usableHeight) return null;
 
     // ===== Tính rows & seats max =====
     let maxRows = 0;
@@ -367,7 +377,7 @@ const Seats = ({
       });
     });
 
-    if (!maxRows || !maxSeatsPerRow) return;
+    if (!maxRows || !maxSeatsPerRow) return null;
 
     // ===== Layout constants (match CSS thật) =====
     const seatGap = 6; // gap-1.5
@@ -396,27 +406,33 @@ const Seats = ({
       size -= 1;
     }
 
-    setSeatSize(size);
+    return size;
   }, [seats, availableFloors]);
 
   // Tính toán kích thước ghế tự động để fit vào màn hình
   // Tính dựa trên tầng có nhiều ghế nhất để đảm bảo tất cả tầng đều fit và nhất quán
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = seatContainerRef.current;
     if (!container) return;
 
-    let raf1: number;
-    let raf2: number;
+    let frameId: number | null = null;
+
+    const updateSeatSize = () => {
+      const nextSeatSize = calculateSeatSize();
+      if (!nextSeatSize) return;
+
+      setSeatSize((prev) => (prev === nextSeatSize ? prev : nextSeatSize));
+    };
 
     const runFit = () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
 
-      raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => {
-          calculateSeatSize();
-        });
+      frameId = requestAnimationFrame(() => {
+        updateSeatSize();
+        frameId = null;
       });
     };
 
@@ -424,13 +440,13 @@ const Seats = ({
 
     observer.observe(container);
 
-    // chạy lần đầu
-    runFit();
+    updateSeatSize();
 
     return () => {
       observer.disconnect();
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
     };
   }, [calculateSeatSize]);
 
@@ -462,6 +478,8 @@ const Seats = ({
 
   // Render seats với useMemo để tránh re-render không cần thiết
   const renderedSeats = useMemo(() => {
+    if (seatSize === null) return null;
+
     return filteredSeats?.map((item, index) => (
       <div
         key={index}
@@ -581,7 +599,12 @@ const Seats = ({
           className="mt-2 flex-1 flex justify-center items-center min-h-0"
           ref={seatContainerRef}
         >
-          <div className="space-y-1 flex flex-col items-center px-2">{renderedSeats}</div>
+          <div
+            className="space-y-1 flex flex-col items-center px-2"
+            style={{ visibility: seatSize === null ? "hidden" : "visible" }}
+          >
+            {renderedSeats}
+          </div>
         </div>
 
         <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs shrink-0">

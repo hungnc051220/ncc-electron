@@ -109,6 +109,20 @@ describe("ordersApi", () => {
     expect(patchSpy).toHaveBeenCalledWith("/api/pos/order/print?orderId=88");
   });
 
+  it("posts orderId when checking payment transaction", async () => {
+    const postSpy = vi.spyOn(api, "post").mockResolvedValue({
+      data: { code: "01", message: "PaymentId is callback" }
+    });
+
+    await ordersApi.checkTransaction({
+      orderId: 9845818
+    });
+
+    expect(postSpy).toHaveBeenCalledWith("/api/pos/payment/check-transaction", {
+      orderId: 9845818
+    });
+  });
+
   it("serializes both params when unmarking printed orders", async () => {
     const patchSpy = vi.spyOn(api, "patch").mockResolvedValue({
       data: { success: true }

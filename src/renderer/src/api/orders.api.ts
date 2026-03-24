@@ -104,6 +104,15 @@ export interface OrderRefundQuery {
   RefundStatusId: RefundStatus;
 }
 
+export interface CheckTransactionDto {
+  orderId: number;
+}
+
+export interface CheckTransactionResponse {
+  code?: string;
+  message?: string;
+}
+
 export interface OrderPrintedQuery {
   orderId: number;
   posShortName?: string;
@@ -227,6 +236,10 @@ export const ordersApi = {
     const res = await api.post("/api/pos/order/create-qr", dto);
     return res.data;
   },
+  checkTransaction: async (dto: CheckTransactionDto): Promise<CheckTransactionResponse> => {
+    const res = await api.post("/api/pos/payment/check-transaction", dto);
+    return res.data;
+  },
   create: async (dto: OrderDto) => {
     const res = await api.post("/api/pos/order", dto);
     return res.data;
@@ -240,7 +253,7 @@ export const ordersApi = {
     return res.data;
   },
   cancelReserve: async (dto: OrderCancelReserveDto) => {
-    const res = await api.put("/api/pos/order/cancel/reserve", dto);
+    const res = await api.post("/api/pos/order/cancel/reserve", dto);
     return res.data;
   },
   cancel: async (dto: CancelOrderDto) => {

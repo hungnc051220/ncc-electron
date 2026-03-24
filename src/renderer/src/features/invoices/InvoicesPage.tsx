@@ -130,16 +130,16 @@ const InvoicesPage = () => {
       dataIndex: "contractCode"
     },
     {
-      title: "Ngày tạo",
+      title: "Thời gian tạo",
       key: "createdAt",
       dataIndex: "createdAt",
-      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
+      render: (value: string) => dayjs(value).format("HH:mm DD/MM/YYYY")
     },
     {
-      title: "Ngày sửa",
+      title: "Thời gian sửa",
       key: "updatedAt",
       dataIndex: "updatedAt",
-      render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "")
+      render: (value: string) => (value ? dayjs(value).format("HH:mm DD/MM/YYYY") : "")
     },
     {
       title: "Trạng thái",

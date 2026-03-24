@@ -1,5 +1,6 @@
 import { SetSeatsContractTicketSaleDto } from "@renderer/api/contractTicketSales.api";
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
+import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
 import { useSetSeatsContractTicketSale } from "@renderer/hooks/contractTicketSales/useSetSeatsContractTicketSale";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
@@ -12,11 +13,11 @@ import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ApiError, ListSeat, PlanScreeningDetailProps } from "@shared/types";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, message } from "antd";
+import { Button, Descriptions, Form, Modal, Select, message } from "antd";
 import axios from "axios";
-import { Dispatch, SetStateAction, useCallback, useMemo } from "react";
+import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
   const floors = [1, 2, 3] as const;
@@ -62,6 +63,10 @@ interface ActionsProps {
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
 }
 
+type FieldType = {
+  cancelReasonId: number;
+};
+
 const Actions = ({
   data,
   contractOrderId,
@@ -69,6 +74,7 @@ const Actions = ({
   selectedSeats,
   setSelectedSeats
 }: ActionsProps) => {
+  const [form] = Form.useForm<FieldType>();
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
@@ -82,6 +88,35 @@ const Actions = ({
   const setSeatsContractTicketSale = useSetSeatsContractTicketSale();
   const cancelOrder = useCancelOrder();
   const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
+  const [openCancelSeats, setOpenCancelSeats] = useState(false);
+
+  const {
+    data: cancellationReasons,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["cancellation-reasons"],
+    queryFn: ({ pageParam = 1 }) =>
+      cancellationReasonsApi.getAll({ current: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
+
+  const cancelReasonOptions = useMemo(() => {
+    return (
+      cancellationReasons?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.reason
+        }))
+      ) ?? []
+    );
+  }, [cancellationReasons]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -176,7 +211,7 @@ const Actions = ({
     );
   };
 
-  const onCancelSeats = () => {
+  const onCancelSeats = (values: FieldType) => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
       return;
@@ -184,16 +219,14 @@ const Actions = ({
 
     const body: CancelOrderDto = {
       planScreenId: planScreeningId,
-      cancelReasonId: 0,
-      notes: "Huỷ vé hợp đồng",
-      isRefund: true,
-      cancelReasonMsg: "Huỷ vé hợp đồng",
+      cancelReasonId: values.cancelReasonId,
       ...buildSeatFieldsByFloor(selectedSeats)
     };
 
     cancelOrder.mutate(body, {
       onSuccess: () => {
         setSelectedSeats([]);
+        setOpenCancelSeats(false);
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
         message.success("Huỷ vé hợp đồng thành công");
       },
@@ -242,7 +275,7 @@ const Actions = ({
                 setSeatsContractTicketSale.isPending ||
                 isPlanScreeningPast
               }
-              onClick={onCancelSeats}
+              onClick={() => setOpenCancelSeats(true)}
             >
               Hủy vé hợp đồng
             </Button>
@@ -260,6 +293,54 @@ const Actions = ({
           )}
         </div>
       </div>
+
+      <Modal
+        title="Xác nhận hủy vé"
+        open={openCancelSeats}
+        onOk={() => {
+          form.submit();
+        }}
+        onCancel={() => setOpenCancelSeats(false)}
+        okButtonProps={{
+          loading: cancelOrder.isPending
+        }}
+        cancelButtonProps={{
+          disabled: cancelOrder.isPending
+        }}
+        modalRender={(dom) => (
+          <Form<FieldType>
+            form={form}
+            onFinish={onCancelSeats}
+            autoComplete="off"
+            layout="vertical"
+          >
+            {dom}
+          </Form>
+        )}
+      >
+        <Form.Item<FieldType>
+          name="cancelReasonId"
+          label="Lý do hủy vé"
+          rules={[{ required: true, message: "Chọn lý do hủy vé" }]}
+        >
+          <Select
+            loading={isFetching || isFetchingNextPage}
+            options={cancelReasonOptions}
+            placeholder="Chọn lý do hủy vé"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
+            allowClear
+          />
+        </Form.Item>
+      </Modal>
     </div>
   );
 };

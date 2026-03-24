@@ -110,6 +110,12 @@ const FindOnlineTicketsPage = () => {
       render: (order) => order.customerEmail
     },
     {
+      title: "Phòng chiếu",
+      key: "roomName",
+      dataIndex: "room",
+      render: (room) => room?.name
+    },
+    {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "planScreening",
