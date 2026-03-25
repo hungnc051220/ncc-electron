@@ -57,12 +57,9 @@ export interface DiscountGroup {
 export interface CancelOrderDto {
   planScreenId: number;
   orderIds?: number[];
-  listChairIndexF1?: string;
-  listChairValueF1?: string;
-  listChairIndexF2?: string;
-  listChairValueF2?: string;
-  listChairIndexF3?: string;
-  listChairValueF3?: string;
+  listChairIndexF1?: string[];
+  listChairIndexF2?: string[];
+  listChairIndexF3?: string[];
   cancelReasonId: number;
   notes?: string;
   isRefund?: boolean;

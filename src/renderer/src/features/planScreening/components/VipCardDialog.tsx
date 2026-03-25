@@ -18,6 +18,7 @@ interface VipCardDialogProps {
   planScreenId: number;
   selectedSeats: ListSeat[];
   hasSeatTypeDiscount: boolean;
+  filmVersionCode?: string;
 }
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
@@ -86,7 +87,8 @@ const VipCardDialog = ({
   onBooking,
   planScreenId,
   selectedSeats,
-  hasSeatTypeDiscount
+  hasSeatTypeDiscount,
+  filmVersionCode
 }: VipCardDialogProps) => {
   const [searchText, setSearchText] = useState<string | undefined>(undefined);
   const [lastSearched, setLastSearched] = useState<string | null>(null);
@@ -217,6 +219,11 @@ const VipCardDialog = ({
     return voucherItems.find((item) => item.batchId === selectedBatchId);
   }, [selectedBatchId, voucherItems, voucherType]);
 
+  const is2DVersion = useMemo(
+    () => filmVersionCode?.toUpperCase().includes("2D") ?? false,
+    [filmVersionCode]
+  );
+
   const discountAmount = useMemo(() => {
     const baseTotal = totalPrice || 0;
 
@@ -228,10 +235,17 @@ const VipCardDialog = ({
       return calculateVoucherDiscount(baseTotal, selectedVoucher);
     }
 
-    return 0;
-  }, [hasSeatTypeDiscount, selectedVoucher, totalPrice, voucherType]);
+    if (voucherType === "u22" && is2DVersion) {
+      return Math.max(baseTotal - 55000, 0);
+    }
 
-  const finalAmount = useMemo(() => (totalPrice || 0) - discountAmount, [discountAmount, totalPrice]);
+    return 0;
+  }, [hasSeatTypeDiscount, is2DVersion, selectedVoucher, totalPrice, voucherType]);
+
+  const finalAmount = useMemo(
+    () => (totalPrice || 0) - discountAmount,
+    [discountAmount, totalPrice]
+  );
 
   const columns: TableProps<BatchProps>["columns"] = [
     {
@@ -285,9 +299,9 @@ const VipCardDialog = ({
         ? undefined
         : voucherType === "none"
           ? undefined
-        : voucherType === "u22"
-          ? "U22Ticket"
-          : selectedVoucherCode
+          : voucherType === "u22"
+            ? "U22Ticket"
+            : selectedVoucherCode
     });
     onCancel();
   };
@@ -379,8 +393,8 @@ const VipCardDialog = ({
 
         {isCustomerSearched && hasSeatTypeDiscount && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Đã áp dụng giảm giá theo loại vé ở ngoài. Chỉ được áp mã khách hàng, không thể dùng
-            thêm voucher hoặc ưu đãi U22.
+            Đã áp dụng giảm giá theo loại vé ở ngoài. Chỉ được áp mã khách hàng, không thể dùng thêm
+            voucher hoặc ưu đãi U22.
           </div>
         )}
 
@@ -417,16 +431,20 @@ const VipCardDialog = ({
           />
         )}
 
+        {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "u22" && !is2DVersion && (
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            Suất chiếu 3D không tính ưu đãi U22. Giá vé giữ nguyên theo giá hiện tại.
+          </div>
+        )}
+
         <div className="bg-gray-100 dark:bg-app-bg-container p-4 rounded-md">
           <div className="grid grid-cols-2 gap-10">
             <div>
               <div className="flex justify-between">
                 <p>Tiền mua vé:</p>
-                <p className="text-primary font-semibold">{formatMoney(totalPrice || 0)}</p>
-              </div>
-              <div className="flex justify-between">
-                <p>Tiền khuyến mãi:</p>
-                <p className="text-green-600 font-semibold">{formatMoney(discountAmount)}</p>
+                <p className="text-primary font-semibold">
+                  {formatMoney(voucherType === "u22" && is2DVersion ? 55000 : totalPrice || 0)}
+                </p>
               </div>
               <div className="flex justify-between">
                 <p>Tiền thanh toán sau khuyến mãi:</p>

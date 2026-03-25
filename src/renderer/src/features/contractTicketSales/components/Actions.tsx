@@ -231,10 +231,16 @@ const Actions = ({
       return;
     }
 
+    const selectedSeatIndicesByFloor = {
+      listChairIndexF1: selectedSeats.filter((seat) => seat.floor === 1).map((seat) => seat.seat),
+      listChairIndexF2: selectedSeats.filter((seat) => seat.floor === 2).map((seat) => seat.seat),
+      listChairIndexF3: selectedSeats.filter((seat) => seat.floor === 3).map((seat) => seat.seat)
+    };
+
     const body: CancelOrderDto = {
       planScreenId: planScreeningId,
       cancelReasonId: values.cancelReasonId,
-      ...buildSeatFieldsByFloor(selectedSeats)
+      ...selectedSeatIndicesByFloor
     };
 
     cancelOrder.mutate(body, {

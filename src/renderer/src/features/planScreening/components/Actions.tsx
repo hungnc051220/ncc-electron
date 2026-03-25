@@ -543,11 +543,17 @@ const Actions = ({
       return;
     }
 
+    const selectedSeatIndicesByFloor = {
+      listChairIndexF1: selectedSeats.filter((seat) => seat.floor === 1).map((seat) => seat.seat),
+      listChairIndexF2: selectedSeats.filter((seat) => seat.floor === 2).map((seat) => seat.seat),
+      listChairIndexF3: selectedSeats.filter((seat) => seat.floor === 3).map((seat) => seat.seat)
+    };
+
     const body: CancelOrderDto = {
       planScreenId,
       cancelReasonId: values?.cancelReasonId || 1,
       isRefund: values?.isRefund || false,
-      ...buildSeatFieldsByFloor(selectedSeats)
+      ...selectedSeatIndicesByFloor
     };
 
     cancelOrder.mutate(body, {
@@ -825,6 +831,7 @@ const Actions = ({
           planScreenId={planScreenId}
           selectedSeats={selectedSeats}
           hasSeatTypeDiscount={Object.keys(selectedDiscountGroups).length > 0}
+          filmVersionCode={data.filmInfo.versionCode}
         />
       )}
 
