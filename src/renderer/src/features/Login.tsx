@@ -121,7 +121,7 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen relative flex items-center justify-center p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-y-auto p-4 lg:p-6">
       <div className="absolute inset-0 z-0 auth-bg bg-cover bg-center bg-no-repeat">
         <div className="absolute inset-0 bg-slate-950/55" />
       </div>

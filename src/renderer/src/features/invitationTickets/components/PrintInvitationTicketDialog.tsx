@@ -5,16 +5,20 @@ import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTicket
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
+import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { OrderDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Button, Checkbox, Form, Input, message, Modal, Select, Space } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
+import { ChevronDown } from "lucide-react";
 import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactQuill from "react-quill-new";
+import Keyboard from "react-simple-keyboard";
 import "react-quill-new/dist/quill.snow.css";
+import "react-simple-keyboard/build/css/index.css";
 
 const templateHtml = `<!DOCTYPE html>
 <html>
@@ -40,6 +44,8 @@ interface FieldType {
   status: string;
   background: string;
   title: string;
+  phoneNumber?: string;
+  sendZaloOA?: boolean;
   saveLocation?: string;
 }
 
@@ -48,6 +54,8 @@ interface PrintInvitationTicketDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedItem?: OrderDetailProps | null;
 }
+
+type KeyboardField = "receivedEmail" | "title" | "phoneNumber";
 
 const getApiErrorMessage = (error: unknown, fallback: string) => {
   if (!axios.isAxiosError(error)) {
@@ -73,8 +81,23 @@ const PrintInvitationTicketDialog = ({
   selectedItem
 }: PrintInvitationTicketDialogProps) => {
   const queryClient = useQueryClient();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<FieldType>();
+  const keyboardRef = useRef<{
+    setInput: (input: string, inputName?: string) => void;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [activeField, setActiveField] = useState<KeyboardField>("receivedEmail");
+  const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [keyboardInputs, setKeyboardInputs] = useState<Partial<Record<KeyboardField, string>>>({});
+  const inputRefs = useRef(
+    new Map<
+      KeyboardField,
+      {
+        focus: () => void;
+      }
+    >()
+  );
   const uploadImage = useUploadImage();
   const { data: backgrounds, isFetching: isFetchingBackgrounds } = useInvitationTicketBackgrounds();
   const createInvitationTicket = useCreateInvitationTicket();
@@ -89,6 +112,13 @@ const PrintInvitationTicketDialog = ({
       ?.getDefaultExportFolder()
       .then((path: string) => form.setFieldValue("saveLocation", path));
   }, [form]);
+
+  useEffect(() => {
+    if (!open) {
+      setIsKeyboardOpen(false);
+      setLayoutName("default");
+    }
+  }, [open]);
 
   const handleSelectFolder = async () => {
     const path = await window.api?.selectFolder();
@@ -224,132 +254,237 @@ const PrintInvitationTicketDialog = ({
 
   const image = Form.useWatch("background", form);
   const sendZaloOA = Form.useWatch("sendZaloOA", form);
+  const visibleKeyboardFields = useMemo<KeyboardField[]>(
+    () => ["receivedEmail", "title", ...(sendZaloOA ? (["phoneNumber"] as const) : [])],
+    [sendZaloOA]
+  );
+
+  const updateFieldValue = (field: KeyboardField, value: string) => {
+    setKeyboardInputs((current) => ({ ...current, [field]: value }));
+    form.setFieldValue(field, value);
+    keyboardRef.current?.setInput(value, field);
+  };
+
+  const openKeyboardDrawer = (field: KeyboardField) => {
+    setActiveField(field);
+    setIsKeyboardOpen(true);
+  };
+
+  const handleInputChange = (field: KeyboardField) => (e: ChangeEvent<HTMLInputElement>) => {
+    updateFieldValue(field, e.target.value);
+  };
+
+  const inputProps = (field: KeyboardField, placeholder: string) => ({
+    placeholder,
+    value: keyboardInputs[field] ?? form.getFieldValue(field),
+    onFocus: () => openKeyboardDrawer(field),
+    onChange: handleInputChange(field),
+    ref: (node: { focus: () => void } | null) => {
+      if (node) {
+        inputRefs.current.set(field, node);
+      } else {
+        inputRefs.current.delete(field);
+      }
+    }
+  });
+
+  const handleKeyboardKeyPress = (button: string) => {
+    if (button === "{shift}" || button === "{lock}") {
+      setLayoutName((current) => (current === "default" ? "shift" : "default"));
+      return;
+    }
+
+    if (button === "{tab}") {
+      const currentIndex = visibleKeyboardFields.indexOf(activeField);
+      const nextField =
+        visibleKeyboardFields[
+          currentIndex >= 0 ? (currentIndex + 1) % visibleKeyboardFields.length : 0
+        ];
+
+      setActiveField(nextField);
+      window.setTimeout(() => {
+        inputRefs.current.get(nextField)?.focus();
+      }, 0);
+      return;
+    }
+
+    if (button === "{enter}") {
+      form.submit();
+      return;
+    }
+
+    const currentValue = String(keyboardInputs[activeField] ?? form.getFieldValue(activeField) ?? "");
+    updateFieldValue(activeField, applyVirtualKeyboardButton(currentValue, button));
+  };
 
   return (
-    <Modal
-      title="Xuất vé mời"
-      open={open}
-      okButtonProps={{
-        htmlType: "submit",
-        autoFocus: true
-      }}
-      confirmLoading={createInvitationTicket.isPending || uploadImage.isPending || loading}
-      cancelButtonProps={{
-        disabled: createInvitationTicket.isPending || uploadImage.isPending || loading
-      }}
-      onCancel={() => onOpenChange(false)}
-      modalRender={(dom) => (
-        <Form layout="vertical" form={form} onFinish={handleExport}>
-          {dom}
-        </Form>
-      )}
-      width={1000}
-      centered
-    >
-      <div className="grid grid-cols-2 gap-x-4">
-        <Form.Item
-          name="background"
-          label="Mẫu ảnh nền"
-          rules={[{ required: true, message: "Chọn mẫu ảnh nền" }]}
-        >
-          <Select
-            options={backgrounds?.map((background) => ({
-              value: background.urlImage,
-              label: background.name
-            }))}
-            placeholder="Chọn ảnh nền"
-            loading={isFetchingBackgrounds}
-          />
-        </Form.Item>
-        <Form.Item
-          name="receivedEmail"
-          label="Email người nhận"
-          dependencies={["title"]}
-          rules={[
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                const title = getFieldValue("title");
-
-                if (value && !title) {
-                  return Promise.reject(
-                    new Error("Nhập tiêu đề email khi đã điền email người nhận")
-                  );
-                }
-
-                if (value && !/\S+@\S+\.\S+/.test(value)) {
-                  return Promise.reject(new Error("Email người nhận không hợp lệ"));
-                }
-
-                return Promise.resolve();
-              }
-            })
-          ]}
-        >
-          <Input placeholder="Nhập email người nhận" />
-        </Form.Item>
-
-        <Form.Item label="Thư mục lưu ảnh" required>
-          <Space.Compact style={{ width: "100%" }}>
-            <Form.Item
-              name="saveLocation"
-              noStyle
-              rules={[{ required: true, message: "Chọn thư mục lưu ảnh" }]}
-            >
-              <Input placeholder="Chọn thư mục lưu ảnh" readOnly />
-            </Form.Item>
-
-            <Button onClick={handleSelectFolder}>Chọn</Button>
-          </Space.Compact>
-        </Form.Item>
-
-        <Form.Item
-          name="title"
-          label="Tiêu đề email"
-          dependencies={["receivedEmail"]}
-          rules={[
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                const receivedEmail = getFieldValue("receivedEmail");
-
-                if (receivedEmail && !value?.trim()) {
-                  return Promise.reject(
-                    new Error("Nhập tiêu đề email khi đã điền email người nhận")
-                  );
-                }
-
-                return Promise.resolve();
-              }
-            })
-          ]}
-        >
-          <Input placeholder="Nhập tiêu đề email" />
-        </Form.Item>
-        <Form.Item name="sendZaloOA" label={null} valuePropName="checked">
-          <Checkbox>Gửi zalo OA</Checkbox>
-        </Form.Item>
-        <Form.Item
-          name="phoneNumber"
-          label="Số điện thoại"
-          rules={[{ required: sendZaloOA, message: "Nhập số điện thoại gửi ZaloOA" }]}
-        >
-          <Input placeholder="Nhập số điện thoại" />
-        </Form.Item>
-        {image ? (
-          <img
-            src={image}
-            alt="preview"
-            width={500}
-            height={254}
-            className="w-125 h-63.5 object-contain rounded-md"
-          />
-        ) : (
-          <div className="w-full h-63.5 bg-app-bg-container mt-5 rounded-md" />
+    <>
+      <Modal
+        title="Xuất vé mời"
+        open={open}
+        okButtonProps={{
+          htmlType: "submit",
+          autoFocus: true
+        }}
+        confirmLoading={createInvitationTicket.isPending || uploadImage.isPending || loading}
+        cancelButtonProps={{
+          disabled: createInvitationTicket.isPending || uploadImage.isPending || loading
+        }}
+        onCancel={() => onOpenChange(false)}
+        modalRender={(dom) => (
+          <Form layout="vertical" form={form} onFinish={handleExport}>
+            {dom}
+          </Form>
         )}
-        <div className="mt-5">
-          <ReactQuill value={templateHtml} readOnly />
+        width={1000}
+        centered
+        className="invoice-dialog-with-keyboard"
+      >
+        <div className="grid grid-cols-2 gap-x-4">
+          <Form.Item
+            name="background"
+            label="Mẫu ảnh nền"
+            rules={[{ required: true, message: "Chọn mẫu ảnh nền" }]}
+          >
+            <Select
+              options={backgrounds?.map((background) => ({
+                value: background.urlImage,
+                label: background.name
+              }))}
+              placeholder="Chọn ảnh nền"
+              loading={isFetchingBackgrounds}
+            />
+          </Form.Item>
+          <Form.Item
+            name="receivedEmail"
+            label="Email người nhận"
+            dependencies={["title"]}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const title = getFieldValue("title");
+
+                  if (value && !title) {
+                    return Promise.reject(
+                      new Error("Nhập tiêu đề email khi đã điền email người nhận")
+                    );
+                  }
+
+                  if (value && !/\S+@\S+\.\S+/.test(value)) {
+                    return Promise.reject(new Error("Email người nhận không hợp lệ"));
+                  }
+
+                  return Promise.resolve();
+                }
+              })
+            ]}
+          >
+            <Input {...inputProps("receivedEmail", "Nhập email người nhận")} />
+          </Form.Item>
+
+          <Form.Item label="Thư mục lưu ảnh" required>
+            <Space.Compact style={{ width: "100%" }}>
+              <Form.Item
+                name="saveLocation"
+                noStyle
+                rules={[{ required: true, message: "Chọn thư mục lưu ảnh" }]}
+              >
+                <Input placeholder="Chọn thư mục lưu ảnh" readOnly />
+              </Form.Item>
+
+              <Button onClick={handleSelectFolder}>Chọn</Button>
+            </Space.Compact>
+          </Form.Item>
+
+          <Form.Item
+            name="title"
+            label="Tiêu đề email"
+            dependencies={["receivedEmail"]}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const receivedEmail = getFieldValue("receivedEmail");
+
+                  if (receivedEmail && !value?.trim()) {
+                    return Promise.reject(
+                      new Error("Nhập tiêu đề email khi đã điền email người nhận")
+                    );
+                  }
+
+                  return Promise.resolve();
+                }
+              })
+            ]}
+          >
+            <Input {...inputProps("title", "Nhập tiêu đề email")} />
+          </Form.Item>
+          <Form.Item name="sendZaloOA" label={null} valuePropName="checked">
+            <Checkbox>Gửi zalo OA</Checkbox>
+          </Form.Item>
+          <Form.Item
+            name="phoneNumber"
+            label="Số điện thoại"
+            rules={[{ required: sendZaloOA, message: "Nhập số điện thoại gửi ZaloOA" }]}
+          >
+            <Input {...inputProps("phoneNumber", "Nhập số điện thoại")} />
+          </Form.Item>
+          {image ? (
+            <img
+              src={image}
+              alt="preview"
+              width={500}
+              height={254}
+              className="w-125 h-63.5 object-contain rounded-md"
+            />
+          ) : (
+            <div className="w-full h-63.5 bg-app-bg-container mt-5 rounded-md" />
+          )}
+          <div className="mt-5">
+            <ReactQuill value={templateHtml} readOnly />
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      {open && (
+        <div className={`invoice-keyboard-drawer ${isKeyboardOpen ? "is-open" : ""}`}>
+          <div className="invoice-keyboard-drawer__header">
+            <span className="invoice-keyboard-drawer__title">Bàn phím ảo</span>
+            <button
+              type="button"
+              onClick={() => setIsKeyboardOpen(false)}
+              className="invoice-keyboard-drawer__close"
+            >
+              <ChevronDown size={18} />
+            </button>
+          </div>
+          <Keyboard
+            keyboardRef={(instance) => {
+              keyboardRef.current = instance;
+            }}
+            theme="hg-theme-default invoice-keyboard-theme"
+            layoutName={layoutName}
+            inputName={activeField}
+            onKeyPress={handleKeyboardKeyPress}
+            layout={{
+              default: [
+                "` 1 2 3 4 5 6 7 8 9 0 - = {bksp}",
+                "{tab} q w e r t y u i o p [ ] \\",
+                "{lock} a s d f g h j k l ; '",
+                "{shift} z x c v b n m , . / {shift}",
+                ".com @ {space} {enter}"
+              ],
+              shift: [
+                "~ ! @ # $ % ^ & * ( ) _ + {bksp}",
+                "{tab} Q W E R T Y U I O P { } |",
+                '{lock} A S D F G H J K L : "',
+                "{shift} Z X C V B N M < > ? {shift}",
+                ".com @ {space} {enter}"
+              ]
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 };
 

@@ -197,8 +197,12 @@ const ContractTicketSalesPage = () => {
       title: "Giá trị hợp đồng",
       key: "orderTotal",
       dataIndex: "orderTotal",
-      render: (_, record) => formatMoney(record.order?.orderTotal || 0),
-      align: "right"
+      render: (_, record) => formatMoney(record.order?.orderTotal || 0)
+    },
+    {
+      title: "Ghi chú",
+      key: "note",
+      render: (_, record) => record?.order?.note
     },
     {
       title: "Ngày tạo",

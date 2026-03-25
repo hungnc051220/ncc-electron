@@ -321,7 +321,7 @@
     display: none !important;
   }
 
-  @media (max-width: 1024px), (max-height: 768px) {
+  @media (max-width: 1024px) {
     .login-card {
       max-width: 500px;
     }
@@ -401,6 +401,58 @@
 
     .login-keyboard-drawer .hg-theme-default .hg-button {
       height: 44px;
+    }
+  }
+
+  @media (min-width: 1025px) and (max-height: 820px) {
+    .login-card {
+      max-width: min(1100px, calc(100vw - 32px));
+    }
+
+    .login-card__hero {
+      padding: 22px;
+    }
+
+    .login-focus-list {
+      margin-top: 24px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .login-keyboard-inline .hg-theme-default {
+      font-size: 13px;
+    }
+
+    .login-keyboard-inline .hg-theme-default .hg-button {
+      height: 38px;
+    }
+  }
+
+  @media (min-width: 1025px) and (max-height: 720px) {
+    .login-card__hero h1 {
+      font-size: 30px;
+      line-height: 1.15;
+    }
+
+    .login-card__hero p {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .login-focus-list {
+      margin-top: 18px;
+      gap: 10px;
+    }
+
+    .login-keyboard-shell.login-keyboard-inline {
+      padding: 8px;
+    }
+
+    .login-keyboard-inline .hg-theme-default {
+      font-size: 12px;
+    }
+
+    .login-keyboard-inline .hg-theme-default .hg-button {
+      height: 34px;
     }
   }
 }

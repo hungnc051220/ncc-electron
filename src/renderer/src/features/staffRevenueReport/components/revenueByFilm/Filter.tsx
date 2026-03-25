@@ -6,7 +6,7 @@ import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptio
 import { useQuery } from "@tanstack/react-query";
 import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { ValuesProps } from ".";
 
@@ -24,8 +24,28 @@ interface FilterProps {
   filterValues: ValuesProps;
 }
 
+type FormValues = Omit<ValuesProps, "dateRange"> & {
+  dateRange?: [Dayjs, Dayjs];
+};
+
+const mapFilterValuesToFormValues = (values: ValuesProps): FormValues => ({
+  ...values,
+  dateRange:
+    values.dateRange?.length === 2
+      ? [dayjs(values.dateRange[0]), dayjs(values.dateRange[1])]
+      : undefined
+});
+
+const mapFormValuesToFilterValues = (values: FormValues): ValuesProps => ({
+  ...values,
+  dateRange:
+    values.dateRange && values.dateRange.length === 2
+      ? [values.dateRange[0].toISOString(), values.dateRange[1].toISOString()]
+      : [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+});
+
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
-  const [form] = Form.useForm<ValuesProps>();
+  const [form] = Form.useForm<FormValues>();
   const [open, setOpen] = useState(false);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | undefined>(
     filterValues.manufacturerId
@@ -80,12 +100,11 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   });
 
   const manufacturerOptions = useMemo(() => {
-    const selectedOption =
-      selectedManufacturerId
-        ? ((manufacturerSelect.options.find((item) => item.value === selectedManufacturerId) as
-            | { value: number; label: string }
-            | undefined) ?? null)
-        : null;
+    const selectedOption = selectedManufacturerId
+      ? ((manufacturerSelect.options.find((item) => item.value === selectedManufacturerId) as
+          | { value: number; label: string }
+          | undefined) ?? null)
+      : null;
 
     return [selectedOption, ...manufacturerSelect.options].filter(
       (option, index, arr): option is { value: number; label: string } =>
@@ -109,7 +128,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   }, [filmSelect.options, selectedFilmDetail, selectedFilmId]);
 
   useEffect(() => {
-    form.setFieldsValue(filterValues);
+    form.setFieldsValue(mapFilterValuesToFormValues(filterValues));
     setSelectedManufacturerId(filterValues.manufacturerId);
     setSelectedFilmId(filterValues.filmId);
   }, [filterValues, form]);
@@ -201,7 +220,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             form={form}
             onFinish={(values) => {
               setOpen(false);
-              onSearch(values);
+              onSearch(mapFormValuesToFilterValues(values));
             }}
             initialValues={{
               dateRange: [dayjs(), dayjs()]

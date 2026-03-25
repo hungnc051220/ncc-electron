@@ -38,19 +38,14 @@ jobs:
         shell: pwsh
         run: |
           $package = Get-Content package.json | ConvertFrom-Json
-          $parts = $package.version.Split('.')
-
-          if ($parts.Count -lt 2) {
-            throw "package.json version must use at least major.minor"
-          }
-
-          $major = $parts[0]
-          $minor = $parts[1]
-          $buildNumber = ([int]$env:GITHUB_RUN_NUMBER * 100) + [int]$env:GITHUB_RUN_ATTEMPT
+          $baseVersion = $package.version
           $isDevBranch = $env:GITHUB_REF_NAME -eq "dev"
           $channel = if ($isDevBranch) { "dev" } else { "latest" }
-          $suffix = if ($isDevBranch) { "-dev" } else { "" }
-          $version = "$major.$minor.$buildNumber$suffix"
+          $version = if ($isDevBranch) {
+            "$baseVersion-dev.$($env:GITHUB_RUN_NUMBER).$($env:GITHUB_RUN_ATTEMPT)"
+          } else {
+            $baseVersion
+          }
           $tag = "v$version"
           $releaseName = "Desktop $($env:GITHUB_REF_NAME) $version"
           $enableDevTools = if ($isDevBranch) { "true" } else { "false" }

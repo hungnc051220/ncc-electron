@@ -114,6 +114,10 @@ interface FilmDialogProps {
   filmStatuses: FilmStatusProps[];
 }
 
+type FilmApiError = Omit<ApiError, "message"> & {
+  message: string | string[];
+};
+
 const FilmDialog = ({
   open,
   onOpenChange,
@@ -163,6 +167,22 @@ const FilmDialog = ({
     }
   }, [form, sellOnline]);
 
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (axios.isAxiosError<FilmApiError>(error)) {
+      const apiMessage = error.response?.data?.message;
+
+      if (Array.isArray(apiMessage)) {
+        return apiMessage.join(", ");
+      }
+
+      if (typeof apiMessage === "string" && apiMessage.trim()) {
+        return apiMessage;
+      }
+    }
+
+    return fallback;
+  };
+
   const onOk = () => form.submit();
 
   const handleUpload = async (options: UploadRequestOption) => {
@@ -176,12 +196,7 @@ const FilmDialog = ({
       onSuccess?.(imageUrl);
       form.setFieldValue("imageUrl", imageUrl);
     } catch (error: unknown) {
-      let msg = "Tải ảnh lên thất bại";
-
-      if (axios.isAxiosError<ApiError>(error)) {
-        msg = error.response?.data?.message ?? msg;
-      }
-      message.error(msg);
+      message.error(getApiErrorMessage(error, "Tải ảnh lên thất bại"));
       onError?.(error as Error);
     }
   };
@@ -203,7 +218,6 @@ const FilmDialog = ({
         languageCode: languages.length > 0 ? languages[0].languageCode : undefined,
         statusCode: filmStatuses.length > 0 ? filmStatuses[0].statusCode : undefined,
         published: true,
-        orderNo: 0,
         trailerOnHomePage: false,
         categoryIds: []
       };
@@ -230,7 +244,7 @@ const FilmDialog = ({
       ageAbove: editingFilm.ageAbove,
       proposedPrice: editingFilm.proposedPrice,
       trailerOnHomePage: editingFilm.trailerOnHomePage,
-      orderNo: editingFilm.orderNo,
+      orderNo: editingFilm.orderNo || 0,
       sellOnlineBefore: editingFilm.sellOnlineBefore,
       isFree: editingFilm.isFree,
       categoryIds: editingFilm.categories.map((item) => item.id) || [],
@@ -248,11 +262,14 @@ const FilmDialog = ({
   const onFinish: FormProps<FieldValues>["onFinish"] = (values: FieldValues) => {
     if (!isEdit) {
       createFilm.mutate(
-        { ...values, premieredDay: values["premieredDay"].format("YYYY-MM-DD") },
+        { ...values, premieredDay: values["premieredDay"].format("YYYY-MM-DD"), orderNo: 0 },
         {
           onSuccess: () => {
             message.success("Thêm phim thành công");
             onOpenChange(false);
+          },
+          onError: (error: unknown) => {
+            message.error(getApiErrorMessage(error, "Thêm phim thất bại"));
           }
         }
       );
@@ -269,6 +286,9 @@ const FilmDialog = ({
           onSuccess: () => {
             message.success("Cập nhật phim thành công");
             onOpenChange(false);
+          },
+          onError: (error: unknown) => {
+            message.error(getApiErrorMessage(error, "Cập nhật phim thất bại"));
           }
         }
       );
@@ -347,6 +367,7 @@ const FilmDialog = ({
               <Select
                 className="w-full"
                 placeholder="Chọn nước sản xuất"
+                showSearch={{ optionFilterProp: "label" }}
                 options={countries?.map((item) => ({
                   value: item.id,
                   label: item.name

@@ -1,10 +1,6 @@
 import type { TabsProps } from "antd";
 import { Breadcrumb, Tabs } from "antd";
 import RevenueByFilm from "./components/revenueByFilm";
-// import ExamineTicketByPlan from "./components/examineTicketByPlan";
-// import Vouchers from "./components/vouchers";
-// import U22Usage from "./components/u22";
-// import MonthlyRevenueByTicket from "./components/monthlyRevenueByTicket";
 import { Link } from "react-router";
 import MonthlyRevenueByTicket from "./components/monthlyRevenueByTicket";
 import ExamineTicketByPlan from "./components/examineTicketByPlan";

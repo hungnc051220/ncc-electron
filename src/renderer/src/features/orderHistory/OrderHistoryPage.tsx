@@ -134,7 +134,7 @@ const OrderHistoryPage = () => {
       title: "Thời gian mua",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
-      render: (_, record) => dayjs(record.order.createdOnUtc).format("DD/MM/YYYY")
+      render: (_, record) => dayjs(record.order.createdOnUtc).format("HH:mm DD/MM/YYYY")
     },
     ...(activeKey === "2"
       ? [

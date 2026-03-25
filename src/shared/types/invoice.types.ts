@@ -1,3 +1,5 @@
+import { OrderResponseProps } from "./order.types";
+
 export interface InvoiceProps {
   id: number;
   orderId: number;
@@ -18,6 +20,7 @@ export interface InvoiceProps {
   updatedAt: string;
   invoiceType: "personal" | "business";
   contractCode?: string;
+  order: OrderResponseProps;
 }
 
 export enum InvoiceStatus {

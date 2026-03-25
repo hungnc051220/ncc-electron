@@ -1,12 +1,10 @@
-import Icon from "@ant-design/icons";
+import { FilterOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal } from "antd";
 import dayjs from "dayjs";
-import { FilterIcon } from "lucide-react";
 import { startTransition, useState } from "react";
 import { ValuesProps } from ".";
-// import { useDebounce } from "@renderer/hooks/useDebounce";
 
 const { RangePicker } = DatePicker;
 
@@ -26,15 +24,11 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  // const [searchText, setSearchText] = useState<string>("");
-  // const debouncedSearchText = useDebounce(searchText, 500);
-  // const usersQuery = useInfiniteUsers(debouncedSearchText);
 
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      // setSearchText("");
       queryClient.removeQueries({
         queryKey: ["users", "infinite"]
       });
@@ -49,11 +43,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   return (
     <>
       <div className="relative">
-        <Button
-          variant="outlined"
-          icon={<Icon component={FilterIcon} />}
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="outlined" icon={<FilterOutlined />} onClick={() => setOpen(true)}>
           Bộ lọc
         </Button>
         {!isEmptyFilter && (
@@ -94,24 +84,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           </>
         )}
       >
-        {/* <Form.Item name="userId" label="Nhân viên">
-          <InfiniteSelect<UserProps>
-            query={usersQuery}
-            getLabel={(user) => user.customerFirstName}
-            getValue={(user) => user.id}
-            placeholder="Chọn nhân viên"
-            showSearch={{
-              onSearch: (value) => setSearchText(value)
-            }}
-            allowClear
-            onClear={() => {
-              setSearchText("");
-              queryClient.removeQueries({
-                queryKey: ["users", "infinite"]
-              });
-            }}
-          />
-        </Form.Item> */}
         <Form.Item name="dateRange" label="Khoảng thời gian">
           <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
         </Form.Item>

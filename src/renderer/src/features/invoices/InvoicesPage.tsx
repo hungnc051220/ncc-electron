@@ -80,9 +80,9 @@ const InvoicesPage = () => {
     },
     {
       title: "Mã vé",
-      key: "orderId",
-      dataIndex: "orderId",
-      fixed: "left"
+      key: "barCode",
+      dataIndex: "order",
+      render: (order) => order?.barCode
     },
     {
       title: "Tên người mua/đơn vị",

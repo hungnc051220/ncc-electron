@@ -139,7 +139,9 @@ const Actions = ({
   const [invoiceOrderId, setInvoiceOrderId] = useState<number | undefined>(undefined);
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
-  const [lastSaleTotal, setLastSaleTotal] = useState(() => Number(sessionStorage.getItem("lastTotal")) || 0);
+  const [lastSaleTotal, setLastSaleTotal] = useState(
+    () => Number(sessionStorage.getItem("lastTotal")) || 0
+  );
 
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
@@ -263,7 +265,15 @@ const Actions = ({
     });
 
     return cleanup;
-  }, [canPrint, handlePrint, planScreenId, qrData, queryClient, setSelectedSeats, syncLastSaleTotal]);
+  }, [
+    canPrint,
+    handlePrint,
+    planScreenId,
+    qrData,
+    queryClient,
+    setSelectedSeats,
+    syncLastSaleTotal
+  ]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -580,9 +590,8 @@ const Actions = ({
                     .split(",")
                     .map((seat) => seat.trim())
                     .filter(Boolean)
-                    .some(
-                      (seatCode) =>
-                        selectedSeatCodes.has(`${floorIndex + 1}-${seatCode.toUpperCase()}`)
+                    .some((seatCode) =>
+                      selectedSeatCodes.has(`${floorIndex + 1}-${seatCode.toUpperCase()}`)
                     )
               )
             )
