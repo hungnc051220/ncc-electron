@@ -121,7 +121,7 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-y-auto p-4 lg:p-6">
+    <div className="relative flex min-h-screen items-center justify-center overflow-y-auto p-4 xl:p-6">
       <div className="absolute inset-0 z-0 auth-bg bg-cover bg-center bg-no-repeat">
         <div className="absolute inset-0 bg-slate-950/55" />
       </div>
@@ -135,8 +135,8 @@ export default function Login() {
           isKeyboardDrawerOpen ? "is-password-focused" : ""
         }`}
       >
-        <div className="grid gap-0 lg:grid-cols-[420px_minmax(0,1fr)]">
-          <div className="login-card__hero flex flex-col justify-between rounded-lg p-7 text-white lg:p-8">
+        <div className="grid gap-0 xl:grid-cols-[420px_minmax(0,1fr)]">
+          <div className="login-card__hero flex flex-col justify-between rounded-lg p-7 text-white xl:p-8">
             <div className="space-y-4">
               <Image width={164} alt="NCC System" src={logo} preview={false} />
               <div className="space-y-2">
@@ -148,7 +148,7 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="login-focus-list mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="login-focus-list mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <button
                 type="button"
                 onClick={() => openKeyboardDrawer("username")}
@@ -178,7 +178,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="p-0 pt-4 lg:p-7 lg:pr-1">
+          <div className="p-0 pt-4 xl:p-7 xl:pr-1">
             <Form<LoginForm>
               layout="vertical"
               onFinish={onFinish}
