@@ -1,3 +1,4 @@
+import { ordersApi } from "@renderer/api/orders.api";
 import { useCustomer } from "@renderer/hooks/useCustomer";
 import { useAvailableVouchersForPos } from "@renderer/hooks/vouchers/useAvailableVouchersForPos";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
@@ -95,6 +96,8 @@ const VipCardDialog = ({
   const [status, setStatus] = useState<InputStatus>("");
   const [voucherType, setVoucherType] = useState<"campaign" | "u22" | "none">("campaign");
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+  const [isValidatingU22, setIsValidatingU22] = useState(false);
+  const [u22ValidationReason, setU22ValidationReason] = useState<string | null>(null);
   const cardInputRef = useRef<InputRef>(null);
 
   const { data, isFetching, refetch } = useCustomer({
@@ -109,6 +112,7 @@ const VipCardDialog = ({
     return data.data[0];
   }, [data]);
   const isCustomerSearched = Boolean(customer);
+  const isCurrentCustomerSearched = Boolean(searchText && lastSearched === searchText && customer);
 
   const seatFields = useMemo(() => buildSeatFieldsByFloor(selectedSeats), [selectedSeats]);
 
@@ -155,12 +159,21 @@ const VipCardDialog = ({
 
   const isU22Member = customer?.currentCardId === 12;
   const voucherItems = useMemo(() => vouchers?.items ?? [], [vouchers?.items]);
+  const isSingleSeatSelected = selectedSeats.length === 1;
+  const isU22UsedToday = u22ValidationReason === "used_today";
+  const isU22Disabled =
+    !isCurrentCustomerSearched ||
+    hasSeatTypeDiscount ||
+    !isU22Member ||
+    !isSingleSeatSelected ||
+    isValidatingU22 ||
+    isU22UsedToday;
 
   useEffect(() => {
-    if (!isU22Member && voucherType === "u22") {
+    if (isU22Disabled && voucherType === "u22") {
       setVoucherType("campaign");
     }
-  }, [isU22Member, voucherType]);
+  }, [isU22Disabled, voucherType]);
 
   useEffect(() => {
     if (hasSeatTypeDiscount) {
@@ -175,6 +188,13 @@ const VipCardDialog = ({
       setVoucherType(hasSeatTypeDiscount ? "none" : "campaign");
     }
   }, [hasSeatTypeDiscount, isCustomerSearched]);
+
+  useEffect(() => {
+    if (!isSingleSeatSelected) {
+      setU22ValidationReason(null);
+      setIsValidatingU22(false);
+    }
+  }, [isSingleSeatSelected]);
 
   useEffect(() => {
     const defaultBatchId = voucherItems.find((item) => item.vouchers?.length > 0)?.batchId ?? null;
@@ -206,6 +226,63 @@ const VipCardDialog = ({
 
     return () => window.clearTimeout(focusTimer);
   }, [open]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !searchText ||
+      lastSearched !== searchText ||
+      !customer?.id ||
+      customer.currentCardId !== 12 ||
+      !isSingleSeatSelected
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const validateU22Voucher = async () => {
+      setIsValidatingU22(true);
+      setU22ValidationReason(null);
+
+      try {
+        const validation = await ordersApi.validateVoucher({
+          customerId: customer.id,
+          planScreenId,
+          ...seatFields,
+          voucherCode: "U22Ticket",
+          memberCardCode: searchText
+        });
+
+        if (!isCancelled) {
+          setU22ValidationReason(validation.isValid ? null : validation.reason || "invalid");
+        }
+      } catch {
+        if (!isCancelled) {
+          setU22ValidationReason(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsValidatingU22(false);
+        }
+      }
+    };
+
+    void validateU22Voucher();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    customer?.currentCardId,
+    customer?.id,
+    lastSearched,
+    open,
+    planScreenId,
+    searchText,
+    seatFields,
+    isSingleSeatSelected
+  ]);
 
   const selectedVoucherCode = useMemo(() => {
     if (!selectedBatchId || voucherType === "none") return undefined;
@@ -333,6 +410,8 @@ const VipCardDialog = ({
       setStatus("");
     } catch {
       message.error("Có lỗi xảy ra khi tìm kiếm");
+      setIsValidatingU22(false);
+      setU22ValidationReason(null);
     }
   };
 
@@ -357,6 +436,8 @@ const VipCardDialog = ({
                 setSearchText(e.target.value);
                 setStatus("");
                 setLastSearched(null);
+                setIsValidatingU22(false);
+                setU22ValidationReason(null);
               }}
               status={status}
               onPressEnter={onSearch}
@@ -377,13 +458,33 @@ const VipCardDialog = ({
           <Radio value="campaign" disabled={!isCustomerSearched || hasSeatTypeDiscount}>
             Áp dụng chương trình khuyến mãi
           </Radio>
-          <Radio value="u22" disabled={!isCustomerSearched || hasSeatTypeDiscount || !isU22Member}>
+          <Radio value="u22" disabled={isU22Disabled}>
             Áp dụng ưu đãi cho thành viên U22
           </Radio>
           <Radio value="none" disabled={!isCustomerSearched}>
             Không áp dụng khuyến mãi
           </Radio>
         </Radio.Group>
+
+        {!hasSeatTypeDiscount && selectedSeats.length > 1 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Ưu đãi U22 chỉ áp dụng khi chọn đúng 1 ghế. Vui lòng bỏ bớt ghế nếu muốn dùng ưu đãi
+            này.
+          </div>
+        )}
+
+        {!hasSeatTypeDiscount && isCustomerSearched && isValidatingU22 && isSingleSeatSelected && (
+          <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
+            Đang kiểm tra điều kiện sử dụng ưu đãi U22 trong ngày.
+          </div>
+        )}
+
+        {!hasSeatTypeDiscount && isCustomerSearched && isU22UsedToday && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Thành viên U22 này đã sử dụng voucher hôm nay, nên không thể chọn ưu đãi U22 thêm lần
+            nữa.
+          </div>
+        )}
 
         {!isCustomerSearched && (
           <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">

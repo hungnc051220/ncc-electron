@@ -1,6 +1,6 @@
 import { formatMoney } from "@renderer/lib/utils";
 import { QrDialogData } from "@shared/types";
-import { Modal, QRCode } from "antd";
+import { Button, Modal, QRCode } from "antd";
 import dayjs from "dayjs";
 import { Hourglass } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,18 +9,32 @@ import Countdown from "./Countdown";
 interface QrCodeDialogProps {
   open: boolean;
   onCancel?: () => void;
+  onCheckTransaction?: () => void;
   dataQr: QrDialogData;
   isCustomerView?: boolean;
+  isCheckingTransaction?: boolean;
 }
 
-const QrCodeDialog = ({ open, onCancel, dataQr, isCustomerView }: QrCodeDialogProps) => {
+const QrCodeDialog = ({
+  open,
+  onCancel,
+  onCheckTransaction,
+  dataQr,
+  isCustomerView,
+  isCheckingTransaction
+}: QrCodeDialogProps) => {
   const [expired, setExpired] = useState(false);
+  const isU22Voucher = dataQr.voucherCode === "U22Ticket";
+  const displayTicketTotal = isU22Voucher
+    ? dataQr.orderTotal || 0
+    : (dataQr.orderTotal || 0) + (dataQr.orderDiscount || 0);
+  const displayDiscount = isU22Voucher ? 0 : dataQr.orderDiscount || 0;
 
   useEffect(() => {
-    if (expired && open && onCancel) {
-      onCancel();
+    if (!open) {
+      setExpired(false);
     }
-  }, [expired, onCancel, open]);
+  }, [open, dataQr.orderId]);
 
   return (
     <Modal
@@ -30,30 +44,48 @@ const QrCodeDialog = ({ open, onCancel, dataQr, isCustomerView }: QrCodeDialogPr
       closeIcon={isCustomerView ? false : true}
       width={800}
       centered
-      footer={() => (
-        <div className="flex w-full gap-6">
-          <div className="w-3/5 text-sm">
-            <p className="text-trunks">
-              Tổng tiền vé:{" "}
-              <span className="font-bold text-black dark:text-white">
-                {formatMoney((dataQr.orderTotal || 0) + (dataQr.orderDiscount || 0))}
-              </span>
-            </p>
-            <p className="text-trunks mt-1">
-              Giảm giá:{" "}
-              <span className="font-bold text-black dark:text-white">
-                {formatMoney(dataQr.orderDiscount || 0)}
-              </span>
-            </p>
+      footer={() => {
+        return (
+          <div className="flex w-full gap-6">
+            <div className="text-sm w-3/5 flex items-center justify-between">
+              <div className="text-left">
+                <div className="flex items-center justify-between">
+                  <p className="text-trunks w-25">Tổng tiền vé: </p>{" "}
+                  <p className="font-bold text-black dark:text-white">
+                    {formatMoney(displayTicketTotal)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-trunks w-25">Giảm giá: </p>
+                  <p className="font-bold text-black dark:text-white">
+                    {formatMoney(displayDiscount)}
+                  </p>
+                </div>
+              </div>
+              <div className="min-w-40 pl-4 text-right">
+                <p className="text-sm text-trunks">Tổng thanh toán</p>
+                <p className="text-chichi font-bold text-xl mt-1">
+                  {formatMoney(dataQr.orderTotal || 0)}
+                </p>
+              </div>
+            </div>
+            <div className="w-2/5 flex items-center">
+              {!isCustomerView && (
+                <div className="flex gap-2 justify-center w-full">
+                  <Button onClick={onCancel}>Kết thúc</Button>
+                  <Button
+                    type="primary"
+                    onClick={onCheckTransaction}
+                    loading={isCheckingTransaction}
+                  >
+                    Kiểm tra lại giao dịch TT
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="w-2/5 pl-4">
-            <p className="text-sm text-trunks">Tổng thanh toán</p>
-            <p className="text-chichi font-bold text-xl mt-1">
-              {formatMoney(dataQr.orderTotal || 0)}
-            </p>
-          </div>
-        </div>
-      )}
+        );
+      }}
     >
       <div className="py-2">
         <div className="flex gap-6">
@@ -84,11 +116,18 @@ const QrCodeDialog = ({ open, onCancel, dataQr, isCustomerView }: QrCodeDialogPr
             </div>
 
             <div className="bg-krillin/10 rounded-lg p-4 mt-10 flex items-center justify-between">
-              <Countdown
-                orderCreatedAt={dataQr.createdOnUtc}
-                expired={expired}
-                setExpired={(value: boolean) => setExpired(value)}
-              />
+              <div>
+                <Countdown
+                  orderCreatedAt={dataQr.createdOnUtc}
+                  expired={expired}
+                  setExpired={(value: boolean) => setExpired(value)}
+                />
+                {expired && (
+                  <p className="mt-1 text-sm font-medium text-red-500">
+                    Vui lòng kết thúc hoặc check lại giao dịch thanh toán.
+                  </p>
+                )}
+              </div>
               <Hourglass size={36} className="text-krillin" />
             </div>
           </div>

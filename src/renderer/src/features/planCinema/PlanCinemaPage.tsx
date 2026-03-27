@@ -45,16 +45,17 @@ const PlanCinemaPage = () => {
   };
 
   const [selectedPlan, setSelectedPlan] = useState<PlanCinemaProps | undefined>(undefined);
+  const currentActiveKey = Array.isArray(activeKey) ? activeKey[0] : activeKey;
 
   const params = useMemo(
     () => ({
       current,
       pageSize: 20,
-      activeKey: activeKey[0],
-      fromDate: activeKey[0] === "4" && fromDate ? dayjs(fromDate).format() : undefined,
-      toDate: activeKey[0] === "4" && toDate ? dayjs(toDate).format() : undefined
+      activeKey: currentActiveKey,
+      fromDate: currentActiveKey === "4" && fromDate ? dayjs(fromDate).format() : undefined,
+      toDate: currentActiveKey === "4" && toDate ? dayjs(toDate).format() : undefined
     }),
-    [current, activeKey, fromDate, toDate]
+    [current, currentActiveKey, fromDate, toDate]
   );
 
   const { data, isFetching } = usePlanCinemas(params);
@@ -184,7 +185,9 @@ const PlanCinemaPage = () => {
           ]}
         />
 
-        <div className="flex gap-2 items-center">{canCreate && <AddPlanCinemaDialog />}</div>
+        <div className="flex gap-2 items-center">
+          {canCreate && currentActiveKey === "0" && <AddPlanCinemaDialog />}
+        </div>
       </div>
       <div className="h-full flex flex-col">
         <div className="flex gap-5 flex-1 min-h-0">

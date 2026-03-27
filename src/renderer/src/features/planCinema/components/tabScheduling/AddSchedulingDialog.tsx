@@ -1,5 +1,6 @@
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
+import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
 import { getPlanScreeningDateTime } from "@renderer/lib/utils";
@@ -23,6 +24,8 @@ import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
+
+const MIN_SCREENING_BREAK_MINUTES = 10;
 
 type FieldType = {
   filmId: number;
@@ -117,6 +120,20 @@ const AddSchedulingDialog = ({
     date: projectDate ? dayjs(projectDate).format() : undefined
   });
 
+  const planScreeningParams = useMemo(
+    () => ({
+      current: 1,
+      pageSize: 500,
+      planCinemaId,
+      roomId,
+      fromDate: projectDate ? dayjs(projectDate).format("YYYY-MM-DD") : undefined,
+      toDate: projectDate ? dayjs(projectDate).format("YYYY-MM-DD") : undefined
+    }),
+    [planCinemaId, projectDate, roomId]
+  );
+
+  const { data: existingScreenings } = usePlanScreenings(planScreeningParams);
+
   useEffect(() => {
     if (selectedFilm) {
       form.setFieldValue("versionCode", selectedFilm.film.versionCode);
@@ -194,6 +211,44 @@ const AddSchedulingDialog = ({
     }
   }, [projectTime, form, filmId, selectedFilm]);
 
+  const getScreeningBreakError = (values: FieldType) => {
+    const screeningStart = getPlanScreeningDateTime(
+      dayjs(values.projectDate).format("YYYY-MM-DD"),
+      dayjs(values.projectTime).format()
+    );
+    const filmDuration = selectedFilm?.film.duration ?? 0;
+
+    if (!screeningStart?.isValid() || !filmDuration) {
+      return null;
+    }
+
+    const screeningEnd = screeningStart.add(filmDuration, "minute");
+
+    const hasConflict = (existingScreenings?.data ?? []).some((screening) => {
+      if (screening.roomId !== values.roomId) {
+        return false;
+      }
+
+      const existingStart = getPlanScreeningDateTime(screening.projectDate, screening.projectTime);
+      if (!existingStart?.isValid()) {
+        return false;
+      }
+
+      const existingEnd = existingStart.add(screening.filmInfo?.duration ?? 0, "minute");
+
+      return (
+        screeningStart.isBefore(existingEnd.add(MIN_SCREENING_BREAK_MINUTES, "minute")) &&
+        existingStart.isBefore(screeningEnd.add(MIN_SCREENING_BREAK_MINUTES, "minute"))
+      );
+    });
+
+    if (!hasConflict) {
+      return null;
+    }
+
+    return `Các ca chiếu trong cùng một phòng phải cách nhau ít nhất ${MIN_SCREENING_BREAK_MINUTES} phút.`;
+  };
+
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
     const uniformPrice = Number(values.price);
     const hasUniformPrice = isSamePrice && Number.isFinite(uniformPrice);
@@ -221,6 +276,12 @@ const AddSchedulingDialog = ({
         ? buildUniformPriceValue(planPricing[3], uniformPrice)
         : ""
       : values.priceOfPosition4;
+    const sameFilmBreakError = getScreeningBreakError(values);
+
+    if (sameFilmBreakError) {
+      message.error(sameFilmBreakError);
+      return;
+    }
 
     const body = {
       planCinemaId,
@@ -297,7 +358,16 @@ const AddSchedulingDialog = ({
               label="Phim"
               rules={[{ required: true, message: "Chọn phim" }]}
             >
-              <Select options={filmOptions} placeholder="Chọn phim" loading={isFetchingFilms} />
+              <Select
+                options={filmOptions}
+                placeholder="Chọn phim"
+                loading={isFetchingFilms}
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  `${option?.label ?? ""}`.toLowerCase().includes(input.toLowerCase())
+                }
+              />
             </Form.Item>
             <Form.Item<FieldType>
               name="roomId"

@@ -220,6 +220,7 @@ export const router = createHashRouter([
         element: (
           <PermissionGuard
             permissionKey="plan_screening"
+            alternatePermissions={[{ permissionKey: "showtimes" }]}
             fallbackPath="/403"
             allowInCustomerMode
           >

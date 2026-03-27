@@ -48,4 +48,23 @@ describe("PermissionGuard", () => {
 
     expect(screen.queryByText("staff screen")).not.toBeInTheDocument();
   });
+
+  it("renders children when an alternate permission is granted", () => {
+    canMock.mockImplementation((permissionKey: string) => permissionKey === "showtimes");
+    window.location.hash = "#/plan-screening/1";
+
+    render(
+      <MemoryRouter initialEntries={["/plan-screening/1"]}>
+        <PermissionGuard
+          permissionKey="plan_screening"
+          alternatePermissions={[{ permissionKey: "showtimes" }]}
+          fallbackPath="/403"
+        >
+          <div>staff screen</div>
+        </PermissionGuard>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("staff screen")).toBeInTheDocument();
+  });
 });

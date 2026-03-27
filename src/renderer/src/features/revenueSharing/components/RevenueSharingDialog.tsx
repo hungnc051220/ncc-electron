@@ -223,7 +223,7 @@ const RevenueSharingDialog = ({
       .map((item) => ({
         id: item.id,
         dateRange: [dayjs(item.fromDate), dayjs(item.toDate)] as [Dayjs, Dayjs],
-        rate: item.rate
+        rate: item.rate * 100
       }));
 
     form.setFieldValue("sharingRates", sharingRates.length ? sharingRates : [emptyRow]);
@@ -304,7 +304,7 @@ const RevenueSharingDialog = ({
       filmId,
       fromDate: fromDate.startOf("day").toISOString(),
       toDate: toDate.endOf("day").toISOString(),
-      rate: Number(item.rate)
+      rate: Number(item.rate) / 100
     };
   };
 

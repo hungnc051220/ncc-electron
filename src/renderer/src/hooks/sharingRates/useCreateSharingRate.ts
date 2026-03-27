@@ -1,7 +1,6 @@
 import { sharingRatesApi } from "@renderer/api/sharingRates.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { sharingRatesKeys } from "./keys";
-import { reportsKeys } from "../reports/keys";
 
 export const useCreateSharingRate = () => {
   const queryClient = useQueryClient();
@@ -9,13 +8,15 @@ export const useCreateSharingRate = () => {
   return useMutation({
     mutationFn: sharingRatesApi.create,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: sharingRatesKeys.all
-      });
-      queryClient.invalidateQueries({
-        queryKey: reportsKeys.getReportRevenueSharing()
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: sharingRatesKeys.all
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["report-sharing"]
+        })
+      ]);
     }
   });
 };

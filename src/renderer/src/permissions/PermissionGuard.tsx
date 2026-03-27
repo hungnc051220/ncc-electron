@@ -7,6 +7,10 @@ import { usePermission } from "./usePermission";
 type PermissionGuardProps = {
   permissionKey: string;
   action?: PermissionAction;
+  alternatePermissions?: Array<{
+    permissionKey: string;
+    action?: PermissionAction;
+  }>;
   fallbackPath?: string;
   allowInCustomerMode?: boolean;
   children: ReactNode;
@@ -15,6 +19,7 @@ type PermissionGuardProps = {
 const PermissionGuard = ({
   permissionKey,
   action = "access",
+  alternatePermissions = [],
   fallbackPath = "/",
   allowInCustomerMode = false,
   children
@@ -22,7 +27,11 @@ const PermissionGuard = ({
   const { can } = usePermission();
   const location = useLocation();
   const isCustomerMode = window.location.hash.includes("view=customer");
-  const allowed = can(permissionKey, action);
+  const allowed =
+    can(permissionKey, action) ||
+    alternatePermissions.some((permission) =>
+      can(permission.permissionKey, permission.action ?? "access")
+    );
 
   if (!allowed && !(allowInCustomerMode && isCustomerMode)) {
     return (

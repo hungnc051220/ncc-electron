@@ -393,6 +393,7 @@ export interface QrDialogData extends QrCodeResponseProps {
   orderId: number;
   orderTotal: number;
   orderDiscount: number;
+  voucherCode?: string;
   createdOnUtc: string;
   filmName: string;
   roomName: string;

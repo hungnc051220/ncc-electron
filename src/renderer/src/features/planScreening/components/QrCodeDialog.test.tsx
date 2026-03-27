@@ -52,20 +52,34 @@ describe("QrCodeDialog", () => {
     expect(screen.getByText("Conan")).toBeInTheDocument();
     expect(screen.getByText("A1, A2")).toBeInTheDocument();
     expect(screen.getAllByText((content) => content.replace(/\s/g, "") === "0₫")).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Check lại giao dịch TT" })).toBeInTheDocument();
   });
 
-  it("calls onCancel when the QR expires while open", () => {
+  it("shows options instead of auto-closing when the QR expires", () => {
     const onCancel = vi.fn();
 
     render(<QrCodeDialog open onCancel={onCancel} dataQr={baseQrData} />);
     fireEvent.click(screen.getByTestId("countdown-expire"));
 
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(
+      screen.getAllByText(/kết thúc hoặc check lại giao dịch TT/i).length
+    ).toBeGreaterThan(0);
+  });
+
+  it("calls onCheckTransaction when clicking the retry button", () => {
+    const onCheckTransaction = vi.fn();
+
+    render(<QrCodeDialog open onCheckTransaction={onCheckTransaction} dataQr={baseQrData} />);
+    fireEvent.click(screen.getByRole("button", { name: "Check lại giao dịch TT" }));
+
+    expect(onCheckTransaction).toHaveBeenCalledTimes(1);
   });
 
   it("hides the close button in customer view", () => {
     render(<QrCodeDialog open dataQr={baseQrData} isCustomerView />);
 
     expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check lại giao dịch TT" })).not.toBeInTheDocument();
   });
 });

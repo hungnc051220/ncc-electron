@@ -91,6 +91,25 @@ export interface OrderCancelReserveDto {
   orderIds: number[];
 }
 
+export interface ValidateVoucherDto {
+  customerId: number;
+  planScreenId: number;
+  listChairIndexF1?: string;
+  listChairValueF1?: string;
+  listChairIndexF2?: string;
+  listChairValueF2?: string;
+  listChairIndexF3?: string;
+  listChairValueF3?: string;
+  voucherCode: string;
+  memberCardCode: string;
+}
+
+export interface ValidateVoucherResponse {
+  isValid: boolean;
+  discountAmount: number;
+  reason?: string;
+}
+
 export interface OrderRefundDto {
   id: number;
   refundedAmount: number;
@@ -251,6 +270,10 @@ export const ordersApi = {
   },
   cancelReserve: async (dto: OrderCancelReserveDto) => {
     const res = await api.post("/api/pos/order/cancel/reserve", dto);
+    return res.data;
+  },
+  validateVoucher: async (dto: ValidateVoucherDto): Promise<ValidateVoucherResponse> => {
+    const res = await api.post("/api/pos/order/validate-voucher", dto);
     return res.data;
   },
   cancel: async (dto: CancelOrderDto) => {

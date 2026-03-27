@@ -14,6 +14,7 @@ import {
   ApiError,
   DiscountProps,
   ListSeat,
+  PaymentStatus,
   OrderResponseProps,
   PaymentType,
   PlanScreeningDetailProps,
@@ -142,6 +143,7 @@ const Actions = ({
   const [lastSaleTotal, setLastSaleTotal] = useState(
     () => Number(sessionStorage.getItem("lastTotal")) || 0
   );
+  const [isCheckingQrTransaction, setIsCheckingQrTransaction] = useState(false);
 
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
@@ -243,37 +245,39 @@ const Actions = ({
     [planScreenId, posShortName, queryClient, selectedPrinter, user, posName]
   );
 
-  useEffect(() => {
-    const cleanup = onOrderPaymentUpdated((data) => {
-      if (data.paymentStatus !== 30) return;
-
-      if (qrData && String(qrData.orderId) === String(data.orderId)) {
-        syncLastSaleTotal(qrData.orderTotal);
-      }
-
+  const handleQrPaymentSuccess = useCallback(
+    (orderId: number, orderTotal: number) => {
+      syncLastSaleTotal(orderTotal);
       message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
       if (canPrint) {
-        handlePrint(Number(data.orderId));
+        void handlePrint(orderId);
       }
       setSelectedSeats([]);
       setSelectedDiscountGroups({});
       queryClient.invalidateQueries({
         queryKey: planScreeningsKeys.getDetail(planScreenId)
       });
+      queryClient.invalidateQueries({
+        queryKey: ordersKeys.getOrdersByScreening(planScreenId)
+      });
       setOpenQrDialog(false);
       window.api?.sendQrClose();
+    },
+    [canPrint, handlePrint, planScreenId, queryClient, setSelectedSeats, syncLastSaleTotal]
+  );
+
+  useEffect(() => {
+    const cleanup = onOrderPaymentUpdated((data) => {
+      if (data.paymentStatus !== 30) return;
+
+      if (qrData && String(qrData.orderId) === String(data.orderId)) {
+        handleQrPaymentSuccess(Number(data.orderId), qrData.orderTotal);
+        return;
+      }
     });
 
     return cleanup;
-  }, [
-    canPrint,
-    handlePrint,
-    planScreenId,
-    qrData,
-    queryClient,
-    setSelectedSeats,
-    syncLastSaleTotal
-  ]);
+  }, [handleQrPaymentSuccess, qrData, queryClient]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -358,6 +362,7 @@ const Actions = ({
               orderId: order.id,
               orderTotal: order.orderTotal,
               orderDiscount: order.orderDiscount,
+              voucherCode: order.voucherCode,
               createdOnUtc: order.createdOnUtc,
               filmName: data.filmInfo.filmName,
               roomName: data.roomInfo.name,
@@ -535,6 +540,40 @@ const Actions = ({
         }
       }
     );
+  };
+
+  const onCheckQrTransaction = async () => {
+    if (!qrData) return;
+
+    try {
+      setIsCheckingQrTransaction(true);
+      await ordersApi.checkTransaction({ orderId: qrData.orderId });
+
+      const orderDetail = await queryClient.fetchQuery({
+        queryKey: ordersKeys.getDetail(qrData.orderId),
+        queryFn: () => ordersApi.getDetail(qrData.orderId)
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: planScreeningsKeys.getDetail(planScreenId)
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.getOrdersByScreening(planScreenId)
+        })
+      ]);
+
+      if (orderDetail.order.paymentStatusId === PaymentStatus.PAID) {
+        handleQrPaymentSuccess(qrData.orderId, qrData.orderTotal);
+        return;
+      }
+
+      message.warning("Giao dịch chưa được ghi nhận thành công. Vui lòng kiểm tra lại.");
+    } catch {
+      message.error("Kiểm tra lại giao dịch thanh toán thất bại");
+    } finally {
+      setIsCheckingQrTransaction(false);
+    }
   };
 
   const onCancelSeats = (values?: FieldType) => {
@@ -818,7 +857,9 @@ const Actions = ({
             setOpenQrDialog(false);
             window.api?.sendQrClose();
           }}
+          onCheckTransaction={() => void onCheckQrTransaction()}
           dataQr={qrData}
+          isCheckingTransaction={isCheckingQrTransaction}
         />
       )}
 
