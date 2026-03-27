@@ -1,9 +1,9 @@
 import { useCreateShowTimeSlot } from "@renderer/hooks/showTimeSlots/useCreateShowTimeSlot";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateShowTimeSlot } from "@renderer/hooks/showTimeSlots/useUpdateShowTimeSlot";
-import { ApiError, DayPartProps } from "@shared/types";
+import { DayPartProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select, TimePicker } from "antd";
-import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 
@@ -66,13 +66,7 @@ const ShowTimeSlotDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Thêm khung giờ chiếu thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Thêm khung giờ chiếu thất bại"));
           }
         }
       );
@@ -92,13 +86,7 @@ const ShowTimeSlotDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật khung giờ chiếu thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật khung giờ chiếu thất bại"));
           }
         }
       );

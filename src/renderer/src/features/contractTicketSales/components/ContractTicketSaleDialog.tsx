@@ -2,11 +2,11 @@
 
 import { useCreateContractTicketSale } from "@renderer/hooks/contractTicketSales/useCreateContractTicketSale";
 import { useUpdateContractTicketSale } from "@renderer/hooks/contractTicketSales/useUpdateContractTicketSale";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { formatter } from "@renderer/lib/utils";
-import { ApiError, OrderResponseProps } from "@shared/types";
+import { OrderResponseProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, InputNumber, message, Modal } from "antd";
-import axios from "axios";
 
 type FieldType = {
   customerFirstName: string;
@@ -52,13 +52,7 @@ const ContractTicketSaleDialog = ({
           onOpenChange(false);
         },
         onError: (error: unknown) => {
-          let msg = "Thêm vé bán hợp đồng thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm vé bán hợp đồng thất bại"));
         }
       });
     } else {
@@ -70,13 +64,7 @@ const ContractTicketSaleDialog = ({
             onOpenChange(false);
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật vé bán hợp đồng thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật vé bán hợp đồng thất bại"));
           }
         }
       );

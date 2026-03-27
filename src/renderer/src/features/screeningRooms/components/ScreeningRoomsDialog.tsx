@@ -1,9 +1,9 @@
 import { useCreateScreeningRoom } from "@renderer/hooks/screeningRooms/useCreateScreeningRoom";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateScreeningRoom } from "@renderer/hooks/screeningRooms/useUpdateScreeningRoom";
-import { ApiError, RoomProps } from "@shared/types";
+import { RoomProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Col, Form, Input, InputNumber, message, Modal, Row, Select } from "antd";
-import axios from "axios";
 
 const ruleOrderOptions = [
   {
@@ -67,13 +67,7 @@ const ScreeningRoomsDialog = ({ open, onOpenChange, editingRoom }: ScreeningRoom
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Thêm phòng chiếu thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm phòng chiếu thất bại"));
         }
       });
     } else {
@@ -85,13 +79,7 @@ const ScreeningRoomsDialog = ({ open, onOpenChange, editingRoom }: ScreeningRoom
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật phòng chiếu thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật phòng chiếu thất bại"));
           }
         }
       );

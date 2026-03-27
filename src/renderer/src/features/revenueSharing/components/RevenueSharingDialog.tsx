@@ -7,13 +7,13 @@ import { useCreateSharingRate } from "@renderer/hooks/sharingRates/useCreateShar
 import { useDeleteSharingRate } from "@renderer/hooks/sharingRates/useDeleteSharingRate";
 import { useSharingRates } from "@renderer/hooks/sharingRates/useSharingRates";
 import { useUpdateSharingRate } from "@renderer/hooks/sharingRates/useUpdateSharingRate";
-import { ApiError, ReportRevenueSharingProps } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { ReportRevenueSharingProps } from "@shared/types";
 import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import type { FormProps, TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, InputNumber, Modal, Select, Space, message } from "antd";
-import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 
 const { RangePicker } = DatePicker;
@@ -276,18 +276,6 @@ const RevenueSharingDialog = ({
     onOpenChange(false);
   };
 
-  const getErrorMessage = (error: unknown, fallback: string) => {
-    if (axios.isAxiosError<ApiError>(error)) {
-      return error.response?.data?.message ?? fallback;
-    }
-
-    if (error instanceof Error) {
-      return error.message || fallback;
-    }
-
-    return fallback;
-  };
-
   const toDto = (
     manufacturerId: number,
     filmId: number,
@@ -323,7 +311,7 @@ const RevenueSharingDialog = ({
         await refetchSharingRates();
       },
       onError: (error: unknown) => {
-        message.error(getErrorMessage(error, "Xóa mốc chia doanh thu thất bại"));
+        message.error(getApiErrorMessage(error, "Xóa mốc chia doanh thu thất bại"));
       }
     });
   };
@@ -368,7 +356,7 @@ const RevenueSharingDialog = ({
       onCancel();
     } catch (error) {
       message.error(
-        getErrorMessage(
+        getApiErrorMessage(
           error,
           isEdit ? "Cập nhật chia doanh thu thất bại" : "Thêm chia doanh thu thất bại"
         )

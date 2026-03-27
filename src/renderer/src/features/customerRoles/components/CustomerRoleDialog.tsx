@@ -1,10 +1,10 @@
 import { CustomerRoleDto } from "@renderer/api/customerRoles.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useCreateCustomerRole } from "@renderer/hooks/customerRoles/useCreateCustomerRole";
 import { useUpdateCustomerRole } from "@renderer/hooks/customerRoles/useUpdateCustomerRole";
-import { ApiError, CustomerRoleProps } from "@shared/types";
+import { CustomerRoleProps } from "@shared/types";
 import { Checkbox, Form, Input, Modal, message } from "antd";
 import type { FormProps } from "antd";
-import axios from "axios";
 
 type FieldType = CustomerRoleDto;
 
@@ -53,13 +53,7 @@ const CustomerRoleDialog = ({
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Thêm nhóm người dùng thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm nhóm người dùng thất bại"));
         }
       });
       return;
@@ -76,13 +70,7 @@ const CustomerRoleDialog = ({
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Cập nhật nhóm người dùng thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Cập nhật nhóm người dùng thất bại"));
         }
       }
     );

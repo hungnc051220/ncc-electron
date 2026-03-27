@@ -1,9 +1,9 @@
 import { UpdateStatusInvoiceDto } from "@renderer/api/invoice.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateStatusInvoice } from "@renderer/hooks/invoices/useUpdateStatusInvoice";
-import { ApiError, InvoiceProps, InvoiceStatus } from "@shared/types";
+import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, message, Modal, Select } from "antd";
-import axios from "axios";
 
 interface UpdateStatusInvoiceDialogProps {
   open: boolean;
@@ -44,13 +44,7 @@ const UpdateStatusInvoiceDialog = ({
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Cập nhật trạng thái hóa đơn điện tử thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Cập nhật trạng thái hóa đơn điện tử thất bại"));
         }
       }
     );

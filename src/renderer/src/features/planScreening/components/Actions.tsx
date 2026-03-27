@@ -1,4 +1,5 @@
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import ticketIcon from "@renderer/assets/icons/confirmation_number.svg";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
@@ -11,7 +12,6 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import {
-  ApiError,
   DiscountProps,
   ListSeat,
   PaymentStatus,
@@ -23,7 +23,6 @@ import {
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
 import { Button, Checkbox, Descriptions, Form, message, Modal, Select } from "antd";
-import axios from "axios";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
@@ -399,13 +398,7 @@ const Actions = ({
         }
       },
       onError: (error: unknown) => {
-        let msg = "Tạo đơn thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Tạo đơn thất bại"));
       }
     });
   };
@@ -442,13 +435,7 @@ const Actions = ({
         queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
       },
       onError: (error: unknown) => {
-        let msg = "Giữ chỗ thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Giữ chỗ thất bại"));
       }
     });
   };
@@ -530,13 +517,7 @@ const Actions = ({
           message.success("Huỷ đơn thành công");
         },
         onError: (error: unknown) => {
-          let msg = "Huỷ đơn thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Huỷ đơn thất bại"));
         }
       }
     );
@@ -604,13 +585,7 @@ const Actions = ({
         message.success("Huỷ vé thành công");
       },
       onError: (error: unknown) => {
-        let msg = "Huỷ vé thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Huỷ vé thất bại"));
       }
     });
   };
@@ -668,13 +643,7 @@ const Actions = ({
       ]);
       message.success("Huỷ giữ chỗ thành công");
     } catch (error) {
-      let msg = "Huỷ giữ chỗ thất bại";
-
-      if (axios.isAxiosError<ApiError>(error)) {
-        msg = error.response?.data?.message ?? msg;
-      }
-
-      message.error(msg);
+      message.error(getApiErrorMessage(error, "Huỷ giữ chỗ thất bại"));
     } finally {
       setIsCancelReservePending(false);
     }

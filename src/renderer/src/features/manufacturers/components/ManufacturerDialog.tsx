@@ -1,9 +1,9 @@
 import { useCreateManufacturer } from "@renderer/hooks/manufacturers/useCreateManufacturer";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateManufacturer } from "@renderer/hooks/manufacturers/useUpdateManufacturer";
-import { ApiError, ManufacturerProps } from "@shared/types";
+import { ManufacturerProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal } from "antd";
-import axios from "axios";
 
 type FieldType = {
   name: string;
@@ -68,13 +68,7 @@ const ManufacturerDialog = ({
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Thêm hãng phim thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm hãng phim thất bại"));
         }
       });
     } else {
@@ -86,13 +80,7 @@ const ManufacturerDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật hãng phim thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật hãng phim thất bại"));
           }
         }
       );

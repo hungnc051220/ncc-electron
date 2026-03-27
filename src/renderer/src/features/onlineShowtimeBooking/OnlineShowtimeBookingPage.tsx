@@ -1,11 +1,11 @@
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError, PlanScreeningDetailProps } from "@shared/types";
+import { PlanScreeningDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { Breadcrumb, DatePicker, message, Switch, Table } from "antd";
-import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
@@ -57,13 +57,7 @@ const OnlineShowtimeBookingPage = () => {
             message.success("Cập nhật trạng thái bán online thành công");
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật trạng thái bán online thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật trạng thái bán online thất bại"));
           }
         }
       );

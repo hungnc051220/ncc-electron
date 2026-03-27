@@ -1,11 +1,11 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useReportRevenueSharing } from "@renderer/hooks/reports/useReportRevenueSharing";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError, ReportRevenueSharingProps } from "@shared/types";
+import { ReportRevenueSharingProps } from "@shared/types";
 import type { TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table, message } from "antd";
-import axios from "axios";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
@@ -68,18 +68,10 @@ const RevenueSharingPage = () => {
         content: "Xuất file excel thành công"
       });
     } catch (error) {
-      let msg = "Xuất excel thất bại";
-
-      if (axios.isAxiosError<ApiError>(error)) {
-        msg = error.response?.data?.message ?? msg;
-      } else if (error instanceof Error && error.message) {
-        msg = error.message;
-      }
-
       message.open({
         key: messageKey,
         type: "error",
-        content: msg
+        content: getApiErrorMessage(error, "Xuất excel thất bại")
       });
     }
   }, []);

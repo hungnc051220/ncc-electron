@@ -1,8 +1,9 @@
 import { cyan, generate, green, presetPalettes, red } from "@ant-design/colors";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
 import { useCreateSeatType } from "@renderer/hooks/seatTypes/useCreateSeatType";
 import { useUpdateSeatType } from "@renderer/hooks/seatTypes/useUpdateSeatType";
-import { ApiError, SeatTypeProps } from "@shared/types";
+import { SeatTypeProps } from "@shared/types";
 import type { ColorPickerProps, FormProps, GetProp, UploadProps } from "antd";
 import {
   Checkbox,
@@ -17,7 +18,6 @@ import {
   theme,
   Upload
 } from "antd";
-import axios from "axios";
 import { useState } from "react";
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
@@ -114,13 +114,7 @@ const SeatTypeDialog = ({ open, onOpenChange, editingSeatType }: SeatTypeDialogP
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Thêm loại ghế, vị trí thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm loại ghế, vị trí thất bại"));
         }
       });
     } else {
@@ -132,13 +126,7 @@ const SeatTypeDialog = ({ open, onOpenChange, editingSeatType }: SeatTypeDialogP
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật loại ghế, vị trí thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật loại ghế, vị trí thất bại"));
           }
         }
       );

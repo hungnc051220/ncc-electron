@@ -1,11 +1,11 @@
 import { useFilms } from "@renderer/hooks/films/useFilms";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useCreatePlanFilm } from "@renderer/hooks/planFilms/useCreatePlanFilm";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError, FilmProps, PlanFilmProps } from "@shared/types";
+import { FilmProps, PlanFilmProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Button, Input, message, Modal, Table } from "antd";
-import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 
@@ -135,13 +135,7 @@ const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
         setOpen(false);
       },
       onError: (error: unknown) => {
-        let msg = "Thêm phim cho kế hoạch thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Thêm phim cho kế hoạch thất bại"));
       }
     });
   };

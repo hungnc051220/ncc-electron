@@ -6,12 +6,12 @@ import { useSwapSeats } from "@renderer/hooks/orders/useSwapSeats";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { formatMoney } from "@renderer/lib/utils";
-import { ApiError, ListSeat, OrderStatus } from "@shared/types";
+import { ListSeat, OrderStatus } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, Spin, message } from "antd";
-import axios from "axios";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import Seats from "../planScreening/components/Seats";
@@ -166,13 +166,7 @@ const OrderHistorySwapSeatsPage = () => {
 
       navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`);
     } catch (error: unknown) {
-      let msg = "Đổi ghế thất bại";
-
-      if (axios.isAxiosError<ApiError>(error)) {
-        msg = error.response?.data?.message ?? msg;
-      }
-
-      message.error(msg);
+      message.error(getApiErrorMessage(error, "Đổi ghế thất bại"));
     }
   };
 

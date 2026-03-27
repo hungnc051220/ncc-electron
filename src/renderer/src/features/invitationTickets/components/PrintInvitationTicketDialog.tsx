@@ -5,12 +5,12 @@ import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTicket
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { OrderDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Button, Checkbox, Form, Input, message, Modal, Select, Space } from "antd";
-import axios from "axios";
 import dayjs from "dayjs";
 import { ChevronDown } from "lucide-react";
 import QRCode from "qrcode";
@@ -56,24 +56,6 @@ interface PrintInvitationTicketDialogProps {
 }
 
 type KeyboardField = "receivedEmail" | "title" | "phoneNumber";
-
-const getApiErrorMessage = (error: unknown, fallback: string) => {
-  if (!axios.isAxiosError(error)) {
-    return fallback;
-  }
-
-  const responseMessage = error.response?.data?.message;
-
-  if (Array.isArray(responseMessage)) {
-    return responseMessage[0] ?? fallback;
-  }
-
-  if (typeof responseMessage === "string") {
-    return responseMessage;
-  }
-
-  return fallback;
-};
 
 const PrintInvitationTicketDialog = ({
   open,

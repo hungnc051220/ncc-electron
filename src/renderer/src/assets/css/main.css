@@ -288,10 +288,16 @@
     border-radius: 22px;
     background: transparent !important;
     box-shadow: none !important;
+    font-family: "Inter", system-ui, sans-serif !important;
   }
 
   .version-info-modal .ant-modal-container {
     padding: 0 !important;
+  }
+
+  .version-info-modal .ant-modal-content,
+  .version-info-modal .ant-modal-content * {
+    font-family: "Inter", system-ui, sans-serif !important;
   }
 
   .version-info-modal .ant-modal-close {

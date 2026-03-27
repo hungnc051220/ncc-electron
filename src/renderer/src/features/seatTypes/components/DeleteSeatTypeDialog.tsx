@@ -1,7 +1,6 @@
 import { useDeleteSeatType } from "@renderer/hooks/seatTypes/useDeleteSeatType";
-import { ApiError } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { message, Modal } from "antd";
-import axios from "axios";
 
 interface DeleteSeatTypeDialogProps {
   open: boolean;
@@ -20,13 +19,7 @@ const DeleteSeatTypeDialog = ({ open, onOpenChange, id, name }: DeleteSeatTypeDi
         onOpenChange(false);
       },
       onError: (error: unknown) => {
-        let msg = "Xóa loại ghế, vị trí thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Xóa loại ghế, vị trí thất bại"));
       }
     });
   };

@@ -1,12 +1,12 @@
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError, PlanScreeningDetailProps } from "@shared/types";
+import { PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
 import { Button, DatePicker, message, Select, Table } from "antd";
-import axios from "axios";
 import dayjs, { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import AddSchedulingDialog from "./AddSchedulingDialog";
@@ -82,7 +82,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       screeningRoomsApi.getAll({
         current: pageParam,
         pageSize: 20,
-        hidden: false
+        hidden: false,
+        sort: "name.asc"
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {
@@ -111,13 +112,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
         message.success("Xóa ca chiếu trong kế hoạch thành công");
       },
       onError: (error: unknown) => {
-        let msg = "Xóa ca chiếu vào kế hoạch thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Xóa ca chiếu vào kế hoạch thất bại"));
       }
     });
   };

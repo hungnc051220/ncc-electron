@@ -116,10 +116,10 @@ const VersionInfoModalContent = ({
           )}
 
           <div className={`mt-5 border-t pt-4 ${dividerClassName}`}>
-            <div className={`mb-4 text-[16px] font-semibold ${titleClassName} sm:text-[17px]`}>
+            <div className={`mb-2 text-[16px] font-semibold ${titleClassName} sm:text-[17px]`}>
               Liên hệ
             </div>
-            <div className="space-y-3 text-base leading-6">
+            <div className="space-y-2 text-base leading-6">
               <div className="flex flex-wrap gap-x-2">
                 <span className={`font-normal w-17.5 ${labelClassName}`}>Tác giả:</span>
                 <span className="font-semibold text-orange-500">Nguyễn Cảnh Hưng</span>
@@ -128,7 +128,7 @@ const VersionInfoModalContent = ({
                 <span className={`font-normal w-17.5 ${labelClassName}`}>Email:</span>
                 <a
                   href="mailto:hungnc.dev@gmail.com"
-                  className="font-normal text-[#3b82f6] hover:text-[#2563eb] dark:text-[#76a9ff] dark:hover:text-[#9ec1ff]"
+                  className="font-normal text-[#3b82f6]! hover:text-[#2563eb]! dark:text-[#76a9ff] dark:hover:text-[#9ec1ff]"
                 >
                   hungnc.dev@gmail.com
                 </a>
@@ -137,12 +137,7 @@ const VersionInfoModalContent = ({
           </div>
 
           <div className="flex justify-end pt-5">
-            <Button
-              type="primary"
-              size="large"
-              className="h-10 rounded-xl px-5 text-[14px] font-medium"
-              onClick={onClose}
-            >
+            <Button type="primary" size="large" onClick={onClose}>
               Đóng
             </Button>
           </div>

@@ -1,10 +1,10 @@
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useRolePermissions } from "@renderer/hooks/permissions/useRolePermissions";
 import { useUpdateRolePermissions } from "@renderer/hooks/permissions/useUpdateRolePermissions";
 import { PERMISSION_ACTION_LABELS } from "@renderer/permissions/definitions";
 import { buildPermissionMatrix } from "@renderer/permissions/utils";
 import {
-  ApiError,
   BulkUpdateRolePermissionsRequest,
   PermissionAction,
   permissionActions,
@@ -13,7 +13,6 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import type { MenuProps, TableProps } from "antd";
 import { Breadcrumb, Button, Checkbox, Layout, Menu, message, Table } from "antd";
-import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
@@ -286,13 +285,7 @@ const UserRolesPage = () => {
         message.success("Lưu thông tin quyền người dùng thành công");
       },
       onError: (error: unknown) => {
-        let msg = "Lưu thông tin quyền người dùng thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Lưu thông tin quyền người dùng thất bại"));
       }
     });
   };

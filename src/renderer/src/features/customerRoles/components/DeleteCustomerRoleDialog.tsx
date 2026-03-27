@@ -1,7 +1,6 @@
 import { useDeleteCustomerRole } from "@renderer/hooks/customerRoles/useDeleteCustomerRole";
-import { ApiError } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { Modal, message } from "antd";
-import axios from "axios";
 
 interface DeleteCustomerRoleDialogProps {
   open: boolean;
@@ -25,13 +24,7 @@ const DeleteCustomerRoleDialog = ({
         onOpenChange(false);
       },
       onError: (error: unknown) => {
-        let msg = "Xóa nhóm người dùng thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Xóa nhóm người dùng thất bại"));
       }
     });
   };

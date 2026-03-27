@@ -6,9 +6,9 @@ import { useUpdateFilm } from "@renderer/hooks/films/useUpdateFilm";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useFilmCategories } from "@renderer/hooks/useFilmCategories";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { formatter } from "@renderer/lib/utils";
 import {
-  ApiError,
   CountryProps,
   FilmProps,
   FilmStatusProps,
@@ -28,7 +28,6 @@ import {
   Select,
   Upload
 } from "antd";
-import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useEffect } from "react";
@@ -114,10 +113,6 @@ interface FilmDialogProps {
   filmStatuses: FilmStatusProps[];
 }
 
-type FilmApiError = Omit<ApiError, "message"> & {
-  message: string | string[];
-};
-
 const FilmDialog = ({
   open,
   onOpenChange,
@@ -166,22 +161,6 @@ const FilmDialog = ({
       form.setFieldValue("sellOnlineBefore", 0);
     }
   }, [form, sellOnline]);
-
-  const getApiErrorMessage = (error: unknown, fallback: string) => {
-    if (axios.isAxiosError<FilmApiError>(error)) {
-      const apiMessage = error.response?.data?.message;
-
-      if (Array.isArray(apiMessage)) {
-        return apiMessage.join(", ");
-      }
-
-      if (typeof apiMessage === "string" && apiMessage.trim()) {
-        return apiMessage;
-      }
-    }
-
-    return fallback;
-  };
 
   const onOk = () => form.submit();
 

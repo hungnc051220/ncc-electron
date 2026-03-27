@@ -1,7 +1,7 @@
 import { useUpdateScreeningRoom } from "@renderer/hooks/screeningRooms/useUpdateScreeningRoom";
-import { ApiError, RoomProps } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { RoomProps } from "@shared/types";
 import { message, Modal } from "antd";
-import axios from "axios";
 
 interface ChangeHiddenScreeningRoomDialogProps {
   open: boolean;
@@ -33,13 +33,7 @@ const ChangeHiddenScreeningRoomDialog = ({
           onOpenChange(false);
         },
         onError: (error: unknown) => {
-          let msg = "Thay đổi ẩn/hiện phòng chiếu thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thay đổi ẩn/hiện phòng chiếu thất bại"));
         }
       }
     );

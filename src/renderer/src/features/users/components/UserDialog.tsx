@@ -1,12 +1,12 @@
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useCreateUser } from "@renderer/hooks/users/useCreateUser";
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select } from "antd";
-import { ApiError, CustomerRoleProps, UserProps } from "@shared/types";
+import { CustomerRoleProps, UserProps } from "@shared/types";
 import { UserDto } from "@renderer/api/users.api";
-import axios from "axios";
 interface UserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,13 +70,7 @@ const UserDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Thêm người dùng thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Thêm người dùng thất bại"));
           }
         }
       );
@@ -89,13 +83,7 @@ const UserDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật người dùng thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật người dùng thất bại"));
           }
         }
       );

@@ -1,7 +1,7 @@
 import { useUpdateManufacturer } from "@renderer/hooks/manufacturers/useUpdateManufacturer";
-import { ApiError, ManufacturerProps } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { ManufacturerProps } from "@shared/types";
 import { message, Modal } from "antd";
-import axios from "axios";
 
 interface ChangeHiddenManufacturerDialogProps {
   open: boolean;
@@ -33,13 +33,7 @@ const ChangeHiddenManufacturerDialog = ({
           onOpenChange(false);
         },
         onError: (error: unknown) => {
-          let msg = "Thay đổi ẩn/hiện hãng phim thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thay đổi ẩn/hiện hãng phim thất bại"));
         }
       }
     );

@@ -1,7 +1,6 @@
 import { useDeleteScreeningRoom } from "@renderer/hooks/screeningRooms/useDeleteScreeningRoom";
-import { ApiError } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { message, Modal } from "antd";
-import axios from "axios";
 
 interface DeleteScreeningRoomDialogProps {
   open: boolean;
@@ -25,13 +24,7 @@ const DeleteScreeningRoomDialog = ({
         onOpenChange(false);
       },
       onError: (error: unknown) => {
-        let msg = "Xóa phòng chiếu thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Xóa phòng chiếu thất bại"));
       }
     });
   };

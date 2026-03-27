@@ -1,10 +1,12 @@
 import { generalDataApi } from "@renderer/api/generalData.api";
 import { usersApi } from "@renderer/api/users.api";
 import LoginSettingsPopup from "@renderer/components/LoginSettingsPopup";
+import { useUpdater } from "@renderer/components/UpdaterContext";
 import { usersKeys } from "@renderer/hooks/users/keys";
 import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { JwtPayload } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Image, Input } from "antd";
 import { jwtDecode } from "jwt-decode";
 import { ChevronDown, LockKeyhole, User2 } from "lucide-react";
@@ -27,6 +29,7 @@ export default function Login() {
   const loginMutation = useLogin();
   const navigate = useNavigate();
   const isAuth = useAuthStore((s) => s.isAuth);
+  const { showVersionInfo } = useUpdater();
   const [form] = Form.useForm<LoginForm>();
   const inlineKeyboardRef = useRef<{
     setInput: (input: string, inputName?: string) => void;
@@ -127,6 +130,7 @@ export default function Login() {
       </div>
       <div className="absolute top-3 right-4 z-99 text-white space-x-2">
         <LoginSettingsPopup />
+        <Button onClick={() => void showVersionInfo()} icon={<InfoCircleOutlined />} />
         <QuitApp />
       </div>
       <div className={`login-keyboard-backdrop ${isKeyboardDrawerOpen ? "is-open" : ""}`} />

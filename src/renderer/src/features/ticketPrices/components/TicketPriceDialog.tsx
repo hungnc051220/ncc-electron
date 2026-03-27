@@ -1,13 +1,13 @@
 import { seatTypesApi } from "@renderer/api/seatTypes.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { showTimeSlotsApi } from "@renderer/api/showTimeSlots.api";
 import { useCreateTicketPrice } from "@renderer/hooks/ticketPrices/useCreateTicketPrice";
 import { useUpdateTicketPrice } from "@renderer/hooks/ticketPrices/useUpdateTicketPrice";
 import { formatter } from "@renderer/lib/utils";
-import { ApiError, TicketPriceProps } from "@shared/types";
+import { TicketPriceProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Form, Input, InputNumber, message, Modal, Select } from "antd";
-import axios from "axios";
 import { useMemo } from "react";
 
 type FieldType = {
@@ -105,13 +105,7 @@ const TicketPriceDialog = ({ open, onOpenChange, editingTicketPrice }: TicketPri
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Thêm giá vé thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm giá vé thất bại"));
         }
       });
     } else {
@@ -123,13 +117,7 @@ const TicketPriceDialog = ({ open, onOpenChange, editingTicketPrice }: TicketPri
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật giá vé thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật giá vé thất bại"));
           }
         }
       );

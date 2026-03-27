@@ -1,10 +1,9 @@
 import { useChangePasswordUser } from "@renderer/hooks/users/useChangePasswordUser";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
-import { ApiError } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message } from "antd";
-import axios from "axios";
 
 type FieldType = {
   password: string;
@@ -24,13 +23,7 @@ const ChangePassword = () => {
         logout();
       },
       onError: (error: unknown) => {
-        let msg = "Xóa lý do hủy vé thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Xóa lý do hủy vé thất bại"));
       }
     });
   };

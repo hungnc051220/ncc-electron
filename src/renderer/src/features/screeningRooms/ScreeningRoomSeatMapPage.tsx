@@ -4,11 +4,11 @@ import { useScreeningRoomChairs } from "@renderer/hooks/screeningRooms/useScreen
 import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRooms";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { cn } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message, Select, Space, Spin } from "antd";
-import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import Selecto from "react-selecto";
@@ -396,10 +396,7 @@ const ScreeningRoomSeatMapPage = () => {
       await createChairs.mutateAsync(payload);
       message.success("Cập nhật sơ đồ ghế thành công");
     } catch (error) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Cập nhật sơ đồ ghế thất bại"
-        : "Cập nhật sơ đồ ghế thất bại";
-      message.error(errorMessage);
+      message.error(getApiErrorMessage(error, "Cập nhật sơ đồ ghế thất bại"));
     }
   };
 

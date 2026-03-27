@@ -1,4 +1,5 @@
 import { MoreOutlined } from "@ant-design/icons";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useMarkPrintedOrder } from "@renderer/hooks/orders/useMarkPrintedOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
@@ -9,10 +10,9 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ApiError, OrderDetailProps, OrderStatus } from "@shared/types";
+import { OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Dropdown, message, Table } from "antd";
-import axios from "axios";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -97,13 +97,7 @@ const PrintOnlineTicketsPage = () => {
       },
       {
         onError: (error: unknown) => {
-          let msg = "Cập nhật trạng thái in vé thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Cập nhật trạng thái in vé thất bại"));
         }
       }
     );
@@ -117,13 +111,7 @@ const PrintOnlineTicketsPage = () => {
           message.success("Cho phép in lại vé thành công");
         },
         onError: (error: unknown) => {
-          let msg = "Cho phép in lại vé thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Cho phép in lại vé thất bại"));
         }
       }
     );

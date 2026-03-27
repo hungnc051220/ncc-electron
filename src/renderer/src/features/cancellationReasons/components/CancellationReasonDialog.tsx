@@ -1,9 +1,9 @@
 import { useCreateCancellationReason } from "@renderer/hooks/cancellationReasons/useCreateCancellationReason";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateCancellationReason } from "@renderer/hooks/cancellationReasons/useUpdateCancellationReason";
-import { ApiError, CancellationReasonProps } from "@shared/types";
+import { CancellationReasonProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal } from "antd";
-import axios from "axios";
 
 type FieldType = {
   reason: string;
@@ -48,13 +48,7 @@ const CancellationReasonDialog = ({
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Thêm lý do hủy vé thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm lý do hủy vé thất bại"));
         }
       });
     } else {
@@ -69,13 +63,7 @@ const CancellationReasonDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật lý do hủy vé thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật lý do hủy vé thất bại"));
           }
         }
       );

@@ -1,14 +1,14 @@
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
-import { ApiError, ListSeat, PlanScreeningDetailProps } from "@shared/types";
+import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, message } from "antd";
-import axios from "axios";
 import { Dispatch, SetStateAction, useMemo } from "react";
 
 const buildMergedNoOnlinePayload = (
@@ -119,13 +119,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
           });
         },
         onError: (error: unknown) => {
-          let msg = "Cập nhật trạng thái ghế bán online thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Cập nhật trạng thái ghế bán online thất bại"));
         }
       }
     );

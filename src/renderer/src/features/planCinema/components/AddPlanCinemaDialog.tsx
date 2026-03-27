@@ -1,10 +1,9 @@
 import Icon from "@ant-design/icons";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useCreatePlanCinema } from "@renderer/hooks/planCinemas/useCreatePlanCinema";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError } from "@shared/types";
 import type { FormProps } from "antd";
 import { Button, Form, Input, message, Modal } from "antd";
-import axios from "axios";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -39,13 +38,7 @@ const AddPlanCinemaDialog = () => {
         onCancel();
       },
       onError: (error: unknown) => {
-        let msg = "Tạo kế hoạch chiếu phim thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Tạo kế hoạch chiếu phim thất bại"));
       }
     });
   };

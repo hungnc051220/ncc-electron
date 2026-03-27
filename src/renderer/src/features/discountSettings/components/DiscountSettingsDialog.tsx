@@ -1,10 +1,10 @@
 import { useCreateDiscount } from "@renderer/hooks/discounts/useCreateDiscount";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateDiscount } from "@renderer/hooks/discounts/useUpdateDiscount";
 import { formatter } from "@renderer/lib/utils";
-import { ApiError, DiscountProps } from "@shared/types";
+import { DiscountProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, InputNumber, message, Modal, Select } from "antd";
-import axios from "axios";
 
 type FieldType = {
   discountName: string;
@@ -52,13 +52,7 @@ const DiscountSettingsDialog = ({
           onCancel();
         },
         onError: (error: unknown) => {
-          let msg = "Thêm giảm giá thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm giảm giá thất bại"));
         }
       });
     } else {
@@ -70,13 +64,7 @@ const DiscountSettingsDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật giảm giá thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật giảm giá thất bại"));
           }
         }
       );

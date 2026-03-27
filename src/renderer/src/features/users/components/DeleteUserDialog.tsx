@@ -1,7 +1,6 @@
 import { useDeleteUser } from "@renderer/hooks/users/useDeleteUser";
-import { ApiError } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { message, Modal } from "antd";
-import axios from "axios";
 
 interface DeleteUserDialogProps {
   open: boolean;
@@ -20,13 +19,7 @@ const DeleteUserDialog = ({ open, onOpenChange, id, username }: DeleteUserDialog
         onOpenChange(false);
       },
       onError: (error: unknown) => {
-        let msg = "Xóa người dùng thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Xóa người dùng thất bại"));
       }
     });
   };

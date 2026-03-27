@@ -1,11 +1,11 @@
 import { useCreateInvoice } from "@renderer/hooks/invoices/useCreateInvoice";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
 import { useUpdateInvoice } from "@renderer/hooks/invoices/useUpdateInvoice";
 import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
-import { ApiError, InvoiceProps } from "@shared/types";
+import { InvoiceProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, message, Modal, Select } from "antd";
-import axios from "axios";
 import { ChevronDown } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import Keyboard from "react-simple-keyboard";
@@ -223,13 +223,7 @@ const InvoiceDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Thêm hóa đơn điện tử thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Thêm hóa đơn điện tử thất bại"));
           }
         }
       );
@@ -250,13 +244,7 @@ const InvoiceDialog = ({
             onCancel();
           },
           onError: (error: unknown) => {
-            let msg = "Cập nhật hóa đơn điện tử thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Cập nhật hóa đơn điện tử thất bại"));
           }
         }
       );

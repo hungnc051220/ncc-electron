@@ -1,4 +1,5 @@
 import { SetSeatsContractTicketSaleDto } from "@renderer/api/contractTicketSales.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
@@ -13,11 +14,10 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ApiError, ListSeat, PlanScreeningDetailProps } from "@shared/types";
+import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, Form, Modal, Select, message } from "antd";
-import axios from "axios";
 import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
@@ -213,13 +213,7 @@ const Actions = ({
           });
         },
         onError: (error: unknown) => {
-          let msg = "Thiết lập ghế hợp đồng thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thiết lập ghế hợp đồng thất bại"));
         }
       }
     );
@@ -251,13 +245,7 @@ const Actions = ({
         message.success("Huỷ vé hợp đồng thành công");
       },
       onError: (error: unknown) => {
-        let msg = "Huỷ vé hợp đồng thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Huỷ vé hợp đồng thất bại"));
       }
     });
   };

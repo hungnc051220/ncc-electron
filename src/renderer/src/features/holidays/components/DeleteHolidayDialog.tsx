@@ -1,7 +1,6 @@
 import { useDeleteHoliday } from "@renderer/hooks/holidays/useDeleteHoliday";
-import { ApiError } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { message, Modal } from "antd";
-import axios from "axios";
 import dayjs from "dayjs";
 
 interface DeleteHolidayDialogProps {
@@ -21,13 +20,7 @@ const DeleteHolidayDialog = ({ open, onOpenChange, id, date }: DeleteHolidayDial
         onOpenChange(false);
       },
       onError: (error: unknown) => {
-        let msg = "Xóa ngày thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Xóa ngày thất bại"));
       }
     });
   };

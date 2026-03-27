@@ -1,4 +1,5 @@
 import type { DragEndEvent } from "@dnd-kit/core";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
@@ -12,12 +13,11 @@ import { useDeletePlanFilm } from "@renderer/hooks/planFilms/useDeletePlanFilm";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useUpdatePlanFilm } from "@renderer/hooks/planFilms/useUpdatePlanCinema";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError, PlanFilmProps } from "@shared/types";
+import { PlanFilmProps } from "@shared/types";
 import type { TableColumnsType, TableProps } from "antd";
 import { Button, message, Table } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import AddMovies from "./AddMovies";
-import axios from "axios";
 
 interface TabFilmProps {
   planCinemaId?: number;
@@ -71,13 +71,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
             message.success("Thay đổi thứ tự phim trong kế hoạch thành công");
           },
           onError: (error: unknown) => {
-            let msg = "Thay đổi thứ tự phim trong kế hoạch thất bại";
-
-            if (axios.isAxiosError<ApiError>(error)) {
-              msg = error.response?.data?.message ?? msg;
-            }
-
-            message.error(msg);
+            message.error(getApiErrorMessage(error, "Thay đổi thứ tự phim trong kế hoạch thất bại"));
           }
         }
       );
@@ -101,13 +95,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
           message.success("Xóa phim trong kế hoạch thành công");
         },
         onError: (error: unknown) => {
-          let msg = "Xóa phim trong kế hoạch thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Xóa phim trong kế hoạch thất bại"));
         }
       }
     );

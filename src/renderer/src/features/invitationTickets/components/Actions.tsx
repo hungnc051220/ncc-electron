@@ -1,4 +1,5 @@
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
@@ -10,12 +11,11 @@ import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ApiError, ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
+import { ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, Form, Input, Modal, Select, message } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
-import axios from "axios";
 import { ChevronDown } from "lucide-react";
 import {
   ChangeEvent,
@@ -252,13 +252,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
         });
       },
       onError: (error: unknown) => {
-        let msg = "Tạo vé mời thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Tạo vé mời thất bại"));
       }
     });
   };
@@ -292,13 +286,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
         message.success("Huỷ vé mời thành công");
       },
       onError: (error: unknown) => {
-        let msg = "Huỷ vé mời thất bại";
-
-        if (axios.isAxiosError<ApiError>(error)) {
-          msg = error.response?.data?.message ?? msg;
-        }
-
-        message.error(msg);
+        message.error(getApiErrorMessage(error, "Huỷ vé mời thất bại"));
       }
     });
   };

@@ -1,8 +1,7 @@
 import { useUpdatePlanCinema } from "@renderer/hooks/planCinemas/useUpdatePlanCinema";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError } from "@shared/types";
 import { Button, message } from "antd";
-import axios from "axios";
 
 const RestoreActions = ({
   planCinemaId,
@@ -24,13 +23,7 @@ const RestoreActions = ({
           message.success("Khôi phục kế hoạch thành công");
         },
         onError: (error: unknown) => {
-          let msg = "Khôi phục kế hoạch thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Khôi phục kế hoạch thất bại"));
         }
       }
     );

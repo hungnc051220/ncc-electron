@@ -1,8 +1,7 @@
 import { useApproveRejectPlanCinema } from "@renderer/hooks/planCinemas/useApproveRejectPlanCinema";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError } from "@shared/types";
 import { Button, message } from "antd";
-import axios from "axios";
 
 const ApproveRejectActions = ({
   planCinemaId,
@@ -24,13 +23,7 @@ const ApproveRejectActions = ({
           message.success("Cập nhật trạng thái kế hoạch thành công");
         },
         onError: (error: unknown) => {
-          let msg = "Cập nhật trạng thái kế hoạch thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Cập nhật trạng thái kế hoạch thất bại"));
         }
       }
     );

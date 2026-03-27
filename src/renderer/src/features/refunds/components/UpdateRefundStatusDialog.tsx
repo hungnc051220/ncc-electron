@@ -1,8 +1,8 @@
 import { useUpdateRefundStatusOrder } from "@renderer/hooks/orders/useUpdateRefundStatusOrder";
-import { ApiError, OrderDetailProps, RefundStatus } from "@shared/types";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { OrderDetailProps, RefundStatus } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, message, Modal, Select } from "antd";
-import axios from "axios";
 
 interface UpdateRefundStatusDialogProps {
   open: boolean;
@@ -64,13 +64,7 @@ const UpdateRefundStatusDialog = ({
               onCancel();
             },
             onError: (error: unknown) => {
-              let msg = "Cập nhật trạng thái hoàn tiền thất bại";
-
-              if (axios.isAxiosError<ApiError>(error)) {
-                msg = error.response?.data?.message ?? msg;
-              }
-
-              message.error(msg);
+              message.error(getApiErrorMessage(error, "Cập nhật trạng thái hoàn tiền thất bại"));
             }
           }
         );

@@ -1,11 +1,11 @@
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
 import { getPlanScreeningDateTime } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { ApiError } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import {
@@ -20,7 +20,6 @@ import {
   Select,
   TimePicker
 } from "antd";
-import axios from "axios";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
@@ -305,13 +304,7 @@ const AddSchedulingDialog = ({
           setOpen(false);
         },
         onError: (error: unknown) => {
-          let msg = "Thêm ca chiếu vào kế hoạch thất bại";
-
-          if (axios.isAxiosError<ApiError>(error)) {
-            msg = error.response?.data?.message ?? msg;
-          }
-
-          message.error(msg);
+          message.error(getApiErrorMessage(error, "Thêm ca chiếu vào kế hoạch thất bại"));
         }
       }
     );
