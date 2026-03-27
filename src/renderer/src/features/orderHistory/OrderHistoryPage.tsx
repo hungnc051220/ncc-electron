@@ -13,7 +13,8 @@ import { OrderDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Breadcrumb, Button, Dropdown, message, Table, Tabs } from "antd";
 import dayjs from "dayjs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import OrderDialog from "./components/OrderHistoryDialog";
 import Filter from "./components/Filter";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -48,6 +49,8 @@ const OrderHistoryPage = () => {
   const [activeKey, setActiveKey] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const userId = useAuthStore((s) => s.userId);
   const { posShortName } = useSettingPosStore();
@@ -76,6 +79,33 @@ const OrderHistoryPage = () => {
   }, [current, pageSize, filterValues, activeKey]);
 
   const { data: orders, isFetching } = useOrders(params);
+
+  useEffect(() => {
+    const reopenOrderIdParam = searchParams.get("reopenOrderId");
+
+    if (!reopenOrderIdParam) {
+      return;
+    }
+
+    const reopenOrderId = Number(reopenOrderIdParam);
+
+    if (!reopenOrderId) {
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.delete("reopenOrderId");
+      setSearchParams(nextSearchParams, { replace: true });
+      return;
+    }
+
+    const matchedOrder = orders?.data.find((item) => item.order.id === reopenOrderId) ?? null;
+
+    setSelectedOrderId(reopenOrderId);
+    setSelectedItem(matchedOrder);
+    setDialogOpen(true);
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("reopenOrderId");
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [orders?.data, searchParams, setSearchParams]);
 
   const handlePrint = async (orderDetail: OrderDetailProps) => {
     const messageKey = `order-history-print-${orderDetail.order.id}`;
@@ -267,6 +297,7 @@ const OrderHistoryPage = () => {
   };
 
   const handleViewDetail = useCallback((item: OrderDetailProps) => {
+    setSelectedOrderId(item.order.id);
     setSelectedItem(item);
     setDialogOpen(true);
   }, []);
@@ -274,6 +305,7 @@ const OrderHistoryPage = () => {
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
     if (!open) {
+      setSelectedOrderId(null);
       setSelectedItem(null);
     }
   }, []);
@@ -366,6 +398,7 @@ const OrderHistoryPage = () => {
         <OrderDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
+          selectedOrderId={selectedOrderId}
           selectedItem={selectedItem}
         />
       )}

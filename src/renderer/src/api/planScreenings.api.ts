@@ -9,6 +9,7 @@ export interface PlanScreeningsQuery {
   fromDate?: string;
   toDate?: string;
   roomId?: number;
+  sort?: string;
 }
 
 export interface PlanScreeningDto {
@@ -28,7 +29,7 @@ export interface PlanScreeningDto {
 
 export const planScreeningsApi = {
   getAll: async (params: PlanScreeningsQuery): Promise<ApiResponse<PlanScreeningDetailProps>> => {
-    const { current, pageSize, planCinemaId, fromDate, toDate, roomId } = params;
+    const { current, pageSize, planCinemaId, fromDate, toDate, roomId, sort } = params;
 
     const filter: Record<string, unknown> = {};
 
@@ -47,7 +48,7 @@ export const planScreeningsApi = {
     const queryObject: Record<string, unknown> = {
       current,
       pageSize,
-      sort: "projectDate.desc"
+      sort
     };
 
     if (Object.keys(filter).length > 0) {

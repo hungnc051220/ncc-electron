@@ -68,7 +68,7 @@ export const isPlanScreeningLocked = (projectDate?: string, projectTime?: string
   const screeningDateTime = getPlanScreeningDateTime(projectDate, projectTime);
   if (!screeningDateTime?.isValid()) return false;
 
-  return !screeningDateTime.isAfter(dayjs());
+  return !screeningDateTime.add(30, "minute").isAfter(dayjs());
 };
 
 export function formatNumber(x: number) {

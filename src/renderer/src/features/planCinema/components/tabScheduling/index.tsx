@@ -15,6 +15,41 @@ interface TabSchedulingProps {
   planCinemaId?: number;
 }
 
+const parseTicketPriceValue = (value?: string) => {
+  if (!value) {
+    return { seatType: "", amount: 0 };
+  }
+
+  const normalizedValue = `${value}`.trim();
+
+  if (!normalizedValue.includes(":")) {
+    const amount = Number(normalizedValue.replace(/[^\d.-]/g, ""));
+    return {
+      seatType: "",
+      amount: Number.isFinite(amount) ? amount : 0
+    };
+  }
+
+  const [seatType, rawAmount] = normalizedValue.split(":");
+  const amount = Number(rawAmount?.replace(/[^\d.-]/g, ""));
+
+  return {
+    seatType: seatType?.trim() ?? "",
+    amount: Number.isFinite(amount) ? amount : 0
+  };
+};
+
+const compareTicketPriceValue = (left?: string, right?: string) => {
+  const leftPrice = parseTicketPriceValue(left);
+  const rightPrice = parseTicketPriceValue(right);
+
+  if (leftPrice.amount !== rightPrice.amount) {
+    return leftPrice.amount - rightPrice.amount;
+  }
+
+  return leftPrice.seatType.localeCompare(rightPrice.seatType);
+};
+
 const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [roomId, setRoomId] = useState<number | undefined>(undefined);
@@ -25,7 +60,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       planCinemaId,
       roomId,
       fromDate: date ? dayjs(date).startOf("day").format("YYYY-MM-DD") : undefined,
-      toDate: date ? dayjs(date).endOf("day").format("YYYY-MM-DD") : undefined
+      toDate: date ? dayjs(date).endOf("day").format("YYYY-MM-DD") : undefined,
+      sort: "projectDate.asc,projectTime.asc"
     };
   }, [planCinemaId, roomId, date]);
 
@@ -43,7 +79,11 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   } = useInfiniteQuery({
     queryKey: ["screening-rooms"],
     queryFn: ({ pageParam = 1 }) =>
-      screeningRoomsApi.getAll({ current: pageParam, pageSize: 20, hidden: false }),
+      screeningRoomsApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        hidden: false
+      }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {
       const currentPage = pages.length;
@@ -87,25 +127,35 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "projectDate",
-      render: (_, record) => dayjs(record.projectDate).format("DD/MM/YYYY")
+      render: (_, record) => dayjs(record.projectDate).format("DD/MM/YYYY"),
+      sorter: {
+        compare: (a, b) => dayjs(a.projectDate).unix() - dayjs(b.projectDate).unix(),
+        multiple: 3
+      }
     },
     {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
-      render: (_, record) => dayjs(record.projectTime).format("HH:mm")
+      render: (_, record) => dayjs(record.projectTime).format("HH:mm"),
+      sorter: {
+        compare: (a, b) => dayjs(a.projectTime).unix() - dayjs(b.projectTime).unix(),
+        multiple: 2
+      }
     },
     {
       title: "Phòng",
       key: "roomName",
       dataIndex: "roomName",
-      render: (_, record) => record.roomInfo?.name
+      render: (_, record) => record.roomInfo?.name,
+      sorter: (a, b) => a.roomInfo.name.localeCompare(b.roomInfo.name)
     },
     {
       title: "Tên phim",
       key: "filmName",
       dataIndex: "filmName",
-      render: (_, record) => record.filmInfo?.filmName
+      render: (_, record) => record.filmInfo?.filmName,
+      sorter: (a, b) => a.filmInfo?.filmName.localeCompare(b.filmInfo?.filmName)
     },
     {
       title: "Kết thúc",
@@ -116,27 +166,35 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           .add(record.filmInfo.duration, "minute")
           .format("HH:mm");
         return time;
+      },
+      sorter: {
+        compare: (a, b) => dayjs(a.projectTime).unix() - dayjs(b.projectTime).unix(),
+        multiple: 1
       }
     },
     {
       title: "Giá vé 1",
       key: "priceOfPosition1",
-      dataIndex: "priceOfPosition1"
+      dataIndex: "priceOfPosition1",
+      sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition1, b.priceOfPosition1)
     },
     {
       title: "Giá vé 2",
       key: "priceOfPosition2",
-      dataIndex: "priceOfPosition2"
+      dataIndex: "priceOfPosition2",
+      sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition2, b.priceOfPosition2)
     },
     {
       title: "Giá vé 3",
       key: "priceOfPosition3",
-      dataIndex: "priceOfPosition3"
+      dataIndex: "priceOfPosition3",
+      sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition3, b.priceOfPosition3)
     },
     {
       title: "Giá vé 4",
       key: "priceOfPosition4",
-      dataIndex: "priceOfPosition4"
+      dataIndex: "priceOfPosition4",
+      sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition4, b.priceOfPosition4)
     }
   ];
 

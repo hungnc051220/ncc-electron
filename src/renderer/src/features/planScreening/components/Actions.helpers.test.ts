@@ -102,4 +102,9 @@ describe("plan screening action helpers", () => {
   it("locks screenings that already passed on March 19, 2026", () => {
     expect(isPlanScreeningLocked("2026-03-19", "10:00:00")).toBe(true);
   });
+
+  it("keeps screenings unlocked during the first 30 minutes after showtime", () => {
+    expect(isPlanScreeningLocked("2026-03-19", "11:31:00")).toBe(false);
+    expect(isPlanScreeningLocked("2026-03-19", "11:30:00")).toBe(true);
+  });
 });

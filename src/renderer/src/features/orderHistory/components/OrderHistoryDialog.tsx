@@ -14,10 +14,16 @@ import { useLocation, useNavigate } from "react-router";
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  selectedOrderId?: number | null;
   selectedItem?: OrderDetailProps | null;
 }
 
-const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogProps) => {
+const OrderHistoryDialog = ({
+  open,
+  onOpenChange,
+  selectedOrderId,
+  selectedItem
+}: OrderDialogProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -26,7 +32,7 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
     data: orderDetail,
     isFetching: isFetchingOrderDetail,
     refetch: refetchOrderDetail
-  } = useOrderDetail(selectedItem?.order.id ?? 0);
+  } = useOrderDetail(selectedOrderId ?? selectedItem?.order.id ?? 0);
 
   const currentDetail = orderDetail ?? selectedItem ?? null;
   const currentOrder = currentDetail?.order;
@@ -54,11 +60,11 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
       okText: "Xác nhận",
       cancelText: "Hủy",
       onOk: () => {
-        onOpenChange(false);
         const searchParams = new URLSearchParams({
           callbackUrl: "/order-history/swap-seats",
           id: String(currentDetail.order.id),
-          returnTo: `${location.pathname}${location.search}`
+          returnTo: `${location.pathname}${location.search}`,
+          reopenOrderId: String(currentDetail.order.id)
         });
 
         navigate(`/showtimes?${searchParams.toString()}`);
@@ -211,6 +217,16 @@ const OrderHistoryDialog = ({ open, onOpenChange, selectedItem }: OrderDialogPro
         </div>
         {!currentOrder?.isInvitation && (
           <>
+            <div className="py-3 px-4">
+              <p className="text-sm text-trunks">Tổng tiền</p>
+              <p className="font-bold">
+                {formatMoney((currentOrder?.orderTotal || 0) + (currentOrder?.orderDiscount || 0))}
+              </p>
+            </div>
+            <div className="py-3 px-4">
+              <p className="text-sm text-trunks">Tiền khuyến mãi</p>
+              <p className="font-bold">{formatMoney(currentOrder?.orderDiscount || 0)}</p>
+            </div>
             <div className="py-3 px-4">
               <p className="text-sm text-trunks">Tiền thanh toán</p>
               <p className="font-bold">{formatMoney(currentOrder?.orderTotal || 0)}</p>

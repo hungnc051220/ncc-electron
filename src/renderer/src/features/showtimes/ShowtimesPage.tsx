@@ -22,6 +22,7 @@ const ShowtimesPage = () => {
   const callbackUrl = searchParams.get("callbackUrl");
   const id = searchParams.get("id");
   const returnTo = searchParams.get("returnTo");
+  const reopenOrderId = searchParams.get("reopenOrderId");
 
   const [date, setDate] = useQueryState("date", {
     defaultValue: dayjs().format("YYYY-MM-DD")
@@ -59,7 +60,9 @@ const ShowtimesPage = () => {
         ...film,
         details: showPast
           ? [...film.details]
-          : film.details.filter((detail) => dayjs(detail.projectTime).add(7, "hour").isAfter(now))
+          : film.details.filter((detail) =>
+              dayjs(detail.projectTime).add(7, "hour").add(30, "minute").isAfter(now)
+            )
       }))
       .filter((film) => film.details.length > 0);
   }, [data, showPast, date, tick]);
@@ -89,7 +92,10 @@ const ShowtimesPage = () => {
             const selectedDate = dayjs(date, "YYYY-MM-DD");
             const isPastDay = selectedDate.isBefore(now, "day");
             const isToday = selectedDate.isSame(now, "day");
-            const isFutureShowtime = dayjs(s.projectTime).add(7, "hour").isAfter(now);
+            const isFutureShowtime = dayjs(s.projectTime)
+              .add(7, "hour")
+              .add(30, "minute")
+              .isAfter(now);
 
             return (
               <Button
@@ -107,6 +113,10 @@ const ShowtimesPage = () => {
 
                       if (returnTo) {
                         nextSearchParams.set("returnTo", returnTo);
+                      }
+
+                      if (reopenOrderId) {
+                        nextSearchParams.set("reopenOrderId", reopenOrderId);
                       }
 
                       navigate(`${callbackUrl}/${id}?${nextSearchParams.toString()}`);

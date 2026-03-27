@@ -64,6 +64,7 @@ const OrderHistorySwapSeatsPage = () => {
   const [searchParams] = useSearchParams();
   const planScreeningId = Number(searchParams.get("plan-screening"));
   const returnTo = searchParams.get("returnTo") || "/order-history";
+  const reopenOrderId = searchParams.get("reopenOrderId");
   const orderId = Number(id);
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
   const limitWarningRef = useRef(0);
@@ -154,7 +155,16 @@ const OrderHistorySwapSeatsPage = () => {
       queryClient.invalidateQueries({
         queryKey: ordersKeys.getDetail(orderDetail.order.id)
       });
-      navigate(returnTo);
+      queryClient.invalidateQueries({
+        queryKey: ordersKeys.all
+      });
+      const nextReturnTo = new URL(returnTo, window.location.origin);
+
+      if (reopenOrderId) {
+        nextReturnTo.searchParams.set("reopenOrderId", reopenOrderId);
+      }
+
+      navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`);
     } catch (error: unknown) {
       let msg = "Đổi ghế thất bại";
 
@@ -196,7 +206,18 @@ const OrderHistorySwapSeatsPage = () => {
                 >
                   Đổi ghế
                 </Button>
-                <Button className="h-full! font-bold" onClick={() => navigate(returnTo)}>
+                <Button
+                  className="h-full! font-bold"
+                  onClick={() => {
+                    const nextReturnTo = new URL(returnTo, window.location.origin);
+
+                    if (reopenOrderId) {
+                      nextReturnTo.searchParams.set("reopenOrderId", reopenOrderId);
+                    }
+
+                    navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`);
+                  }}
+                >
                   Hủy
                 </Button>
               </div>
