@@ -8,7 +8,7 @@ import { Breadcrumb, Dropdown, Table } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
-import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
+import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 import Filter from "./components/Filter";
 import RefundStatusBadge from "./components/RefundStatusBadge";
 import UpdateRefundStatusDialog from "./components/UpdateRefundStatusDialog";
@@ -283,7 +283,7 @@ const RefundsPage = () => {
       />
 
       {dialogViewDetailOpen && selectedItem && (
-        <OrderHistoryDialog
+        <OrderDetailDialog
           open={dialogViewDetailOpen}
           onOpenChange={handleDialogViewDetailClose}
           selectedItem={selectedItem}

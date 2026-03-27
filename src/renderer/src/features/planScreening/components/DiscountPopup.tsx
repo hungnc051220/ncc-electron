@@ -170,12 +170,14 @@ const DiscountPopup = ({
         <Empty description="Chưa có ghế nào được chọn" />
       ) : (
         <div className="grid grid-cols-[320px_minmax(0,1fr)] gap-4">
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-app-border dark:bg-app-bg-container">
             <div className="mb-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold">Danh sách ghế</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Danh sách ghế
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     Chọn nhiều ghế rồi áp một mức giảm giá trong một lần.
                   </p>
                 </div>
@@ -207,8 +209,8 @@ const DiscountPopup = ({
                     className={[
                       "rounded-lg border p-3 text-left transition",
                       isSelected
-                        ? "border-blue-500 bg-blue-50 shadow-sm"
-                        : "border-gray-200 bg-white hover:border-blue-300"
+                        ? "border-blue-500 bg-blue-50 shadow-sm dark:border-blue-400 dark:bg-blue-500/15"
+                        : "border-gray-200 bg-white hover:border-blue-300 dark:border-app-border dark:bg-slate-900/40 dark:hover:border-blue-400"
                     ].join(" ")}
                     onClick={() => toggleSeatSelection(item.key)}
                   >
@@ -220,9 +222,11 @@ const DiscountPopup = ({
                             onChange={() => toggleSeatSelection(item.key)}
                             onClick={(e) => e.stopPropagation()}
                           />
-                          <p className="text-sm font-semibold">{item.label}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {item.label}
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
                           {item.seat.positionName || "Ghế"} x {formatMoney(item.price)}
                         </p>
                       </div>
@@ -246,15 +250,15 @@ const DiscountPopup = ({
           </div>
 
           <div className="min-w-0">
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-app-border dark:bg-app-bg-container">
               <div>
-                <p className="text-sm font-semibold">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {selectedSeatItems.length > 0
                     ? `Áp dụng cho ${selectedSeatItems.length} ghế`
                     : "Chọn ghế"}
                 </p>
                 {selectedSeatItems.length > 0 && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     {selectedSeatItems.map((item) => item.label).join(", ")}
                   </p>
                 )}

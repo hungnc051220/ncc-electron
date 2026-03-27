@@ -15,7 +15,7 @@ import { Breadcrumb, Button, Dropdown, message, Table, Tabs } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
-import OrderDialog from "./components/OrderHistoryDialog";
+import OrderDetailDialog from "./components/OrderDetailDialog";
 import Filter from "./components/Filter";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
@@ -395,7 +395,7 @@ const OrderHistoryPage = () => {
       />
 
       {dialogOpen && (
-        <OrderDialog
+        <OrderDetailDialog
           open={dialogOpen}
           onOpenChange={handleDialogClose}
           selectedOrderId={selectedOrderId}

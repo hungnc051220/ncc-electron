@@ -17,7 +17,7 @@ import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
-import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
+import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 import Filter from "./components/Filter";
 
 export interface ValuesProps {
@@ -296,7 +296,7 @@ const PrintOnlineTicketsPage = () => {
       />
 
       {dialogViewDetailOpen && selectedItem && (
-        <OrderHistoryDialog
+        <OrderDetailDialog
           open={dialogViewDetailOpen}
           onOpenChange={handleDialogViewDetailClose}
           selectedItem={selectedItem}

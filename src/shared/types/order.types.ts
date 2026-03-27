@@ -1,3 +1,4 @@
+import { DiscountProps } from "./discount.types";
 import { FilmProps } from "./film.types";
 import { RoomProps } from "./room.types";
 import { PlanScreeningDetailProps } from "./screening.types";
@@ -101,6 +102,14 @@ export interface OrderResponseProps {
   seller?: SellerProps;
   printer?: SellerProps;
   invitationTickets: InvitationTicketProps;
+  campaign?: CampaignProps;
+}
+
+export interface CampaignProps {
+  id: number;
+  name: string;
+  subject: string;
+  body: string;
 }
 
 export interface SellerProps {
@@ -153,6 +162,9 @@ export interface OrderItem {
   listChairCheckinIndexF1: string;
   listChairCheckinIndexF2: string;
   listChairCheckinIndexF3: string;
+  discount: DiscountProps;
+  posName?: string;
+  posShortName?: string;
 }
 
 export interface OrderDetailProps {

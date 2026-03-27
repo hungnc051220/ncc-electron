@@ -24,6 +24,68 @@
   --color-app-primary: var(--app-primary);
 }
 
+:root {
+  --scrollbar-size: 11px;
+  --scrollbar-radius: 999px;
+  --scrollbar-track: color-mix(in srgb, var(--app-bg-container, #ffffff) 90%, #cbd5e1 10%);
+  --scrollbar-thumb: color-mix(in srgb, var(--app-primary, #464fb4) 34%, transparent);
+  --scrollbar-thumb-hover: color-mix(
+    in srgb,
+    var(--app-primary, #464fb4) 48%,
+    var(--app-text, #0f172a) 12%
+  );
+  --scrollbar-thumb-active: color-mix(
+    in srgb,
+    var(--app-primary, #464fb4) 58%,
+    var(--app-text, #0f172a) 18%
+  );
+}
+
+.dark {
+  --scrollbar-track: color-mix(in srgb, var(--app-bg-container, #141414) 84%, #0f172a 16%);
+  --scrollbar-thumb: color-mix(in srgb, var(--app-primary, #464fb4) 44%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--app-primary, #464fb4) 60%, white 8%);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--app-primary, #464fb4) 72%, white 12%);
+}
+
+html,
+body,
+#root,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--scrollbar-radius);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 40px;
+  border: 2px solid transparent;
+  border-radius: var(--scrollbar-radius);
+  background: linear-gradient(180deg, var(--scrollbar-thumb), var(--scrollbar-thumb-hover));
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover), var(--scrollbar-thumb-active));
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @layer utilities {
   .auth-bg {
     @apply bg-[url(/images/auth-bg.png)];

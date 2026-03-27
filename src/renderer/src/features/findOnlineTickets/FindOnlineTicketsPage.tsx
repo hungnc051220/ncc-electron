@@ -9,7 +9,7 @@ import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { usePermission } from "@renderer/permissions/usePermission";
 import Filter from "./components/Filter";
-import OrderHistoryDialog from "../orderHistory/components/OrderHistoryDialog";
+import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 import { MoreOutlined } from "@ant-design/icons";
 
 export interface ValuesProps {
@@ -239,7 +239,7 @@ const FindOnlineTicketsPage = () => {
       />
 
       {dialogViewDetailOpen && selectedItem && (
-        <OrderHistoryDialog
+        <OrderDetailDialog
           open={dialogViewDetailOpen}
           onOpenChange={handleDialogViewDetailClose}
           selectedItem={selectedItem}
