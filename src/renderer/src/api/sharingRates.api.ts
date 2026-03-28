@@ -54,7 +54,7 @@ export const sharingRatesApi = {
     return res.data;
   },
   delete: async (id: number) => {
-    const res = await api.delete(`/api/pos/sharing-rate/${id}`);
+    const res = await api.delete(`/api/pos/sharing-rate?id=${id}`);
     return res.data;
   },
   recalculate: async () => {

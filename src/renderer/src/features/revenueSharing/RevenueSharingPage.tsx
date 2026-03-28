@@ -12,6 +12,7 @@ import { Link } from "react-router";
 import { exportRevenueSharingExcel } from "./components/ExportExcel";
 import Filter from "./components/Filter";
 import RevenueSharingDialog from "./components/RevenueSharingDialog";
+import dayjs from "dayjs";
 
 export interface ValuesProps {
   manufacturerId?: number;
@@ -128,8 +129,9 @@ const RevenueSharingPage = () => {
     },
     {
       title: "Ngày phát hành",
-      key: "premierDay",
-      dataIndex: "premierDay"
+      key: "premieredDay",
+      dataIndex: "premieredDay",
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
     },
     {
       title: "Doanh thu NCC",
@@ -224,6 +226,7 @@ const RevenueSharingPage = () => {
         scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
+          pageSize: 20,
           total: groupedRevenueSharings.length,
           size: "middle",
           pageSizeOptions: [20, 50, 100],

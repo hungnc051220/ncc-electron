@@ -292,7 +292,7 @@ const PlanScreeningPage = () => {
   }
 
   if (!renderData) {
-    if (isFetching) {
+    if (isFetching || isCustomerMode) {
       return (
         <Spin spinning>
           <div className="h-screen" />

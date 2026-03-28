@@ -59,6 +59,7 @@ const RevenueSharingDialog = ({
   editingRevenueSharing
 }: RevenueSharingDialogProps) => {
   const [form] = Form.useForm<FieldType>();
+  const sharingRates = Form.useWatch("sharingRates", form) ?? [];
   const isEdit = !!editingRevenueSharing;
   const [selectedFilmId, setSelectedFilmId] = useState<number | undefined>(
     editingRevenueSharing?.filmId
@@ -316,6 +317,24 @@ const RevenueSharingDialog = ({
     });
   };
 
+  const getDisabledDate = (index: number) => (current: Dayjs) => {
+    const normalizedCurrent = current.startOf("day");
+    const previousRange = sharingRates[index - 1]?.dateRange;
+    const nextRange = sharingRates[index + 1]?.dateRange;
+
+    const previousToDate = previousRange?.[1]?.endOf("day");
+    if (previousToDate && normalizedCurrent.valueOf() <= previousToDate.valueOf()) {
+      return true;
+    }
+
+    const nextFromDate = nextRange?.[0]?.startOf("day");
+    if (nextFromDate && normalizedCurrent.valueOf() >= nextFromDate.valueOf()) {
+      return true;
+    }
+
+    return false;
+  };
+
   const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
     const manufacturerId = values.manufacturerId ?? editingRevenueSharing?.manufacturerId;
     const filmId = values.filmId ?? editingRevenueSharing?.filmId;
@@ -455,7 +474,12 @@ const RevenueSharingDialog = ({
                       rules={[{ required: true, message: "Vui lòng chọn khoảng thời gian" }]}
                       className="flex-1"
                     >
-                      <RangePicker format="DD/MM/YYYY" presets={rangePresets} className="w-full" />
+                      <RangePicker
+                        format="DD/MM/YYYY"
+                        presets={rangePresets}
+                        className="w-full"
+                        disabledDate={getDisabledDate(index)}
+                      />
                     </Form.Item>
 
                     <Form.Item

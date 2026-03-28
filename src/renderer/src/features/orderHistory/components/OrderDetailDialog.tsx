@@ -95,11 +95,14 @@ const OrderDetailDialog = ({
     return Array.from(map.values());
   }, [currentItems]);
 
-  const promotionMode = currentOrder?.campaign
-    ? "campaign"
-    : ticketPromotions.length > 0
-      ? "ticket"
-      : "none";
+  const isU22Voucher = currentOrder?.voucherCode === "U22Ticket";
+
+  const promotionMode =
+    isU22Voucher || currentOrder?.campaign
+      ? "campaign"
+      : ticketPromotions.length > 0
+        ? "ticket"
+        : "none";
 
   const getChairs = () => {
     const chairsF1 = currentItems.map((item) => item.listChairValueF1);
@@ -314,34 +317,86 @@ const OrderDetailDialog = ({
                 <div className="py-2 grid grid-cols-2 gap-3">
                   <div>
                     <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                      {isRefundOrder ? "Trạng thái xử lý" : "Trạng thái đơn"}
+                      Trạng thái đơn
                     </p>
-                    {isRefundOrder ? (
-                      <RefundStatusBadge status={currentOrder?.refundStatusId} />
-                    ) : (
-                      currentOrder?.orderStatusId && (
-                        <OrderStatusBadge status={currentOrder.orderStatusId} type="order" />
-                      )
+                    {currentOrder?.orderStatusId && (
+                      <OrderStatusBadge status={currentOrder.orderStatusId} type="order" />
                     )}
                   </div>
 
                   <div>
                     <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                      {isRefundOrder ? "Số tiền đã hoàn" : "Trạng thái thanh toán"}
+                      Trạng thái thanh toán
                     </p>
-                    {isRefundOrder ? (
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        {formatMoney(currentOrder?.refundedAmount || 0)}
-                      </p>
-                    ) : (
-                      currentOrder?.paymentStatusId && (
-                        <OrderStatusBadge status={currentOrder.paymentStatusId} type="payment" />
-                      )
+                    {currentOrder?.paymentStatusId && (
+                      <OrderStatusBadge status={currentOrder.paymentStatusId} type="payment" />
                     )}
                   </div>
                 </div>
               </div>
             </div>
+
+            {(currentOrder?.cancelTicket || isRefundOrder) && (
+              <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-500/20 dark:bg-rose-500/5">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Thông tin hủy / hoàn tiền
+                    </h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Chi tiết xử lý đơn hàng sau khi phát sinh hủy hoặc hoàn tiền
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-x-6 md:grid-cols-2">
+                  <div>
+                    {renderInfoRow(
+                      "Thời gian hủy",
+                      currentOrder?.cancelTicket?.createdOnUtc
+                        ? dayjs(currentOrder.cancelTicket.createdOnUtc).format("HH:mm DD/MM/YYYY")
+                        : "-",
+                      {
+                        borderClassName: "border-rose-100 dark:border-rose-500/10"
+                      }
+                    )}
+                    {renderInfoRow("Người hủy", currentOrder?.cancelTicket?.userName, {
+                      borderClassName: "border-rose-100 dark:border-rose-500/10"
+                    })}
+                  </div>
+                  <div>
+                    <div className="flex items-start justify-between gap-4 border-b border-rose-100 py-2 dark:border-rose-500/10">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                        Trạng thái hoàn tiền
+                      </span>
+                      <div className="text-right">
+                        {isRefundOrder ? (
+                          <RefundStatusBadge status={currentOrder?.refundStatusId} />
+                        ) : (
+                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                            Chưa hoàn tiền
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {renderInfoRow(
+                      "Số tiền đã hoàn",
+                      formatMoney(currentOrder?.refundedAmount || 0),
+                      {
+                        borderClassName: "border-rose-100 dark:border-rose-500/10"
+                      }
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-rose-100 pt-2 dark:border-rose-500/10">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Lý do hủy</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">
+                    {currentOrder?.cancelTicket?.reason || "-"}
+                  </p>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
@@ -408,11 +463,17 @@ const OrderDetailDialog = ({
                 </div>
               </div>
 
-              {promotionMode === "campaign" && currentOrder?.campaign ? (
+              {promotionMode === "campaign" && (isU22Voucher || currentOrder?.campaign) ? (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-                  {renderInfoRow("Tên chương trình", currentOrder.campaign.name, {
-                    borderClassName: "border-emerald-100 dark:border-emerald-500/20"
-                  })}
+                  {renderInfoRow(
+                    "Tên chương trình",
+                    isU22Voucher
+                      ? "Khuyến mãi giá vé dành cho thành viên U22"
+                      : currentOrder?.campaign?.name,
+                    {
+                      borderClassName: "border-emerald-100 dark:border-emerald-500/20"
+                    }
+                  )}
                   {renderInfoRow("Mã áp dụng", currentOrder.voucherCode || "Không có mã", {
                     fallback: "Không có mã",
                     borderClassName: "border-emerald-100 dark:border-emerald-500/20"
@@ -453,7 +514,7 @@ const OrderDetailDialog = ({
                 </div>
               ) : null}
 
-              {promotionMode === "none" ? (
+              {promotionMode === "none" && !currentDetail?.order?.voucherCode ? (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
                   Đơn hàng này không áp dụng chương trình khuyến mãi.
                 </div>

@@ -1,6 +1,6 @@
 {
   "name": "ncc-system",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "Hệ thống quản lý Rạp Chiếu Phim Quốc Gia - NCC System",
   "main": "./out/main/index.js",
   "author": "HungNC",
