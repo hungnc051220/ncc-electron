@@ -71,7 +71,9 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
             message.success("Thay đổi thứ tự phim trong kế hoạch thành công");
           },
           onError: (error: unknown) => {
-            message.error(getApiErrorMessage(error, "Thay đổi thứ tự phim trong kế hoạch thất bại"));
+            message.error(
+              getApiErrorMessage(error, "Thay đổi thứ tự phim trong kế hoạch thất bại")
+            );
           }
         }
       );
@@ -157,6 +159,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
   ];
 
   const rowSelection: TableProps<PlanFilmProps>["rowSelection"] = {
+    hideSelectAll: true,
     selectedRowKeys: selectedFilmIds,
     onChange: (selectedRowKeys: React.Key[]) => {
       setSelectedFilmIds(selectedRowKeys as number[]);

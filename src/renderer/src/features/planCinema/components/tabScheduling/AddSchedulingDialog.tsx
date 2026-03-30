@@ -45,6 +45,13 @@ interface AddSchedulingDialogProps {
   selectedDate: Dayjs | null;
 }
 
+const compareNullableText = (left?: string | null, right?: string | null) => {
+  return (left ?? "").localeCompare(right ?? "", undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
+};
+
 const AddSchedulingDialog = ({
   planCinemaId,
   selectedRoomId,
@@ -135,8 +142,8 @@ const AddSchedulingDialog = ({
 
   useEffect(() => {
     if (selectedFilm) {
-      form.setFieldValue("versionCode", selectedFilm.film.versionCode);
-      form.setFieldValue("duration", selectedFilm.film.duration);
+      form.setFieldValue("versionCode", selectedFilm.film?.versionCode);
+      form.setFieldValue("duration", selectedFilm.film?.duration);
       return;
     }
 
@@ -148,19 +155,21 @@ const AddSchedulingDialog = ({
     return (
       films?.data.map((film) => ({
         value: film.filmId,
-        label: film.film.filmName
+        label: film.film?.filmName
       })) ?? []
     );
   }, [films]);
 
   const roomOptions = useMemo(() => {
     return (
-      rooms?.pages.flatMap((page) =>
-        page.data.map((item) => ({
-          value: item.id,
-          label: item.name
-        }))
-      ) ?? []
+      rooms?.pages
+        .flatMap((page) =>
+          page.data.map((item) => ({
+            value: item.id,
+            label: item.name
+          }))
+        )
+        .sort((a, b) => compareNullableText(a.label, b.label)) ?? []
     );
   }, [rooms]);
 
@@ -205,7 +214,7 @@ const AddSchedulingDialog = ({
     if (projectTime && filmId) {
       form.setFieldValue(
         "endTime",
-        dayjs(projectTime).add(selectedFilm?.film.duration ?? 0, "minute")
+        dayjs(projectTime).add(selectedFilm?.film?.duration ?? 0, "minute")
       );
     }
   }, [projectTime, form, filmId, selectedFilm]);
@@ -215,7 +224,7 @@ const AddSchedulingDialog = ({
       dayjs(values.projectDate).format("YYYY-MM-DD"),
       dayjs(values.projectTime).format()
     );
-    const filmDuration = selectedFilm?.film.duration ?? 0;
+    const filmDuration = selectedFilm?.film?.duration ?? 0;
 
     if (!screeningStart?.isValid() || !filmDuration) {
       return null;

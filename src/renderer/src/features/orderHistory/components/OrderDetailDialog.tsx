@@ -2,14 +2,16 @@ import { ordersApi } from "@renderer/api/orders.api";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { cn, formatMoney } from "@renderer/lib/utils";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
-import { OrderDetailProps, PaymentStatus } from "@shared/types";
+import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Checkbox, Modal, message } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { ReloadOutlined } from "@ant-design/icons";
 
 interface OrderDialogProps {
   open: boolean;
@@ -28,6 +30,7 @@ const OrderDetailDialog = ({
   const location = useLocation();
   const queryClient = useQueryClient();
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [isChangingToSuccess, setIsChangingToSuccess] = useState(false);
   const {
     data: orderDetail,
     isFetching: isFetchingOrderDetail,
@@ -41,12 +44,13 @@ const OrderDetailDialog = ({
     .filter(Boolean)
     .join(" ");
   const totalTickets = currentItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  const isVietQrPayment = useMemo(() => {
-    const paymentMethodSystemName = currentOrder?.paymentMethodSystemName?.toLowerCase() ?? "";
-    return paymentMethodSystemName.includes("vietqr");
-  }, [currentOrder?.paymentMethodSystemName]);
   const isRefundOrder = currentOrder?.refundStatusId != null;
+  const canShowChangeToSuccessButton =
+    !!currentOrder &&
+    currentOrder.orderStatusId !== OrderStatus.CANCELLED &&
+    !currentOrder.isInvitation &&
+    !currentOrder.isContract &&
+    !isRefundOrder;
 
   const ticketPromotions = useMemo(() => {
     const map = new Map<
@@ -184,38 +188,43 @@ const OrderDetailDialog = ({
     return refreshed.data;
   };
 
+  const onCheckPaymentTransaction = async () => {
+    if (!currentOrder) return;
+
+    try {
+      setIsCheckingPayment(true);
+      await ordersApi.checkTransaction({ orderId: currentOrder.id });
+      const refreshedOrderDetail = await refreshOrderDetail();
+
+      if (refreshedOrderDetail?.order.paymentStatusId === PaymentStatus.PAID) {
+        message.success("Đã cập nhật trạng thái thanh toán thành công");
+        return;
+      }
+
+      message.warning(
+        "Đơn chưa thanh toán. Nếu chắc chắn đơn đã thanh toán, vui lòng ấn Làm mới dữ liệu để cập nhật lại."
+      );
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Kiểm tra giao dịch thanh toán thất bại"));
+    } finally {
+      setIsCheckingPayment(false);
+    }
+  };
+
   const onChangeStatusOrder = async () => {
     if (!currentOrder) return;
 
-    if (isVietQrPayment) {
-      try {
-        setIsCheckingPayment(true);
-        await ordersApi.checkTransaction({ orderId: currentOrder.id });
-        const refreshedOrderDetail = await refreshOrderDetail();
-
-        if (refreshedOrderDetail?.order.paymentStatusId === PaymentStatus.PAID) {
-          goToSwapSeats();
-          return;
-        }
-
-        message.warning(
-          "Đơn chưa thanh toán, không thể chuyển vé. Nếu chắc chắn đơn đã thanh toán, vui lòng ấn Làm mới dữ liệu để cập nhật lại."
-        );
+    try {
+      setIsChangingToSuccess(true);
+      if (currentOrder.paymentStatusId === PaymentStatus.PAID) {
+        goToSwapSeats();
         return;
-      } catch {
-        message.error("Kiểm tra thanh toán VietQR thất bại");
-        return;
-      } finally {
-        setIsCheckingPayment(false);
       }
-    }
 
-    if (currentOrder.paymentStatusId === PaymentStatus.PAID) {
-      goToSwapSeats();
-      return;
+      message.warning("Đơn hàng chưa thanh toán thành công");
+    } finally {
+      setIsChangingToSuccess(false);
     }
-
-    message.warning("Đơn hàng chưa thanh toán thành công");
   };
 
   return (
@@ -227,27 +236,22 @@ const OrderDetailDialog = ({
       style={{ top: 20, paddingBottom: 20 }}
       footer={(_, { CancelBtn }) => (
         <>
+          <CancelBtn />
           {currentOrder && (
-            <Button
-              onClick={() => void refreshOrderDetail()}
-              loading={isFetchingOrderDetail && !isCheckingPayment}
-            >
-              Làm mới dữ liệu
+            <Button onClick={() => void onCheckPaymentTransaction()} loading={isCheckingPayment}>
+              Kiểm tra giao dịch thanh toán
             </Button>
           )}
-          <CancelBtn />
-          {currentOrder &&
-            currentOrder.paymentStatusId === PaymentStatus.PAID &&
-            isVietQrPayment && (
-              <Button
-                variant="solid"
-                color="green"
-                onClick={() => void onChangeStatusOrder()}
-                loading={isCheckingPayment}
-              >
-                Chuyển sang thành công
-              </Button>
-            )}
+          {canShowChangeToSuccessButton && (
+            <Button
+              variant="solid"
+              color="green"
+              onClick={() => void onChangeStatusOrder()}
+              loading={isChangingToSuccess}
+            >
+              Chuyển sang thành công
+            </Button>
+          )}
         </>
       )}
     >
@@ -271,6 +275,16 @@ const OrderDetailDialog = ({
                 </p>
               )}
             </div>
+
+            {currentOrder && (
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => void refreshOrderDetail()}
+                loading={isFetchingOrderDetail && !isCheckingPayment && !isChangingToSuccess}
+              >
+                Làm mới dữ liệu
+              </Button>
+            )}
           </div>
         </div>
 

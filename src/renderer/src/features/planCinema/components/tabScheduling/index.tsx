@@ -50,6 +50,13 @@ const compareTicketPriceValue = (left?: string, right?: string) => {
   return leftPrice.seatType.localeCompare(rightPrice.seatType);
 };
 
+const compareNullableText = (left?: string | null, right?: string | null) => {
+  return (left ?? "").localeCompare(right ?? "", undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
+};
+
 const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [roomId, setRoomId] = useState<number | undefined>(undefined);
@@ -94,12 +101,14 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
 
   const roomOptions = useMemo(() => {
     return (
-      rooms?.pages.flatMap((page) =>
-        page.data.map((item) => ({
-          value: item.id,
-          label: item.name
-        }))
-      ) ?? []
+      rooms?.pages
+        .flatMap((page) =>
+          page.data.map((item) => ({
+            value: item.id,
+            label: item.name
+          }))
+        )
+        .sort((a, b) => compareNullableText(a.label, b.label)) ?? []
     );
   }, [rooms]);
 
@@ -143,14 +152,14 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       key: "roomName",
       dataIndex: "roomName",
       render: (_, record) => record.roomInfo?.name,
-      sorter: (a, b) => a.roomInfo.name.localeCompare(b.roomInfo.name)
+      sorter: (a, b) => compareNullableText(a.roomInfo?.name, b.roomInfo?.name)
     },
     {
       title: "Tên phim",
       key: "filmName",
       dataIndex: "filmName",
       render: (_, record) => record.filmInfo?.filmName,
-      sorter: (a, b) => a.filmInfo?.filmName.localeCompare(b.filmInfo?.filmName)
+      sorter: (a, b) => compareNullableText(a.filmInfo?.filmName, b.filmInfo?.filmName)
     },
     {
       title: "Kết thúc",
@@ -158,7 +167,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       dataIndex: "endTime",
       render: (_, record) => {
         const time = dayjs(record.projectTime)
-          .add(record.filmInfo.duration, "minute")
+          .add(record.filmInfo?.duration ?? 0, "minute")
           .format("HH:mm");
         return time;
       },
@@ -194,6 +203,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   ];
 
   const rowSelection: TableProps<PlanScreeningDetailProps>["rowSelection"] = {
+    hideSelectAll: true,
     selectedRowKeys,
     onChange: (selectedRowKeys: React.Key[]) => {
       setSelectedRowKeys(selectedRowKeys);

@@ -91,6 +91,7 @@ export function useAutoUpdater() {
     const onAvailable = (info: UpdateInfo) => {
       latestUpdateRef.current = info;
       setAvailableUpdate(info);
+      openVersionInfoModal(info);
     };
 
     const onProgress = (progressInfo: UpdateDownloadProgress) => {
