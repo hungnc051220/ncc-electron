@@ -15,7 +15,11 @@ interface VipCardDialogProps {
   open: boolean;
   onCancel: () => void;
   totalPrice?: number;
-  onBooking: (params?: { memberCardCode?: string; voucherCode?: string }) => void;
+  onBooking: (params?: {
+    customerId?: number;
+    memberCardCode?: string;
+    voucherCode?: string;
+  }) => void;
   planScreenId: number;
   selectedSeats: ListSeat[];
   hasSeatTypeDiscount: boolean;
@@ -371,6 +375,7 @@ const VipCardDialog = ({
     }
 
     onBooking({
+      customerId: customer?.id,
       memberCardCode: searchText,
       voucherCode: hasSeatTypeDiscount
         ? undefined

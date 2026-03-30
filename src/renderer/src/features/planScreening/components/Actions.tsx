@@ -323,7 +323,11 @@ const Actions = ({
     }));
   }, [selectedDiscountGroups, selectedSeats]);
 
-  const onBooking = (params?: { memberCardCode?: string; voucherCode?: string }) => {
+  const onBooking = (params?: {
+    customerId?: number;
+    memberCardCode?: string;
+    voucherCode?: string;
+  }) => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
       return;
@@ -339,6 +343,7 @@ const Actions = ({
       posName,
       posShortName,
       isInvitation: false,
+      customerId: params?.customerId,
       memberCardCode: params?.memberCardCode,
       voucherCode: params?.voucherCode,
       discountGroups: discountGroupsPayload,

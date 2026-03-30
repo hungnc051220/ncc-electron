@@ -47,6 +47,7 @@ export interface OrderDto {
   discountGroups?: DiscountGroup[];
   voucherCode?: string;
   note?: string;
+  customerId?: number;
 }
 
 export interface DiscountGroup {
