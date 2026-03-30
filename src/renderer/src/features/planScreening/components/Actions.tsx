@@ -754,7 +754,7 @@ const Actions = ({
           <Button
             variant="outlined"
             color="green"
-            disabled={disableActions || !canUpdate}
+            disabled={disableActions || !canUpdate || selectedSeats.length === 0}
             onClick={onReserveSeats}
           >
             Giữ chỗ
@@ -762,7 +762,7 @@ const Actions = ({
           <Button
             variant="outlined"
             danger
-            disabled={disableActions || !canUpdate}
+            disabled={disableActions || !canUpdate || selectedSeats.length === 0}
             onClick={() => void onCancelReserve()}
           >
             Huỷ giữ

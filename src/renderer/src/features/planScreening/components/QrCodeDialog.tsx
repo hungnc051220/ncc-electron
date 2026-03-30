@@ -109,7 +109,7 @@ const QrCodeDialog = ({
                   <p className="w-50 text-trunks">Ngày giờ</p>
                   <p className="flex-1 font-bold">
                     {dayjs(dataQr.projectDate).format("DD/MM/YYYY")}-{" "}
-                    {dayjs(dataQr.projectTime).utc().format("HH:mm")}
+                    {dayjs(dataQr.projectTime).format("HH:mm")}
                   </p>
                 </div>
               </div>

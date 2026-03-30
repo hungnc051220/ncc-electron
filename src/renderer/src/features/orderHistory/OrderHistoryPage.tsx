@@ -217,7 +217,7 @@ const OrderHistoryPage = () => {
           : ""
     },
     {
-      title: "Ngày chiếu",
+      title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
       render: (_, record) =>
