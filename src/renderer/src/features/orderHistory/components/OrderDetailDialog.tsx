@@ -234,6 +234,7 @@ const OrderDetailDialog = ({
       onCancel={() => onOpenChange(false)}
       width={960}
       style={{ top: 20, paddingBottom: 20 }}
+      cancelText="Đóng"
       footer={(_, { CancelBtn }) => (
         <>
           <CancelBtn />
