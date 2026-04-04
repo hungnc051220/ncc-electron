@@ -3,7 +3,7 @@ import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { cn, formatMoney } from "@renderer/lib/utils";
+import { cn, formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -294,7 +294,7 @@ const OrderDetailDialog = ({
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                  Khách hàng và liên hệ
+                  Khách hàng và thông tin vé
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Thông tin người mua và trạng thái gửi vé
@@ -313,7 +313,10 @@ const OrderDetailDialog = ({
                     ? dayjs(currentOrder.createdOnUtc).format("HH:mm DD/MM/YYYY")
                     : "-"
                 )}
-                {renderInfoRow("Kênh thanh toán", currentOrder?.paymentMethodSystemName)}
+                {renderInfoRow(
+                  "Kênh thanh toán",
+                  formatPaymentMethod(currentOrder?.paymentMethodSystemName)
+                )}
               </div>
               <div>
                 <div className="border-b border-slate-100 py-2 dark:border-app-border">

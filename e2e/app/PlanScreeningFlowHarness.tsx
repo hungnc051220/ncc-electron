@@ -138,10 +138,7 @@ const PlanScreeningFlowHarness = () => {
   );
   const discountAmount = useMemo(
     () =>
-      selectedSeats.reduce(
-        (sum, seat) => sum + calculateSeatDiscount(seat, appliedDiscount),
-        0
-      ),
+      selectedSeats.reduce((sum, seat) => sum + calculateSeatDiscount(seat, appliedDiscount), 0),
     [appliedDiscount, selectedSeats]
   );
   const payable = totalPrice - discountAmount;
@@ -347,11 +344,7 @@ const PlanScreeningFlowHarness = () => {
         </section>
       </div>
 
-      <QrCodeDialog
-        open={qrOpen}
-        onCancel={() => setQrOpen(false)}
-        dataQr={qrData}
-      />
+      <QrCodeDialog open={qrOpen} onCancel={() => setQrOpen(false)} dataQr={qrData} />
     </main>
   );
 };

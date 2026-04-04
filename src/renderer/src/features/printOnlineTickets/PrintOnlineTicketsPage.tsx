@@ -14,7 +14,7 @@ import { OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Dropdown, message, Table } from "antd";
 import dayjs from "dayjs";
-import { Check, X } from "lucide-react";
+import { Check, Eye, Printer, RotateCcw, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
@@ -216,12 +216,20 @@ const PrintOnlineTicketsPage = () => {
               const isPrinted = record.order.printedOnUtc;
               const items = [
                 ...(canView
-                  ? [{ key: "1", label: "Xem chi tiết", onClick: () => handeViewDetail(record) }]
+                  ? [
+                      {
+                        key: "1",
+                        icon: <Eye size={16} />,
+                        label: "Xem chi tiết",
+                        onClick: () => handeViewDetail(record)
+                      }
+                    ]
                   : []),
                 ...(canPrint
                   ? [
                       {
                         key: "2",
+                        icon: isPrinted ? <RotateCcw size={16} /> : <Printer size={16} />,
                         label: isPrinted ? "Cho phép in lại vé" : "In vé",
                         onClick: () => (isPrinted ? onUnmarkPrinted(record) : onPrint(record))
                       }

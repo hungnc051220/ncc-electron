@@ -229,14 +229,15 @@ const InvoiceDialog = ({
       );
     } else {
       const invoiceId = editingItem?.id ?? invoiceData?.id;
+      const resolvedOrderId = orderId ?? editingItem?.order?.id;
 
-      if (!invoiceId || !orderId) {
+      if (!invoiceId || !resolvedOrderId) {
         message.error("Không tìm thấy hóa đơn để cập nhật");
         return;
       }
 
       updateInvoice.mutate(
-        { id: invoiceId, dto: { orderId, ...values } },
+        { id: invoiceId, dto: { orderId: resolvedOrderId, ...values } },
         {
           onSuccess: () => {
             message.success("Cập nhật hóa đơn điện tử thành công");

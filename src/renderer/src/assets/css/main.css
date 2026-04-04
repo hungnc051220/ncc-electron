@@ -377,11 +377,168 @@ body,
     box-shadow: none !important;
   }
 
+  .film-dialog-modal .ant-modal-content {
+    padding: 14px 16px 12px !important;
+  }
+
+  .film-dialog-modal .ant-modal-header {
+    margin-bottom: 8px !important;
+    padding-right: 28px;
+  }
+
+  .film-dialog-modal .ant-modal-title {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .film-dialog-modal .ant-modal-body {
+    padding: 0 !important;
+  }
+
+  .film-dialog-modal .ant-modal-footer {
+    margin-top: 10px !important;
+    padding-top: 8px !important;
+  }
+
+  .film-dialog-modal .ant-form-item {
+    margin-bottom: 10px !important;
+  }
+
+  .film-dialog-modal .ant-form-item-label {
+    padding-bottom: 3px !important;
+  }
+
+  .film-dialog-modal .ant-form-item-label > label {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+  }
+
+  .film-dialog-modal .ant-input,
+  .film-dialog-modal .ant-input-affix-wrapper,
+  .film-dialog-modal .ant-input-number,
+  .film-dialog-modal .ant-picker,
+  .film-dialog-modal .ant-select-selector {
+    min-height: 34px !important;
+  }
+
+  .film-dialog-modal textarea.ant-input {
+    min-height: unset !important;
+  }
+
+  .film-dialog-modal .ant-input-number-input {
+    height: 32px !important;
+  }
+
+  .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper,
+  .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload {
+    width: 180px !important;
+    height: 180px !important;
+    margin: 0 !important;
+  }
+
+  .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload-select {
+    border-radius: 10px !important;
+    border-color: var(--app-border) !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      background-color 0.2s ease !important;
+  }
+
+  .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload-select:hover {
+    border-color: var(--color-primary) !important;
+    border-style: dashed !important;
+    background: color-mix(in srgb, var(--color-primary) 3%, transparent) !important;
+  }
+
+  .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload .ant-image,
+  .film-dialog-modal
+    .ant-upload-wrapper.ant-upload-picture-card-wrapper
+    .ant-upload
+    .ant-image-img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+  }
+
+  .film-dialog-modal .film-dialog-image-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .film-dialog-modal .film-dialog-upload-trigger {
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      color 0.2s ease,
+      background-color 0.2s ease;
+  }
+
+  .film-dialog-modal .film-dialog-upload-trigger:hover {
+    color: var(--color-primary) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .film-dialog-modal .film-dialog-upload-trigger:hover,
+  .film-dialog-modal .film-dialog-upload-trigger:hover .anticon,
+  .film-dialog-modal .film-dialog-upload-trigger:hover div {
+    color: var(--color-primary) !important;
+  }
+
   .selecto-selection {
     display: none !important;
   }
 
   @media (max-width: 1024px) {
+    .film-dialog-modal {
+      width: calc(100vw - 24px) !important;
+      max-width: calc(100vw - 24px) !important;
+    }
+
+    .film-dialog-modal .ant-modal-content {
+      padding: 12px 12px 10px !important;
+    }
+
+    .film-dialog-modal .ant-modal-footer {
+      margin-top: 8px !important;
+    }
+
+    .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper,
+    .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload {
+      width: 100% !important;
+      min-width: 0 !important;
+      height: 150px !important;
+    }
+
+    .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload-select {
+      width: 100% !important;
+      height: 150px !important;
+    }
+
+    .film-dialog-modal .ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload .ant-image,
+    .film-dialog-modal
+      .ant-upload-wrapper.ant-upload-picture-card-wrapper
+      .ant-upload
+      .ant-image-img {
+      width: 100% !important;
+      height: 150px !important;
+    }
+
+    .film-dialog-modal .film-dialog-upload-trigger {
+      width: 100% !important;
+      height: 150px !important;
+    }
+
+    .film-dialog-modal .film-dialog-image-box {
+      width: 100% !important;
+      justify-content: stretch !important;
+    }
+
     .login-card {
       max-width: 500px;
     }

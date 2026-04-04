@@ -3,9 +3,9 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRooms";
 import { formatNumber } from "@renderer/lib/utils";
 import { RoomProps } from "@shared/types";
-import type { PaginationProps, TableProps } from "antd";
+import type { MenuProps, PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
-import { Check, PlusIcon, X } from "lucide-react";
+import { Armchair, Check, Eye, EyeOff, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteScreeningRoomDialog from "./components/DeleteScreeningRoomDialog";
 import ScreeningRoomsDialog from "./components/ScreeningRoomsDialog";
@@ -77,16 +77,23 @@ const ScreeningRoomsPage = () => {
     }
   }, []);
 
-  const actionItems = [
-    ...(canUpdate
-      ? [
-          { key: "1", label: "Cập nhật" },
-          { key: "2", label: "Ẩn/hiện phòng chiếu" }
-        ]
-      : []),
-    ...(canConfigure ? [{ key: "3", label: "Xem sơ đồ ghế" }] : []),
-    ...(canDelete ? [{ key: "4", label: <p className="text-red-500">Xóa</p> }] : [])
-  ];
+  const getActionItems = useCallback(
+    (item: RoomProps): MenuProps["items"] => [
+      ...(canUpdate
+        ? [
+            { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
+            {
+              key: "2",
+              icon: item.hidden ? <Eye size={16} /> : <EyeOff size={16} />,
+              label: item.hidden ? "Hiện phòng chiếu" : "Ẩn phòng chiếu"
+            }
+          ]
+        : []),
+      ...(canConfigure ? [{ key: "3", icon: <Armchair size={16} />, label: "Xem sơ đồ ghế" }] : []),
+      ...(canDelete ? [{ key: "4", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
+    ],
+    [canConfigure, canDelete, canUpdate]
+  );
 
   const columns: TableProps<RoomProps>["columns"] = [
     {
@@ -166,7 +173,7 @@ const ScreeningRoomsPage = () => {
       align: "center",
       width: 100
     },
-    ...(actionItems.length
+    ...(canUpdate || canConfigure || canDelete
       ? [
           {
             title: "",
@@ -175,7 +182,7 @@ const ScreeningRoomsPage = () => {
             render: (_: unknown, record: RoomProps) => (
               <Dropdown
                 menu={{
-                  items: actionItems,
+                  items: getActionItems(record),
                   onClick: (e) => {
                     if (e.key === "1") {
                       handleEdit(record);

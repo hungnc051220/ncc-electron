@@ -1,34 +1,32 @@
 import { useReportTicketSalesRevenue } from "@renderer/hooks/reports/useReportTicketSalesRevenue";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { ReportRevenueFilmProps, RevenueByFilmProps } from "@shared/types";
-import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
-import { DatePicker, Table, Typography } from "antd";
+import type { PaginationProps, TableProps } from "antd";
+import { Table, Typography } from "antd";
 import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const { Text } = Typography;
-const { RangePicker } = DatePicker;
 
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
+interface TabRevenueByFilmProps {
+  fromDate: Dayjs;
+  toDate: Dayjs;
+}
 
-const TabRevenueByFilm = () => {
+const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
   const [current, setCurrent] = useState(1);
-  const [fromDate, setFromDate] = useState<Dayjs | null>(dayjs());
-  const [toDate, setToDate] = useState<Dayjs | null>(dayjs());
 
   const onChange: PaginationProps["onChange"] = (page) => {
     setCurrent(page);
   };
 
+  useEffect(() => {
+    setCurrent(1);
+  }, [fromDate, toDate]);
+
   const { data, isFetching: isFetchingData } = useReportTicketSalesRevenue({
-    fromDate: fromDate?.startOf("day").format(),
-    toDate: toDate?.endOf("day").format(),
+    fromDate: fromDate.startOf("day").format(),
+    toDate: toDate.endOf("day").format(),
     reportType: "FILM"
   });
 
@@ -79,11 +77,11 @@ const TabRevenueByFilm = () => {
       render: (_, { offSaleVietQr }) => formatMoney(offSaleVietQr || 0)
     },
     {
-      title: "Doanh thu VNPayQR",
-      dataIndex: "offSaleVnPayQr",
-      key: "offSaleVnPayQr",
+      title: "Doanh thu Online",
+      dataIndex: "onSaleTotal",
+      key: "onSaleTotal",
       align: "right",
-      render: (_, { offSaleVnPayQr }) => formatMoney(offSaleVnPayQr || 0)
+      render: (_, { onSaleTotal }) => formatMoney(onSaleTotal || 0)
     },
     {
       title: "Doanh thu Offline",
@@ -93,7 +91,7 @@ const TabRevenueByFilm = () => {
       render: (_, { actualOffSale }) => formatMoney(actualOffSale || 0)
     },
     {
-      title: "Tiền thực nộp",
+      title: "Doanh thu tổng",
       dataIndex: "totalSale",
       key: "totalSale",
       align: "right",
@@ -101,24 +99,8 @@ const TabRevenueByFilm = () => {
     }
   ];
 
-  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
-    if (dates) {
-      setFromDate(dates[0]);
-      setToDate(dates[1]);
-    }
-  };
-
   return (
     <div>
-      <div className="flex items-center gap-x-3 gap-y-2 mb-4 flex-wrap">
-        <RangePicker
-          defaultValue={[fromDate, toDate]}
-          format="DD/MM/YYYY"
-          onChange={onRangeChange}
-          presets={rangePresets}
-          allowClear={false}
-        />
-      </div>
       <Table
         dataSource={formatData?.revenueByFilm || []}
         columns={columns}
@@ -164,7 +146,7 @@ const TabRevenueByFilm = () => {
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={6} align="right">
                   <Text className="font-bold">
-                    {formatMoney(formatData?.totalByFilm?.offSaleVnPayQr || 0)}
+                    {formatMoney(formatData?.totalByFilm?.onSaleTotal || 0)}
                   </Text>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={7} align="right">

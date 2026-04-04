@@ -1,16 +1,22 @@
+import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
+import type { UploadRequestOption } from "@rc-component/upload/lib/interface";
 import { useCreateDiscount } from "@renderer/hooks/discounts/useCreateDiscount";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateDiscount } from "@renderer/hooks/discounts/useUpdateDiscount";
+import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { formatter } from "@renderer/lib/utils";
 import { DiscountProps } from "@shared/types";
-import type { FormProps } from "antd";
-import { Form, Input, InputNumber, message, Modal, Select } from "antd";
+import type { FormProps, GetProp, UploadProps } from "antd";
+import { Form, Image, Input, InputNumber, message, Modal, Select, Upload } from "antd";
+
+type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
 type FieldType = {
   discountName: string;
   discountType: string;
   discountAmount?: number;
   discountRate?: number;
+  image?: string;
 };
 
 interface DiscountSettingsDialogProps {
@@ -28,9 +34,11 @@ const DiscountSettingsDialog = ({
   const isEdit = !!editingDiscount;
 
   const discountTypeValue = Form.useWatch("discountType", form);
+  const imageUrl = form.getFieldValue("image");
 
   const createDiscount = useCreateDiscount();
   const updateDiscount = useUpdateDiscount();
+  const uploadImage = useUploadImage();
   const onOk = () => form.submit();
   const onCancel = () => onOpenChange(false);
 
@@ -71,6 +79,46 @@ const DiscountSettingsDialog = ({
     }
   };
 
+  const handleUpload = async (options: UploadRequestOption) => {
+    const { file, onSuccess, onError } = options;
+
+    try {
+      if (!(file instanceof File)) {
+        throw new Error("File không hợp lệ");
+      }
+
+      const image = await uploadImage.mutateAsync(file);
+      form.setFieldValue("image", image);
+      onSuccess?.(image);
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Tải ảnh lên thất bại"));
+      onError?.(error as Error);
+    }
+  };
+
+  const beforeUpload = (file: FileType) => {
+    const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
+    if (!isJpgOrPng) {
+      message.error("Chỉ có thể tải ảnh dạng JPG/PNG!");
+      return Upload.LIST_IGNORE;
+    }
+
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error("Ảnh phải nhỏ hơn 5MB!");
+      return Upload.LIST_IGNORE;
+    }
+
+    return true;
+  };
+
+  const uploadButton = (
+    <button style={{ border: 0, background: "none" }} type="button">
+      {uploadImage.isPending ? <LoadingOutlined /> : <PlusOutlined />}
+      <div className="mt-2 text-gray-500">{uploadImage.isPending ? "Đang tải" : "Chọn ảnh"}</div>
+    </button>
+  );
+
   return (
     <Modal
       open={open}
@@ -78,14 +126,16 @@ const DiscountSettingsDialog = ({
       onOk={onOk}
       onCancel={() => onOpenChange(false)}
       okButtonProps={{
-        loading: createDiscount.isPending || updateDiscount.isPending
+        loading: createDiscount.isPending || updateDiscount.isPending,
+        disabled: uploadImage.isPending
       }}
       cancelButtonProps={{
-        disabled: createDiscount.isPending || updateDiscount.isPending
+        disabled: createDiscount.isPending || updateDiscount.isPending || uploadImage.isPending
       }}
-      width={500}
+      width={640}
     >
       <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>
+        <Form.Item<FieldType> name="image" hidden />
         <Form.Item<FieldType>
           name="discountName"
           label="Tên khuyến mại, giảm giá"
@@ -144,6 +194,27 @@ const DiscountSettingsDialog = ({
             </Form.Item>
           )}
         </div>
+        <Form.Item<FieldType> label="Ảnh">
+          <Upload
+            showUploadList={false}
+            accept="image/png,image/jpeg"
+            listType="picture-card"
+            customRequest={handleUpload}
+            beforeUpload={beforeUpload}
+          >
+            {imageUrl ? (
+              <Image
+                width={140}
+                alt="discount image"
+                src={imageUrl}
+                className="rounded-lg border border-app-border object-cover"
+                preview={false}
+              />
+            ) : (
+              uploadButton
+            )}
+          </Upload>
+        </Form.Item>
       </Form>
     </Modal>
   );

@@ -8,7 +8,7 @@ import { OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import dayjs from "dayjs";
-import { Check, X } from "lucide-react";
+import { Check, Eye, Printer, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
@@ -83,8 +83,8 @@ const InvitationTicketsPage = () => {
   }, []);
 
   const actionItems = [
-    ...(canView ? [{ key: "1", label: "Xem chi tiết" }] : []),
-    ...(canPrint ? [{ key: "2", label: "Xuất vé mời" }] : [])
+    ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
+    ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "Xuất vé mời" }] : [])
   ];
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
@@ -187,7 +187,8 @@ const InvitationTicketsPage = () => {
           : "";
       },
       align: "center",
-      fixed: "right"
+      fixed: "right",
+      width: 150
     },
     {
       title: "Xuất vé mời qua email",

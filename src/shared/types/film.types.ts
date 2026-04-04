@@ -75,6 +75,7 @@ export interface FilmCategoryProps {
   id: number;
   name: string;
   description: string;
+  published?: boolean;
 }
 
 export interface FilmVersionProps {

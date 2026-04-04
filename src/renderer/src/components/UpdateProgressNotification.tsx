@@ -34,7 +34,9 @@ const UpdateProgressNotification = ({
             <span>Đang tải bản cập nhật</span>
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            {latestVersion ? `Phiên bản mới nhất: ${latestVersion}` : "Hệ thống đang tải phiên bản mới"}
+            {latestVersion
+              ? `Phiên bản mới nhất: ${latestVersion}`
+              : "Hệ thống đang tải phiên bản mới"}
           </div>
         </div>
         <Button type="text" size="small" icon={<EyeInvisibleOutlined />} onClick={onHide}>
@@ -48,13 +50,16 @@ const UpdateProgressNotification = ({
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
         <div>
-          Đã tải: <span className="font-medium text-slate-900">{formatBytes(progress.transferred)}</span>
+          Đã tải:{" "}
+          <span className="font-medium text-slate-900">{formatBytes(progress.transferred)}</span>
         </div>
         <div>
-          Tổng dung lượng: <span className="font-medium text-slate-900">{formatBytes(progress.total)}</span>
+          Tổng dung lượng:{" "}
+          <span className="font-medium text-slate-900">{formatBytes(progress.total)}</span>
         </div>
         <div>
-          Tốc độ: <span className="font-medium text-slate-900">{formatSpeed(progress.bytesPerSecond)}</span>
+          Tốc độ:{" "}
+          <span className="font-medium text-slate-900">{formatSpeed(progress.bytesPerSecond)}</span>
         </div>
         <div>
           Tiến độ: <span className="font-medium text-slate-900">{progress.percent}%</span>

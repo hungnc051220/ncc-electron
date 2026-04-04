@@ -295,7 +295,9 @@ const PrintInvitationTicketDialog = ({
       return;
     }
 
-    const currentValue = String(keyboardInputs[activeField] ?? form.getFieldValue(activeField) ?? "");
+    const currentValue = String(
+      keyboardInputs[activeField] ?? form.getFieldValue(activeField) ?? ""
+    );
     updateFieldValue(activeField, applyVirtualKeyboardButton(currentValue, button));
   };
 

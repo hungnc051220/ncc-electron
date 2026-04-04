@@ -1,15 +1,16 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useReportRevenueSharing } from "@renderer/hooks/reports/useReportRevenueSharing";
-import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ReportRevenueSharingProps } from "@shared/types";
 import type { TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table, message } from "antd";
-import { PlusIcon } from "lucide-react";
+import { DownloadIcon, FileSpreadsheet, PlusIcon, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { exportRevenueSharingExcel } from "./components/ExportExcel";
+import { exportRevenueSharingListExcel } from "./components/ExportListExcel";
 import Filter from "./components/Filter";
 import RevenueSharingDialog from "./components/RevenueSharingDialog";
 import dayjs from "dayjs";
@@ -17,6 +18,7 @@ import dayjs from "dayjs";
 export interface ValuesProps {
   manufacturerId?: number;
   filmId?: number;
+  dateRange?: [string, string];
 }
 
 const RevenueSharingPage = () => {
@@ -25,10 +27,30 @@ const RevenueSharingPage = () => {
     useState<ReportRevenueSharingProps | null>(null);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
-  const { data: revenueSharings, isFetching } = useReportRevenueSharing({
-    manufacturerIds: filterValues.manufacturerId ? [filterValues.manufacturerId] : undefined,
-    filmIds: filterValues.filmId ? [filterValues.filmId] : undefined
-  });
+  const params = useMemo(() => {
+    const { dateRange, ...rest } = filterValues;
+    const filtered = filterEmptyValues(rest as Record<string, unknown>);
+
+    if (filtered.manufacturerId) {
+      filtered.manufacturerIds = [filtered.manufacturerId];
+      delete filtered.manufacturerId;
+    }
+
+    if (filtered.filmId) {
+      filtered.filmIds = [filtered.filmId];
+      delete filtered.filmId;
+    }
+
+    if (dateRange && dateRange.length === 2) {
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
+    }
+
+    return filtered;
+  }, [filterValues]);
+
+  const { data: revenueSharings, isFetching } = useReportRevenueSharing(params);
+
   const { can } = usePermission();
   const canCreate = can("revenue_sharing", "create");
   const canUpdate = can("revenue_sharing", "update");
@@ -51,35 +73,53 @@ const RevenueSharingPage = () => {
     }
   }, []);
 
-  const handleExport = useCallback(async (item: ReportRevenueSharingProps) => {
-    const messageKey = `export-revenue-sharing-${item.filmId}`;
+  const handleExport = useCallback(
+    async (item: ReportRevenueSharingProps) => {
+      const messageKey = `export-revenue-sharing-${item.filmId}`;
+      const [fromDate, toDate] = filterValues.dateRange ?? [];
 
-    message.open({
-      key: messageKey,
-      type: "loading",
-      content: "Đang xuất file excel...",
-      duration: 0
-    });
-
-    try {
-      await exportRevenueSharingExcel(item);
       message.open({
         key: messageKey,
-        type: "success",
-        content: "Xuất file excel thành công"
+        type: "loading",
+        content: "Đang xuất file excel...",
+        duration: 0
       });
-    } catch (error) {
-      message.open({
-        key: messageKey,
-        type: "error",
-        content: getApiErrorMessage(error, "Xuất excel thất bại")
-      });
-    }
-  }, []);
+
+      try {
+        const result = await exportRevenueSharingExcel({
+          ...item,
+          fromDate: fromDate ? dayjs(fromDate).format("YYYY-MM-DD") : undefined,
+          toDate: toDate ? dayjs(toDate).format("YYYY-MM-DD") : undefined
+        });
+
+        if (result.canceled) {
+          message.open({
+            key: messageKey,
+            type: "warning",
+            content: "Bạn đã hủy lưu file excel"
+          });
+          return;
+        }
+
+        message.open({
+          key: messageKey,
+          type: "success",
+          content: "Xuất file excel thành công"
+        });
+      } catch (error) {
+        message.open({
+          key: messageKey,
+          type: "error",
+          content: getApiErrorMessage(error, "Xuất excel thất bại")
+        });
+      }
+    },
+    [filterValues.dateRange]
+  );
 
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canExport ? [{ key: "2", label: "Xuất excel" }] : [])
+    ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+    ...(canExport ? [{ key: "2", icon: <FileSpreadsheet size={16} />, label: "Xuất excel" }] : [])
   ];
 
   const groupedRevenueSharings = useMemo(() => {
@@ -107,6 +147,66 @@ const RevenueSharingPage = () => {
 
     return Array.from(grouped.values());
   }, [revenueSharings]);
+
+  const revenueSummary = useMemo(() => {
+    return groupedRevenueSharings.reduce(
+      (totals, item) => {
+        totals.totalRevenueNCC += item.totalRevenue - item.sharedRevenue;
+        totals.totalSharedRevenue += item.sharedRevenue;
+        totals.allRevenue += item.totalRevenue;
+        return totals;
+      },
+      {
+        totalRevenueNCC: 0,
+        totalSharedRevenue: 0,
+        allRevenue: 0
+      }
+    );
+  }, [groupedRevenueSharings]);
+
+  const hasRevenueSharingData = groupedRevenueSharings.length > 0;
+
+  const handleExportList = useCallback(async () => {
+    const messageKey = "export-revenue-sharing-list";
+    const [fromDate, toDate] = filterValues.dateRange ?? [];
+
+    message.open({
+      key: messageKey,
+      type: "loading",
+      content: "Đang xuất file excel...",
+      duration: 0
+    });
+
+    try {
+      const result = await exportRevenueSharingListExcel({
+        data: groupedRevenueSharings,
+        summary: revenueSummary,
+        fromDate,
+        toDate
+      });
+
+      if (result.canceled) {
+        message.open({
+          key: messageKey,
+          type: "warning",
+          content: "Bạn đã hủy lưu file excel"
+        });
+        return;
+      }
+
+      message.open({
+        key: messageKey,
+        type: "success",
+        content: "Xuất file excel thành công"
+      });
+    } catch (error) {
+      message.open({
+        key: messageKey,
+        type: "error",
+        content: getApiErrorMessage(error, "Xuất excel thất bại")
+      });
+    }
+  }, [filterValues.dateRange, groupedRevenueSharings, revenueSummary]);
 
   const columns: TableProps<ReportRevenueSharingProps>["columns"] = [
     {
@@ -209,6 +309,17 @@ const RevenueSharingPage = () => {
 
         <div className="flex gap-2 items-center">
           <Filter filterValues={filterValues} onSearch={onSearch} />
+          {canExport && (
+            <Button
+              variant="solid"
+              color="green"
+              disabled={!hasRevenueSharingData}
+              onClick={handleExportList}
+              icon={<Icon component={DownloadIcon} />}
+            >
+              Xuất excel
+            </Button>
+          )}
           {canCreate && (
             <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
               Thêm mới
@@ -232,6 +343,24 @@ const RevenueSharingPage = () => {
           pageSizeOptions: [20, 50, 100],
           showSizeChanger: true,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
+        }}
+        summary={() => {
+          return (
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0} colSpan={4} align="center" className="font-bold">
+                Tổng
+              </Table.Summary.Cell>
+              <Table.Summary.Cell align="right" index={4} className="font-bold">
+                {formatMoney(revenueSummary.totalRevenueNCC)}
+              </Table.Summary.Cell>
+              <Table.Summary.Cell align="right" index={5} className="font-bold">
+                {formatMoney(revenueSummary.totalSharedRevenue)}
+              </Table.Summary.Cell>
+              <Table.Summary.Cell align="right" index={6} className="font-bold">
+                {formatMoney(revenueSummary.allRevenue)}
+              </Table.Summary.Cell>
+            </Table.Summary.Row>
+          );
         }}
       />
 

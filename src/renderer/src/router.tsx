@@ -7,6 +7,7 @@ import ContractTicketSalesPage from "./features/contractTicketSales/ContractTick
 import CustomerRolesPage from "./features/customerRoles/CustomerRolesPage";
 import Dashboard from "./features/Dashboard";
 import DiscountSettingsPage from "./features/discountSettings/DiscountSettingsPage";
+import FilmCategoriesPage from "./features/filmCategories/FilmCategoriesPage";
 import FilmsPage from "./features/films/FilmsPage";
 import FindOnlineTicketsPage from "./features/findOnlineTickets/FindOnlineTicketsPage";
 import ForbiddenPage from "./features/ForbiddenPage";
@@ -104,6 +105,10 @@ export const router = createHashRouter([
           {
             path: "/manufacturers",
             element: withAccess("manufacturers", <ManufacturersPage />)
+          },
+          {
+            path: "/film-categories",
+            element: withAccess("films", <FilmCategoriesPage />)
           },
           {
             path: "/invoices",

@@ -1,25 +1,41 @@
 import { FilterOutlined } from "@ant-design/icons";
+import { manufacturersApi } from "@renderer/api/manufacturers.api";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { Button, DatePicker, Form, Input, Modal, Select } from "antd";
 import { useState } from "react";
 import { ValuesProps } from "../FilmsPage";
-import { ManufacturerProps } from "@shared/types";
 import { filterEmptyValues } from "@renderer/lib/utils";
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
   filterValues: ValuesProps;
   setCurrent: (page: number) => void;
-  manufacturers: ManufacturerProps[];
 }
 
-const Filter = ({ onSearch, filterValues, setCurrent, manufacturers }: FilterProps) => {
+const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
+
+  const manufacturerSelect = useInfiniteSelectOptions({
+    queryKey: ["manufacturers"],
+    queryFn: ({ pageParam, searchText }) =>
+      manufacturersApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        name: searchText,
+        isHidden: false
+      }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.name
+    })
+  });
 
   const onClear = () => {
     setOpen(false);
     setCurrent(1);
     form.resetFields();
+    manufacturerSelect.onClear();
     onSearch({});
   };
 
@@ -52,7 +68,6 @@ const Filter = ({ onSearch, filterValues, setCurrent, manufacturers }: FilterPro
             layout="vertical"
             form={form}
             onFinish={(values) => {
-              console.log(values);
               setOpen(false);
               setCurrent(1);
               onSearch(values);
@@ -74,8 +89,15 @@ const Filter = ({ onSearch, filterValues, setCurrent, manufacturers }: FilterPro
         </Form.Item>
         <Form.Item name="manufacturerId" label="Hãng phát hành">
           <Select
-            options={manufacturers.map((m) => ({ label: m.name, value: m.id }))}
             placeholder="Chọn hãng phát hành"
+            showSearch={{
+              filterOption: false,
+              onSearch: manufacturerSelect.onSearch
+            }}
+            loading={manufacturerSelect.loading}
+            options={manufacturerSelect.options}
+            onPopupScroll={manufacturerSelect.onPopupScroll}
+            onClear={manufacturerSelect.onClear}
             allowClear
           />
         </Form.Item>

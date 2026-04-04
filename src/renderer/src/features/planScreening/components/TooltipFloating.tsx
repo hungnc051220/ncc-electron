@@ -1,4 +1,4 @@
-import { formatMoney } from "@renderer/lib/utils";
+import { formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
 import { ListSeat, OrderResponseProps, SellerProps } from "@shared/types";
 import dayjs from "dayjs";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -45,7 +45,6 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
     left = Math.max(edgePadding, Math.min(left, window.innerWidth - tooltipWidth - edgePadding));
     top = Math.max(edgePadding, Math.min(top, window.innerHeight - tooltipHeight - edgePadding));
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStyle({ left, top });
   }, [position, visible, order, seat]);
 
@@ -69,6 +68,11 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
     if (!value) return "--";
     const parsed = dayjs(value);
     return parsed.isValid() ? parsed.format("HH:mm DD/MM/YYYY") : "--";
+  };
+
+  const formatTransactionType = (isOnline?: boolean) => {
+    if (typeof isOnline !== "boolean") return "--";
+    return isOnline ? "Online" : "Offline";
   };
 
   const getActorDisplayName = (person?: SellerProps) => {
@@ -121,6 +125,28 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
   const ticketPrice = itemMatchedSeat?.unitPriceInclTax ?? seat.price ?? 0;
   const seatInfo = seat.positionName?.trim() || labelSeatByType[seat.type] || "Ghế";
 
+  const totalSoldTickets =
+    order?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || (itemMatchedSeat ? 1 : 0);
+  const matchedItemQuantity = itemMatchedSeat?.quantity || 1;
+  const perSeatItemDiscount = itemMatchedSeat
+    ? (itemMatchedSeat.discountAmountInclTax || 0) / matchedItemQuantity
+    : 0;
+  const perSeatOrderDiscountFallback =
+    !perSeatItemDiscount && totalSoldTickets > 0
+      ? (order?.orderDiscount || 0) / totalSoldTickets
+      : 0;
+  const promotionAmount = perSeatItemDiscount || perSeatOrderDiscountFallback;
+  const originalPrice = ticketPrice + promotionAmount;
+  const finalAmount = Math.max(ticketPrice, 0);
+  const isU22Voucher = order?.voucherCode === "U22Ticket";
+  const promotionName =
+    itemMatchedSeat?.discount?.discountName?.trim() ||
+    (isU22Voucher
+      ? "Khuyến mãi giá vé dành cho thành viên U22"
+      : order?.campaign?.name?.trim() || order?.voucherCode?.trim() || "");
+  const displayPromotionAmount =
+    isU22Voucher && !itemMatchedSeat?.discount?.id ? 0 : promotionAmount;
+
   const isInvitationTicket = seat.isInvitation === 1;
   const isHoldSeat = seat.isHold === 1;
   const isSoldSeat = seat.status === 1;
@@ -162,7 +188,14 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
           <p>Thời gian xuất vé: {formatDateTime(order.printedOnUtc)}</p>
           <div className="my-2 border border-dashed" />
           <p>{seatInfo}</p>
-          <p>Giá vé: {formatMoney(ticketPrice)}</p>
+          <p>Kênh thanh toán: {formatPaymentMethod(order.paymentMethodSystemName)}</p>
+          <p>Loại giao dịch: {formatTransactionType(order.isOnline)}</p>
+          {promotionName && <p>Chương trình khuyến mãi: {promotionName}</p>}
+          <p>Giá gốc: {formatMoney(originalPrice)}</p>
+          {displayPromotionAmount > 0 && (
+            <p>Tiền khuyến mãi: {formatMoney(displayPromotionAmount)}</p>
+          )}
+          <p>Thành tiền: {formatMoney(finalAmount)}</p>
         </>
       )}
     </div>

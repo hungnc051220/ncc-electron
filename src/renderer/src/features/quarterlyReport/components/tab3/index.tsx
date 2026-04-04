@@ -174,7 +174,7 @@ const Tab3 = () => {
     });
   }
 
-  function buildColumns(allTimes: string[]): ColumnsType<TimeTreeRow> {
+  function buildColumns(): ColumnsType<TimeTreeRow> {
     return [
       {
         title: "Phòng / Ngày / Kênh",
@@ -190,42 +190,42 @@ const Tab3 = () => {
           return <div className="whitespace-pre-wrap">{v}</div>;
         }
       },
-      {
-        title: "Suất chiếu",
-        children: allTimes.map((t) => ({
-          title: t,
-          children: [
-            {
-              title: "Vé V",
-              dataIndex: `${t}_V`,
-              align: "right" as const,
-              width: 80,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
-            },
-            {
-              title: "Vé T",
-              dataIndex: `${t}_T`,
-              align: "right" as const,
-              width: 80,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
-            },
-            {
-              title: "Tổng vé",
-              dataIndex: `${t}_C`,
-              align: "right" as const,
-              width: 90,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
-            },
-            {
-              title: "Doanh thu",
-              dataIndex: `${t}_R`,
-              align: "right" as const,
-              width: 120,
-              render: (v) => (typeof v === "number" && v !== 0 ? formatMoney(v) : "")
-            }
-          ]
-        }))
-      },
+      // {
+      //   title: "Suất chiếu",
+      //   children: allTimes.map((t) => ({
+      //     title: t,
+      //     children: [
+      //       {
+      //         title: "Vé V",
+      //         dataIndex: `${t}_V`,
+      //         align: "right" as const,
+      //         width: 80,
+      //         render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
+      //       },
+      //       {
+      //         title: "Vé T",
+      //         dataIndex: `${t}_T`,
+      //         align: "right" as const,
+      //         width: 80,
+      //         render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
+      //       },
+      //       {
+      //         title: "Tổng vé",
+      //         dataIndex: `${t}_C`,
+      //         align: "right" as const,
+      //         width: 90,
+      //         render: (v) => (typeof v === "number" && v !== 0 ? formatNumber(v) : "")
+      //       },
+      //       {
+      //         title: "Doanh thu",
+      //         dataIndex: `${t}_R`,
+      //         align: "right" as const,
+      //         width: 120,
+      //         render: (v) => (typeof v === "number" && v !== 0 ? formatMoney(v) : "")
+      //       }
+      //     ]
+      //   }))
+      // },
       {
         title: "Tổng",
         children: [
@@ -270,7 +270,7 @@ const Tab3 = () => {
     [formatData, allTimes]
   );
 
-  const columns = useMemo(() => buildColumns(allTimes), [allTimes]);
+  const columns = buildColumns();
 
   const items: TabsProps["items"] = [
     {

@@ -11,8 +11,9 @@ import {
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
-import { Breadcrumb, Button, Dropdown, message, Table, Tabs } from "antd";
+import { Breadcrumb, Dropdown, message, Table, Tabs } from "antd";
 import dayjs from "dayjs";
+import { Eye, Printer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import OrderDetailDialog from "./components/OrderDetailDialog";
@@ -45,7 +46,6 @@ const OrderHistoryPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
-  const [pickedOrderIds, setPickedOrderIds] = useState<number[]>([]);
   const [activeKey, setActiveKey] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
@@ -58,7 +58,6 @@ const OrderHistoryPage = () => {
   const { data: user } = useUserDetail(userId!);
   const { can } = usePermission();
   const canView = can("order_history", "view");
-  const canExport = can("order_history", "export");
   const canPrint = can("order_history", "print");
 
   const params = useMemo(() => {
@@ -260,8 +259,8 @@ const OrderHistoryPage = () => {
             width: 50,
             render: (_: unknown, record: OrderDetailProps) => {
               const items = [
-                ...(canView ? [{ key: "1", label: "Xem chi tiết" }] : []),
-                ...(canPrint ? [{ key: "2", label: "In vé" }] : [])
+                ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
+                ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : [])
               ];
 
               return (
@@ -319,23 +318,6 @@ const OrderHistoryPage = () => {
     setPageSize(pageSize);
   };
 
-  const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
-    setPickedOrderIds((prev) => {
-      const pageFilmIds = orders?.data.map((f) => f.order.id) ?? [];
-
-      const newKeys = newSelectedRowKeys as number[];
-
-      const prevWithoutCurrentPage = prev.filter((id) => !pageFilmIds.includes(id));
-
-      return [...prevWithoutCurrentPage, ...newKeys];
-    });
-  };
-
-  const rowSelection: TableProps<OrderDetailProps>["rowSelection"] = {
-    selectedRowKeys: pickedOrderIds,
-    onChange: onSelectChange
-  };
-
   return (
     <div className="mt-4 px-4">
       <div className="flex items-center justify-between">
@@ -353,21 +335,7 @@ const OrderHistoryPage = () => {
             }
           ]}
         />
-        <div className="flex items-center gap-3">
-          <div className="flex gap-6">
-            <p className="text-xs">
-              Số lượng vé xuất: <span className="font-semibold">{pickedOrderIds.length}</span>
-            </p>
-          </div>
-          <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
-          <Button
-            type="primary"
-            disabled={pickedOrderIds.length === 0 || !canExport}
-            onClick={() => {}}
-          >
-            Xuất vé điện tử
-          </Button>
-        </div>
+        <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
       </div>
 
       <Tabs defaultActiveKey="1" items={items} activeKey={activeKey} onChange={setActiveKey} />
@@ -391,7 +359,6 @@ const OrderHistoryPage = () => {
           onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
         }}
-        rowSelection={{ type: "checkbox", ...rowSelection }}
       />
 
       {dialogOpen && (

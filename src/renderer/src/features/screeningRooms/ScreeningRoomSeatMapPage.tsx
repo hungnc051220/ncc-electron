@@ -101,6 +101,20 @@ const ScreeningRoomSeatMapPage = () => {
     () => floorConfigs.find((item) => item.floor === selectedFloor),
     [floorConfigs, selectedFloor]
   );
+
+  const floorRowOffsets = useMemo(
+    () =>
+      floorConfigs.reduce(
+        (offsets, item, index) => ({
+          ...offsets,
+          [item.floor]: floorConfigs
+            .slice(0, index)
+            .reduce((totalRows, floorConfig) => totalRows + floorConfig.rows, 0)
+        }),
+        { 1: 0, 2: 0, 3: 0 } as Record<FloorNumber, number>
+      ),
+    [floorConfigs]
+  );
   const isSeatMapLoading = isLoadingRooms || isLoadingChairs || isFetchingRooms || isFetchingChairs;
 
   const parseChairPositions = (input: string): string[] => {
@@ -146,8 +160,16 @@ const ScreeningRoomSeatMapPage = () => {
     [seatTypes]
   );
 
-  const getRowLabel = (rowIdx: number) => {
-    return String.fromCharCode(65 + (rowIdx % 26));
+  const getRowLabel = (rowIdx: number, floor: FloorNumber) => {
+    let labelIndex = floorRowOffsets[floor] + rowIdx;
+    let label = "";
+
+    do {
+      label = String.fromCharCode(65 + (labelIndex % 26)) + label;
+      labelIndex = Math.floor(labelIndex / 26) - 1;
+    } while (labelIndex >= 0);
+
+    return label;
   };
 
   const getSeatNumberByRule = (seatIdx: number, totalSeats: number) => {
@@ -503,79 +525,83 @@ const ScreeningRoomSeatMapPage = () => {
             ) : selectedFloorConfig ? (
               <div className="w-full h-full flex justify-center items-center">
                 <div className="flex flex-col gap-1">
-                  {Array.from({ length: selectedFloorConfig.rows }).map((_, rowIdx) => (
-                    <div key={rowIdx} className="flex items-center gap-1">
-                      <div
-                        className="text-center font-semibold text-trunks"
-                        style={{
-                          width: `${seatSize}px`,
-                          height: `${seatSize}px`,
-                          fontSize: `${Math.max(10, seatSize * 0.3)}px`,
-                          lineHeight: `${seatSize}px`
-                        }}
-                      >
-                        {getRowLabel(rowIdx)}
-                      </div>
+                  {Array.from({ length: selectedFloorConfig.rows }).map((_, rowIdx) => {
+                    const rowLabel = getRowLabel(rowIdx, selectedFloor);
 
-                      {Array.from({ length: selectedFloorConfig.cols }).map((_, seatIdx) => {
-                        const seatKey = `${rowIdx}:${seatIdx}`;
-                        const positionId = seatAssignments[selectedFloor][seatKey];
-                        const seatColor = positionId
-                          ? seatTypeColorMap.get(positionId) || "#8f8f8f"
-                          : "transparent";
-                        const seatNo = getSeatNumberByRule(seatIdx, selectedFloorConfig.cols);
-                        const seatCode = `${getRowLabel(rowIdx)}${seatNo}`;
-                        const isSelected = selectedSeatKeys.includes(seatKey);
-                        const seatTextColor = isSelected
-                          ? "#ffffff"
-                          : getContrastTextColor(seatColor);
+                    return (
+                      <div key={rowIdx} className="flex items-center gap-1">
+                        <div
+                          className="text-center font-semibold text-trunks"
+                          style={{
+                            width: `${seatSize}px`,
+                            height: `${seatSize}px`,
+                            fontSize: `${Math.max(10, seatSize * 0.3)}px`,
+                            lineHeight: `${seatSize}px`
+                          }}
+                        >
+                          {rowLabel}
+                        </div>
 
-                        return (
-                          <div
-                            key={seatKey}
-                            title={`Hàng ${rowIdx + 1} - Ghế ${seatIdx + 1}`}
-                            className={cn(
-                              "relative rounded-sm flex items-center justify-center selectable-seat",
-                              "border border-app-border cursor-pointer",
-                              isSelected && "bg-whis border-whis"
-                            )}
-                            data-seat-key={seatKey}
-                            style={{
-                              backgroundColor: isSelected ? undefined : seatColor,
-                              width: `${seatSize}px`,
-                              height: `${seatSize}px`
-                            }}
-                          >
-                            <p
-                              className="leading-none font-semibold"
+                        {Array.from({ length: selectedFloorConfig.cols }).map((_, seatIdx) => {
+                          const seatKey = `${rowIdx}:${seatIdx}`;
+                          const positionId = seatAssignments[selectedFloor][seatKey];
+                          const seatColor = positionId
+                            ? seatTypeColorMap.get(positionId) || "#8f8f8f"
+                            : "transparent";
+                          const seatNo = getSeatNumberByRule(seatIdx, selectedFloorConfig.cols);
+                          const seatCode = `${rowLabel}${seatNo}`;
+                          const isSelected = selectedSeatKeys.includes(seatKey);
+                          const seatTextColor = isSelected
+                            ? "#ffffff"
+                            : getContrastTextColor(seatColor);
+
+                          return (
+                            <div
+                              key={seatKey}
+                              title={`Hàng ${rowIdx + 1} - Ghế ${seatIdx + 1}`}
+                              className={cn(
+                                "relative rounded-sm flex items-center justify-center selectable-seat",
+                                "border border-app-border cursor-pointer",
+                                isSelected && "bg-whis border-whis"
+                              )}
+                              data-seat-key={seatKey}
                               style={{
-                                fontSize: `${Math.max(9, seatSize * 0.25)}px`,
-                                color: seatTextColor,
-                                textShadow:
-                                  seatTextColor === "#ffffff"
-                                    ? "0 1px 1px rgba(0, 0, 0, 0.45)"
-                                    : "0 1px 1px rgba(255, 255, 255, 0.25)"
+                                backgroundColor: isSelected ? undefined : seatColor,
+                                width: `${seatSize}px`,
+                                height: `${seatSize}px`
                               }}
                             >
-                              {seatCode}
-                            </p>
-                          </div>
-                        );
-                      })}
+                              <p
+                                className="leading-none font-semibold"
+                                style={{
+                                  fontSize: `${Math.max(9, seatSize * 0.25)}px`,
+                                  color: seatTextColor,
+                                  textShadow:
+                                    seatTextColor === "#ffffff"
+                                      ? "0 1px 1px rgba(0, 0, 0, 0.45)"
+                                      : "0 1px 1px rgba(255, 255, 255, 0.25)"
+                                }}
+                              >
+                                {seatCode}
+                              </p>
+                            </div>
+                          );
+                        })}
 
-                      <div
-                        className="text-center font-semibold text-trunks"
-                        style={{
-                          width: `${seatSize}px`,
-                          height: `${seatSize}px`,
-                          fontSize: `${Math.max(10, seatSize * 0.3)}px`,
-                          lineHeight: `${seatSize}px`
-                        }}
-                      >
-                        {getRowLabel(rowIdx)}
+                        <div
+                          className="text-center font-semibold text-trunks"
+                          style={{
+                            width: `${seatSize}px`,
+                            height: `${seatSize}px`,
+                            fontSize: `${Math.max(10, seatSize * 0.3)}px`,
+                            lineHeight: `${seatSize}px`
+                          }}
+                        >
+                          {rowLabel}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : (

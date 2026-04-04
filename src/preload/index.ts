@@ -55,6 +55,7 @@ const api: PreloadAPI = {
 
     return new Uint8Array(buffer);
   },
+  saveFile: (params) => ipcRenderer.invoke("save-file", params),
   getVersion: (): Promise<string> => ipcRenderer.invoke("app:get-version"),
   checkUpdate: () => ipcRenderer.invoke("app:check-update"),
   startDownload: (): Promise<void> => ipcRenderer.invoke("app:start-download"),

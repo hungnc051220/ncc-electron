@@ -11,6 +11,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import Filter from "./components/Filter";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 import { MoreOutlined } from "@ant-design/icons";
+import { Eye } from "lucide-react";
 
 export interface ValuesProps {
   id?: string;
@@ -165,7 +166,7 @@ const FindOnlineTicketsPage = () => {
             render: (_: unknown, record: OrderDetailProps) => (
               <Dropdown
                 menu={{
-                  items: [{ key: "1", label: "Xem chi tiết" }],
+                  items: [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }],
                   onClick: (e) => {
                     if (e.key === "1") {
                       handeViewDetail(record);

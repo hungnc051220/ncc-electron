@@ -641,7 +641,10 @@ describe("Actions", () => {
       <Actions
         data={createPlanScreening()}
         planScreenId={1}
-        selectedSeats={[createSeat({ seat: "1", code: "A1" }), createSeat({ seat: "2", code: "A2" })]}
+        selectedSeats={[
+          createSeat({ seat: "1", code: "A1" }),
+          createSeat({ seat: "2", code: "A2" })
+        ]}
         setSelectedSeats={vi.fn()}
         cancelMode={false}
         setCancelMode={vi.fn()}

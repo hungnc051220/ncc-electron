@@ -6,6 +6,7 @@ import { OrderDetailProps, RefundStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Dropdown, Table } from "antd";
 import dayjs from "dayjs";
+import { Eye, RefreshCcw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
@@ -191,9 +192,17 @@ const RefundsPage = () => {
             width: 50,
             render: (_: unknown, record: OrderDetailProps) => {
               const actionItems = [
-                ...(canView ? [{ key: "view-detail", label: "Xem chi tiết" }] : []),
+                ...(canView
+                  ? [{ key: "view-detail", icon: <Eye size={16} />, label: "Xem chi tiết" }]
+                  : []),
                 ...(canUpdate && record.order.refundStatusId === RefundStatus.PENDING
-                  ? [{ key: "update-refund-status", label: "Cập nhật trạng thái huỷ" }]
+                  ? [
+                      {
+                        key: "update-refund-status",
+                        icon: <RefreshCcw size={16} />,
+                        label: "Cập nhật trạng thái huỷ"
+                      }
+                    ]
                   : [])
               ];
 

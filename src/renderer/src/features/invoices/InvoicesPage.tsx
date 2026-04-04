@@ -5,6 +5,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Dropdown, Table } from "antd";
+import { RefreshCcw, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import InvoiceDialog from "./components/InvoiceDialog";
@@ -57,8 +58,8 @@ const InvoicesPage = () => {
 
   const actionItems = canUpdate
     ? [
-        { key: "1", label: "Cập nhật" },
-        { key: "2", label: "Thay đổi trạng thái" }
+        { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
+        { key: "2", icon: <RefreshCcw size={16} />, label: "Thay đổi trạng thái" }
       ]
     : [];
 

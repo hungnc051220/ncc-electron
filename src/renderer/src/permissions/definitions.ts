@@ -57,6 +57,13 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     actions: ["access", "list", "view", "create", "update", "delete"]
   },
   {
+    key: "films_categories",
+    module: "Quản lý danh sách",
+    label: "Danh sách thể loại phim",
+    route: "/films-categories",
+    actions: ["access", "list", "view", "create", "update", "delete"]
+  },
+  {
     key: "invoices",
     module: "Quản lý danh sách",
     label: "Hóa đơn điện tử",
@@ -229,7 +236,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     module: "Tra cứu",
     label: "Lịch sử bán vé",
     route: "/order-history",
-    actions: ["access", "list", "view", "export"]
+    actions: ["access", "list", "view", "export", "print"]
   },
   {
     key: "staff_revenue_report",

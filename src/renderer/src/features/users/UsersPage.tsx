@@ -8,9 +8,9 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { useUsers } from "@renderer/hooks/users/useUsers";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { UserProps } from "@shared/types";
-import type { PaginationProps, TableProps } from "antd";
+import type { MenuProps, PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
-import { Check, PlusIcon, X } from "lucide-react";
+import { Check, Eye, EyeOff, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 
@@ -93,15 +93,35 @@ const UsersPage = () => {
     setCurrent(page);
   };
 
-  const actionItems = [
-    ...(canUpdate
-      ? [
-          { key: "1", label: "Ẩn/hiện" },
-          { key: "2", label: "Cập nhật" }
-        ]
-      : []),
-    ...(canDelete ? [{ key: "3", label: <p className="text-red-500">Xóa</p> }] : [])
-  ];
+  const getActionItems = useCallback(
+    (user: UserProps): MenuProps["items"] => [
+      ...(canUpdate
+        ? [
+            {
+              key: "1",
+              icon: user.isHidden ? <Eye size={16} /> : <EyeOff size={16} />,
+              label: user.isHidden ? "Hiện người dùng" : "Ẩn người dùng"
+            },
+            {
+              key: "2",
+              icon: <SquarePen size={16} />,
+              label: "Cập nhật"
+            }
+          ]
+        : []),
+      ...(canDelete
+        ? [
+            {
+              key: "3",
+              icon: <Trash2 size={16} />,
+              label: "Xóa",
+              danger: true
+            }
+          ]
+        : [])
+    ],
+    [canDelete, canUpdate]
+  );
 
   const columns: TableProps<UserProps>["columns"] = [
     {
@@ -164,7 +184,7 @@ const UsersPage = () => {
       width: 80,
       align: "center"
     },
-    ...(actionItems.length
+    ...(canUpdate || canDelete
       ? [
           {
             title: "",
@@ -173,7 +193,7 @@ const UsersPage = () => {
             render: (_: unknown, record: UserProps) => (
               <Dropdown
                 menu={{
-                  items: actionItems,
+                  items: getActionItems(record),
                   onClick: (e) => {
                     if (e.key === "1") {
                       handleChangeHidden(record);

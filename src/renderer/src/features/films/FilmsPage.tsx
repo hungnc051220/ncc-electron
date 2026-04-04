@@ -2,7 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import type { TableProps, TabsProps, PaginationProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table, Tabs } from "antd";
 import dayjs from "dayjs";
-import { Check, PlusIcon, X } from "lucide-react";
+import { Check, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteFilmDialog from "./components/DeleteFilmDialog";
 import FilmDialog from "./components/FilmDialog";
@@ -11,10 +11,8 @@ import type { Dayjs } from "dayjs";
 import { FilmProps } from "@shared/types";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useFilms } from "@renderer/hooks/films/useFilms";
-import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import { Link } from "react-router";
 
 const items: TabsProps["items"] = [
@@ -64,21 +62,7 @@ const FilmsPage = () => {
 
   const { data: films, isFetching } = useFilms(params);
   const { data: generalData } = useGeneralData();
-  const manufacturerSelect = useInfiniteSelectOptions({
-    queryKey: ["manufacturers"],
-    queryFn: ({ pageParam, searchText }) =>
-      manufacturersApi.getAll({
-        current: pageParam,
-        pageSize: 20,
-        name: searchText,
-        isHidden: false
-      }),
-    mapOption: (item) => ({
-      value: item.id,
-      label: item.name
-    }),
-    prefetchAll: true
-  });
+
   const { can } = usePermission();
   const canCreate = can("films", "create");
   const canUpdate = can("films", "update");
@@ -87,9 +71,11 @@ const FilmsPage = () => {
   const manufacturerMap = useMemo(
     () =>
       new Map(
-        manufacturerSelect.items.map((manufacturer) => [manufacturer.id, manufacturer.name] as const)
+        (generalData?.manufacturers || []).map(
+          (manufacturer) => [manufacturer.id, manufacturer.name] as const
+        )
       ),
-    [manufacturerSelect.items]
+    [generalData?.manufacturers]
   );
 
   const handleAdd = useCallback(() => {
@@ -126,8 +112,8 @@ const FilmsPage = () => {
   };
 
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+    ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
   ];
 
   const columns: TableProps<FilmProps>["columns"] = [
@@ -144,27 +130,28 @@ const FilmsPage = () => {
       key: "filmName",
       dataIndex: "filmName",
       fixed: "left",
-      width: "40%"
+      width: 400
     },
     {
       title: "Phiên bản",
       key: "versionCode",
       dataIndex: "versionCode",
-      width: 90,
+      width: 100,
       align: "center"
     },
     {
       title: "Hãng phát hành",
       key: "manufacturerId",
       dataIndex: "manufacturerId",
-      render: (value: number) => manufacturerMap.get(value) || ""
+      render: (value: number) => manufacturerMap.get(value) || "",
+      width: 200
     },
     {
       title: "Ngày khởi chiếu",
       key: "premieredDay",
       dataIndex: "premieredDay",
       render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
-      width: 130
+      width: 150
     },
     {
       title: "Thời lượng",
@@ -172,20 +159,22 @@ const FilmsPage = () => {
       dataIndex: "duration",
       render: (value: number) => `${value} phút`,
       align: "right",
-      width: 100
+      width: 150
     },
     {
       title: "Nước sản xuất",
       key: "countryName",
       dataIndex: "countryName",
-      render: (_, record) => record.country?.name
+      render: (_, record) => record.country?.name,
+      width: 150
     },
     {
       title: "Giá cộng thêm",
       key: "proposedPrice",
       dataIndex: "proposedPrice",
       render: (value: number) => formatMoney(value || 0),
-      align: "right"
+      align: "right",
+      width: 150
     },
     {
       title: "Bán online",
@@ -201,7 +190,7 @@ const FilmsPage = () => {
         </div>
       ),
       align: "center",
-      width: 100
+      width: 150
     },
     ...(actionItems.length
       ? [
@@ -262,12 +251,7 @@ const FilmsPage = () => {
         />
 
         <div className="flex gap-2 items-center">
-          <Filter
-            onSearch={onSearch}
-            filterValues={filterValues}
-            setCurrent={setCurrent}
-            manufacturers={manufacturerSelect.items}
-          />
+          <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
           {canCreate && (
             <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
               Thêm phim
@@ -293,7 +277,7 @@ const FilmsPage = () => {
         bordered
         size="small"
         scroll={{ x: "max-content", y: "calc(100vh - 315px)" }}
-        loading={isFetching || manufacturerSelect.loading}
+        loading={isFetching}
         pagination={{
           current,
           onChange,

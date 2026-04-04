@@ -5,9 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 const buildDefines = {
   "process.env.APP_RELEASE_CHANNEL": JSON.stringify(process.env.APP_RELEASE_CHANNEL ?? "latest"),
-  "process.env.APP_ENABLE_DEVTOOLS": JSON.stringify(
-    process.env.APP_ENABLE_DEVTOOLS ?? "false"
-  )
+  "process.env.APP_ENABLE_DEVTOOLS": JSON.stringify(process.env.APP_ENABLE_DEVTOOLS ?? "false")
 };
 
 export default defineConfig({

@@ -5,7 +5,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { DayPartProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import ShowTimeSlotDialog from "./components/ShowTimeSlotDialog";
 import DeleteShowTimeSlotDialog from "./components/DeleteShowTimeSlotDialog";
@@ -62,8 +62,8 @@ const ShowTimeSlotsPage = () => {
   }, []);
 
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+    ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
   ];
 
   const columns: TableProps<DayPartProps>["columns"] = [

@@ -23,12 +23,12 @@ export interface TreeRow {
   [key: string]: string | number | boolean | TreeRow[] | undefined;
 }
 
-const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
-  1: "Quý I",
-  2: "Quý II",
-  3: "Quý III",
-  4: "Quý IV"
-};
+// const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
+//   1: "Quý I",
+//   2: "Quý II",
+//   3: "Quý III",
+//   4: "Quý IV"
+// };
 
 const renderValue = (value: number | undefined, isMoney = false) => {
   if (!value) return "";
@@ -126,35 +126,35 @@ const Tab1 = () => {
         fixed: "left",
         width: 360
       },
-      ...QUARTERS.map((quarter) => ({
-        title: quarterTitleMap[quarter],
-        children: [
-          {
-            title: "Buổi chiếu",
-            dataIndex: `q${quarter}Screenings`,
-            key: `q${quarter}Screenings`,
-            align: "right" as const,
-            width: 110,
-            render: (value: number | undefined) => renderValue(value)
-          },
-          {
-            title: "Khán giả",
-            dataIndex: `q${quarter}Tickets`,
-            key: `q${quarter}Tickets`,
-            align: "right" as const,
-            width: 110,
-            render: (value: number | undefined) => renderValue(value)
-          },
-          {
-            title: "Doanh thu",
-            dataIndex: `q${quarter}Revenue`,
-            key: `q${quarter}Revenue`,
-            align: "right" as const,
-            width: 140,
-            render: (value: number | undefined) => renderValue(value, true)
-          }
-        ]
-      })),
+      // ...QUARTERS.map((quarter) => ({
+      //   title: quarterTitleMap[quarter],
+      //   children: [
+      //     {
+      //       title: "Buổi chiếu",
+      //       dataIndex: `q${quarter}Screenings`,
+      //       key: `q${quarter}Screenings`,
+      //       align: "right" as const,
+      //       width: 110,
+      //       render: (value: number | undefined) => renderValue(value)
+      //     },
+      //     {
+      //       title: "Khán giả",
+      //       dataIndex: `q${quarter}Tickets`,
+      //       key: `q${quarter}Tickets`,
+      //       align: "right" as const,
+      //       width: 110,
+      //       render: (value: number | undefined) => renderValue(value)
+      //     },
+      //     {
+      //       title: "Doanh thu",
+      //       dataIndex: `q${quarter}Revenue`,
+      //       key: `q${quarter}Revenue`,
+      //       align: "right" as const,
+      //       width: 140,
+      //       render: (value: number | undefined) => renderValue(value, true)
+      //     }
+      //   ]
+      // })),
       {
         title: "Cả năm",
         children: [

@@ -4,6 +4,7 @@ export interface DiscountProps {
   discountType: string;
   discountAmount: number;
   discountRate: number;
+  image?: string;
   deleted: boolean;
   createdOnUtc: string;
   createdUser: string;

@@ -5,7 +5,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { SeatTypeProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, ColorPicker, Dropdown, Table } from "antd";
-import { Check, PlusIcon, X } from "lucide-react";
+import { Check, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteSeatTypeDialog from "./components/DeleteSeatTypeDialog";
 import SeatTypesDialog from "./components/SeatTypeDialog";
@@ -62,8 +62,8 @@ const SeatTypesPage = () => {
   }, []);
 
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+    ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
   ];
 
   const columns: TableProps<SeatTypeProps>["columns"] = [

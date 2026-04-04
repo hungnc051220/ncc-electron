@@ -47,7 +47,11 @@ export const screeningRoomsApi = {
     }
 
     if (hidden !== undefined) {
-      filter.hidden = hidden;
+      if (hidden) {
+        filter.hidden = true;
+      } else {
+        filter.or = [{ hidden: false }, { hidden: null }];
+      }
     }
 
     const queryObject: Record<string, unknown> = {

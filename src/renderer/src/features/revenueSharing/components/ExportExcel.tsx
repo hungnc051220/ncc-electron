@@ -7,9 +7,10 @@ import {
   RevenueSharingDetailSummaryItem,
   RevenueSharingWeekItem
 } from "@shared/types";
+import { saveExcelFile } from "@renderer/lib/saveFile";
 import dayjs from "dayjs";
 import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
+import type { SaveFileResult } from "@renderer/lib/saveFile";
 
 const moneyFormat = "#,##0";
 const percentFormat = "0%";
@@ -199,11 +200,16 @@ const addWeekRows = (ws: ExcelJS.Worksheet, weeks: RevenueSharingWeekItem[]) => 
 };
 
 export const exportRevenueSharingExcel = async (
-  record: Pick<ReportRevenueSharingProps, "filmId" | "manufacturerId">
-) => {
+  record: Pick<ReportRevenueSharingProps, "filmId" | "manufacturerId"> & {
+    fromDate?: string;
+    toDate?: string;
+  }
+): Promise<SaveFileResult> => {
   const data = await reportsApi.getReportRevenueSharingDetails({
     filmId: record.filmId,
-    manufacturerId: record.manufacturerId
+    manufacturerId: record.manufacturerId,
+    fromDate: record.fromDate,
+    toDate: record.toDate
   });
 
   const wb = new ExcelJS.Workbook();
@@ -407,7 +413,7 @@ export const exportRevenueSharingExcel = async (
   ];
 
   const buf = await wb.xlsx.writeBuffer();
-  saveAs(new Blob([buf]), getFileName(data));
+  return saveExcelFile(new Uint8Array(buf), getFileName(data));
 };
 
 const ExportButton = () => null;

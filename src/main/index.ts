@@ -463,6 +463,28 @@ app.whenReady().then(() => {
     return new Uint8Array(data.buffer);
   });
 
+  ipcMain.handle("save-file", async (event, payload) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const dialogOptions = {
+      defaultPath: payload.defaultFileName,
+      filters: payload.filters
+    };
+    const result = win
+      ? await dialog.showSaveDialog(win, dialogOptions)
+      : await dialog.showSaveDialog(dialogOptions);
+
+    if (result.canceled || !result.filePath) {
+      return { canceled: true };
+    }
+
+    await fs.promises.writeFile(result.filePath, Buffer.from(payload.content));
+
+    return {
+      canceled: false,
+      filePath: result.filePath
+    };
+  });
+
   ipcMain.handle("export-ticket", async (_, payload) => {
     const templatePath = getTemplatePath();
     const htmlTemplate = fs.readFileSync(templatePath, "utf-8");

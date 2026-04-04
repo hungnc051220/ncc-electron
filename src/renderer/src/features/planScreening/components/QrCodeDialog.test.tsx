@@ -62,9 +62,7 @@ describe("QrCodeDialog", () => {
     fireEvent.click(screen.getByTestId("countdown-expire"));
 
     expect(onCancel).not.toHaveBeenCalled();
-    expect(
-      screen.getAllByText(/kết thúc hoặc check lại giao dịch TT/i).length
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/kết thúc hoặc check lại giao dịch TT/i).length).toBeGreaterThan(0);
   });
 
   it("calls onCheckTransaction when clicking the retry button", () => {
@@ -80,6 +78,8 @@ describe("QrCodeDialog", () => {
     render(<QrCodeDialog open dataQr={baseQrData} isCustomerView />);
 
     expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Check lại giao dịch TT" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Check lại giao dịch TT" })
+    ).not.toBeInTheDocument();
   });
 });

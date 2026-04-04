@@ -12,7 +12,7 @@ import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, message, Table } from "antd";
 import dayjs from "dayjs";
-import { PlusIcon } from "lucide-react";
+import { Armchair, FileText, PlusIcon, Printer, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import ContractTicketSaleDialog from "./components/ContractTicketSaleDialog";
@@ -130,12 +130,12 @@ const ContractTicketSalesPage = () => {
   const actionItems = [
     ...(canUpdate
       ? [
-          { key: "1", label: "Cập nhật" },
-          { key: "2", label: "Thiết lập ghế ngồi" }
+          { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
+          { key: "2", icon: <Armchair size={16} />, label: "Thiết lập ghế ngồi" }
         ]
       : []),
-    ...(canPrint ? [{ key: "3", label: "In vé" }] : []),
-    ...(canView ? [{ key: "4", label: "Thông tin xuất hóa đơn" }] : [])
+    ...(canPrint ? [{ key: "3", icon: <Printer size={16} />, label: "In vé" }] : []),
+    ...(canView ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }] : [])
   ];
 
   const columns: TableProps<OrderDetailProps>["columns"] = [

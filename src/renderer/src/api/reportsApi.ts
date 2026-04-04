@@ -16,13 +16,13 @@ import {
   YearlyReportSummaryItem,
   YearlyReportType
 } from "@shared/types";
-
 export interface ReportRevenueByFilmDto {
   fromDate?: string;
   toDate?: string;
   userId?: number;
   manufacturerId?: number;
   filmId?: number;
+  dayType?: number; //1: theo lịch chiếu, 2: theo ngày bán
   reportType?: string;
 }
 
@@ -47,6 +47,8 @@ export interface ReportRevenueSharingDto {
 export interface ReportRevenueSharingDetailDto {
   filmId: number;
   manufacturerId: number;
+  fromDate?: string;
+  toDate?: string;
 }
 
 export const reportsApi = {

@@ -43,7 +43,7 @@ export type Row = {
   onlineRowSpan?: number;
 };
 
-const RevenueByFilm = () => {
+const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({
     dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
   });
@@ -52,13 +52,15 @@ const RevenueByFilm = () => {
     const { dateRange, ...rest } = filterValues;
     const filtered = filterEmptyValues(rest as Record<string, unknown>);
 
+    filtered.dateType = dateType;
+
     if (dateRange && dateRange.length === 2) {
-      filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
-      filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
     }
 
     return filtered;
-  }, [filterValues]);
+  }, [filterValues, dateType]);
 
   const { data, isFetching } = useReportRevenueByFilm(params);
 
@@ -188,11 +190,7 @@ const RevenueByFilm = () => {
       fixed: "left"
     },
     {
-      title: "Loại giá vé (Đơn vị tính: 1.000 đồng)",
-      children: buildPriceColumns<Row>(allPrices as number[])
-    },
-    {
-      title: "Tổng",
+      title: "Tổng vé",
       key: "totalQuantity",
       dataIndex: "totalQuantity",
       align: "right",
@@ -285,6 +283,7 @@ const RevenueByFilm = () => {
               summaryByDate={summaryByDate}
               fromDate={filterValues.dateRange[0]!}
               toDate={filterValues.dateRange[1]!}
+              dateType={dateType}
               employeeName={filterValues?.userName}
             />
           </div>

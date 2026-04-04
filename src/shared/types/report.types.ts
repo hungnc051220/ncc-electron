@@ -35,6 +35,7 @@ export interface RevenueByFilmProps {
   offSaleVnPayQr: number | null;
   actualOffSale: number | null;
   totalSale: number | null;
+  onSaleTotal: number | null;
 }
 
 export interface TotalRevenueProps {
@@ -45,6 +46,7 @@ export interface TotalRevenueProps {
   offSaleVnPayQr: number;
   actualOffSale: number;
   totalSale: number;
+  onSaleTotal: number | null;
 }
 
 export interface TotalRevenue2Props {
@@ -386,6 +388,7 @@ export interface ReportRevenueSharingProps {
   manufacturerName: string;
   filmName: string;
   VersionCode: string;
+  premieredDay: string;
 }
 
 export interface RevenueSharingDetailPriceItem {

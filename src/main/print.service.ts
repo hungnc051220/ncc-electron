@@ -5,6 +5,21 @@ export const createPrintService = () => {
   let printWindow: BrowserWindow | null = null;
   let printQueue: Promise<void> = Promise.resolve();
 
+  function disposePrintWindow() {
+    if (printWindow && !printWindow.isDestroyed()) {
+      printWindow.destroy();
+    }
+    printWindow = null;
+  }
+
+  function isPrintCanceledError(error: unknown) {
+    return (
+      error instanceof Error &&
+      typeof error.message === "string" &&
+      error.message.toLowerCase().includes("canceled")
+    );
+  }
+
   // 🔹 Tạo hoặc reuse hidden window
   function getPrintWindow(): BrowserWindow {
     if (printWindow && !printWindow.isDestroyed()) {
@@ -27,6 +42,8 @@ export const createPrintService = () => {
 
   // 🔹 Render HTML template
   function renderTicketHTML(ticket: PrintTicketPayload) {
+    const hasDiscountImage = Boolean(ticket.discountImage);
+
     return `
     <!DOCTYPE html>
     <html>
@@ -116,12 +133,39 @@ export const createPrintService = () => {
 
           .qr {
             text-align: center;
-            margin-top: 8px;
+            margin-top: 10px;
+          }
+
+          .qr-layout {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 10px;
           }
 
           .qr img {
             margin-left: auto;
             margin-right: auto;
+          }
+
+          .qr-side-image {
+            width: 54px;
+            height: 54px;
+            object-fit: contain;
+            flex-shrink: 0;
+          }
+
+          .qr-main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+
+          .ticket-code {
+            margin-top: 4px;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.1;
           }
 
           .footer {
@@ -203,20 +247,39 @@ export const createPrintService = () => {
           <div class="center value flex-center">
             Tầng ${ticket.floor}
           </div>
-
-          <div class="bold flex-center value">
-            Mã vé: ${ticket.ticketCode}
-          </div>
+        </div>
 
           <div class="qr">
-            <img
-              src=${ticket.qrData}
-              alt="qr"
-              width="100"
-              height="100"
-            />
+            <div class="qr-layout">
+              ${
+                hasDiscountImage
+                  ? `<img
+                      class="qr-side-image"
+                      src="${ticket.discountImage}"
+                      alt="discount"
+                    />`
+                  : ""
+              }
+              <div class="qr-main">
+                <img
+                  src="${ticket.qrData}"
+                  alt="qr"
+                  width="100"
+                  height="100"
+                />
+                <div class="ticket-code">${ticket.ticketCode}</div>
+              </div>
+              ${
+                hasDiscountImage
+                  ? `<img
+                      class="qr-side-image"
+                      src="${ticket.discountImage}"
+                      alt="discount"
+                    />`
+                  : ""
+              }
+            </div>
           </div>
-        </div>
 
         <div class="footer">www.chieuphimquocgia.com.vn</div>
         <div class="info-wrapper">
@@ -225,8 +288,8 @@ export const createPrintService = () => {
             <span class="label-footer">${ticket.posName}</span>
           </div>
           <div class="row">
-            <span class="bold"></span>
-            <span class="bold"></span>
+            <span class="en-label">Hình thức TT</span>
+            <span class="label-footer">${ticket.paymentMethod || ""}</span>
           </div>
           <div class="row">
             <span class="en-label">Nhân viên:</span>
@@ -244,12 +307,13 @@ export const createPrintService = () => {
   }
 
   function enqueue(task: () => Promise<void>) {
-    printQueue = printQueue.then(task).catch((err) => {
+    const taskPromise = printQueue.then(task);
+
+    printQueue = taskPromise.catch((err) => {
       console.error("Print queue error:", err);
-      throw err;
     });
 
-    return printQueue;
+    return taskPromise;
   }
 
   // 🔹 In 1 ticket (retry 1 lần)
@@ -277,7 +341,9 @@ export const createPrintService = () => {
         }
       );
     }).catch(async (err) => {
-      if (retry) {
+      disposePrintWindow();
+
+      if (retry && !isPrintCanceledError(err)) {
         console.warn("Retry printing...");
         await printSingleTicket(ticket, printerName, false);
       } else {

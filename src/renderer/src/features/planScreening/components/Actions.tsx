@@ -212,6 +212,17 @@ const Actions = ({
         const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posName);
 
         await window.api?.printTickets(tickets, selectedPrinter);
+      } catch (error) {
+        console.error(error);
+        message.error({
+          key: printMessageKey,
+          content: getPrintErrorMessage(error),
+          duration: 4
+        });
+        return;
+      }
+
+      try {
         await ordersApi.markPrinted({
           orderId,
           posShortName
@@ -236,12 +247,12 @@ const Actions = ({
         console.error(error);
         message.error({
           key: printMessageKey,
-          content: getPrintErrorMessage(error),
+          content: getApiErrorMessage(error, "Cập nhật trạng thái in vé thất bại"),
           duration: 4
         });
       }
     },
-    [planScreenId, posShortName, queryClient, selectedPrinter, user, posName]
+    [planScreenId, queryClient, selectedPrinter, user, posName, posShortName]
   );
 
   const handleQrPaymentSuccess = useCallback(

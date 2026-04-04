@@ -7,6 +7,7 @@ export interface ManufacturersQuery {
   pageSize: number;
   name?: string;
   isHidden?: boolean;
+  sort?: string;
 }
 
 export interface ManufacturerDto {
@@ -26,7 +27,7 @@ export interface ManufacturerDto {
 
 export const manufacturersApi = {
   getAll: async (params: ManufacturersQuery): Promise<ApiResponse<ManufacturerProps>> => {
-    const { current, pageSize, name, isHidden } = params;
+    const { current, pageSize, name, isHidden, sort } = params;
 
     const filter: Record<string, unknown> = {};
 
@@ -45,7 +46,7 @@ export const manufacturersApi = {
     const queryObject: Record<string, unknown> = {
       current,
       pageSize,
-      sort: "createdOnUtc.desc"
+      sort: sort || "createdOnUtc.desc"
     };
 
     if (Object.keys(filter).length > 0) {

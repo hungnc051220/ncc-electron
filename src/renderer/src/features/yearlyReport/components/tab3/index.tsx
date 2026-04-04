@@ -23,12 +23,12 @@ export interface TreeRow {
   [key: string]: string | number | boolean | TreeRow[] | undefined;
 }
 
-const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
-  1: "Quý I",
-  2: "Quý II",
-  3: "Quý III",
-  4: "Quý IV"
-};
+// const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
+//   1: "Quý I",
+//   2: "Quý II",
+//   3: "Quý III",
+//   4: "Quý IV"
+// };
 
 const renderMoney = (value: number | undefined) => {
   if (!value) return "";
@@ -121,27 +121,27 @@ const Tab3 = () => {
         fixed: "left",
         width: 360
       },
-      ...QUARTERS.map((quarter) => ({
-        title: quarterTitleMap[quarter],
-        children: [
-          {
-            title: "DT đối tác",
-            dataIndex: `q${quarter}PartnerRevenue`,
-            key: `q${quarter}PartnerRevenue`,
-            align: "right" as const,
-            width: 150,
-            render: (value: number | undefined) => renderMoney(value)
-          },
-          {
-            title: "Tổng doanh thu",
-            dataIndex: `q${quarter}Revenue`,
-            key: `q${quarter}Revenue`,
-            align: "right" as const,
-            width: 150,
-            render: (value: number | undefined) => renderMoney(value)
-          }
-        ]
-      })),
+      // ...QUARTERS.map((quarter) => ({
+      //   title: quarterTitleMap[quarter],
+      //   children: [
+      //     {
+      //       title: "DT đối tác",
+      //       dataIndex: `q${quarter}PartnerRevenue`,
+      //       key: `q${quarter}PartnerRevenue`,
+      //       align: "right" as const,
+      //       width: 150,
+      //       render: (value: number | undefined) => renderMoney(value)
+      //     },
+      //     {
+      //       title: "Tổng doanh thu",
+      //       dataIndex: `q${quarter}Revenue`,
+      //       key: `q${quarter}Revenue`,
+      //       align: "right" as const,
+      //       width: 150,
+      //       render: (value: number | undefined) => renderMoney(value)
+      //     }
+      //   ]
+      // })),
       {
         title: "Cả năm",
         children: [

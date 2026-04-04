@@ -66,6 +66,11 @@ const NavItems = () => {
           permissionKey: "manufacturers"
         },
         {
+          label: <Link to="/film-categories">Danh sách thể loại phim</Link>,
+          key: "film-categories",
+          permissionKey: "films"
+        },
+        {
           label: <Link to="/invoices">Danh sách hóa đơn điện tử</Link>,
           key: "invoices",
           permissionKey: "invoices"

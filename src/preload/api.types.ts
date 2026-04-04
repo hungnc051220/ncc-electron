@@ -15,6 +15,22 @@ export interface CustomerScreenPayload {
   seatTypes: SeatTypeProps[];
 }
 
+export interface SaveFileFilter {
+  name: string;
+  extensions: string[];
+}
+
+export interface SaveFileParams {
+  defaultFileName: string;
+  content: Uint8Array;
+  filters?: SaveFileFilter[];
+}
+
+export interface SaveFileResult {
+  canceled: boolean;
+  filePath?: string;
+}
+
 export interface PreloadAPI {
   getConfig: () => Promise<AppConfig>;
   setConfig: (config: AppConfig) => Promise<void>;
@@ -38,6 +54,7 @@ export interface PreloadAPI {
   exportTicket(payload: unknown): Promise<string>;
 
   readFile(path: string): Promise<Uint8Array>;
+  saveFile(params: SaveFileParams): Promise<SaveFileResult>;
   getVersion(): Promise<string>;
   checkUpdate(): Promise<UpdateInfo | null>;
   startDownload(): Promise<void>;

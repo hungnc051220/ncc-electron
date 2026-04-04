@@ -7,12 +7,12 @@ import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
 import { Breadcrumb, DatePicker, Dropdown, Table } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { Check } from "lucide-react";
+import { Check, Eye } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import ShowtimeScheduleDetailDialog from "./components/ShowtimeScheduleDetailDialog";
 import { Link } from "react-router";
 
-const actionItems = [{ key: "1", label: "Xem chi tiết" }];
+const actionItems = [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }];
 
 const { RangePicker } = DatePicker;
 

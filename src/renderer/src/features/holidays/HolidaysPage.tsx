@@ -7,6 +7,7 @@ import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Breadcrumb, Button, DatePicker, Dropdown, Table, Tabs } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import { Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteHolidayDialog from "./components/DeleteHolidayDialog";
 import HolidayDialog from "./components/HolidayDialog";
@@ -71,7 +72,9 @@ const HolidaysPage = () => {
     }
   }, []);
 
-  const actionItems = canDelete ? [{ key: "1", label: <p className="text-red-500">Xóa</p> }] : [];
+  const actionItems = canDelete
+    ? [{ key: "1", icon: <Trash2 size={16} />, label: "Xóa", danger: true }]
+    : [];
 
   const columns: TableProps<HolidayProps>["columns"] = [
     {

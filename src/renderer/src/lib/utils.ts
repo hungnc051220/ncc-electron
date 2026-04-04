@@ -1,4 +1,4 @@
-import { OrderDetailProps, PrintTicketPayload } from "@shared/types";
+import { OrderDetailProps, PaymentType, PrintTicketPayload } from "@shared/types";
 import type { InputNumberProps } from "antd";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -30,6 +30,21 @@ export const decodeToken = (token: string) => {
 
 export const formatMoney = (price: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
+
+export const formatPaymentMethod = (value?: string | null) => {
+  const normalizedValue = value?.replace(/^Payments\./, "").trim();
+
+  switch (normalizedValue) {
+    case PaymentType.POS:
+      return "Tiền mặt";
+    case PaymentType.VIETQR:
+      return "Quét VietQR";
+    case PaymentType.VNPAY:
+      return "Quét VNPayQR";
+    default:
+      return normalizedValue || "--";
+  }
+};
 
 const extractTimePart = (projectTime?: string) => {
   if (!projectTime) return undefined;
@@ -140,8 +155,10 @@ export const buildTicketsFromOrder = async (
         price: formatMoney(item.unitPriceInclTax),
         ticketCode: data.order.barCode,
         qrData: qrBase64,
+        discountImage: item.discount?.image,
         posName,
-        staffName
+        staffName,
+        paymentMethod: formatPaymentMethod(data.order.paymentMethodSystemName)
       });
     });
   });

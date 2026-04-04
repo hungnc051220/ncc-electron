@@ -1,8 +1,10 @@
+import Icon from "@ant-design/icons";
+import { saveExcelFile } from "@renderer/lib/saveFile";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { YearlyReportSummaryItem } from "@shared/types";
 import { Button } from "antd";
 import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
+import { DownloadIcon } from "lucide-react";
 
 type Props = {
   tableData: YearlyReportSummaryItem[];
@@ -17,6 +19,7 @@ const ExportRevenueExcelButton = ({
 }: Props) => {
   const { can } = usePermission();
   const canExport = can("yearly_report", "export");
+  const isDisabled = tableData.length === 0;
 
   if (!canExport) {
     return null;
@@ -82,12 +85,17 @@ const ExportRevenueExcelButton = ({
     ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1 }];
 
     const buf = await wb.xlsx.writeBuffer();
-    saveAs(new Blob([buf]), fileName);
+    await saveExcelFile(new Uint8Array(buf), fileName);
   };
-
   return (
-    <Button type="primary" onClick={exportExcel}>
-      Xuất Excel
+    <Button
+      variant="solid"
+      color="green"
+      disabled={isDisabled}
+      onClick={exportExcel}
+      icon={<Icon component={DownloadIcon} />}
+    >
+      Xuất excel
     </Button>
   );
 };

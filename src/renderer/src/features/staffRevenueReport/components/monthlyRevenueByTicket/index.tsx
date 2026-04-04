@@ -6,6 +6,7 @@ import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useState } from "react";
+import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
 
@@ -33,16 +34,7 @@ const MonthlyRevenueByTicket = () => {
 
   const { data, isFetching } = useReportRevenueDayInMonth({ ...filterValues });
 
-  const buildColumns = (priceHeaders: number[]): ColumnsType<Row> => {
-    const priceColumns = priceHeaders.map((price) => ({
-      title: (price / 1000).toString(),
-      dataIndex: price,
-      key: price,
-      align: "right" as const,
-      render: (v: number) => v && formatNumber(v),
-      width: 80
-    }));
-
+  const buildColumns = (): ColumnsType<Row> => {
     return [
       {
         title: "Ngày",
@@ -56,10 +48,6 @@ const MonthlyRevenueByTicket = () => {
         dataIndex: "isOnline",
         fixed: "left",
         width: 100
-      },
-      {
-        title: "Loại giá vé (Đơn vị tính: 1.000đ)",
-        children: [...priceColumns]
       },
       {
         title: "Tổng vé",
@@ -99,7 +87,7 @@ const MonthlyRevenueByTicket = () => {
     });
   };
 
-  const columns = buildColumns(data?.priceHeaders || []);
+  const columns = buildColumns();
   const dataSource = buildDataSource(data?.revenuesByDay || []);
 
   const items: TabsProps["items"] = [
@@ -126,14 +114,12 @@ const MonthlyRevenueByTicket = () => {
         tabBarExtraContent={
           <div className="flex justify-end mb-2 gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
-            {/* <ExportRevenueExcelButton
-              tableData={tableData}
-              allPrices={allPrices}
-              summaryByDate={summaryByDate}
-              fromDate={filterValues.dateRange[0]!}
-              toDate={filterValues.dateRange[1]!}
+            <ExportRevenueExcelButton
+              tableData={dataSource}
+              data={data}
+              fromDate={filterValues.fromDate}
               employeeName={filterValues?.userName}
-            /> */}
+            />
           </div>
         }
       />

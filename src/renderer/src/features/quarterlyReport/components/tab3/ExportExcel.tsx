@@ -1,7 +1,9 @@
+import Icon from "@ant-design/icons";
+import { saveExcelFile } from "@renderer/lib/saveFile";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { Button } from "antd";
 import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
+import { DownloadIcon } from "lucide-react";
 import { TimeTreeRow } from ".";
 import dayjs from "dayjs";
 
@@ -25,6 +27,7 @@ const ExportRevenueExcelButton = ({
 }: Props) => {
   const { can } = usePermission();
   const canExport = can("quarterly_report", "export");
+  const isDisabled = treeData.length === 0 || allTimes.length === 0;
 
   if (!canExport) {
     return null;
@@ -188,12 +191,17 @@ const ExportRevenueExcelButton = ({
     ];
 
     const buf = await wb.xlsx.writeBuffer();
-    saveAs(new Blob([buf]), fileName);
+    await saveExcelFile(new Uint8Array(buf), fileName);
   };
-
   return (
-    <Button type="primary" onClick={exportExcel}>
-      Xuất Excel
+    <Button
+      variant="solid"
+      color="green"
+      disabled={isDisabled}
+      onClick={exportExcel}
+      icon={<Icon component={DownloadIcon} />}
+    >
+      Xuất excel
     </Button>
   );
 };

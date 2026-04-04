@@ -2,7 +2,6 @@ import { OrderResponseProps } from "./order.types";
 
 export interface InvoiceProps {
   id: number;
-  orderId: number;
   partyA: string;
   address: string;
   taxCode: string;

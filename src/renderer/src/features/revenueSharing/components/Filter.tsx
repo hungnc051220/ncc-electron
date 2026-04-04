@@ -3,18 +3,49 @@ import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Form, Modal, Select } from "antd";
+import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { ValuesProps } from "../RevenueSharingPage";
+import type { TimeRangePickerProps } from "antd";
+import type { Dayjs } from "dayjs";
+
+const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
+];
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
   filterValues: ValuesProps;
 }
 
+type FormValues = Omit<ValuesProps, "dateRange"> & {
+  dateRange?: [Dayjs, Dayjs];
+};
+
+const mapFilterValuesToFormValues = (values: ValuesProps): FormValues => ({
+  ...values,
+  dateRange:
+    values.dateRange?.length === 2
+      ? [dayjs(values.dateRange[0]), dayjs(values.dateRange[1])]
+      : undefined
+});
+
+const mapFormValuesToFilterValues = (values: FormValues): ValuesProps => ({
+  ...values,
+  dateRange:
+    values.dateRange && values.dateRange.length === 2
+      ? [values.dateRange[0].format(), values.dateRange[1].format()]
+      : [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
+});
+
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
-  const [form] = Form.useForm<ValuesProps>();
+  const [form] = Form.useForm<FormValues>();
   const [open, setOpen] = useState(false);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | undefined>(
     filterValues.manufacturerId
@@ -59,12 +90,11 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   });
 
   const manufacturerOptions = useMemo(() => {
-    const selectedOption =
-      selectedManufacturerId
-        ? ((manufacturerSelect.options.find((item) => item.value === selectedManufacturerId) as
-            | { value: number; label: string }
-            | undefined) ?? null)
-        : null;
+    const selectedOption = selectedManufacturerId
+      ? ((manufacturerSelect.options.find((item) => item.value === selectedManufacturerId) as
+          | { value: number; label: string }
+          | undefined) ?? null)
+      : null;
 
     return [selectedOption, ...manufacturerSelect.options].filter(
       (option, index, arr): option is { value: number; label: string } =>
@@ -88,7 +118,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   }, [filmSelect.options, selectedFilmDetail, selectedFilmId]);
 
   useEffect(() => {
-    form.setFieldsValue(filterValues);
+    form.setFieldsValue(mapFilterValuesToFormValues(filterValues));
     setSelectedManufacturerId(filterValues.manufacturerId);
     setSelectedFilmId(filterValues.filmId);
   }, [filterValues, form]);
@@ -144,7 +174,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       setSelectedFilmId(undefined);
       manufacturerSelect.resetSearch();
       filmSelect.resetSearch();
-      onSearch({});
+      onSearch({ dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()] });
     });
   };
 
@@ -177,7 +207,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             form={form}
             onFinish={(values) => {
               setOpen(false);
-              onSearch(values);
+              onSearch(mapFormValuesToFilterValues(values));
             }}
             initialValues={{
               dateRange: [dayjs(), dayjs()]
@@ -224,6 +254,10 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             onChange={handleFilmChange}
             allowClear
           />
+        </Form.Item>
+
+        <Form.Item name="dateRange" label="Khoảng thời gian">
+          <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
         </Form.Item>
       </Modal>
     </>

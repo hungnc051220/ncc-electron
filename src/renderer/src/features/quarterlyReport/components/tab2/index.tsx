@@ -141,53 +141,53 @@ const Tab2 = () => {
     }
   ];
 
-  function buildPriceColumns(prices: number[]): ColumnsType<TreeRow> {
-    return prices.map((price) => ({
-      title: (price / 1000).toString(),
-      children: [
-        {
-          title: "Online",
-          children: [
-            {
-              title: "Số vé",
-              align: "right",
-              width: 100,
-              render: (_, row) => row[`price_${price}_online`]?.tickets || ""
-            },
-            {
-              title: "Thành tiền",
-              align: "right",
-              width: 100,
-              render: (_, row) =>
-                row[`price_${price}_online`]?.revenue
-                  ? formatMoney(row[`price_${price}_online`]?.revenue)
-                  : ""
-            }
-          ]
-        },
-        {
-          title: "Offline",
-          children: [
-            {
-              title: "Số vé",
-              align: "right",
-              width: 100,
-              render: (_, row) => row[`price_${price}_offline`]?.tickets || ""
-            },
-            {
-              title: "Thành tiền",
-              align: "right",
-              width: 100,
-              render: (_, row) =>
-                row[`price_${price}_offline`]?.revenue
-                  ? formatMoney(row[`price_${price}_offline`]?.revenue)
-                  : ""
-            }
-          ]
-        }
-      ]
-    }));
-  }
+  // function buildPriceColumns(prices: number[]): ColumnsType<TreeRow> {
+  //   return prices.map((price) => ({
+  //     title: (price / 1000).toString(),
+  //     children: [
+  //       {
+  //         title: "Online",
+  //         children: [
+  //           {
+  //             title: "Số vé",
+  //             align: "right",
+  //             width: 100,
+  //             render: (_, row) => row[`price_${price}_online`]?.tickets || ""
+  //           },
+  //           {
+  //             title: "Thành tiền",
+  //             align: "right",
+  //             width: 100,
+  //             render: (_, row) =>
+  //               row[`price_${price}_online`]?.revenue
+  //                 ? formatMoney(row[`price_${price}_online`]?.revenue)
+  //                 : ""
+  //           }
+  //         ]
+  //       },
+  //       {
+  //         title: "Offline",
+  //         children: [
+  //           {
+  //             title: "Số vé",
+  //             align: "right",
+  //             width: 100,
+  //             render: (_, row) => row[`price_${price}_offline`]?.tickets || ""
+  //           },
+  //           {
+  //             title: "Thành tiền",
+  //             align: "right",
+  //             width: 100,
+  //             render: (_, row) =>
+  //               row[`price_${price}_offline`]?.revenue
+  //                 ? formatMoney(row[`price_${price}_offline`]?.revenue)
+  //                 : ""
+  //           }
+  //         ]
+  //       }
+  //     ]
+  //   }));
+  // }
 
   const totalColumns: ColumnsType<TreeRow> = [
     {
@@ -265,10 +265,10 @@ const Tab2 = () => {
   const columns = useMemo(
     () => [
       ...baseColumns,
-      {
-        title: "Loại giá vé (Đơn vị tính 1.000 đồng)",
-        children: buildPriceColumns(allPrices)
-      },
+      // {
+      //   title: "Loại giá vé (Đơn vị tính 1.000 đồng)",
+      //   children: buildPriceColumns(allPrices)
+      // },
       ...totalColumns
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -5,7 +5,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { CustomerRoleProps } from "@shared/types";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
 import type { PaginationProps, TableProps } from "antd";
-import { Check, PlusIcon, X } from "lucide-react";
+import { Check, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import CustomerRoleDialog from "./components/CustomerRoleDialog";
@@ -64,8 +64,8 @@ const CustomerRolesPage = () => {
 
   const actionItems = useMemo(
     () => [
-      ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-      ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+      ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+      ...(canDelete ? [{ key: "2", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
     ],
     [canDelete, canUpdate]
   );

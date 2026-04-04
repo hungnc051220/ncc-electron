@@ -12,8 +12,10 @@ export interface PrintTicketPayload {
   price: string;
   ticketCode: string;
   qrData: string;
+  discountImage?: string;
   posName?: string;
   staffName?: string;
+  paymentMethod?: string;
 }
 
 export type PrintTicketsArgs = {

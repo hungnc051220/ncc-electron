@@ -16,6 +16,15 @@ export const getPrintErrorMessage = (error: unknown) => {
 
   if (!normalizedMessage) return fallback;
 
+  if (
+    normalizedMessage.includes("print job canceled") ||
+    normalizedMessage.includes("print job cancelled") ||
+    normalizedMessage.includes("canceled") ||
+    normalizedMessage.includes("cancelled")
+  ) {
+    return "Bạn đã hủy thao tác in hoặc đóng cửa sổ lưu file. Vé chưa được in.";
+  }
+
   if (normalizedMessage.includes("no printer selected")) {
     return "Chưa chọn máy in mặc định. Vui lòng kiểm tra cấu hình máy in.";
   }

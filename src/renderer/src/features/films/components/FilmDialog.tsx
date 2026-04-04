@@ -1,10 +1,10 @@
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
+import { filmCategoriesApi } from "@renderer/api/filmCategories.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import type { UploadRequestOption } from "@rc-component/upload/lib/interface";
 import { useCreateFilm } from "@renderer/hooks/films/useCreateFilm";
 import { useUpdateFilm } from "@renderer/hooks/films/useUpdateFilm";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
-import { useFilmCategories } from "@renderer/hooks/useFilmCategories";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { formatter } from "@renderer/lib/utils";
@@ -125,7 +125,6 @@ const FilmDialog = ({
   const [form] = Form.useForm();
   const isEdit = !!editingFilm;
 
-  const { data: categories } = useFilmCategories({ current: 1, pageSize: 100 });
   const manufacturerSelect = useInfiniteSelectOptions({
     queryKey: ["manufacturers"],
     queryFn: ({ pageParam, searchText }) =>
@@ -133,11 +132,29 @@ const FilmDialog = ({
         current: pageParam,
         pageSize: 20,
         name: searchText,
-        isHidden: false
+        isHidden: false,
+        sort: "name.asc"
       }),
     mapOption: (item) => ({
       value: item.id,
       label: item.fullName
+    }),
+    prefetchAll: true
+  });
+
+  const categorySelect = useInfiniteSelectOptions({
+    queryKey: ["film-categories"],
+    queryFn: ({ pageParam, searchText }) =>
+      filmCategoriesApi.getAll({
+        current: pageParam,
+        pageSize: 20,
+        name: searchText,
+        published: true,
+        sort: "name.asc"
+      }),
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.name
     }),
     prefetchAll: true
   });
@@ -193,7 +210,7 @@ const FilmDialog = ({
         sellOnlineBefore: 0,
         showOnHomePage: true,
         versionCode: versions.length > 0 ? versions[0].versionCode : undefined,
-        countryId: countries.length > 0 ? countries[0].id : undefined,
+        countryId: undefined,
         languageCode: languages.length > 0 ? languages[0].languageCode : undefined,
         statusCode: filmStatuses.length > 0 ? filmStatuses[0].statusCode : undefined,
         published: true,
@@ -289,7 +306,10 @@ const FilmDialog = ({
   };
 
   const uploadButton = (
-    <button className="border-none bg-none" type="button">
+    <button
+      className="film-dialog-upload-trigger flex h-full w-full flex-col items-center justify-center rounded-lg border-0 bg-transparent text-center"
+      type="button"
+    >
       {uploadImage.isPending ? <LoadingOutlined /> : <PlusOutlined />}
       <div className="mt-2 text-gray-500">{uploadImage.isPending ? "Đang tải" : "Chọn ảnh"}</div>
     </button>
@@ -298,6 +318,7 @@ const FilmDialog = ({
   return (
     <Modal
       open={open}
+      className="film-dialog-modal"
       title={isEdit ? "Cập nhật phim" : "Thêm mới phim"}
       onOk={onOk}
       onCancel={() => onOpenChange(false)}
@@ -308,197 +329,217 @@ const FilmDialog = ({
       cancelButtonProps={{
         disabled: createFilm.isPending || updateFilm.isPending
       }}
-      width={960}
+      style={{ maxWidth: "calc(100vw - 24px)" }}
+      width={1500}
       centered
+      destroyOnHidden
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={onFinish}
-        initialValues={getInitialValues()}
-        className="h-[80vh] overflow-y-auto"
-      >
-        <div className="flex gap-6">
-          <div className="flex-1 grid grid-cols-2 gap-x-4 mt-4">
-            <Form.Item<FieldValues>
-              name="filmName"
-              label="Tên phim"
-              rules={[{ required: true, message: "Hãy nhập tên phim" }]}
-            >
-              <Input placeholder="Nhập tên phim" />
-            </Form.Item>
-            <Form.Item<FieldValues> name="filmNameEn" label="Tên phim tiếng Anh">
-              <Input placeholder="Nhập tên phim tiếng Anh" />
-            </Form.Item>
+      <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>
+        <Form.Item<FieldValues> name="imageUrl" hidden />
 
-            <Form.Item<FieldValues> name="versionCode" label="Phiên bản">
-              <Select
-                className="w-full"
-                placeholder="Chọn phiên bản"
-                options={versions?.map((item) => ({
-                  value: item.versionCode,
-                  label: item.versionName
-                }))}
-              />
-            </Form.Item>
+        <div className="[&_.ant-form-item]:mb-2.5">
+          <div className="grid grid-cols-2 gap-3 items-stretch">
+            <section className="h-full rounded-lg border border-app-border bg-app-bg-container px-3 py-2.5">
+              <p className="mb-2 text-sm font-semibold">Thông tin cơ bản</p>
+              <div className="grid grid-cols-2 gap-x-3">
+                <Form.Item<FieldValues>
+                  name="filmName"
+                  label="Tên phim"
+                  rules={[{ required: true, message: "Hãy nhập tên phim" }]}
+                >
+                  <Input placeholder="Nhập tên phim" />
+                </Form.Item>
+                <Form.Item<FieldValues> name="filmNameEn" label="Tên tiếng Anh">
+                  <Input placeholder="Nhập tên phim tiếng Anh" />
+                </Form.Item>
 
-            <Form.Item<FieldValues> name="countryId" label="Nước sản xuất">
-              <Select
-                className="w-full"
-                placeholder="Chọn nước sản xuất"
-                showSearch={{ optionFilterProp: "label" }}
-                options={countries?.map((item) => ({
-                  value: item.id,
-                  label: item.name
-                }))}
-              />
-            </Form.Item>
+                <Form.Item<FieldValues> name="versionCode" label="Phiên bản">
+                  <Select
+                    className="w-full"
+                    placeholder="Chọn phiên bản"
+                    options={versions?.map((item) => ({
+                      value: item.versionCode,
+                      label: item.versionName
+                    }))}
+                  />
+                </Form.Item>
+                <Form.Item<FieldValues> name="statusCode" label="Trạng thái">
+                  <Select
+                    className="w-full"
+                    placeholder="Chọn trạng thái phim"
+                    options={filmStatuses?.map((item) => ({
+                      value: item.statusCode,
+                      label: item.statusName
+                    }))}
+                  />
+                </Form.Item>
 
-            <Form.Item<FieldValues> name="manufacturerId" label="Hãng phát hành">
-              <Select
-                className="w-full"
-                placeholder="Chọn hãng phát hành"
-                showSearch={{
-                  filterOption: false,
-                  onSearch: manufacturerSelect.onSearch
-                }}
-                loading={manufacturerSelect.loading}
-                options={manufacturerSelect.options}
-                onPopupScroll={manufacturerSelect.onPopupScroll}
-                onClear={manufacturerSelect.onClear}
-                allowClear
-              />
-            </Form.Item>
+                <Form.Item<FieldValues> name="ageAbove" label="Độ tuổi">
+                  <Select placeholder="Chọn tuổi yêu cầu từ" options={ageAboveOptions} />
+                </Form.Item>
+                <Form.Item<FieldValues> name="premieredDay" label="Ngày khởi chiếu">
+                  <DatePicker className="w-full" format="DD/MM/YYYY" />
+                </Form.Item>
 
-            <Form.Item<FieldValues> name="premieredDay" label="Ngày khởi chiếu">
-              <DatePicker className="w-full" format="DD/MM/YYYY" />
-            </Form.Item>
+                <Form.Item<FieldValues>
+                  name="duration"
+                  label="Thời lượng (phút)"
+                  rules={[{ required: true, message: "Nhập thời lượng phim" }]}
+                >
+                  <InputNumber className="w-full" min={1} placeholder="Nhập thời lượng" />
+                </Form.Item>
+                <Form.Item<FieldValues>
+                  name="categoryIds"
+                  className="mb-0"
+                  rules={[{ required: true, message: "Chọn ít nhất 1 thể loại" }]}
+                  label="Thể loại phim"
+                >
+                  <Select
+                    mode="multiple"
+                    placeholder="Chọn thể loại"
+                    showSearch={{
+                      filterOption: false,
+                      onSearch: categorySelect.onSearch
+                    }}
+                    loading={categorySelect.loading}
+                    options={categorySelect.options}
+                    onPopupScroll={categorySelect.onPopupScroll}
+                    onClear={categorySelect.onClear}
+                    allowClear
+                    maxTagCount="responsive"
+                  />
+                </Form.Item>
+              </div>
+            </section>
 
-            <Form.Item<FieldValues> name="languageCode" label="Ngôn ngữ, phụ đề">
-              <Select
-                className="w-full"
-                placeholder="Chọn ngôn ngữ, phụ đề"
-                options={languages?.map((item) => ({
-                  value: item.languageCode,
-                  label: item.languageName
-                }))}
-              />
-            </Form.Item>
+            <section className="h-full rounded-lg border border-app-border bg-app-bg-container px-3 py-2.5">
+              <p className="mb-2 text-sm font-semibold">Sản xuất và phát hành</p>
+              <div className="grid grid-cols-2 gap-x-3">
+                <Form.Item<FieldValues> name="countryId" label="Nước sản xuất">
+                  <Select
+                    className="w-full"
+                    placeholder="Chọn nước sản xuất"
+                    showSearch={{
+                      optionFilterProp: "label",
+                      filterSort: (optionA, optionB) =>
+                        (optionA?.label ?? "")
+                          .toLowerCase()
+                          .localeCompare((optionB?.label ?? "").toLowerCase())
+                    }}
+                    options={countries?.map((item) => ({
+                      value: item.id,
+                      label: item.name
+                    }))}
+                  />
+                </Form.Item>
+                <Form.Item<FieldValues> name="manufacturerId" label="Hãng phát hành">
+                  <Select
+                    className="w-full"
+                    placeholder="Chọn hãng phát hành"
+                    showSearch={{
+                      filterOption: false,
+                      onSearch: manufacturerSelect.onSearch
+                    }}
+                    loading={manufacturerSelect.loading}
+                    options={manufacturerSelect.options}
+                    onPopupScroll={manufacturerSelect.onPopupScroll}
+                    onClear={manufacturerSelect.onClear}
+                    allowClear
+                  />
+                </Form.Item>
 
-            <Form.Item<FieldValues>
-              name="duration"
-              label="Thời lượng (phút)"
-              rules={[{ required: true, message: "Nhập thời lượng phim" }]}
-            >
-              <InputNumber className="w-full" min={1} placeholder="Nhập thời lượng (phút)" />
-            </Form.Item>
+                <Form.Item<FieldValues> name="languageCode" label="Ngôn ngữ, phụ đề">
+                  <Select
+                    className="w-full"
+                    placeholder="Chọn ngôn ngữ, phụ đề"
+                    options={languages?.map((item) => ({
+                      value: item.languageCode,
+                      label: item.languageName
+                    }))}
+                  />
+                </Form.Item>
+                <Form.Item<FieldValues> name="director" label="Đạo diễn">
+                  <Input placeholder="Nhập đạo diễn" />
+                </Form.Item>
 
-            <Form.Item<FieldValues> name="director" label="Đạo diễn">
-              <Input placeholder="Nhập đạo diễn" />
-            </Form.Item>
+                <Form.Item<FieldValues>
+                  name="actors"
+                  label="Diễn viên chính"
+                  className="col-span-2"
+                >
+                  <Input placeholder="Nhập diễn viên chính" />
+                </Form.Item>
 
-            <Form.Item<FieldValues> name="actors" label="Diễn viên chính">
-              <Input placeholder="Nhập diễn viên chính" />
-            </Form.Item>
-
-            <Form.Item<FieldValues> name="statusCode" label="Trạng thái phim">
-              <Select
-                className="w-full"
-                placeholder="Chọn trạng thái phim"
-                options={filmStatuses?.map((item) => ({
-                  value: item.statusCode,
-                  label: item.statusName
-                }))}
-              />
-            </Form.Item>
-
-            <Form.Item<FieldValues> name="proposedPrice" label="Giá cộng thêm">
-              <InputNumber
-                className="w-full"
-                min={0}
-                placeholder="Nhập giá cộng thêm"
-                formatter={formatter}
-                parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, "") || 0)}
-                suffix="đ"
-              />
-            </Form.Item>
-
-            <Form.Item<FieldValues>
-              name="videoUrl"
-              label="URL file video"
-              rules={[{ required: true, message: "Nhập URL file video" }]}
-            >
-              <Input placeholder="Nhập URL file video" />
-            </Form.Item>
-
-            <Form.Item<FieldValues> name="ageAbove" label="Tuổi yêu cầu từ">
-              <Select placeholder="Chọn tuổi yêu cầu từ" options={ageAboveOptions} />
-            </Form.Item>
-
-            <Form.Item<FieldValues> name="imageUrl" hidden />
-
-            <Form.Item<FieldValues> name="description" label="Khuyến cáo" className="col-span-2">
-              <Input.TextArea rows={5} placeholder="Nhập khuyến cáo" />
-            </Form.Item>
-
-            <Form.Item<FieldValues>
-              name="introduction"
-              label="Tóm tắt nội dung"
-              className="col-span-2"
-            >
-              <Input.TextArea rows={5} placeholder="Nhập tóm tắt nội dung" />
-            </Form.Item>
+                <Form.Item<FieldValues>
+                  name="videoUrl"
+                  label="URL file video"
+                  className="col-span-2"
+                  rules={[{ required: true, message: "Nhập URL file video" }]}
+                >
+                  <Input placeholder="Nhập URL file video" />
+                </Form.Item>
+              </div>
+            </section>
           </div>
 
-          <div className="w-75">
-            <Form.Item label="Ảnh" className="col-span-2">
-              <Upload
-                showUploadList={false}
-                accept="image/png,image/jpeg"
-                listType="picture-card"
-                customRequest={handleUpload}
-                beforeUpload={beforeUpload}
-              >
-                {imageUrl ? (
-                  <Image
-                    width={200}
-                    alt="film image"
-                    src={imageUrl}
-                    className="rounded-lg p-1"
-                    preview={false}
-                  />
-                ) : (
-                  uploadButton
-                )}
-              </Upload>
-            </Form.Item>
-            <div className="bg-app-bg-container rounded-lg py-3 px-4">
-              <p className="font-semibold mb-2 text-sm">Cấu hình phim</p>
-              <div className="space-y-1.5">
-                <Form.Item<FieldValues> name="isHot" noStyle valuePropName="checked">
-                  <Checkbox className="w-full">Phim hot</Checkbox>
-                </Form.Item>
-                <Form.Item<FieldValues> name="isFree" noStyle valuePropName="checked">
-                  <Checkbox className="w-full">Phim miễn phí</Checkbox>
-                </Form.Item>
-                <Form.Item<FieldValues> name="sellOnline" noStyle valuePropName="checked">
-                  <Checkbox className="w-full">Bán online</Checkbox>
-                </Form.Item>
-                <Form.Item dependencies={["sellOnline"]} noStyle>
-                  {({ getFieldValue }) => {
-                    const enabled = getFieldValue("sellOnline");
-                    return (
-                      <Form.Item<FieldValues> name="sellOnlineBefore" noStyle>
-                        <InputNumber
-                          className="w-full"
-                          min={0}
-                          placeholder="Nhập số ngày"
-                          disabled={!enabled}
-                        />
-                      </Form.Item>
-                    );
-                  }}
-                </Form.Item>
+          <div
+            className="mt-3 grid gap-3 items-stretch"
+            style={{
+              gridTemplateColumns: "calc(50% - 0.375rem) calc(30% - 0.675rem) calc(20% - 0.45rem)"
+            }}
+          >
+            <section className="h-full rounded-lg border border-app-border bg-app-bg-container px-3 py-2.5">
+              <p className="mb-2 text-sm font-semibold">Mô tả nội dung</p>
+              <Form.Item<FieldValues> name="description" label="Khuyến cáo">
+                <Input.TextArea rows={1} placeholder="Nhập khuyến cáo" />
+              </Form.Item>
+              <Form.Item<FieldValues> name="introduction" label="Tóm tắt nội dung">
+                <Input.TextArea rows={3} placeholder="Nhập tóm tắt nội dung" />
+              </Form.Item>
+            </section>
+
+            <section className="h-full rounded-lg border border-app-border bg-app-bg-container px-3 py-2.5">
+              <p className="mb-2 text-sm font-semibold">Cấu hình phim</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <Form.Item<FieldValues> name="isHot" noStyle valuePropName="checked">
+                    <Checkbox>Phim hot</Checkbox>
+                  </Form.Item>
+                  <Form.Item<FieldValues> name="isFree" noStyle valuePropName="checked">
+                    <Checkbox>Phim miễn phí</Checkbox>
+                  </Form.Item>
+                  <Form.Item<FieldValues> name="sellOnline" noStyle valuePropName="checked">
+                    <Checkbox>Bán online</Checkbox>
+                  </Form.Item>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Form.Item dependencies={["sellOnline"]} noStyle>
+                    {({ getFieldValue }) => {
+                      const enabled = getFieldValue("sellOnline");
+                      return (
+                        <Form.Item<FieldValues> name="sellOnlineBefore" label="Bán trước">
+                          <InputNumber
+                            className="w-full"
+                            min={0}
+                            placeholder="Nhập số ngày"
+                            disabled={!enabled}
+                            suffix="ngày"
+                          />
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                  <Form.Item<FieldValues> name="proposedPrice" label="Giá cộng thêm">
+                    <InputNumber
+                      className="w-full"
+                      min={0}
+                      placeholder="Nhập giá cộng thêm"
+                      formatter={formatter}
+                      parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, "") || 0)}
+                      suffix="đ"
+                    />
+                  </Form.Item>
+                </div>
                 <Form.Item<FieldValues> name="showOnHomePage" noStyle valuePropName="checked">
                   <Checkbox className="w-full">Hiển thị trên trang chủ</Checkbox>
                 </Form.Item>
@@ -506,28 +547,35 @@ const FilmDialog = ({
                   <Checkbox className="w-full">Hiển thị trailer trên trang chủ</Checkbox>
                 </Form.Item>
                 <Form.Item<FieldValues> name="published" noStyle valuePropName="checked">
-                  <Checkbox>Xuất bản</Checkbox>
+                  <Checkbox className="w-full">Xuất bản</Checkbox>
                 </Form.Item>
               </div>
-            </div>
-            <div className="bg-app-bg-container rounded-lg py-3 px-4 mt-4">
-              <p className="font-semibold mb-2 text-sm">Thể loại phim</p>
-              <div className="space-y-1.5">
-                <Form.Item<FieldValues>
-                  name="categoryIds"
-                  rules={[{ required: true, message: "Chọn ít nhất 1 thể loại" }]}
+            </section>
+
+            <section className="rounded-lg border border-app-border bg-app-bg-container px-3 py-2.5">
+              <p className="mb-2 text-sm font-semibold">Ảnh phim</p>
+              <Form.Item label={null} className="film-dialog-image-box mb-0">
+                <Upload
+                  showUploadList={false}
+                  accept="image/png,image/jpeg"
+                  listType="picture-card"
+                  customRequest={handleUpload}
+                  beforeUpload={beforeUpload}
                 >
-                  <Select
-                    mode="multiple"
-                    placeholder="Chọn thể loại"
-                    options={categories?.data?.map((category) => ({
-                      label: category.name,
-                      value: category.id
-                    }))}
-                  />
-                </Form.Item>
-              </div>
-            </div>
+                  {imageUrl ? (
+                    <Image
+                      width={180}
+                      alt="film image"
+                      src={imageUrl}
+                      className="rounded-lg border border-app-border object-cover"
+                      preview={false}
+                    />
+                  ) : (
+                    uploadButton
+                  )}
+                </Upload>
+              </Form.Item>
+            </section>
           </div>
         </div>
       </Form>

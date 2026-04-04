@@ -40,8 +40,8 @@ const mapFormValuesToFilterValues = (values: FormValues): ValuesProps => ({
   ...values,
   dateRange:
     values.dateRange && values.dateRange.length === 2
-      ? [values.dateRange[0].toISOString(), values.dateRange[1].toISOString()]
-      : [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+      ? [values.dateRange[0].format(), values.dateRange[1].format()]
+      : [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
 });
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
@@ -186,7 +186,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       manufacturerSelect.resetSearch();
       filmSelect.resetSearch();
       onSearch({
-        dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+        dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
       });
     });
   };

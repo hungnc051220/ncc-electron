@@ -12,12 +12,12 @@ const StaffRevenueReportPage = () => {
     {
       key: "1",
       label: "Báo cáo doanh thu theo ngày bán",
-      children: <RevenueByFilm />
+      children: <RevenueByFilm dateType={1} />
     },
     {
       key: "2",
-      label: "Báo cáo doanh thu theo nhân viên",
-      children: <RevenueByFilm />
+      label: "Báo cáo doanh thu theo lịch chiếu",
+      children: <RevenueByFilm dateType={2} />
     },
     {
       key: "3",

@@ -76,19 +76,44 @@ const PlanCinemaPage = () => {
   const planItems = (
     <div>
       <Spin spinning={isFetching} size="small">
-        <div className="max-h-125 overflow-y-auto">
-          {plans?.map((plan) => (
-            <div
-              key={plan.id}
-              className={cn(
-                "flex items-center justify-between px-2 py-3 pl-4 rounded-lg cursor-pointer gap-1",
-                selectedPlan?.id === plan.id && "bg-trunks text-white"
-              )}
-              onClick={() => setSelectedPlan(plan)}
-            >
-              <p>{plan.name}</p>
-            </div>
-          ))}
+        <div className="max-h-125 overflow-y-auto pr-1">
+          <div className="space-y-1.5">
+            {plans?.map((plan) => {
+              const isSelected = selectedPlan?.id === plan.id;
+
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  className={cn(
+                    "group flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-100",
+                    "px-3 py-2.5 cursor-pointer select-none",
+                    !isSelected && "hover:bg-goku/80",
+                    isSelected ? "bg-trunks text-white" : "bg-transparent"
+                  )}
+                  onClick={() => setSelectedPlan(plan)}
+                >
+                  <span
+                    className={cn(
+                      "mt-0.5 size-2 shrink-0 rounded-full transition-colors duration-100",
+                      isSelected ? "bg-white" : "bg-trunks/35 group-hover:bg-trunks"
+                    )}
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={cn(
+                        "text-sm font-medium leading-5 transition-colors wrap-break-word",
+                        isSelected ? "text-white" : "text-app-text"
+                      )}
+                    >
+                      {plan.name}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
         {data && data?.total > 0 ? (
           <div className="flex items-center justify-end mt-3">
@@ -170,7 +195,7 @@ const PlanCinemaPage = () => {
 
   return (
     <div className="mt-4 px-4 pb-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between h-8">
         <Breadcrumb
           items={[
             {

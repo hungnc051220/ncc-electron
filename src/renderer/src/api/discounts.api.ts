@@ -12,6 +12,7 @@ export interface DiscountDto {
   discountType: string;
   discountAmount?: number;
   discountRate?: number;
+  image?: string;
 }
 
 export const discountsApi = {
@@ -38,10 +39,6 @@ export const discountsApi = {
 
     const res = await api.get(`/api/pos/discount?${query}`);
 
-    return res.data;
-  },
-  getDetail: async (id: number): Promise<DiscountProps> => {
-    const res = await api.get(`/api/pos/discount/${id}`);
     return res.data;
   },
   create: async (dto: DiscountDto) => {

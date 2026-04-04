@@ -4,8 +4,8 @@ import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { DiscountProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
-import { PlusIcon } from "lucide-react";
+import { Breadcrumb, Button, Dropdown, Image, Table } from "antd";
+import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import DeleteDiscountDialog from "./components/DeleteDiscountDialog";
@@ -62,8 +62,8 @@ const DiscountSettingsPage = () => {
   }, []);
 
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+    ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
   ];
 
   const columns: TableProps<DiscountProps>["columns"] = [
@@ -84,6 +84,12 @@ const DiscountSettingsPage = () => {
       title: "Hình thức",
       key: "discountType",
       dataIndex: "discountType"
+    },
+    {
+      title: "Ảnh",
+      key: "image",
+      dataIndex: "image",
+      render: (value: string) => value && <Image src={value} alt="discount" width={40} />
     },
     {
       title: "Số tiền",

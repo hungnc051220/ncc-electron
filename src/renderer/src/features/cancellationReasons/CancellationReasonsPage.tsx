@@ -5,7 +5,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { CancellationReasonProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Breadcrumb, Button, Dropdown, Table } from "antd";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import CancellationReasonDialog from "./components/CancellationReasonDialog";
 import DeleteCancellationReasonDialog from "./components/DeleteCancellationReasonDialog";
@@ -63,8 +63,8 @@ const CancellationReasonsPage = () => {
   }, []);
 
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", label: "Cập nhật" }] : []),
-    ...(canDelete ? [{ key: "2", label: <p className="text-red-500">Xóa</p> }] : [])
+    ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+    ...(canDelete ? [{ key: "2", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
   ];
 
   const columns: TableProps<CancellationReasonProps>["columns"] = [
