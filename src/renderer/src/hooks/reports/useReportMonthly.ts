@@ -2,9 +2,10 @@ import { ReportRevenueByFilmDto, reportsApi } from "@renderer/api/reportsApi";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { reportsKeys } from "./keys";
 
-export const useReportMonthly = (dto: ReportRevenueByFilmDto) =>
+export const useReportMonthly = (dto: ReportRevenueByFilmDto, enabled = true) =>
   useQuery({
     queryKey: reportsKeys.getReportMonthly(dto),
     queryFn: () => reportsApi.getReportMonthly(dto),
-    placeholderData: keepPreviousData
+    placeholderData: keepPreviousData,
+    enabled
   });

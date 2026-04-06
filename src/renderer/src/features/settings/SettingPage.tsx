@@ -1,7 +1,8 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import PageHeader from "@renderer/components/PageHeader";
 import type { MenuProps } from "antd";
-import { Breadcrumb, Layout, Menu } from "antd";
+import { Layout, Menu } from "antd";
 import { useState } from "react";
-import { Link } from "react-router";
 import ChangePassword from "./components/ChangePassword";
 import SettingPos from "./components/SettingPos";
 import SettingPrinter from "./components/SettingPrinter";
@@ -33,19 +34,7 @@ const SettingPage = () => {
 
   return (
     <div className="space-y-4 flex-1 h-full p-4 pb-0 flex flex-col">
-      <Breadcrumb
-        items={[
-          {
-            title: <Link to="/">Trang chủ</Link>
-          },
-          {
-            title: "Hệ thống"
-          },
-          {
-            title: "Cài đặt"
-          }
-        ]}
-      />
+      <PageHeader left={<AppBreadcrumb />} />
 
       <div className="flex-1">
         <Layout hasSider className="flex-1 h-full">

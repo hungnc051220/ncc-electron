@@ -1,15 +1,17 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { SeatTypeProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, ColorPicker, Dropdown, Table } from "antd";
+import { Button, ColorPicker, Dropdown } from "antd";
 import { Check, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteSeatTypeDialog from "./components/DeleteSeatTypeDialog";
 import SeatTypesDialog from "./components/SeatTypeDialog";
-import { Link } from "react-router";
 
 const SeatTypesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -156,38 +158,24 @@ const SeatTypesPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Quản lý danh sách"
-            },
-            {
-              title: "Danh sách loại ghế, vị trí"
-            }
-          ]}
-        />
-
-        <div className="flex gap-2 items-center">
-          {canCreate && (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          canCreate ? (
             <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
               Thêm loại ghế, vị trí
             </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.id}
         dataSource={seatTypes?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

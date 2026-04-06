@@ -1,11 +1,12 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { usersApi } from "@renderer/api/users.api";
-import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
+import { useDebounce } from "@renderer/hooks/useDebounce";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
-import { startTransition, useEffect, useState } from "react";
-import { ValuesProps } from ".";
+import { startTransition, useEffect, useMemo, useState } from "react";
+import { dataTypes } from "./accessHistory.constants";
 
 const { RangePicker } = DatePicker;
 
@@ -16,27 +17,57 @@ const rangePresets: TimeRangePickerProps["presets"] = [
   { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
 ];
 
-interface FilterProps {
-  onSearch: (values: ValuesProps) => void;
-  filterValues: ValuesProps;
+export interface AccessHistoryFilterValues {
+  userId?: number;
+  model?: string;
+  dateRange?: [string, string];
 }
 
-type FormValues = Omit<ValuesProps, "dateRange"> & {
+type FormValues = Omit<AccessHistoryFilterValues, "dateRange"> & {
   dateRange?: [Dayjs, Dayjs];
 };
+
+interface FilterProps {
+  onSearch: (values: AccessHistoryFilterValues) => void;
+  filterValues: AccessHistoryFilterValues;
+}
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const [form] = Form.useForm<FormValues>();
   const [open, setOpen] = useState(false);
-  const userSelect = useInfiniteSelectOptions({
-    queryKey: ["users"],
-    queryFn: ({ pageParam, searchText }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: searchText }),
-    mapOption: (user) => ({
-      value: user.id,
-      label: user.customerFirstName || user.username
-    })
+  const [searchText, setSearchText] = useState("");
+  const debouncedSearch = useDebounce(searchText, 500);
+
+  const {
+    data: users,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["access-history-users", debouncedSearch],
+    queryFn: ({ pageParam = 1 }) =>
+      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: debouncedSearch }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
   });
+
+  const userOptions = useMemo(
+    () =>
+      users?.pages.flatMap((page) =>
+        page.data.map((user) => ({
+          value: user.id,
+          label:
+            user.customerFirstName && user.customerLastName
+              ? `${user.customerFirstName} ${user.customerLastName}`
+              : user.username
+        }))
+      ) ?? [],
+    [users]
+  );
 
   useEffect(() => {
     form.setFieldsValue({
@@ -52,7 +83,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      userSelect.resetSearch();
+      setSearchText("");
       onSearch({});
     });
   };
@@ -80,6 +111,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         okText="Tìm kiếm"
         okButtonProps={{ htmlType: "submit", autoFocus: true }}
         onCancel={() => setOpen(false)}
+        width={420}
         modalRender={(dom) => (
           <Form
             layout="vertical"
@@ -87,10 +119,14 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             onFinish={(values) => {
               setOpen(false);
               onSearch({
-                ...values,
+                userId: values.userId,
+                model: values.model,
                 dateRange:
                   values.dateRange && values.dateRange.length === 2
-                    ? [values.dateRange[0].toISOString(), values.dateRange[1].toISOString()]
+                    ? [
+                        values.dateRange[0].startOf("day").toISOString(),
+                        values.dateRange[1].endOf("day").toISOString()
+                      ]
                     : undefined
               });
             }}
@@ -106,17 +142,28 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           </>
         )}
       >
-        <Form.Item name="userId" label="Nhân viên">
+        <Form.Item name="model" label="Loại dữ liệu">
+          <Select options={[...dataTypes]} placeholder="Chọn loại dữ liệu" allowClear />
+        </Form.Item>
+        <Form.Item name="userId" label="Người thao tác">
           <Select
             showSearch={{
               filterOption: false,
-              onSearch: userSelect.onSearch
+              onSearch: (value) => setSearchText(value)
             }}
-            loading={userSelect.loading}
-            options={userSelect.options}
-            placeholder="Chọn nhân viên"
-            onPopupScroll={userSelect.onPopupScroll}
-            onClear={userSelect.onClear}
+            loading={isFetching || isFetchingNextPage}
+            options={userOptions}
+            placeholder="Chọn người thao tác"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
             allowClear
           />
         </Form.Item>

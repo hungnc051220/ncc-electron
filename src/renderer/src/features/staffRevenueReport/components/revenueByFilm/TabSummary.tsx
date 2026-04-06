@@ -1,3 +1,5 @@
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import { TotalRevenueOnlineProps, TotalRevenueProps } from "@shared/types";
 import { Table } from "antd";
 import { Row, SummaryGroup } from ".";
 import type { TableProps } from "antd";
@@ -16,15 +18,27 @@ export type SummaryRow = {
   saleVnPayQr: number;
   saleVietQr: number;
   actualSale: number;
+  discountOffline: number;
+  discountOnline: number;
+  discountPartner: number;
+  discountTotal: number;
 };
 
 interface TabSummaryProps {
   summaryByDate: Record<string, SummaryGroup>;
   isFetching: boolean;
-  priceColumns: TableProps<SummaryRow>["columns"];
+  totalRevenue?: TotalRevenueProps;
+  totalRevenueOnline?: TotalRevenueOnlineProps;
+  totalRevenueOffline?: TotalRevenueOnlineProps;
 }
 
-const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps) => {
+const TabSummary = ({
+  summaryByDate,
+  isFetching,
+  totalRevenue,
+  totalRevenueOnline,
+  totalRevenueOffline
+}: TabSummaryProps) => {
   const sumGroup = (rows: Row[]) => {
     const prices: Record<number, number> = {};
     let totalQuantity = 0;
@@ -34,6 +48,10 @@ const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps
     let saleVnPayQr = 0;
     let saleVietQr = 0;
     let actualSale = 0;
+    let discountOffline = 0;
+    let discountOnline = 0;
+    let discountPartner = 0;
+    let discountTotal = 0;
 
     rows.forEach((r) => {
       totalQuantity += r.totalQuantity;
@@ -43,6 +61,10 @@ const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps
       saleVnPayQr += r.saleVnPayQr;
       saleVietQr += r.saleVietQr;
       actualSale += r.actualSale;
+      discountOffline += r.discountOffline;
+      discountOnline += r.discountOnline;
+      discountPartner += r.discountPartner;
+      discountTotal += r.discountTotal;
 
       Object.entries(r.pricesMap).forEach(([price, qty]) => {
         const p = Number(price);
@@ -58,7 +80,11 @@ const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps
       totalSale,
       saleVnPayQr,
       saleVietQr,
-      actualSale
+      actualSale,
+      discountOffline,
+      discountOnline,
+      discountPartner,
+      discountTotal
     };
   };
 
@@ -79,7 +105,11 @@ const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps
       totalSale: offSum.totalSale,
       saleVnPayQr: offSum.saleVnPayQr,
       saleVietQr: offSum.saleVietQr,
-      actualSale: offSum.actualSale
+      actualSale: offSum.actualSale,
+      discountOffline: offSum.discountOffline,
+      discountOnline: offSum.discountOnline,
+      discountPartner: offSum.discountPartner,
+      discountTotal: offSum.discountTotal
     });
 
     tableData.push({
@@ -93,7 +123,11 @@ const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps
       totalSale: onSum.totalSale,
       saleVnPayQr: onSum.saleVnPayQr,
       saleVietQr: onSum.saleVietQr,
-      actualSale: onSum.actualSale
+      actualSale: onSum.actualSale,
+      discountOffline: onSum.discountOffline,
+      discountOnline: onSum.discountOnline,
+      discountPartner: onSum.discountPartner,
+      discountTotal: onSum.discountTotal
     });
   });
 
@@ -114,9 +148,46 @@ const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps
       render: (value: boolean) => (value ? "On" : "Off"),
       fixed: "left"
     },
+    // {
+    //   title: "Loại giá vé (Đơn vị tính: 1.000 đồng)",
+    //   children: priceColumns
+    // },
     {
-      title: "Loại giá vé (Đơn vị tính: 1.000 đồng)",
-      children: priceColumns
+      title: "Khuyến mại",
+      children: [
+        {
+          title: "Offline",
+          key: "discountOffline",
+          dataIndex: "discountOffline",
+          width: 110,
+          align: "right",
+          render: (value: number) => formatMoney(value)
+        },
+        {
+          title: "Online",
+          key: "discountOnline",
+          dataIndex: "discountOnline",
+          width: 110,
+          align: "right",
+          render: (value: number) => formatMoney(value)
+        },
+        {
+          title: "Đại lý",
+          key: "discountPartner",
+          dataIndex: "discountPartner",
+          width: 110,
+          align: "right",
+          render: (value: number) => formatMoney(value)
+        }
+      ]
+    },
+    {
+      title: "Tổng sau KM",
+      key: "discountTotal",
+      dataIndex: "discountTotal",
+      width: 110,
+      align: "right",
+      render: (value: number) => formatMoney(value)
     },
     {
       title: "Tổng",
@@ -174,14 +245,70 @@ const TabSummary = ({ summaryByDate, isFetching, priceColumns }: TabSummaryProps
   ];
 
   return (
-    <Table
+    <AutoHeightTable
       dataSource={tableData}
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 375px)" }}
       loading={isFetching}
       pagination={false}
+      summary={() => {
+        const summaryRows = [
+          { label: "Online", value: totalRevenueOnline },
+          { label: "Offline", value: totalRevenueOffline },
+          { label: "Tổng cộng", value: totalRevenue }
+        ].filter((item) => !!item.value);
+
+        if (summaryRows.length === 0) {
+          return null;
+        }
+
+        return (
+          <Table.Summary fixed>
+            {summaryRows.map(({ label, value }) => (
+              <Table.Summary.Row key={label}>
+                <Table.Summary.Cell index={0}>
+                  <strong>{label}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={1}></Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="right">
+                  <strong>{formatMoney(value?.discountOffline || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="right">
+                  <strong>{formatMoney(value?.discountOnline || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={4} align="right">
+                  <strong>{formatMoney(value?.discountPartner || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="right">
+                  <strong>{formatMoney(value?.discountTotal || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={6} align="right">
+                  <strong>{formatNumber(value?.totalQuantity || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={7} align="right">
+                  <strong>{formatNumber(value?.totalInvitationQuantity || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={8} align="right">
+                  <strong>{formatNumber(value?.totalContractQuantity || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={9} align="right">
+                  <strong>{formatMoney(value?.totalSale || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={10} align="right">
+                  <strong>{formatMoney(value?.saleVnPayQr || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={11} align="right">
+                  <strong>{formatMoney(value?.saleVietQr || 0)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={12} align="right">
+                  <strong>{formatMoney(value?.actualSale || 0)}</strong>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            ))}
+          </Table.Summary>
+        );
+      }}
     />
   );
 };

@@ -1,4 +1,6 @@
 import { useReportTicketSalesRevenue } from "@renderer/hooks/reports/useReportTicketSalesRevenue";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { ReportRevenueStaffProps, RevenueByEmployeeProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
@@ -9,12 +11,13 @@ import { useEffect, useState } from "react";
 const { Text } = Typography;
 
 interface TabRevenueByStaffProps {
-  fromDate: Dayjs;
-  toDate: Dayjs;
+  fromDate?: Dayjs;
+  toDate?: Dayjs;
 }
 
 const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
   const [current, setCurrent] = useState(1);
+  const hasDateRange = !!fromDate && !!toDate;
 
   const onChange: PaginationProps["onChange"] = (page) => {
     setCurrent(page);
@@ -24,13 +27,16 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
     setCurrent(1);
   }, [fromDate, toDate]);
 
-  const { data, isFetching: isFetchingData } = useReportTicketSalesRevenue({
-    fromDate: fromDate.startOf("day").format(),
-    toDate: toDate.endOf("day").format(),
-    reportType: "STAFF"
-  });
+  const { data, isFetching: isFetchingData } = useReportTicketSalesRevenue(
+    {
+      fromDate: fromDate?.startOf("day").format() || "",
+      toDate: toDate?.endOf("day").format() || "",
+      reportType: "STAFF"
+    },
+    hasDateRange
+  );
 
-  const formatData = data as ReportRevenueStaffProps;
+  const formatData = (hasDateRange ? data : undefined) as ReportRevenueStaffProps | undefined;
 
   const columns: TableProps<RevenueByEmployeeProps>["columns"] = [
     {
@@ -99,14 +105,17 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
     }
   ];
 
+  if (!hasDateRange) {
+    return <DateRangeRequiredEmptyState />;
+  }
+
   return (
-    <div>
-      <Table
+    <div className="flex h-full min-h-0 flex-col">
+      <AutoHeightTable
         dataSource={formatData?.revenueByEmployee || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 410px)" }}
         loading={isFetchingData}
         pagination={{
           current,

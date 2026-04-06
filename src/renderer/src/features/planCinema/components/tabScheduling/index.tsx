@@ -1,4 +1,5 @@
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
@@ -6,7 +7,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
-import { Button, DatePicker, message, Select, Table } from "antd";
+import { Button, DatePicker, message, Select } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import AddSchedulingDialog from "./AddSchedulingDialog";
@@ -216,8 +217,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   if (!data) return null;
 
   return (
-    <div>
-      <div className="flex items-center justify-between pb-2">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="flex shrink-0 items-center justify-between pb-2">
         <div className="flex items-center gap-3">
           <p className="text-sm">
             Đã chọn <b>{selectedRowKeys.length}</b> ca chiếu
@@ -270,8 +271,9 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
         </div>
       </div>
 
-      <div className="mt-2">
-        <Table
+      <div className="mt-2 flex min-h-0 min-w-0 flex-1 flex-col">
+        <AutoHeightTable
+          containerClassName="min-w-0"
           rowKey="id"
           columns={columns}
           dataSource={data?.data || []}

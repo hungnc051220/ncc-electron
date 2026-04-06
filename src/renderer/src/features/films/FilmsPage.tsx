@@ -1,6 +1,9 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import type { TableProps, TabsProps, PaginationProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table, Tabs } from "antd";
+import { Button, Dropdown, Tabs } from "antd";
 import dayjs from "dayjs";
 import { Check, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -13,7 +16,6 @@ import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/util
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { Link } from "react-router";
 
 const items: TabsProps["items"] = [
   {
@@ -234,35 +236,25 @@ const FilmsPage = () => {
   };
 
   return (
-    <div className="mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Quản lý danh sách"
-            },
-            {
-              title: "Danh sách phim"
-            }
-          ]}
-        />
-
-        <div className="flex gap-2 items-center">
-          <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
-          {canCreate && (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm phim
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          <>
+            <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm phim
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <Tabs
         defaultActiveKey="ALL"
         activeKey={activeKey}
+        type="card"
         onChange={(newActiveKey) => {
           setActiveKey(newActiveKey);
           setCurrent(1);
@@ -270,13 +262,12 @@ const FilmsPage = () => {
         items={items}
       />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.id}
         dataSource={films?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 315px)" }}
         loading={isFetching}
         pagination={{
           current,

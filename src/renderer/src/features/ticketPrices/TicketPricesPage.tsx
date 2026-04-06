@@ -1,15 +1,17 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { useTicketPrices } from "@renderer/hooks/ticketPrices/useTicketPrices";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { TicketPriceProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { Button, Dropdown } from "antd";
 import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteTicketPriceDialog from "./components/DeleteTicketPriceDialog";
 import TicketPriceDialog from "./components/TicketPriceDialog";
-import { Link } from "react-router";
 
 const TicketPricesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -143,38 +145,24 @@ const TicketPricesPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Quản lý danh sách"
-            },
-            {
-              title: "Danh sách giá vé"
-            }
-          ]}
-        />
-
-        <div className="flex gap-2 items-center">
-          {canCreate && (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          canCreate ? (
             <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
               Thêm giá vé
             </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.id}
         dataSource={ticketPrices?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

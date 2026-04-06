@@ -1,4 +1,4 @@
-import { Table } from "antd";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { YearlyReportSummaryItem } from "@shared/types";
 import type { TableProps } from "antd";
 
@@ -10,13 +10,12 @@ interface TabRevenueProps {
 
 const TabRevenue = ({ tableData, columns, isFetching }: TabRevenueProps) => {
   return (
-    <Table
+    <AutoHeightTable
       dataSource={tableData}
       columns={columns}
       bordered
       rowKey="manufacturerId"
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 375px)" }}
       loading={isFetching}
       pagination={false}
     />

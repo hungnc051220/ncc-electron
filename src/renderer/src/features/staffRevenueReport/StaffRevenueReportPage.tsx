@@ -1,7 +1,8 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import PageHeader from "@renderer/components/PageHeader";
 import type { TabsProps } from "antd";
-import { Breadcrumb, Tabs } from "antd";
+import { Tabs } from "antd";
 import RevenueByFilm from "./components/revenueByFilm";
-import { Link } from "react-router";
 import MonthlyRevenueByTicket from "./components/monthlyRevenueByTicket";
 import ExamineTicketByPlan from "./components/examineTicketByPlan";
 import U22Usage from "./components/u22";
@@ -12,54 +13,75 @@ const StaffRevenueReportPage = () => {
     {
       key: "1",
       label: "Báo cáo doanh thu theo ngày bán",
-      children: <RevenueByFilm dateType={1} />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <RevenueByFilm dateType={1} />
+        </div>
+      )
     },
     {
       key: "2",
       label: "Báo cáo doanh thu theo lịch chiếu",
-      children: <RevenueByFilm dateType={2} />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <RevenueByFilm dateType={2} />
+        </div>
+      )
     },
     {
       key: "3",
       label: "Báo cáo tháng của nhân viên",
-      children: <MonthlyRevenueByTicket />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <MonthlyRevenueByTicket />
+        </div>
+      )
     },
     {
       key: "4",
       label: "Báo cáo rà soát vé",
-      children: <ExamineTicketByPlan />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <ExamineTicketByPlan />
+        </div>
+      )
     },
     {
       key: "5",
       label: "Báo cáo số lượng Voucher",
-      children: <Vouchers />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <Vouchers />
+        </div>
+      )
     },
     {
       key: "6",
       label: "Báo cáo giao dịch mua vé thẻ U22",
-      children: <U22Usage />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <U22Usage />
+        </div>
+      )
     }
   ];
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Thống kê, báo cáo"
-            },
-            {
-              title: "Báo cáo vé bán, doanh thu theo nhân viên"
-            }
-          ]}
-        />
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4 pb-3">
+      <PageHeader left={<AppBreadcrumb />} />
 
-      <Tabs defaultActiveKey="1" items={items} />
+      <Tabs
+        defaultActiveKey="1"
+        type="card"
+        items={items}
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
+      />
     </div>
   );
 };

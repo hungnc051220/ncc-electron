@@ -1,17 +1,19 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
 import { useHolidays } from "@renderer/hooks/holidays/useHolidays";
 import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { HolidayProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
-import { Breadcrumb, Button, DatePicker, Dropdown, Table, Tabs } from "antd";
+import { Button, DatePicker, Dropdown, Tabs } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteHolidayDialog from "./components/DeleteHolidayDialog";
 import HolidayDialog from "./components/HolidayDialog";
-import { Link } from "react-router";
 
 const items: TabsProps["items"] = [
   {
@@ -142,40 +144,30 @@ const HolidaysPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Quản lý danh sách"
-            },
-            {
-              title: "Danh sách ngày lễ"
-            }
-          ]}
-        />
-
-        <div className="flex gap-2 items-center">
-          <DatePicker
-            picker="year"
-            defaultValue={year}
-            onChange={(date) => setYear(date!)}
-            allowClear={false}
-          />
-          {canUpdate && (
-            <Button type="primary" onClick={() => setDialogOpen(true)}>
-              Cập nhật lại ngày
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          <>
+            <DatePicker
+              picker="year"
+              defaultValue={year}
+              onChange={(date) => setYear(date!)}
+              allowClear={false}
+            />
+            {canUpdate && (
+              <Button type="primary" onClick={() => setDialogOpen(true)}>
+                Cập nhật lại ngày
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <Tabs
         defaultActiveKey="ALL"
         activeKey={activeKey}
+        type="card"
         onChange={(newActiveKey) => {
           setActiveKey(newActiveKey);
           setCurrent(1);
@@ -183,13 +175,12 @@ const HolidaysPage = () => {
         items={items}
       />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.dateValue}
         dataSource={holidays?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 340px)" }}
         loading={isFetching}
         pagination={{
           current,

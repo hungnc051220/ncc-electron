@@ -1,4 +1,5 @@
 import { useReportYearly } from "@renderer/hooks/reports/useReportYearly";
+import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { YearlyReportSummaryItem } from "@shared/types";
 import type { TabsProps } from "antd";
@@ -12,7 +13,7 @@ import TabRevenue from "./TabRevenue";
 import { normalizeYearlySummaryData } from "../yearlyReport.utils";
 
 export interface ValuesProps {
-  fromDate: string;
+  fromDate?: string;
 }
 
 const columns: ColumnsType<YearlyReportSummaryItem> = [
@@ -66,40 +67,54 @@ const columns: ColumnsType<YearlyReportSummaryItem> = [
 ];
 
 const Tab4 = () => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({
-    fromDate: dayjs().startOf("year").format()
-  });
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const hasFromDate = !!filterValues.fromDate;
 
   const params = useMemo(
     () => ({
-      year: dayjs(filterValues.fromDate).year(),
+      year: filterValues.fromDate ? dayjs(filterValues.fromDate).year() : 0,
       reportType: "SUMMARY" as const
     }),
     [filterValues.fromDate]
   );
 
-  const { data, isFetching } = useReportYearly(params);
-  const tableData = useMemo(() => normalizeYearlySummaryData(data), [data]);
+  const { data, isFetching } = useReportYearly(params, hasFromDate);
+  const tableData = useMemo(
+    () => normalizeYearlySummaryData(hasFromDate ? data : undefined),
+    [data, hasFromDate]
+  );
 
   const items: TabsProps["items"] = [
     {
       key: "1",
       label: "Chi tiết",
-      children: <TabRevenue tableData={tableData} columns={columns} isFetching={isFetching} />
+      forceRender: true,
+      children: hasFromDate ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabRevenue tableData={tableData} columns={columns} isFetching={isFetching} />
+        </div>
+      ) : (
+        <DateRangeRequiredEmptyState description="Vui lòng chọn năm để xem báo cáo" />
+      )
     }
   ];
 
+  const onSearch = (values: ValuesProps) => {
+    setFilterValues(values.fromDate ? values : {});
+  };
+
   return (
-    <div className="pb-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Tabs
         items={items}
         defaultActiveKey="1"
-        type="card"
-        size="small"
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
           <div className="mb-2 flex justify-end gap-3">
-            <Filter filterValues={filterValues} onSearch={setFilterValues} />
-            <ExportRevenueExcelButton tableData={tableData} year={params.year} />
+            <Filter filterValues={filterValues} onSearch={onSearch} />
+            {filterValues.fromDate && (
+              <ExportRevenueExcelButton tableData={tableData} year={params.year} />
+            )}
           </div>
         }
       />

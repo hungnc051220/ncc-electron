@@ -1,11 +1,12 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { useMachineSerials } from "@renderer/hooks/useMachineSerials";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { MachineSerialProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Table } from "antd";
 import { useMemo, useState } from "react";
 import Filter from "./components/Filter";
-import { Link } from "react-router";
 
 export interface ValuesProps {
   year?: number;
@@ -74,31 +75,18 @@ const MachineSerialsPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Hệ thống"
-            },
-            {
-              title: "Danh sách seri các máy bán vé"
-            }
-          ]}
-        />
-        <Filter isFetching={isFetching} onSearch={onSearch} setCurrent={setCurrent} />
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<Filter isFetching={isFetching} onSearch={onSearch} setCurrent={setCurrent} />}
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey="id"
         dataSource={machineSerials?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

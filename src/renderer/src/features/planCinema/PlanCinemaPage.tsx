@@ -1,16 +1,17 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import PageHeader from "@renderer/components/PageHeader";
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { cn } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanCinemaProps } from "@shared/types";
 import type { CollapseProps, PaginationProps, TimeRangePickerProps } from "antd";
-import { Breadcrumb, Button, Collapse, DatePicker, Empty, Pagination, Spin } from "antd";
+import { Button, Collapse, DatePicker, Empty, Pagination, Spin } from "antd";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import DeletePlanDialog from "./components/DeletePlanCinemaDialog";
 import ApproveRejectActions from "./components/tabFilm/ApproveRejectActions";
 import SendForApproveActions from "./components/tabFilm/SendForApproveActions";
-import { Link } from "react-router";
 import AddPlanCinemaDialog from "./components/AddPlanCinemaDialog";
 import ArchivedActions from "./components/tabFilm/ArchivedActions";
 import TabsList from "./components/TabsList";
@@ -74,64 +75,60 @@ const PlanCinemaPage = () => {
   };
 
   const planItems = (
-    <div>
-      <Spin spinning={isFetching} size="small">
-        <div className="max-h-125 overflow-y-auto pr-1">
-          <div className="space-y-1.5">
-            {plans?.map((plan) => {
-              const isSelected = selectedPlan?.id === plan.id;
+    <Spin spinning={isFetching} size="small" className="w-full" wrapperClassName="w-full">
+      <div className="w-full space-y-1.5">
+        {plans?.map((plan) => {
+          const isSelected = selectedPlan?.id === plan.id;
 
-              return (
-                <button
-                  key={plan.id}
-                  type="button"
+          return (
+            <button
+              key={plan.id}
+              type="button"
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-100",
+                "px-3 py-2.5 cursor-pointer select-none",
+                !isSelected && "hover:bg-goku/80",
+                isSelected ? "bg-trunks text-white" : "bg-transparent"
+              )}
+              onClick={() => setSelectedPlan(plan)}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 size-2 shrink-0 rounded-full transition-colors duration-100",
+                  isSelected ? "bg-white" : "bg-trunks/35 group-hover:bg-trunks"
+                )}
+              />
+
+              <div className="min-w-0 flex-1">
+                <div
                   className={cn(
-                    "group flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-100",
-                    "px-3 py-2.5 cursor-pointer select-none",
-                    !isSelected && "hover:bg-goku/80",
-                    isSelected ? "bg-trunks text-white" : "bg-transparent"
+                    "text-sm font-medium leading-5 transition-colors wrap-break-word",
+                    isSelected ? "text-white" : "text-app-text"
                   )}
-                  onClick={() => setSelectedPlan(plan)}
                 >
-                  <span
-                    className={cn(
-                      "mt-0.5 size-2 shrink-0 rounded-full transition-colors duration-100",
-                      isSelected ? "bg-white" : "bg-trunks/35 group-hover:bg-trunks"
-                    )}
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className={cn(
-                        "text-sm font-medium leading-5 transition-colors wrap-break-word",
-                        isSelected ? "text-white" : "text-app-text"
-                      )}
-                    >
-                      {plan.name}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  {plan.name}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {data && data?.total > 0 ? (
+        <div className="mt-3 flex items-center justify-end">
+          <Pagination
+            current={data?.current || 1}
+            onChange={onChangePage}
+            pageSize={20}
+            total={data?.total || 0}
+            showSizeChanger={false}
+            simple
+            size="small"
+          />
         </div>
-        {data && data?.total > 0 ? (
-          <div className="flex items-center justify-end mt-3">
-            <Pagination
-              current={data?.current || 1}
-              onChange={onChangePage}
-              pageSize={20}
-              total={data?.total || 0}
-              showSizeChanger={false}
-              simple
-              size="small"
-            />
-          </div>
-        ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-        )}
-      </Spin>
-    </div>
+      ) : (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      )}
+    </Spin>
   );
 
   const items: CollapseProps["items"] = [
@@ -174,16 +171,16 @@ const PlanCinemaPage = () => {
         </div>
       ),
       children: (
-        <>
+        <div className="flex h-full min-h-0 flex-col">
           <RangePicker
             defaultValue={[fromDate, toDate]}
             format="DD/MM/YYYY"
             onChange={onRangeChange}
             presets={rangePresets}
-            className="mb-3"
+            className="mb-3 shrink-0"
           />
           {planItems}
-        </>
+        </div>
       )
     }
   ];
@@ -194,44 +191,32 @@ const PlanCinemaPage = () => {
   };
 
   return (
-    <div className="mt-4 px-4 pb-6 space-y-4">
-      <div className="flex items-center justify-between h-8">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Kế hoạch chiếu phim"
-            },
-            {
-              title: "Lập kế hoạch chiếu phim"
-            }
-          ]}
-        />
-
-        <div className="flex gap-2 items-center">
-          {canCreate && currentActiveKey === "0" && <AddPlanCinemaDialog />}
-        </div>
-      </div>
-      <div className="h-full flex flex-col">
-        <div className="flex gap-5 flex-1 min-h-0">
-          <div className="w-74 min-w-74">
-            <Collapse
-              activeKey={activeKey}
-              items={items}
-              onChange={onChange}
-              expandIconPlacement="end"
-              accordion
-            />
+    <div className="flex h-full min-h-0 flex-col space-y-4 overflow-hidden p-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={canCreate && currentActiveKey === "0" ? <AddPlanCinemaDialog /> : undefined}
+      />
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+        <div className="flex flex-1 min-h-0 gap-5">
+          <div className="flex h-full min-h-0 w-74 min-w-74 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <Collapse
+                activeKey={activeKey}
+                items={items}
+                onChange={onChange}
+                expandIconPlacement="end"
+                accordion
+                className="w-full"
+              />
+            </div>
           </div>
-          <div className="flex-1 flex flex-col min-h-0 border border-app-border p-4 rounded-lg">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-app-border p-4">
             {!selectedPlan ? (
-              <div className="flex items-center justify-center py-20 rounded-lg">
+              <div className="flex flex-1 items-center justify-center rounded-lg">
                 <span className="text-gray-400">Chưa chọn kế hoạch</span>
               </div>
             ) : (
-              <div className="flex flex-col h-full min-h-0">
+              <div className="flex h-full min-h-0 min-w-0 flex-col">
                 <div className="flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-1 text-sm">
                     <p>Kế hoạch đang chọn:</p>
@@ -299,7 +284,7 @@ const PlanCinemaPage = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 min-w-0">
                   <TabsList planCinemaId={selectedPlan?.id} />
                 </div>
               </div>

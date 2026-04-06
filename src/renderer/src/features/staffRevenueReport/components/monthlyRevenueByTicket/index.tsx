@@ -1,4 +1,5 @@
 import { useReportRevenueDayInMonth } from "@renderer/hooks/reports/useReportRevenueDayInMonth";
+import { filterEmptyValues } from "@renderer/lib/utils";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { RevenuesByDayProps } from "@shared/types";
 import type { TabsProps } from "antd";
@@ -6,6 +7,7 @@ import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useState } from "react";
+import DateRangeRequiredEmptyState from "../DateRangeRequiredEmptyState";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
@@ -15,7 +17,7 @@ export interface ValuesProps {
   userName?: string;
   manufacturerId?: number;
   filmId?: number;
-  fromDate: string;
+  dateRange?: [string, string];
 }
 
 export interface Row {
@@ -28,11 +30,25 @@ export interface Row {
 }
 
 const MonthlyRevenueByTicket = () => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({
-    fromDate: dayjs().startOf("month").format("YYYY-MM-DD")
-  });
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
-  const { data, isFetching } = useReportRevenueDayInMonth({ ...filterValues });
+  const params = {
+    ...filterEmptyValues({
+      userId: filterValues.userId,
+      manufacturerId: filterValues.manufacturerId,
+      filmId: filterValues.filmId
+    } as Record<string, unknown>),
+    ...(filterValues.dateRange?.length === 2
+      ? {
+          fromDate: dayjs(filterValues.dateRange[0]).startOf("day").format(),
+          toDate: dayjs(filterValues.dateRange[1]).endOf("day").format()
+        }
+      : {})
+  };
+
+  const hasDateRange = filterValues.dateRange?.length === 2;
+  const { data, isFetching } = useReportRevenueDayInMonth(params, hasDateRange);
+  const reportData = hasDateRange ? data : undefined;
 
   const buildColumns = (): ColumnsType<Row> => {
     return [
@@ -88,38 +104,49 @@ const MonthlyRevenueByTicket = () => {
   };
 
   const columns = buildColumns();
-  const dataSource = buildDataSource(data?.revenuesByDay || []);
+  const dataSource = buildDataSource(reportData?.revenuesByDay || []);
 
   const items: TabsProps["items"] = [
     {
       key: "1",
       label: "Chi tiết",
-      children: (
-        <TabRevenue tableData={dataSource} columns={columns} isFetching={isFetching} data={data} />
+      forceRender: true,
+      children: hasDateRange ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabRevenue
+            tableData={dataSource}
+            columns={columns}
+            isFetching={isFetching}
+            data={reportData}
+          />
+        </div>
+      ) : (
+        <DateRangeRequiredEmptyState />
       )
     }
   ];
 
   const onSearch = (values: ValuesProps) => {
-    setFilterValues(values);
+    setFilterValues(filterEmptyValues(values as Record<string, unknown>) as ValuesProps);
   };
 
   return (
-    <div className="pb-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Tabs
         items={items}
         defaultActiveKey="1"
-        type="card"
-        size="small"
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="flex justify-end mb-2 gap-3">
+          <div className="flex justify-end gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
-            <ExportRevenueExcelButton
-              tableData={dataSource}
-              data={data}
-              fromDate={filterValues.fromDate}
-              employeeName={filterValues?.userName}
-            />
+            {filterValues.dateRange?.length === 2 && (
+              <ExportRevenueExcelButton
+                tableData={dataSource}
+                data={reportData}
+                fromDate={filterValues.dateRange[0]}
+                employeeName={filterValues?.userName}
+              />
+            )}
           </div>
         }
       />

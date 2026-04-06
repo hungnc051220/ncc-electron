@@ -1,4 +1,7 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { useContractTicketSales } from "@renderer/hooks/contractTicketSales/useContractTicketSales";
 import { getPrintErrorMessage } from "@renderer/lib/print";
 import {
@@ -10,7 +13,7 @@ import {
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, message, Table } from "antd";
+import { Button, Dropdown, message } from "antd";
 import dayjs from "dayjs";
 import { Armchair, FileText, PlusIcon, Printer, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -135,7 +138,9 @@ const ContractTicketSalesPage = () => {
         ]
       : []),
     ...(canPrint ? [{ key: "3", icon: <Printer size={16} />, label: "In vé" }] : []),
-    ...(canView ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }] : [])
+    ...(canView
+      ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }]
+      : [])
   ];
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
@@ -266,40 +271,27 @@ const ContractTicketSalesPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: "Trang chủ",
-              href: "/"
-            },
-            {
-              title: "Bán vé"
-            },
-            {
-              title: "Danh sách vé bán hợp đồng"
-            }
-          ]}
-        />
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          <>
+            <Filter filterValues={filterValues} setCurrent={setCurrent} onSearch={onSearch} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm hợp đồng
+              </Button>
+            )}
+          </>
+        }
+      />
 
-        <div className="flex gap-2 items-center">
-          <Filter filterValues={filterValues} setCurrent={setCurrent} onSearch={onSearch} />
-          {canCreate && (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm hợp đồng
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.order.id}
         dataSource={tickets?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

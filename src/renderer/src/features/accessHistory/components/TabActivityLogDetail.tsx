@@ -1,81 +1,30 @@
-import { usersApi } from "@renderer/api/users.api";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { useAuditLog } from "@renderer/hooks/useAuditLog";
-import { useDebounce } from "@renderer/hooks/useDebounce";
 import { formatNumber } from "@renderer/lib/utils";
 import { AuditLogProps } from "@shared/types";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
-import { DatePicker, Select, Table, Tag } from "antd";
-import type { Dayjs } from "dayjs";
+import type { PaginationProps, TableProps } from "antd";
+import { Tag } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
-
-const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
-
-const dataTypes = [
-  {
-    value: "Order",
-    label: "Đơn hàng"
-  },
-  {
-    value: "Film",
-    label: "Danh mục phim"
-  },
-  {
-    value: "Category",
-    label: "Danh mục phân loại phim"
-  },
-  {
-    value: "Manufacturer",
-    label: "Danh mục hãng phim"
-  },
-  {
-    value: "PlanCinema",
-    label: "Kế hoạch chiếu phim"
-  },
-  {
-    value: "PlanScreenings",
-    label: "Lịch chiếu phim"
-  },
-  {
-    value: "DayPart",
-    label: "Khung giờ chiếu"
-  },
-  {
-    value: "Room",
-    label: "Phòng chiếu"
-  },
-  {
-    value: "Position",
-    label: "Sơ đồ ghế ngồi"
-  },
-  {
-    value: "CancelReason",
-    label: "Lý do hủy vé"
-  },
-  {
-    value: "Customer",
-    label: "Tài khoản người dùng"
-  }
-];
+import type { AccessHistoryFilterValues } from "./Filter";
+import { dataTypes } from "./accessHistory.constants";
 
 const fieldLabels: Record<string, string> = {
   id: "ID",
+  storeId: "Cửa hàng",
   code: "Mã",
   name: "Tên",
   title: "Tiêu đề",
   description: "Mô tả",
   note: "Ghi chú",
+  comment: "Ghi chú",
+  adminComment: "Ghi chú quản trị",
   status: "Trạng thái",
   isActive: "Đang hoạt động",
   isDeleted: "Đã xóa",
+  isStaff: "Nhân viên",
+  isManufacturer: "Hãng phim",
+  isTaxExempt: "Miễn thuế",
   createdAt: "Ngày tạo",
   updatedAt: "Ngày cập nhật",
   deletedAt: "Ngày xóa",
@@ -105,6 +54,7 @@ const fieldLabels: Record<string, string> = {
   planScreeningId: "Lịch chiếu",
   customerId: "Khách hàng",
   customerName: "Tên khách hàng",
+  customerGuid: "Mã khách hàng",
   price: "Giá",
   quantity: "Số lượng",
   total: "Tổng",
@@ -113,10 +63,14 @@ const fieldLabels: Record<string, string> = {
   versionCode: "Phiên bản",
   posterUrl: "Ảnh poster",
   trailerUrl: "Link trailer",
-  seatMap: "Sơ đồ ghế"
+  seatMap: "Sơ đồ ghế",
+  mobile: "Số điện thoại"
 };
 
 const phraseFieldLabels: Record<string, string> = {
+  "is manufacturer": "Hãng phim",
+  "is staff": "Nhân viên",
+  "is tax exempt": "Miễn thuế",
   "is online selling": "Bán online",
   "online selling": "Bán online",
   "update user": "Người cập nhật",
@@ -136,6 +90,10 @@ const phraseFieldLabels: Record<string, string> = {
   "category name": "Tên phân loại",
   "manufacturer name": "Tên hãng phim",
   "customer name": "Tên khách hàng",
+  "customer guid": "Mã khách hàng",
+  "admin comment": "Ghi chú quản trị",
+  mobile: "Số điện thoại",
+  "store id": "Cửa hàng",
   "full name": "Họ và tên",
   "first name": "Tên",
   "last name": "Họ"
@@ -149,6 +107,7 @@ const fieldWordLabels: Record<string, string> = {
   description: "Mô tả",
   note: "Ghi chú",
   status: "Trạng thái",
+  is: "",
   active: "hoạt động",
   deleted: "đã xóa",
   created: "tạo",
@@ -163,11 +122,13 @@ const fieldWordLabels: Record<string, string> = {
   order: "thứ tự",
   no: "số",
   username: "tên đăng nhập",
+  staff: "nhân viên",
   full: "họ và tên",
   first: "tên",
   last: "họ",
   email: "email",
   phone: "số điện thoại",
+  mobile: "số điện thoại",
   address: "địa chỉ",
   room: "phòng",
   film: "phim",
@@ -187,6 +148,11 @@ const fieldWordLabels: Record<string, string> = {
   url: "link",
   seat: "ghế",
   map: "sơ đồ",
+  guid: "mã",
+  exempt: "miễn",
+  tax: "thuế",
+  store: "cửa hàng",
+  admin: "quản trị",
   online: "online",
   selling: "bán",
   position: "vị trí",
@@ -306,11 +272,13 @@ const formatFieldLabel = (key: string) => {
     return `Ghế tầng ${chairFloorMatch[1]}`;
   }
 
-  const translatedWords = words.map((word) => {
-    const lowerWord = word.toLowerCase();
-    if (lowerWord === "id") return "ID";
-    return fieldWordLabels[lowerWord] || word;
-  });
+  const translatedWords = words
+    .map((word) => {
+      const lowerWord = word.toLowerCase();
+      if (lowerWord === "id") return "ID";
+      return fieldWordLabels[lowerWord] || word;
+    })
+    .filter(Boolean);
 
   const label = translatedWords.join(" ").trim();
   return label ? capitalizeVietnamese(label) : lastKey;
@@ -334,11 +302,23 @@ const formatAuditDisplayValue = (value: AuditValue | undefined) => {
   if (typeof value === "number") return formatNumber(value);
 
   return (
-    <pre className="m-0 whitespace-pre-wrap break-words text-xs text-slate-600">
+    <pre className="m-0 whitespace-pre-wrap wrap-break-word text-xs text-slate-600">
       {JSON.stringify(value, null, 2)}
     </pre>
   );
 };
+
+const CompactAuditValue = ({
+  value,
+  emphasized = false
+}: {
+  value: AuditValue | undefined;
+  emphasized?: boolean;
+}) => (
+  <span className={emphasized ? "font-medium text-slate-900" : "text-slate-700"}>
+    {formatAuditDisplayValue(value)}
+  </span>
+);
 
 const getAuditFieldRows = (record: AuditLogProps): AuditFieldRow[] => {
   const oldValue = parseAuditValue(record.oldValues);
@@ -390,39 +370,38 @@ const AuditChangeList = ({ record }: { record: AuditLogProps }) => {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {rows.map((row) => {
         const isCreateAction = record.action === "CREATE";
         const isDeleteAction = record.action === "DELETE";
         const isUpdateAction = record.action === "UPDATE";
 
         return (
-          <div
-            key={row.key}
-            className={`rounded-md border px-3 py-2 ${
-              row.changed ? "border-sky-200 bg-sky-50/70" : "border-slate-200 bg-slate-50/60"
-            }`}
-          >
-            <div className="mb-1 text-sm font-semibold text-slate-700">{row.label}</div>
-            {isCreateAction ? (
-              <div className="text-sm break-words font-medium text-slate-900">
-                {formatAuditDisplayValue(row.newValue)}
-              </div>
-            ) : null}
-            {isDeleteAction ? (
-              <div className="text-sm break-words text-slate-700">
-                {formatAuditDisplayValue(row.oldValue)}
-              </div>
-            ) : null}
-            {isUpdateAction ? (
-              <div className="flex items-center gap-2 text-sm break-words text-slate-600">
-                <span className="min-w-0">{formatAuditDisplayValue(row.oldValue)}</span>
-                <span className="shrink-0 text-slate-400">-&gt;</span>
-                <span className="min-w-0 font-medium text-slate-900">
-                  {formatAuditDisplayValue(row.newValue)}
-                </span>
-              </div>
-            ) : null}
+          <div key={row.key} className="py-1 text-sm">
+            <div className="grid grid-cols-[140px_minmax(0,1fr)] items-start gap-x-2 gap-y-0.5">
+              <div className="wrap-break-word text-slate-600">{row.label}</div>
+              {isCreateAction ? (
+                <div className="min-w-0 wrap-break-word">
+                  <CompactAuditValue value={row.newValue} emphasized />
+                </div>
+              ) : null}
+              {isDeleteAction ? (
+                <div className="min-w-0 wrap-break-word">
+                  <CompactAuditValue value={row.oldValue} />
+                </div>
+              ) : null}
+              {isUpdateAction ? (
+                <div className="flex min-w-0 items-start gap-1.5 wrap-break-word">
+                  <span className="min-w-0 wrap-break-word text-slate-500 line-through">
+                    <CompactAuditValue value={row.oldValue} />
+                  </span>
+                  <span className="shrink-0 text-slate-400">-&gt;</span>
+                  <span className="min-w-0 wrap-break-word">
+                    <CompactAuditValue value={row.newValue} emphasized />
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
         );
       })}
@@ -430,58 +409,24 @@ const AuditChangeList = ({ record }: { record: AuditLogProps }) => {
   );
 };
 
-const TabActivityLogDetail = () => {
+interface TabActivityLogDetailProps {
+  filterValues: AccessHistoryFilterValues;
+}
+
+const TabActivityLogDetail = ({ filterValues }: TabActivityLogDetailProps) => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [searchText, setSearchText] = useState("");
-  const [userId, setUserId] = useState<number | undefined>(undefined);
-  const [model, setModel] = useState<string | undefined>(undefined);
-  const [fromDate, setFromDate] = useState<Dayjs | null>(dayjs().add(-30, "d"));
-  const [toDate, setToDate] = useState<Dayjs | null>(dayjs());
-
-  const debouncedSearch = useDebounce(searchText, 500);
-
-  const {
-    data: users,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage
-  } = useInfiniteQuery({
-    queryKey: ["users", debouncedSearch],
-    queryFn: ({ pageParam = 1 }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: debouncedSearch }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
-  });
-
-  const options = useMemo(() => {
-    return (
-      users?.pages.flatMap((page) =>
-        page.data.map((user) => ({
-          value: user.id,
-          label:
-            user.customerFirstName && user.customerLastName
-              ? `${user.customerFirstName} ${user.customerLastName}`
-              : user.username
-        }))
-      ) ?? []
-    );
-  }, [users]);
 
   const params = useMemo(() => {
     return {
       current,
       pageSize,
-      userId,
-      model,
-      fromDate: fromDate ? fromDate?.startOf("day").format() : undefined,
-      toDate: toDate ? toDate?.endOf("day").format() : undefined
+      userId: filterValues.userId,
+      model: filterValues.model,
+      fromDate: filterValues.dateRange?.[0],
+      toDate: filterValues.dateRange?.[1]
     };
-  }, [current, pageSize, userId, model, fromDate, toDate]);
+  }, [current, pageSize, filterValues]);
 
   const { data, isFetching: isFetchingData } = useAuditLog(params);
 
@@ -520,7 +465,7 @@ const TabActivityLogDetail = () => {
       title: "Thay đổi",
       key: "changes",
       render: (_, record) => <AuditChangeList record={record} />,
-      width: 520
+      width: 420
     },
     {
       title: "Người cập nhật",
@@ -541,79 +486,20 @@ const TabActivityLogDetail = () => {
     setCurrent(page);
   };
 
-  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
-    if (dates) {
-      setFromDate(dates[0]);
-      setToDate(dates[1]);
-    } else {
-      setFromDate(null);
-      setToDate(null);
-    }
-  };
-
   const onShowSizeChange: PaginationProps["onShowSizeChange"] = (current, pageSize) => {
     setCurrent(current);
     setPageSize(pageSize);
   };
 
   return (
-    <div>
-      <div className="flex items-center gap-x-4 gap-y-2 mb-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <p className="text-sm">Loại dữ liệu</p>
-          <Select
-            style={{ width: 220 }}
-            value={model}
-            onChange={setModel}
-            options={dataTypes}
-            placeholder="Chọn loại dữ liệu"
-            allowClear
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <p className="text-sm">Người thao tác</p>
-          <Select
-            showSearch={{
-              filterOption: false,
-              onSearch: (value) => setSearchText(value)
-            }}
-            loading={isFetching || isFetchingNextPage}
-            style={{ width: 220 }}
-            value={userId}
-            onChange={setUserId}
-            options={options}
-            placeholder="Chọn người thao tác"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPage &&
-                !isFetchingNextPage &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPage();
-              }
-            }}
-            allowClear
-          />
-        </div>
-
-        <div className="flex items-center gap-2 z-20">
-          <p className="text-sm whitespace-nowrap">Từ ngày</p>
-          <RangePicker
-            defaultValue={[fromDate, toDate]}
-            format="DD/MM/YYYY"
-            onChange={onRangeChange}
-            presets={rangePresets}
-          />
-        </div>
-      </div>
-      <Table
+    <div className="flex h-full min-h-0 flex-col">
+      <AutoHeightTable
         dataSource={data?.data || []}
         columns={columns}
         bordered
         size="small"
         rowKey="id"
-        scroll={{ x: 1250, y: "calc(100vh - 370px)" }}
+        scroll={{ x: 1250 }}
         loading={isFetchingData}
         pagination={{
           current,

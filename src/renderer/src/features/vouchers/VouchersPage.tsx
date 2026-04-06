@@ -1,11 +1,12 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { useVouchers } from "@renderer/hooks/vouchers/useVouchers";
 import { formatNumber } from "@renderer/lib/utils";
 import { BatchProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Table } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
 
 const VouchersPage = () => {
   const [current, setCurrent] = useState(1);
@@ -75,30 +76,15 @@ const VouchersPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Quản lý danh sách"
-            },
-            {
-              title: "Danh sách chương trình khuyến mãi"
-            }
-          ]}
-        />
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader left={<AppBreadcrumb />} />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.batchId}
         dataSource={vouchers?.data?.items || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

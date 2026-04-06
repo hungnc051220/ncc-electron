@@ -1,18 +1,32 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { usersApi } from "@renderer/api/users.api";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
+import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
-import dayjs from "dayjs";
-import { startTransition, useState } from "react";
+import dayjs, { type Dayjs } from "dayjs";
+import { startTransition, useEffect, useState } from "react";
 import { ValuesProps } from ".";
+
+const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
+];
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
   filterValues: ValuesProps;
 }
 
+type FormValues = Omit<ValuesProps, "dateRange"> & {
+  dateRange?: [Dayjs, Dayjs];
+};
+
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<FormValues>();
   const [open, setOpen] = useState(false);
 
   const userSelect = useInfiniteSelectOptions({
@@ -25,14 +39,22 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     })
   });
 
+  useEffect(() => {
+    form.setFieldsValue({
+      ...filterValues,
+      dateRange:
+        filterValues.dateRange?.length === 2
+          ? [dayjs(filterValues.dateRange[0]), dayjs(filterValues.dateRange[1])]
+          : undefined
+    });
+  }, [filterValues, form]);
+
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
       userSelect.resetSearch();
-      onSearch({
-        fromDate: dayjs().startOf("month").format()
-      });
+      onSearch({});
     });
   };
 
@@ -65,10 +87,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             form={form}
             onFinish={(values) => {
               setOpen(false);
-              onSearch(values);
-            }}
-            initialValues={{
-              dateRange: [dayjs(), dayjs()]
+              onSearch({
+                ...values,
+                dateRange:
+                  values.dateRange && values.dateRange.length === 2
+                    ? [values.dateRange[0].format(), values.dateRange[1].format()]
+                    : undefined
+              });
             }}
           >
             {dom}
@@ -96,8 +121,8 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             allowClear
           />
         </Form.Item>
-        <Form.Item name="fromDate" label="Khoảng thời gian">
-          <DatePicker picker="month" className="w-full" format="MM/YYYY" />
+        <Form.Item name="dateRange" label="Khoảng thời gian">
+          <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
         </Form.Item>
       </Modal>
     </>

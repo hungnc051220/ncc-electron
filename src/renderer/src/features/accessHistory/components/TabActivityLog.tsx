@@ -1,123 +1,31 @@
-import { usersApi } from "@renderer/api/users.api";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { useAuditLog } from "@renderer/hooks/useAuditLog";
-import { useDebounce } from "@renderer/hooks/useDebounce";
 import { formatNumber } from "@renderer/lib/utils";
 import { AuditLogProps } from "@shared/types";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
-import { DatePicker, Select, Table } from "antd";
-import type { Dayjs } from "dayjs";
+import type { PaginationProps, TableProps } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
+import type { AccessHistoryFilterValues } from "./Filter";
+import { dataTypes } from "./accessHistory.constants";
 
-const { RangePicker } = DatePicker;
+interface TabActivityLogProps {
+  filterValues: AccessHistoryFilterValues;
+}
 
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
-
-const dataTypes = [
-  {
-    value: "Order",
-    label: "Đơn hàng"
-  },
-  {
-    value: "Film",
-    label: "Danh mục phim"
-  },
-  {
-    value: "Category",
-    label: "Danh mục phân loại phim"
-  },
-  {
-    value: "Manufacturer",
-    label: "Danh mục hãng phim"
-  },
-  {
-    value: "PlanCinema",
-    label: "Kế hoạch chiếu phim"
-  },
-  {
-    value: "PlanScreenings",
-    label: "Lịch chiếu phim"
-  },
-  {
-    value: "DayPart",
-    label: "Khung giờ chiếu"
-  },
-  {
-    value: "Room",
-    label: "Phòng chiếu"
-  },
-  {
-    value: "Position",
-    label: "Sơ đồ ghế ngồi"
-  },
-  {
-    value: "CancelReason",
-    label: "Lý do hủy vé"
-  },
-  {
-    value: "Customer",
-    label: "Tài khoản người dùng"
-  }
-];
-
-const TabActivityLog = () => {
+const TabActivityLog = ({ filterValues }: TabActivityLogProps) => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [searchText, setSearchText] = useState("");
-  const [userId, setUserId] = useState<number | undefined>(undefined);
-  const [model, setModel] = useState<string | undefined>(undefined);
-  const [fromDate, setFromDate] = useState<Dayjs | null>(dayjs().add(-30, "d"));
-  const [toDate, setToDate] = useState<Dayjs | null>(dayjs());
-
-  const debouncedSearch = useDebounce(searchText, 500);
-
-  const {
-    data: users,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage
-  } = useInfiniteQuery({
-    queryKey: ["users", debouncedSearch],
-    queryFn: ({ pageParam = 1 }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: debouncedSearch }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
-  });
-
-  const options = useMemo(() => {
-    return (
-      users?.pages.flatMap((page) =>
-        page.data.map((user) => ({
-          value: user.id,
-          label:
-            user.customerFirstName && user.customerLastName
-              ? `${user.customerFirstName} ${user.customerLastName}`
-              : user.username
-        }))
-      ) ?? []
-    );
-  }, [users]);
 
   const params = useMemo(() => {
     return {
       current,
       pageSize,
-      userId,
-      model,
-      fromDate: fromDate ? fromDate?.startOf("day").format() : undefined,
-      toDate: toDate ? toDate?.endOf("day").format() : undefined
+      userId: filterValues.userId,
+      model: filterValues.model,
+      fromDate: filterValues.dateRange?.[0],
+      toDate: filterValues.dateRange?.[1]
     };
-  }, [current, pageSize, userId, model, fromDate, toDate]);
+  }, [current, pageSize, filterValues]);
 
   const { data, isFetching: isFetchingData } = useAuditLog(params);
 
@@ -152,78 +60,18 @@ const TabActivityLog = () => {
     setCurrent(page);
   };
 
-  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
-    if (dates) {
-      setFromDate(dates[0]);
-      setToDate(dates[1]);
-    } else {
-      setFromDate(null);
-      setToDate(null);
-    }
-  };
-
   const onShowSizeChange: PaginationProps["onShowSizeChange"] = (current, pageSize) => {
     setCurrent(current);
     setPageSize(pageSize);
   };
 
   return (
-    <div>
-      <div className="flex items-center gap-x-4 gap-y-2 mb-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <p className="text-sm">Loại dữ liệu</p>
-          <Select
-            style={{ width: 220 }}
-            value={model}
-            onChange={setModel}
-            options={dataTypes}
-            placeholder="Chọn loại dữ liệu"
-            allowClear
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <p className="text-sm">Người thao tác</p>
-          <Select
-            showSearch={{
-              filterOption: false,
-              onSearch: (value) => setSearchText(value)
-            }}
-            loading={isFetching || isFetchingNextPage}
-            style={{ width: 220 }}
-            value={userId}
-            onChange={setUserId}
-            options={options}
-            placeholder="Chọn người thao tác"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPage &&
-                !isFetchingNextPage &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPage();
-              }
-            }}
-            allowClear
-          />
-        </div>
-
-        <div className="flex items-center gap-2 z-20">
-          <p className="text-sm whitespace-nowrap">Từ ngày</p>
-          <RangePicker
-            defaultValue={[fromDate, toDate]}
-            format="DD/MM/YYYY"
-            onChange={onRangeChange}
-            presets={rangePresets}
-          />
-        </div>
-      </div>
-      <Table
+    <div className="flex h-full min-h-0 flex-col">
+      <AutoHeightTable
         dataSource={data?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 370px)" }}
         loading={isFetchingData}
         pagination={{
           current,

@@ -24,6 +24,10 @@ type Row = {
   saleVnPayQr: number;
   saleVietQr: number;
   actualSale: number;
+  discountOffline: number;
+  discountOnline: number;
+  discountPartner: number;
+  discountTotal: number;
 };
 
 type SummaryGroup = {
@@ -90,6 +94,10 @@ const ExportRevenueExcelButton = ({
         "Phòng",
         "Loại",
         ...allPrices.map((p) => (p / 1000).toString()),
+        "KM Offline",
+        "KM Online",
+        "KM Đại lý",
+        "Tổng sau KM",
         "Tổng",
         "Giấy mời",
         "Hợp đồng",
@@ -148,19 +156,50 @@ const ExportRevenueExcelButton = ({
       ws.mergeCells(headerGroupRowIndex, priceStartCol, headerGroupRowIndex, priceEndCol);
       ws.getCell(headerGroupRowIndex, priceStartCol).value = "Loại giá vé (Đơn vị tính: 1000 đồng)";
 
-      const totalStartCol = priceEndCol + 1;
+      const discountStartCol = priceEndCol + 1;
+      const discountEndCol = discountStartCol + 2;
+
+      ws.mergeCells(headerGroupRowIndex, discountStartCol, headerGroupRowIndex, discountEndCol);
+      ws.getCell(headerGroupRowIndex, discountStartCol).value = "Khuyến mại";
+
+      const discountTotalCol = discountEndCol + 1;
+
+      ws.mergeCells(
+        headerGroupRowIndex,
+        discountTotalCol,
+        headerGroupRowIndex + 1,
+        discountTotalCol
+      );
+      ws.getCell(headerGroupRowIndex, discountTotalCol).value = "Tổng sau KM";
+
+      const totalStartCol = discountTotalCol + 1;
       const totalEndCol = totalStartCol + 6;
 
-      let totalCol = priceEndCol + 1;
+      const discountHeaders = ["Offline", "Online", "Đại lý"];
+
+      let totalCol = totalStartCol;
 
       const COL_AMOUNT = totalCol + 3;
       const COL_VNPAY = totalCol + 4;
       const COL_VIETQR = totalCol + 5;
       const COL_ACTUAL = totalCol + 6;
+      const COL_DISCOUNT_OFFLINE = discountStartCol;
+      const COL_DISCOUNT_ONLINE = discountStartCol + 1;
+      const COL_DISCOUNT_PARTNER = discountStartCol + 2;
+      const COL_DISCOUNT_TOTAL = discountStartCol + 3;
 
       const moneyFormat = "#,##0";
 
-      [COL_AMOUNT, COL_VNPAY, COL_VIETQR, COL_ACTUAL].forEach((col) => {
+      [
+        COL_DISCOUNT_OFFLINE,
+        COL_DISCOUNT_ONLINE,
+        COL_DISCOUNT_PARTNER,
+        COL_DISCOUNT_TOTAL,
+        COL_AMOUNT,
+        COL_VNPAY,
+        COL_VIETQR,
+        COL_ACTUAL
+      ].forEach((col) => {
         ws.getColumn(col).numFmt = moneyFormat;
       });
 
@@ -194,6 +233,10 @@ const ExportRevenueExcelButton = ({
         headerRow.getCell(col++).value = (p / 1000).toString();
       });
 
+      discountHeaders.forEach((title) => {
+        headerRow.getCell(col++).value = title;
+      });
+
       [headerGroupRowIndex, headerRowIndex].forEach((r) => {
         ws.getRow(r).font = { bold: true };
         ws.getRow(r).alignment = {
@@ -212,6 +255,10 @@ const ExportRevenueExcelButton = ({
           r.roomName,
           r.isOnline ? "On" : "Off",
           ...allPrices.map((p) => r.pricesMap[p] ?? ""),
+          r.discountOffline,
+          r.discountOnline,
+          r.discountPartner,
+          r.discountTotal,
           r.totalQuantity,
           r.totalInvitationQuantity,
           r.totalContractQuantity,
@@ -271,6 +318,10 @@ const ExportRevenueExcelButton = ({
         "Ngày",
         "Loại",
         ...allPrices.map((p) => p / 1000),
+        "KM Offline",
+        "KM Online",
+        "KM Đại lý",
+        "Tổng sau KM",
         "Tổng",
         "Giấy mời",
         "Hợp đồng",
@@ -297,6 +348,10 @@ const ExportRevenueExcelButton = ({
           let saleVnPayQr = 0;
           let saleVietQr = 0;
           let actualSale = 0;
+          let discountOffline = 0;
+          let discountOnline = 0;
+          let discountPartner = 0;
+          let discountTotal = 0;
 
           rows.forEach((r) => {
             totalQuantity += r.totalQuantity;
@@ -306,6 +361,10 @@ const ExportRevenueExcelButton = ({
             saleVnPayQr += r.saleVnPayQr;
             saleVietQr += r.saleVietQr;
             actualSale += r.actualSale;
+            discountOffline += r.discountOffline;
+            discountOnline += r.discountOnline;
+            discountPartner += r.discountPartner;
+            discountTotal += r.discountTotal;
 
             Object.entries(r.pricesMap).forEach(([p, q]) => {
               const price = Number(p);
@@ -321,7 +380,11 @@ const ExportRevenueExcelButton = ({
             totalSale,
             saleVnPayQr,
             saleVietQr,
-            actualSale
+            actualSale,
+            discountOffline,
+            discountOnline,
+            discountPartner,
+            discountTotal
           };
         };
 
@@ -332,6 +395,10 @@ const ExportRevenueExcelButton = ({
           dayjs(date).format("DD/MM/YYYY"),
           "Off",
           ...allPrices.map((p) => offSum.prices[p] ?? ""),
+          offSum.discountOffline,
+          offSum.discountOnline,
+          offSum.discountPartner,
+          offSum.discountTotal,
           offSum.totalQuantity,
           offSum.totalInvitationQuantity,
           offSum.totalContractQuantity,
@@ -345,6 +412,10 @@ const ExportRevenueExcelButton = ({
           dayjs(date).format("DD/MM/YYYY"),
           "On",
           ...allPrices.map((p) => onSum.prices[p] ?? ""),
+          onSum.discountOffline,
+          onSum.discountOnline,
+          onSum.discountPartner,
+          onSum.discountTotal,
           onSum.totalQuantity,
           onSum.totalInvitationQuantity,
           onSum.totalContractQuantity,
@@ -360,12 +431,14 @@ const ExportRevenueExcelButton = ({
       });
 
       const moneyColsSummary = [
+        3 + allPrices.length,
         4 + allPrices.length,
         5 + allPrices.length,
         6 + allPrices.length,
-        7 + allPrices.length,
-        8 + allPrices.length,
-        9 + allPrices.length
+        10 + allPrices.length,
+        11 + allPrices.length,
+        12 + allPrices.length,
+        13 + allPrices.length
       ];
 
       moneyColsSummary.forEach((summaryCol) => {
@@ -409,7 +482,7 @@ const ExportRevenueExcelButton = ({
 
       const summaryStartRow = 1;
       const summaryEndRow = wsSummary.lastRow!.number;
-      const summaryEndCol = 9 + allPrices.length;
+      const summaryEndCol = 13 + allPrices.length;
 
       for (let r = summaryStartRow; r <= summaryEndRow; r++) {
         for (let c = 1; c <= summaryEndCol; c++) {

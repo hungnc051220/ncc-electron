@@ -6,6 +6,7 @@ import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
+import DateRangeRequiredEmptyState from "../DateRangeRequiredEmptyState";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
@@ -15,7 +16,7 @@ export interface ValuesProps {
   userName?: string;
   manufacturerId?: number;
   filmId?: number;
-  dateRange: [string, string];
+  dateRange?: [string, string];
 }
 
 export type TableRow = {
@@ -42,9 +43,7 @@ export type TableRow = {
 };
 
 const ExamineTicketByPlan = () => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({
-    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
-  });
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -58,7 +57,9 @@ const ExamineTicketByPlan = () => {
     return filtered;
   }, [filterValues]);
 
-  const { data, isFetching } = useReportExamineTicketByPlan(params);
+  const hasDateRange = filterValues.dateRange?.length === 2;
+  const { data, isFetching } = useReportExamineTicketByPlan(params, hasDateRange);
+  const reportData = hasDateRange ? data : undefined;
 
   const buildTreeTable = (films: ExamineTicketsByFilmProps[]): TableRow[] => {
     return films.map((film) => {
@@ -68,15 +69,12 @@ const ExamineTicketByPlan = () => {
         projectTime: p.projectTime,
         roomName: p.roomName,
         isOnline: p.isOnline,
-
         vip: p.vipQuantity,
         regular: p.regularQuantity,
         contract: p.contractQuantity,
-
         vipCI: p.vipCIQuantity,
         regularCI: p.regularCIQuantity,
         contractCI: p.contractCIQuantity,
-
         invitation: p.invitationQuantity,
         total: p.totalQuantity,
         notCI: p.totalNotCIQuantity,
@@ -87,26 +85,25 @@ const ExamineTicketByPlan = () => {
         key: `film-${film.filmId}`,
         filmName: film.filmName,
         isSummary: true,
-
         vip: film.totalVipQuantity,
         regular: film.totalRegularQuantity,
         contract: film.totalContractQuantity,
-
         vipCI: film.totalVipCIQuantity,
         regularCI: film.totalRegularCIQuantity,
         contractCI: film.totalContractCIQuantity,
-
         invitation: film.totalInvitationQuantity,
         total: film.totalQuantity,
         notCI: film.totalNotCIQuantity,
         ci: film.totalCIQuantity,
-
         children
       };
     });
   };
 
-  const tableData = useMemo(() => buildTreeTable(data?.examineTicketsByFilm || []), [data]);
+  const tableData = useMemo(
+    () => buildTreeTable(reportData?.examineTicketsByFilm || []),
+    [reportData]
+  );
 
   const columns: ColumnsType<TableRow> = [
     {
@@ -219,42 +216,48 @@ const ExamineTicketByPlan = () => {
     {
       key: "1",
       label: "Chi tiết",
-      children: (
-        <TabRevenue
-          tableData={tableData}
-          columns={columns}
-          isFetching={isFetching}
-          total={data?.total}
-          totalOnline={data?.totalOnline}
-          totalOffline={data?.totalOffline}
-        />
+      forceRender: true,
+      children: hasDateRange ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabRevenue
+            tableData={tableData}
+            columns={columns}
+            isFetching={isFetching}
+            total={reportData?.total}
+            totalOnline={reportData?.totalOnline}
+            totalOffline={reportData?.totalOffline}
+          />
+        </div>
+      ) : (
+        <DateRangeRequiredEmptyState />
       )
     }
   ];
 
   const onSearch = (values: ValuesProps) => {
-    setFilterValues(values);
+    setFilterValues(filterEmptyValues(values as Record<string, unknown>) as ValuesProps);
   };
 
   return (
-    <div className="pb-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Tabs
         items={items}
         defaultActiveKey="1"
-        type="card"
-        size="small"
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="flex justify-end mb-2 gap-3">
+          <div className="flex justify-end gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
-            <ExportRevenueExcelButton
-              tableData={tableData}
-              fromDate={filterValues.dateRange[0]!}
-              toDate={filterValues.dateRange[1]!}
-              employeeName={filterValues?.userName}
-              total={data?.total}
-              totalOnline={data?.totalOnline}
-              totalOffline={data?.totalOffline}
-            />
+            {filterValues.dateRange?.length === 2 && (
+              <ExportRevenueExcelButton
+                tableData={tableData}
+                fromDate={filterValues.dateRange[0]}
+                toDate={filterValues.dateRange[1]}
+                employeeName={filterValues?.userName}
+                total={reportData?.total}
+                totalOnline={reportData?.totalOnline}
+                totalOffline={reportData?.totalOffline}
+              />
+            )}
           </div>
         }
       />

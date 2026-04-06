@@ -1,15 +1,17 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { useManufacturers } from "@renderer/hooks/manufacturers/useManufacturers";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ManufacturerProps } from "@shared/types";
 import type { MenuProps, PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { Button, Dropdown } from "antd";
 import { Check, Eye, EyeOff, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteManufacturerDialog from "./components/DeleteManufacturerDialog";
 import ManufacturerDialog from "./components/ManufacturerDialog";
 import { formatNumber } from "@renderer/lib/utils";
-import { Link } from "react-router";
 import ChangeHiddenManufacturerDialog from "./components/ChangeHiddenManufacturerDialog";
 
 const ManufacturersPage = () => {
@@ -87,9 +89,7 @@ const ManufacturersPage = () => {
             }
           ]
         : []),
-      ...(canDelete
-        ? [{ key: "3", icon: <Trash2 size={16} />, label: "Xóa", danger: true }]
-        : [])
+      ...(canDelete ? [{ key: "3", icon: <Trash2 size={16} />, label: "Xóa", danger: true }] : [])
     ],
     [canDelete, canUpdate]
   );
@@ -180,38 +180,24 @@ const ManufacturersPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Quản lý danh sách"
-            },
-            {
-              title: "Danh sách hãng phim"
-            }
-          ]}
-        />
-
-        <div className="flex gap-2 items-center">
-          {canCreate && (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          canCreate ? (
             <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
               Thêm hãng phim
             </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.id}
         dataSource={manufacturers?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

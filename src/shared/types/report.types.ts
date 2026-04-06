@@ -47,6 +47,10 @@ export interface TotalRevenueProps {
   actualOffSale: number;
   totalSale: number;
   onSaleTotal: number | null;
+  discountOffline?: number;
+  discountOnline?: number;
+  discountPartner?: number;
+  discountTotal?: number;
 }
 
 export interface TotalRevenue2Props {
@@ -128,6 +132,10 @@ export interface PlanScreen {
   saleVietQr: number;
   actualSale: number;
   prices: PriceProps[];
+  discountOffline: number;
+  discountOnline: number;
+  discountPartner: number;
+  discountTotal: number;
 }
 
 export interface PriceProps {
@@ -143,6 +151,10 @@ export interface TotalRevenueProps {
   saleVnPayQr: number;
   saleVietQr: number;
   actualSale: number;
+  discountOffline?: number;
+  discountOnline?: number;
+  discountPartner?: number;
+  discountTotal?: number;
 }
 
 export interface TotalRevenueOnlineProps {
@@ -154,6 +166,10 @@ export interface TotalRevenueOnlineProps {
   saleVnPayQr: number;
   saleVietQr: number;
   actualSale: number;
+  discountOffline?: number;
+  discountOnline?: number;
+  discountPartner?: number;
+  discountTotal?: number;
 }
 
 export interface ExamineTicketByPlanProps {

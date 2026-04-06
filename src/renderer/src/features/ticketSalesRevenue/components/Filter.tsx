@@ -1,11 +1,8 @@
 import { FilterOutlined } from "@ant-design/icons";
-import { usersApi } from "@renderer/api/users.api";
-import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import type { TimeRangePickerProps } from "antd";
-import { Button, DatePicker, Form, Modal, Select } from "antd";
+import { Button, DatePicker, Form, Modal } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { startTransition, useEffect, useState } from "react";
-import { ValuesProps } from ".";
 
 const { RangePicker } = DatePicker;
 
@@ -16,31 +13,25 @@ const rangePresets: TimeRangePickerProps["presets"] = [
   { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
 ];
 
-interface FilterProps {
-  onSearch: (values: ValuesProps) => void;
-  filterValues: ValuesProps;
+export interface FilterValues {
+  dateRange?: [string, string];
 }
 
-type FormValues = Omit<ValuesProps, "dateRange"> & {
+type FormValues = {
   dateRange?: [Dayjs, Dayjs];
 };
+
+interface FilterProps {
+  onSearch: (values: FilterValues) => void;
+  filterValues: FilterValues;
+}
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const [form] = Form.useForm<FormValues>();
   const [open, setOpen] = useState(false);
-  const userSelect = useInfiniteSelectOptions({
-    queryKey: ["users"],
-    queryFn: ({ pageParam, searchText }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: searchText }),
-    mapOption: (user) => ({
-      value: user.id,
-      label: user.customerFirstName || user.username
-    })
-  });
 
   useEffect(() => {
     form.setFieldsValue({
-      ...filterValues,
       dateRange:
         filterValues.dateRange?.length === 2
           ? [dayjs(filterValues.dateRange[0]), dayjs(filterValues.dateRange[1])]
@@ -52,7 +43,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      userSelect.resetSearch();
       onSearch({});
     });
   };
@@ -80,6 +70,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         okText="Tìm kiếm"
         okButtonProps={{ htmlType: "submit", autoFocus: true }}
         onCancel={() => setOpen(false)}
+        width={420}
         modalRender={(dom) => (
           <Form
             layout="vertical"
@@ -87,7 +78,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             onFinish={(values) => {
               setOpen(false);
               onSearch({
-                ...values,
                 dateRange:
                   values.dateRange && values.dateRange.length === 2
                     ? [values.dateRange[0].toISOString(), values.dateRange[1].toISOString()]
@@ -106,20 +96,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           </>
         )}
       >
-        <Form.Item name="userId" label="Nhân viên">
-          <Select
-            showSearch={{
-              filterOption: false,
-              onSearch: userSelect.onSearch
-            }}
-            loading={userSelect.loading}
-            options={userSelect.options}
-            placeholder="Chọn nhân viên"
-            onPopupScroll={userSelect.onPopupScroll}
-            onClear={userSelect.onClear}
-            allowClear
-          />
-        </Form.Item>
         <Form.Item name="dateRange" label="Khoảng thời gian">
           <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
         </Form.Item>

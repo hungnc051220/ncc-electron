@@ -1,16 +1,18 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanCinemaProps } from "@shared/types";
 import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
-import { Breadcrumb, DatePicker, Dropdown, Table } from "antd";
+import { DatePicker, Dropdown } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { Check, Eye } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import ShowtimeScheduleDetailDialog from "./components/ShowtimeScheduleDetailDialog";
-import { Link } from "react-router";
 
 const actionItems = [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }];
 
@@ -130,20 +132,8 @@ const ShowtimeSchedulePage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <Breadcrumb
-        items={[
-          {
-            title: <Link to="/">Trang chủ</Link>
-          },
-          {
-            title: "Kế hoạch chiếu phim"
-          },
-          {
-            title: "Xem lịch chiếu phim"
-          }
-        ]}
-      />
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader left={<AppBreadcrumb />} />
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 z-20">
@@ -157,13 +147,12 @@ const ShowtimeSchedulePage = () => {
         </div>
       </div>
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.id}
         dataSource={data?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 300px)" }}
         loading={isFetching}
         pagination={{
           current,

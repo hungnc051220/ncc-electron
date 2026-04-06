@@ -1,3 +1,4 @@
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { formatNumber } from "@renderer/lib/utils";
 import { VoucherUsageProps } from "@shared/types";
 import type { TableProps } from "antd";
@@ -12,12 +13,11 @@ interface TabRevenueProps {
 
 const TabRevenue = ({ tableData, columns, isFetching, total }: TabRevenueProps) => {
   return (
-    <Table
+    <AutoHeightTable
       dataSource={tableData}
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 375px)" }}
       loading={isFetching}
       pagination={false}
       summary={() =>

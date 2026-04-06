@@ -1,8 +1,10 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Dropdown, Table } from "antd";
+import { Dropdown } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { Link } from "react-router";
 import { OrderDetailProps } from "@shared/types";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
@@ -200,31 +202,18 @@ const FindOnlineTicketsPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Bán vé"
-            },
-            {
-              title: "Tìm vé online"
-            }
-          ]}
-        />
-        <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />}
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.order.id}
         dataSource={orders?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

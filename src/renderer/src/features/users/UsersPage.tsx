@@ -7,12 +7,14 @@ import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useUsers } from "@renderer/hooks/users/useUsers";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { UserProps } from "@shared/types";
 import type { MenuProps, PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { Button, Dropdown } from "antd";
 import { Check, Eye, EyeOff, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router";
 
 export interface ValuesProps {
   roleId?: number;
@@ -225,44 +227,32 @@ const UsersPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Hệ thống"
-            },
-            {
-              title: "Quản lý người dùng"
-            }
-          ]}
-        />
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          <>
+            <Filter
+              onSearch={onSearch}
+              filterValues={filterValues}
+              setCurrent={setCurrent}
+              customerRoles={customerRoles || []}
+            />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm người dùng
+              </Button>
+            )}
+          </>
+        }
+      />
 
-        <div className="flex gap-2 items-center">
-          <Filter
-            onSearch={onSearch}
-            filterValues={filterValues}
-            setCurrent={setCurrent}
-            customerRoles={customerRoles || []}
-          />
-          {canCreate && (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm người dùng
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.id}
         dataSource={users?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

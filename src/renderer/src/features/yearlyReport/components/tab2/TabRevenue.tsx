@@ -1,4 +1,4 @@
-import { Table } from "antd";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { TreeRow } from ".";
 import type { TableProps } from "antd";
 
@@ -10,12 +10,11 @@ interface TabRevenueProps {
 
 const TabRevenue = ({ tableData, columns, isFetching }: TabRevenueProps) => {
   return (
-    <Table
+    <AutoHeightTable
       dataSource={tableData}
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 375px)" }}
       loading={isFetching}
       pagination={false}
       rowClassName={(row) => (row.isSummary ? "bg-gray-100 dark:bg-app-bg font-bold" : "")}

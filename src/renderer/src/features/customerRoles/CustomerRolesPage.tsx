@@ -1,13 +1,15 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { CustomerRoleProps } from "@shared/types";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { Button, Dropdown } from "antd";
 import type { PaginationProps, TableProps } from "antd";
 import { Check, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router";
 import CustomerRoleDialog from "./components/CustomerRoleDialog";
 import DeleteCustomerRoleDialog from "./components/DeleteCustomerRoleDialog";
 
@@ -189,36 +191,24 @@ const CustomerRolesPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Hệ thống"
-            },
-            {
-              title: "Quản lý nhóm người dùng"
-            }
-          ]}
-        />
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          canCreate ? (
+            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+              Thêm nhóm người dùng
+            </Button>
+          ) : undefined
+        }
+      />
 
-        {canCreate && (
-          <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-            Thêm nhóm người dùng
-          </Button>
-        )}
-      </div>
-
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.id}
         dataSource={paginatedCustomerRoles}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

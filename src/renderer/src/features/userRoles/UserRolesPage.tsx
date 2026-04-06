@@ -1,3 +1,5 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import PageHeader from "@renderer/components/PageHeader";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useRolePermissions } from "@renderer/hooks/permissions/useRolePermissions";
@@ -12,9 +14,8 @@ import {
 } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MenuProps, TableProps } from "antd";
-import { Breadcrumb, Button, Checkbox, Layout, Menu, message, Table } from "antd";
+import { Button, Checkbox, Layout, Menu, message, Table } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
 
 const { Content } = Layout;
 type MenuItem = Required<MenuProps>["items"][number];
@@ -293,19 +294,7 @@ const UserRolesPage = () => {
   return (
     <>
       <div className="space-y-4 flex-1 h-full p-4 pb-0 flex flex-col">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Hệ thống"
-            },
-            {
-              title: "Phân quyền nhóm người dùng"
-            }
-          ]}
-        />
+        <PageHeader left={<AppBreadcrumb />} />
 
         <div className="flex-1">
           <Layout hasSider className="flex-1 h-full">

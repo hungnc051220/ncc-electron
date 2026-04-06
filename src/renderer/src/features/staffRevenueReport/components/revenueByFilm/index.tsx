@@ -5,18 +5,18 @@ import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
+import DateRangeRequiredEmptyState from "../DateRangeRequiredEmptyState";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
-import { buildPriceColumns } from "./priceColumns";
 import TabRevenue from "./TabRevenue";
-import TabSummary, { SummaryRow } from "./TabSummary";
+import TabSummary from "./TabSummary";
 
 export interface ValuesProps {
   userId?: number;
   userName?: string;
   manufacturerId?: number;
   filmId?: number;
-  dateRange: [string, string];
+  dateRange?: [string, string];
 }
 export type SummaryGroup = {
   off: Row[];
@@ -41,12 +41,14 @@ export type Row = {
   filmRowSpan?: number;
   dateRowSpan?: number;
   onlineRowSpan?: number;
+  discountOffline: number;
+  discountOnline: number;
+  discountPartner: number;
+  discountTotal: number;
 };
 
 const RevenueByFilm = ({ dateType }: { dateType: number }) => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({
-    dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
-  });
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -62,18 +64,20 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     return filtered;
   }, [filterValues, dateType]);
 
-  const { data, isFetching } = useReportRevenueByFilm(params);
+  const hasDateRange = filterValues.dateRange?.length === 2;
+  const { data, isFetching } = useReportRevenueByFilm(params, hasDateRange);
+  const reportData = hasDateRange ? data : undefined;
 
   const allPrices = Array.from(
     new Set(
-      data?.revenuesByFilm.flatMap((f) =>
+      reportData?.revenuesByFilm.flatMap((f) =>
         f.planScreens.flatMap((p) => p.prices.map((x) => x.price))
       ) as number[]
     )
   ).sort((a, b) => b - a);
 
   const tableData: Row[] = [];
-  data?.revenuesByFilm.forEach((film) => {
+  reportData?.revenuesByFilm.forEach((film) => {
     const sortedScreens = [...film.planScreens].sort((a, b) => {
       if (a.projectDate !== b.projectDate) {
         return a.projectDate.localeCompare(b.projectDate);
@@ -111,18 +115,20 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
             roomName: p.roomName,
             isOnline,
             pricesMap,
-
             filmRowSpan: isFirstFilmRow ? totalFilmRows : 0,
             dateRowSpan: isFirstDateRow ? totalDateRows : 0,
             onlineRowSpan: idx === 0 ? screens.length : 0,
-
             totalInvitationQuantity: p.totalInvitationQuantity,
             totalContractQuantity: p.totalContractQuantity,
             totalQuantity: p.totalQuantity,
             totalSale: p.totalSale,
             saleVnPayQr: p.saleVnPayQr,
             saleVietQr: p.saleVietQr,
-            actualSale: p.actualSale
+            actualSale: p.actualSale || 0,
+            discountOffline: p.discountOffline,
+            discountOnline: p.discountOnline,
+            discountPartner: p.discountPartner,
+            discountTotal: p.discountTotal
           });
 
           isFirstFilmRow = false;
@@ -190,6 +196,43 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
       fixed: "left"
     },
     {
+      title: "Khuyến mại",
+      children: [
+        {
+          title: "Offline",
+          key: "discountOffline",
+          dataIndex: "discountOffline",
+          width: 110,
+          align: "right",
+          render: (value: number) => formatMoney(value)
+        },
+        {
+          title: "Online",
+          key: "discountOnline",
+          dataIndex: "discountOnline",
+          width: 110,
+          align: "right",
+          render: (value: number) => formatMoney(value)
+        },
+        {
+          title: "Đại lý",
+          key: "discountPartner",
+          dataIndex: "discountPartner",
+          width: 110,
+          align: "right",
+          render: (value: number) => formatMoney(value)
+        }
+      ]
+    },
+    {
+      title: "Tổng sau KM",
+      key: "discountTotal",
+      dataIndex: "discountTotal",
+      width: 110,
+      align: "right",
+      render: (value: number) => formatMoney(value)
+    },
+    {
       title: "Tổng vé",
       key: "totalQuantity",
       dataIndex: "totalQuantity",
@@ -248,44 +291,59 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     {
       key: "1",
       label: "Chi tiết",
-      children: <TabRevenue tableData={tableData} columns={columns} isFetching={isFetching} />
+      forceRender: true,
+      children: hasDateRange ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabRevenue tableData={tableData} columns={columns} isFetching={isFetching} />
+        </div>
+      ) : (
+        <DateRangeRequiredEmptyState />
+      )
     },
     {
       key: "2",
       label: "Tổng hợp",
-      children: (
-        <TabSummary
-          summaryByDate={summaryByDate}
-          isFetching={isFetching}
-          priceColumns={buildPriceColumns<SummaryRow>(allPrices as number[])}
-        />
+      forceRender: true,
+      children: hasDateRange ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabSummary
+            summaryByDate={summaryByDate}
+            isFetching={isFetching}
+            totalRevenue={reportData?.totalRevenue}
+            totalRevenueOnline={reportData?.totalRevenueOnline}
+            totalRevenueOffline={reportData?.totalRevenueOffline}
+          />
+        </div>
+      ) : (
+        <DateRangeRequiredEmptyState />
       )
     }
   ];
 
   const onSearch = (values: ValuesProps) => {
-    setFilterValues(values);
+    setFilterValues(filterEmptyValues(values as Record<string, unknown>) as ValuesProps);
   };
 
   return (
-    <div className="pb-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Tabs
         items={items}
         defaultActiveKey="1"
-        type="card"
-        size="small"
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="flex justify-end mb-2 gap-3">
+          <div className="flex justify-end gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
-            <ExportRevenueExcelButton
-              tableData={tableData}
-              allPrices={allPrices as number[]}
-              summaryByDate={summaryByDate}
-              fromDate={filterValues.dateRange[0]!}
-              toDate={filterValues.dateRange[1]!}
-              dateType={dateType}
-              employeeName={filterValues?.userName}
-            />
+            {filterValues.dateRange?.length === 2 && (
+              <ExportRevenueExcelButton
+                tableData={tableData}
+                allPrices={allPrices as number[]}
+                summaryByDate={summaryByDate}
+                fromDate={filterValues.dateRange[0]}
+                toDate={filterValues.dateRange[1]}
+                dateType={dateType}
+                employeeName={filterValues?.userName}
+              />
+            )}
           </div>
         }
       />

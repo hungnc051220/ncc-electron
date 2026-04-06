@@ -1,71 +1,56 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import PageHeader from "@renderer/components/PageHeader";
 import type { TabsProps } from "antd";
-import { Breadcrumb, DatePicker, Tabs } from "antd";
-import type { TimeRangePickerProps } from "antd";
+import { Tabs } from "antd";
 import TabRevenueByFilm from "./components/TabRevenueByFilm";
 import TabRevenueByStaff from "./components/TabRevenueByStaff";
-import { Link } from "react-router";
 import dayjs from "dayjs";
 import { useState } from "react";
-
-const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
+import type { Dayjs } from "dayjs";
+import Filter, { type FilterValues } from "./components/Filter";
 
 const TicketSalesRevenuePage = () => {
-  const [fromDate, setFromDate] = useState(dayjs());
-  const [toDate, setToDate] = useState(dayjs());
+  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  const dateRange: [Dayjs, Dayjs] | undefined =
+    filterValues.dateRange?.length === 2
+      ? [dayjs(filterValues.dateRange[0]), dayjs(filterValues.dateRange[1])]
+      : undefined;
 
   const items: TabsProps["items"] = [
     {
       key: "1",
       label: "Doanh thu theo nhân viên",
-      children: <TabRevenueByStaff fromDate={fromDate} toDate={toDate} />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabRevenueByStaff fromDate={dateRange?.[0]} toDate={dateRange?.[1]} />
+        </div>
+      )
     },
     {
       key: "2",
       label: "Doanh thu theo phim",
-      children: <TabRevenueByFilm fromDate={fromDate} toDate={toDate} />
+      forceRender: true,
+      children: (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabRevenueByFilm fromDate={dateRange?.[0]} toDate={dateRange?.[1]} />
+        </div>
+      )
     }
   ];
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <Breadcrumb
-        items={[
-          {
-            title: <Link to="/">Trang chủ</Link>
-          },
-          {
-            title: "Bán vé"
-          },
-          {
-            title: "Thống kê doanh thu bán vé"
-          }
-        ]}
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4 pb-3">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<Filter filterValues={filterValues} onSearch={setFilterValues} />}
       />
 
       <Tabs
         defaultActiveKey="1"
+        type="card"
         items={items}
-        tabBarExtraContent={
-          <RangePicker
-            value={[fromDate, toDate]}
-            format="DD/MM/YYYY"
-            onChange={(dates) => {
-              if (dates?.[0] && dates?.[1]) {
-                setFromDate(dates[0]);
-                setToDate(dates[1]);
-              }
-            }}
-            presets={rangePresets}
-            allowClear={false}
-          />
-        }
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
       />
     </div>
   );

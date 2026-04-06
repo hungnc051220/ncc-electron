@@ -1,4 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { getPrintErrorMessage } from "@renderer/lib/print";
@@ -11,7 +14,7 @@ import {
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
-import { Breadcrumb, Dropdown, message, Table, Tabs } from "antd";
+import { Dropdown, message, Tabs } from "antd";
 import dayjs from "dayjs";
 import { Eye, Printer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -319,34 +322,26 @@ const OrderHistoryPage = () => {
   };
 
   return (
-    <div className="mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: "Trang chủ",
-              href: "/"
-            },
-            {
-              title: "Tra cứu"
-            },
-            {
-              title: "Lịch sử bán vé"
-            }
-          ]}
-        />
-        <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />}
+      />
 
-      <Tabs defaultActiveKey="1" items={items} activeKey={activeKey} onChange={setActiveKey} />
+      <Tabs
+        defaultActiveKey="1"
+        items={items}
+        activeKey={activeKey}
+        onChange={setActiveKey}
+        type="card"
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.order.id}
         dataSource={orders?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 320px)" }}
         loading={isFetching}
         pagination={{
           current,

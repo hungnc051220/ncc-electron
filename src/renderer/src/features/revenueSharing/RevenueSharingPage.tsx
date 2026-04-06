@@ -1,14 +1,16 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useReportRevenueSharing } from "@renderer/hooks/reports/useReportRevenueSharing";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ReportRevenueSharingProps } from "@shared/types";
 import type { TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table, message } from "antd";
+import { Button, Dropdown, Table, message } from "antd";
 import { DownloadIcon, FileSpreadsheet, PlusIcon, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router";
 import { exportRevenueSharingExcel } from "./components/ExportExcel";
 import { exportRevenueSharingListExcel } from "./components/ExportListExcel";
 import Filter from "./components/Filter";
@@ -291,50 +293,38 @@ const RevenueSharingPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Quản lý danh sách"
-            },
-            {
-              title: "Quản lý phân chia doanh thu"
-            }
-          ]}
-        />
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          <>
+            <Filter filterValues={filterValues} onSearch={onSearch} />
+            {canExport && (
+              <Button
+                variant="solid"
+                color="green"
+                disabled={!hasRevenueSharingData}
+                onClick={handleExportList}
+                icon={<Icon component={DownloadIcon} />}
+              >
+                Xuất excel
+              </Button>
+            )}
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm mới
+              </Button>
+            )}
+          </>
+        }
+      />
 
-        <div className="flex gap-2 items-center">
-          <Filter filterValues={filterValues} onSearch={onSearch} />
-          {canExport && (
-            <Button
-              variant="solid"
-              color="green"
-              disabled={!hasRevenueSharingData}
-              onClick={handleExportList}
-              icon={<Icon component={DownloadIcon} />}
-            >
-              Xuất excel
-            </Button>
-          )}
-          {canCreate && (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm mới
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.filmId}
         dataSource={groupedRevenueSharings}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           pageSize: 20,

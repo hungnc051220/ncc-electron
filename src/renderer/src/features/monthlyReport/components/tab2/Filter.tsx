@@ -1,8 +1,7 @@
-import Icon from "@ant-design/icons";
+import { FilterOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Form, Modal } from "antd";
 import dayjs from "dayjs";
-import { FilterIcon } from "lucide-react";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { ValuesProps } from ".";
 
 interface FilterProps {
@@ -14,13 +13,17 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    form.setFieldsValue({
+      fromDate: filterValues.fromDate ? dayjs(filterValues.fromDate) : undefined
+    });
+  }, [filterValues, form]);
+
   const onClear = () => {
     setOpen(false);
     startTransition(() => {
       form.resetFields();
-      onSearch({
-        fromDate: dayjs().startOf("month").format()
-      });
+      onSearch({});
     });
   };
 
@@ -29,11 +32,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   return (
     <>
       <div className="relative">
-        <Button
-          variant="outlined"
-          icon={<Icon component={FilterIcon} />}
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="outlined" icon={<FilterOutlined />} onClick={() => setOpen(true)}>
           Bộ lọc
         </Button>
         {!isEmptyFilter && (
@@ -56,11 +55,12 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           <Form
             layout="vertical"
             form={form}
-            initialValues={{ fromDate: dayjs() }}
             onFinish={(values) => {
               const { fromDate } = values;
               setOpen(false);
-              onSearch({ fromDate: dayjs(fromDate).startOf("month").format() });
+              onSearch({
+                fromDate: fromDate ? dayjs(fromDate).startOf("month").format() : undefined
+              });
             }}
           >
             {dom}
@@ -75,7 +75,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         )}
       >
         <Form.Item name="fromDate" label="Khoảng thời gian">
-          <DatePicker picker="month" className="w-full" format="MM/YYYY" allowClear={false} />
+          <DatePicker picker="month" className="w-full" format="MM/YYYY" allowClear />
         </Form.Item>
       </Modal>
     </>

@@ -1,3 +1,4 @@
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { Table } from "antd";
 import { TableRow } from ".";
 import type { TableProps } from "antd";
@@ -22,12 +23,11 @@ const TabRevenue = ({
   totalOffline
 }: TabRevenueProps) => {
   return (
-    <Table
+    <AutoHeightTable
       dataSource={tableData}
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 490px)" }}
       loading={isFetching}
       pagination={false}
       rowClassName={(row) => (row.isSummary ? "bg-gray-100 dark:bg-app-bg font-bold" : "")}

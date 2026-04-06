@@ -9,13 +9,14 @@ import {
   verticalListSortingStrategy
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { useDeletePlanFilm } from "@renderer/hooks/planFilms/useDeletePlanFilm";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useUpdatePlanFilm } from "@renderer/hooks/planFilms/useUpdatePlanCinema";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanFilmProps } from "@shared/types";
 import type { TableColumnsType, TableProps } from "antd";
-import { Button, message, Table } from "antd";
+import { Button, message } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import AddMovies from "./AddMovies";
 
@@ -169,8 +170,8 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
   if (!data) return null;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between pb-2">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="flex shrink-0 items-center justify-between pb-2">
         <div className="flex items-center gap-3">
           <p className="text-sm">
             Đã chọn <b>{selectedFilmIds.length}</b> phim
@@ -195,13 +196,14 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
         )}
       </div>
 
-      <div className="pt-2 z-0">
+      <div className="z-0 flex min-h-0 min-w-0 flex-1 flex-col pt-2">
         <DndContext sensors={sensors} modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
           <SortableContext
             items={dataSource.map((i) => i.filmId)}
             strategy={verticalListSortingStrategy}
           >
-            <Table
+            <AutoHeightTable
+              containerClassName="min-w-0"
               components={{
                 body: { row: Row }
               }}

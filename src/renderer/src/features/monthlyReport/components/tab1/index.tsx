@@ -3,14 +3,14 @@ import { Film, Manufacturer, MonthlyReportPlanProps } from "@shared/types";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import { useMemo, useState } from "react";
+import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
 
 export interface ValuesProps {
-  fromDate: string;
+  fromDate?: string;
 }
 
 export interface TreeRow {
@@ -22,12 +22,14 @@ export interface TreeRow {
 }
 
 const Tab1 = () => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({
-    fromDate: dayjs().startOf("month").format("YYYY-MM-DD")
-  });
+  const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
-  const { data, isFetching } = useReportMonthly({ ...filterValues, reportType: "PLAN" });
-  const formatData = data as MonthlyReportPlanProps;
+  const hasFromDate = !!filterValues.fromDate;
+  const { data, isFetching } = useReportMonthly(
+    { ...filterValues, reportType: "PLAN" },
+    hasFromDate
+  );
+  const formatData = (hasFromDate ? data : undefined) as MonthlyReportPlanProps | undefined;
 
   const getAllRooms = (data: Manufacturer[]) => {
     const set = new Set<string>();
@@ -119,29 +121,37 @@ const Tab1 = () => {
     {
       key: "1",
       label: "Chi tiết",
-      children: <TabRevenue tableData={dataSource} columns={columns} isFetching={isFetching} />
+      forceRender: true,
+      children: hasFromDate ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <TabRevenue tableData={dataSource} columns={columns} isFetching={isFetching} />
+        </div>
+      ) : (
+        <DateRangeRequiredEmptyState description="Vui lòng chọn tháng để xem báo cáo" />
+      )
     }
   ];
 
   const onSearch = (values: ValuesProps) => {
-    setFilterValues(values);
+    setFilterValues(values.fromDate ? values : {});
   };
 
   return (
-    <div className="pb-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Tabs
         items={items}
         defaultActiveKey="1"
-        type="card"
-        size="small"
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
           <div className="flex justify-end mb-2 gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
-            <ExportRevenueExcelButton
-              treeData={dataSource}
-              rooms={rooms}
-              fromDate={filterValues.fromDate!}
-            />
+            {filterValues.fromDate && (
+              <ExportRevenueExcelButton
+                treeData={dataSource}
+                rooms={rooms}
+                fromDate={filterValues.fromDate}
+              />
+            )}
           </div>
         }
       />

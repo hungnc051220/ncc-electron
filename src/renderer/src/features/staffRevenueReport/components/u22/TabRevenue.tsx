@@ -1,3 +1,4 @@
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { U22UsageProps } from "@shared/types";
 import type { TableProps } from "antd";
@@ -19,12 +20,11 @@ const TabRevenue = ({
   totalAmount
 }: TabRevenueProps) => {
   return (
-    <Table
+    <AutoHeightTable
       dataSource={tableData}
       columns={columns}
       bordered
       size="small"
-      scroll={{ x: "max-content", y: "calc(100vh - 415px)" }}
       loading={isFetching}
       pagination={false}
       summary={() =>

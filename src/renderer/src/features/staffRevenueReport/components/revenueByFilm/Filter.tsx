@@ -41,7 +41,7 @@ const mapFormValuesToFilterValues = (values: FormValues): ValuesProps => ({
   dateRange:
     values.dateRange && values.dateRange.length === 2
       ? [values.dateRange[0].format(), values.dateRange[1].format()]
-      : [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
+      : undefined
 });
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
@@ -185,9 +185,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       userSelect.resetSearch();
       manufacturerSelect.resetSearch();
       filmSelect.resetSearch();
-      onSearch({
-        dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
-      });
+      onSearch({});
     });
   };
 
@@ -221,9 +219,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             onFinish={(values) => {
               setOpen(false);
               onSearch(mapFormValuesToFilterValues(values));
-            }}
-            initialValues={{
-              dateRange: [dayjs(), dayjs()]
             }}
           >
             {dom}

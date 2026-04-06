@@ -1,4 +1,6 @@
 import { useReportTicketSalesRevenue } from "@renderer/hooks/reports/useReportTicketSalesRevenue";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { ReportRevenueFilmProps, RevenueByFilmProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
@@ -9,12 +11,13 @@ import { useEffect, useState } from "react";
 const { Text } = Typography;
 
 interface TabRevenueByFilmProps {
-  fromDate: Dayjs;
-  toDate: Dayjs;
+  fromDate?: Dayjs;
+  toDate?: Dayjs;
 }
 
 const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
   const [current, setCurrent] = useState(1);
+  const hasDateRange = !!fromDate && !!toDate;
 
   const onChange: PaginationProps["onChange"] = (page) => {
     setCurrent(page);
@@ -24,13 +27,16 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
     setCurrent(1);
   }, [fromDate, toDate]);
 
-  const { data, isFetching: isFetchingData } = useReportTicketSalesRevenue({
-    fromDate: fromDate.startOf("day").format(),
-    toDate: toDate.endOf("day").format(),
-    reportType: "FILM"
-  });
+  const { data, isFetching: isFetchingData } = useReportTicketSalesRevenue(
+    {
+      fromDate: fromDate?.startOf("day").format() || "",
+      toDate: toDate?.endOf("day").format() || "",
+      reportType: "FILM"
+    },
+    hasDateRange
+  );
 
-  const formatData = data as ReportRevenueFilmProps;
+  const formatData = (hasDateRange ? data : undefined) as ReportRevenueFilmProps | undefined;
 
   const columns: TableProps<RevenueByFilmProps>["columns"] = [
     {
@@ -99,14 +105,17 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
     }
   ];
 
+  if (!hasDateRange) {
+    return <DateRangeRequiredEmptyState />;
+  }
+
   return (
-    <div>
-      <Table
+    <div className="flex h-full min-h-0 flex-col">
+      <AutoHeightTable
         dataSource={formatData?.revenueByFilm || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 410px)" }}
         loading={isFetchingData}
         pagination={{
           current,

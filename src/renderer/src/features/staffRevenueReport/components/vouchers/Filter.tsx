@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal } from "antd";
 import dayjs from "dayjs";
-import { startTransition, useState } from "react";
+import { type Dayjs } from "dayjs";
+import { startTransition, useEffect, useState } from "react";
 import { ValuesProps } from ".";
 
 const { RangePicker } = DatePicker;
@@ -20,10 +21,23 @@ interface FilterProps {
   filterValues: ValuesProps;
 }
 
+type FormValues = {
+  dateRange?: [Dayjs, Dayjs];
+};
+
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const queryClient = useQueryClient();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<FormValues>();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    form.setFieldsValue({
+      dateRange:
+        filterValues.dateRange?.length === 2
+          ? [dayjs(filterValues.dateRange[0]), dayjs(filterValues.dateRange[1])]
+          : undefined
+    });
+  }, [filterValues, form]);
 
   const onClear = () => {
     setOpen(false);
@@ -32,9 +46,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       queryClient.removeQueries({
         queryKey: ["users", "infinite"]
       });
-      onSearch({
-        dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
-      });
+      onSearch({});
     });
   };
 
@@ -67,10 +79,12 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             form={form}
             onFinish={(values) => {
               setOpen(false);
-              onSearch(values);
-            }}
-            initialValues={{
-              dateRange: [dayjs(), dayjs()]
+              onSearch({
+                dateRange:
+                  values.dateRange && values.dateRange.length === 2
+                    ? [values.dateRange[0].format(), values.dateRange[1].format()]
+                    : undefined
+              });
             }}
           >
             {dom}

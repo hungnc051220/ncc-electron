@@ -1,12 +1,15 @@
 "use client";
 
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Button, Dropdown, Table } from "antd";
+import { Button, Dropdown } from "antd";
 import dayjs from "dayjs";
 import { Check, Eye, Printer, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -253,39 +256,27 @@ const InvitationTicketsPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: "Trang chủ",
-              href: "/"
-            },
-            {
-              title: "Bán vé"
-            },
-            {
-              title: "Quản lý giấy mời"
-            }
-          ]}
-        />
-        <div className="flex items-center gap-2">
-          <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
-          {canCreate && (
-            <Button type="primary" onClick={handleViewShowtimes}>
-              Xem sơ đồ vé
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          <>
+            <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
+            {canCreate && (
+              <Button type="primary" onClick={handleViewShowtimes}>
+                Xem sơ đồ vé
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.order.id}
         dataSource={invitationTickets?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,

@@ -1,3 +1,6 @@
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useMarkPrintedOrder } from "@renderer/hooks/orders/useMarkPrintedOrder";
@@ -12,11 +15,10 @@ import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Breadcrumb, Dropdown, message, Table } from "antd";
+import { Dropdown, message } from "antd";
 import dayjs from "dayjs";
 import { Check, Eye, Printer, RotateCcw, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 import Filter from "./components/Filter";
 
@@ -264,31 +266,18 @@ const PrintOnlineTicketsPage = () => {
   };
 
   return (
-    <div className="space-y-3 mt-4 px-4">
-      <div className="flex items-center justify-between">
-        <Breadcrumb
-          items={[
-            {
-              title: <Link to="/">Trang chủ</Link>
-            },
-            {
-              title: "Bán vé"
-            },
-            {
-              title: "In vé online"
-            }
-          ]}
-        />
-        <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />}
+      />
 
-      <Table
+      <AutoHeightTable
         rowKey={(record) => record.order.id}
         dataSource={data?.data || []}
         columns={columns}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: "calc(100vh - 265px)" }}
         loading={isFetching}
         pagination={{
           current,
