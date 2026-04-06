@@ -8,7 +8,9 @@ import type { InputRef } from "antd";
 import { Button, Radio, Descriptions, Input, message, Modal, Space, Table } from "antd";
 import { InputStatus } from "antd/es/_util/statusUtils";
 import dayjs from "dayjs";
+import { AlertTriangle, Info, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { TableProps } from "antd";
 
 interface VipCardDialogProps {
@@ -25,6 +27,35 @@ interface VipCardDialogProps {
   hasSeatTypeDiscount: boolean;
   filmVersionCode?: string;
 }
+
+type NoticeTone = "warning" | "info" | "neutral";
+
+interface NoticeCardProps {
+  tone: NoticeTone;
+  icon: ReactNode;
+  children: ReactNode;
+}
+
+const noticeToneClassName: Record<NoticeTone, string> = {
+  warning:
+    "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-100 [&_.notice-icon]:bg-amber-100 [&_.notice-icon]:text-amber-600 dark:[&_.notice-icon]:bg-amber-500/16 dark:[&_.notice-icon]:text-amber-300",
+  info: "border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/10 dark:text-sky-100 [&_.notice-icon]:bg-sky-100 [&_.notice-icon]:text-sky-600 dark:[&_.notice-icon]:bg-sky-500/16 dark:[&_.notice-icon]:text-sky-300",
+  neutral:
+    "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-200 [&_.notice-icon]:bg-slate-100 [&_.notice-icon]:text-slate-500 dark:[&_.notice-icon]:bg-white/8 dark:[&_.notice-icon]:text-slate-300"
+};
+
+const NoticeCard = ({ tone, icon, children }: NoticeCardProps) => (
+  <div
+    className={`rounded-xl border px-3 py-2 text-sm shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm ${noticeToneClassName[tone]}`}
+  >
+    <div className="flex items-start gap-2.5">
+      <span className="notice-icon mt-[1px] inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+        {icon}
+      </span>
+      <span className="pt-px leading-6">{children}</span>
+    </div>
+  </div>
+);
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
   const floors = [1, 2, 3] as const;
@@ -472,36 +503,39 @@ const VipCardDialog = ({
         </Radio.Group>
 
         {!hasSeatTypeDiscount && selectedSeats.length > 1 && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
             Ưu đãi U22 chỉ áp dụng khi chọn đúng 1 ghế. Vui lòng bỏ bớt ghế nếu muốn dùng ưu đãi
             này.
-          </div>
+          </NoticeCard>
         )}
 
         {!hasSeatTypeDiscount && isCustomerSearched && isValidatingU22 && isSingleSeatSelected && (
-          <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
+          <NoticeCard
+            tone="info"
+            icon={<LoaderCircle size={14} strokeWidth={2.25} className="animate-spin" />}
+          >
             Đang kiểm tra điều kiện sử dụng ưu đãi U22 trong ngày.
-          </div>
+          </NoticeCard>
         )}
 
         {!hasSeatTypeDiscount && isCustomerSearched && isU22UsedToday && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
             Thành viên U22 này đã sử dụng voucher hôm nay, nên không thể chọn ưu đãi U22 thêm lần
             nữa.
-          </div>
+          </NoticeCard>
         )}
 
         {!isCustomerSearched && (
-          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+          <NoticeCard tone="neutral" icon={<Info size={14} strokeWidth={2.25} />}>
             Nhập số thẻ và tìm kiếm khách hàng để chọn hình thức áp dụng khuyến mãi.
-          </div>
+          </NoticeCard>
         )}
 
         {isCustomerSearched && hasSeatTypeDiscount && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
             Đã áp dụng giảm giá theo loại vé ở ngoài. Chỉ được áp mã khách hàng, không thể dùng thêm
             voucher hoặc ưu đãi U22.
-          </div>
+          </NoticeCard>
         )}
 
         {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "campaign" && (

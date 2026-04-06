@@ -1,4 +1,4 @@
-import { createElement, useEffect, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import { App } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import { UpdateDownloadProgress, UpdateInfo } from "@shared/types";
@@ -33,8 +33,13 @@ export function useAutoUpdater() {
   const latestProgressRef = useRef<UpdateDownloadProgress>(INITIAL_PROGRESS);
   const isMockDownloadPausedRef = useRef<boolean>(false);
   const isDownloadingRef = useRef<boolean>(false);
+  const toggleMockDownloadPauseRef = useRef<() => Promise<void>>(async () => undefined);
+  const openProgressDockRef = useRef<() => void>(() => undefined);
+  const openProgressNotificationRef = useRef<(progressInfo: UpdateDownloadProgress) => void>(
+    () => undefined
+  );
 
-  const ensureVersion = async (): Promise<string> => {
+  const ensureVersion = useCallback(async (): Promise<string> => {
     if (versionRef.current) {
       return versionRef.current;
     }
@@ -45,14 +50,80 @@ export function useAutoUpdater() {
     setVersion(currentVersion);
 
     return currentVersion;
-  };
+  }, []);
 
-  const closeVersionModal = () => {
+  const closeVersionModal = useCallback(() => {
     modalRef.current?.destroy();
     modalRef.current = null;
-  };
+  }, []);
 
-  const toggleMockDownloadPause = async () => {
+  const closeProgressDock = useCallback(() => {
+    notification.destroy(UPDATE_PROGRESS_DOCK_KEY);
+  }, [notification]);
+
+  const openProgressDock = useCallback(() => {
+    notification.open({
+      key: UPDATE_PROGRESS_DOCK_KEY,
+      placement: "bottomRight",
+      duration: 0,
+      className: "update-progress-dock-notice",
+      message: null,
+      description: createElement(UpdateProgressDock, {
+        percent: latestProgressRef.current.percent,
+        latestVersion: latestUpdateRef.current?.version,
+        isPaused: isMockDownloadPausedRef.current,
+        onTogglePause: () => {
+          void toggleMockDownloadPauseRef.current();
+        },
+        showMockControls: ENABLE_MOCK_UPDATE_CONTROLS,
+        onExpand: () => {
+          hiddenProgressRef.current = false;
+          closeProgressDock();
+          openProgressNotificationRef.current(latestProgressRef.current);
+        }
+      }),
+      closeIcon: false
+    });
+  }, [closeProgressDock, notification]);
+
+  const openProgressNotification = useCallback(
+    (progressInfo: UpdateDownloadProgress) => {
+      latestProgressRef.current = progressInfo;
+
+      if (hiddenProgressRef.current) {
+        openProgressDockRef.current();
+        return;
+      }
+
+      closeProgressDock();
+
+      notification.open({
+        key: UPDATE_PROGRESS_NOTIFICATION_KEY,
+        placement: "bottomRight",
+        duration: 0,
+        className: "update-progress-notice",
+        message: null,
+        description: createElement(UpdateProgressNotification, {
+          progress: progressInfo,
+          latestVersion: latestUpdateRef.current?.version,
+          isPaused: isMockDownloadPausedRef.current,
+          onTogglePause: () => {
+            void toggleMockDownloadPauseRef.current();
+          },
+          showMockControls: ENABLE_MOCK_UPDATE_CONTROLS,
+          onHide: () => {
+            hiddenProgressRef.current = true;
+            notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
+            openProgressDockRef.current();
+          }
+        }),
+        closeIcon: false
+      });
+    },
+    [closeProgressDock, notification]
+  );
+
+  const toggleMockDownloadPause = useCallback(async () => {
     if (!ENABLE_MOCK_UPDATE_CONTROLS || !isDownloadingRef.current) {
       return;
     }
@@ -66,77 +137,26 @@ export function useAutoUpdater() {
     }
 
     if (hiddenProgressRef.current) {
-      openProgressDock();
+      openProgressDockRef.current();
       return;
     }
 
-    openProgressNotification(latestProgressRef.current);
-  };
+    openProgressNotificationRef.current(latestProgressRef.current);
+  }, []);
 
-  const closeProgressDock = () => {
-    notification.destroy(UPDATE_PROGRESS_DOCK_KEY);
-  };
+  useEffect(() => {
+    openProgressDockRef.current = openProgressDock;
+  }, [openProgressDock]);
 
-  const openProgressDock = () => {
-    notification.open({
-      key: UPDATE_PROGRESS_DOCK_KEY,
-      placement: "bottomRight",
-      duration: 0,
-      className: "update-progress-dock-notice",
-      message: null,
-      description: createElement(UpdateProgressDock, {
-        percent: latestProgressRef.current.percent,
-        latestVersion: latestUpdateRef.current?.version,
-        isPaused: isMockDownloadPausedRef.current,
-        onTogglePause: () => {
-          void toggleMockDownloadPause();
-        },
-        showMockControls: ENABLE_MOCK_UPDATE_CONTROLS,
-        onExpand: () => {
-          hiddenProgressRef.current = false;
-          closeProgressDock();
-          openProgressNotification(latestProgressRef.current);
-        }
-      }),
-      closeIcon: false
-    });
-  };
+  useEffect(() => {
+    openProgressNotificationRef.current = openProgressNotification;
+  }, [openProgressNotification]);
 
-  const openProgressNotification = (progressInfo: UpdateDownloadProgress) => {
-    latestProgressRef.current = progressInfo;
+  useEffect(() => {
+    toggleMockDownloadPauseRef.current = toggleMockDownloadPause;
+  }, [toggleMockDownloadPause]);
 
-    if (hiddenProgressRef.current) {
-      openProgressDock();
-      return;
-    }
-
-    closeProgressDock();
-
-    notification.open({
-      key: UPDATE_PROGRESS_NOTIFICATION_KEY,
-      placement: "bottomRight",
-      duration: 0,
-      className: "update-progress-notice",
-      message: null,
-      description: createElement(UpdateProgressNotification, {
-        progress: progressInfo,
-        latestVersion: latestUpdateRef.current?.version,
-        isPaused: isMockDownloadPausedRef.current,
-        onTogglePause: () => {
-          void toggleMockDownloadPause();
-        },
-        showMockControls: ENABLE_MOCK_UPDATE_CONTROLS,
-        onHide: () => {
-          hiddenProgressRef.current = true;
-          notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
-          openProgressDock();
-        }
-      }),
-      closeIcon: false
-    });
-  };
-
-  const beginDownload = async () => {
+  const beginDownload = useCallback(async () => {
     hiddenProgressRef.current = false;
     closeVersionModal();
     setIsDownloading(true);
@@ -145,33 +165,36 @@ export function useAutoUpdater() {
     closeProgressDock();
     openProgressNotification(INITIAL_PROGRESS);
     await window.api?.startDownload();
-  };
+  }, [closeProgressDock, closeVersionModal, openProgressNotification]);
 
-  const openVersionInfoModal = async (nextUpdate: UpdateInfo | null) => {
-    const currentVersion = await ensureVersion();
+  const openVersionInfoModal = useCallback(
+    async (nextUpdate: UpdateInfo | null) => {
+      const currentVersion = await ensureVersion();
 
-    modalRef.current?.destroy();
+      modalRef.current?.destroy();
 
-    modalRef.current = modal.info({
-      title: null,
-      icon: null,
-      footer: null,
-      width: 560,
-      className: "version-info-modal",
-      styles: {
-        body: {
-          padding: 0
-        }
-      },
-      content: createElement(VersionInfoModalContent, {
-        currentVersion: currentVersion,
-        latestVersion: nextUpdate?.version,
-        isDownloading,
-        onClose: closeVersionModal,
-        onUpdateNow: beginDownload
-      })
-    });
-  };
+      modalRef.current = modal.info({
+        title: null,
+        icon: null,
+        footer: null,
+        width: 560,
+        className: "version-info-modal",
+        styles: {
+          body: {
+            padding: 0
+          }
+        },
+        content: createElement(VersionInfoModalContent, {
+          currentVersion: currentVersion,
+          latestVersion: nextUpdate?.version,
+          isDownloading,
+          onClose: closeVersionModal,
+          onUpdateNow: beginDownload
+        })
+      });
+    },
+    [beginDownload, closeVersionModal, ensureVersion, isDownloading, modal]
+  );
 
   useEffect(() => {
     void ensureVersion();
@@ -231,7 +254,15 @@ export function useAutoUpdater() {
       unsubReady?.();
       unsubError?.();
     };
-  }, []);
+  }, [
+    closeProgressDock,
+    ensureVersion,
+    message,
+    modal,
+    notification,
+    openProgressNotification,
+    openVersionInfoModal
+  ]);
 
   const manualCheck = async (): Promise<void> => {
     const info = await window.api?.checkUpdate();

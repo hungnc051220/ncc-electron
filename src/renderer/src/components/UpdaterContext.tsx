@@ -10,7 +10,6 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
   return <UpdaterContext.Provider value={updater}>{children}</UpdaterContext.Provider>;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useUpdater(): UpdaterContextType {
   const ctx = useContext(UpdaterContext);
 

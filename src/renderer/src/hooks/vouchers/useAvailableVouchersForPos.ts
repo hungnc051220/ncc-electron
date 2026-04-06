@@ -6,5 +6,7 @@ export const useAvailableVouchersForPos = (dto: AvailableForPosDto, enabled = tr
   useQuery({
     queryKey: voucherKeys.availableForPos(dto),
     queryFn: () => vouchersApi.getAvailableForPos(dto),
-    enabled
+    enabled,
+    gcTime: 0,
+    refetchOnMount: "always"
   });
