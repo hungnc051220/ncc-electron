@@ -22,7 +22,6 @@ export function useAutoUpdater() {
   const [progress, setProgress] = useState<number>(0);
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
-  const [isMockDownloadPaused, setIsMockDownloadPaused] = useState<boolean>(false);
 
   const modalRef = useRef<{
     destroy: () => void;
@@ -61,11 +60,9 @@ export function useAutoUpdater() {
     if (isMockDownloadPausedRef.current) {
       await window.api?.resumeMockUpdateDownload();
       isMockDownloadPausedRef.current = false;
-      setIsMockDownloadPaused(false);
     } else {
       await window.api?.pauseMockUpdateDownload();
       isMockDownloadPausedRef.current = true;
-      setIsMockDownloadPaused(true);
     }
 
     if (hiddenProgressRef.current) {
@@ -145,7 +142,6 @@ export function useAutoUpdater() {
     setIsDownloading(true);
     isDownloadingRef.current = true;
     isMockDownloadPausedRef.current = false;
-    setIsMockDownloadPaused(false);
     closeProgressDock();
     openProgressNotification(INITIAL_PROGRESS);
     await window.api?.startDownload();
@@ -191,7 +187,6 @@ export function useAutoUpdater() {
       setIsDownloading(true);
       isDownloadingRef.current = true;
       isMockDownloadPausedRef.current = false;
-      setIsMockDownloadPaused(false);
       openProgressNotification(progressInfo);
     };
 
@@ -199,7 +194,6 @@ export function useAutoUpdater() {
       setIsDownloading(false);
       isDownloadingRef.current = false;
       isMockDownloadPausedRef.current = false;
-      setIsMockDownloadPaused(false);
       setProgress(100);
       hiddenProgressRef.current = false;
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
@@ -220,7 +214,6 @@ export function useAutoUpdater() {
       setIsDownloading(false);
       isDownloadingRef.current = false;
       isMockDownloadPausedRef.current = false;
-      setIsMockDownloadPaused(false);
       hiddenProgressRef.current = false;
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
       closeProgressDock();
