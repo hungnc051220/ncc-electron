@@ -377,6 +377,79 @@ body,
     box-shadow: none !important;
   }
 
+  @keyframes versionAuthorShine {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .version-author-gradient {
+    background-image: linear-gradient(
+      120deg,
+      #f59e0b 0%,
+      #fb7185 28%,
+      #6366f1 56%,
+      #38bdf8 82%,
+      #f59e0b 100%
+    );
+    background-size: 220% 220%;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: versionAuthorShine 6s ease-in-out infinite;
+  }
+
+  .update-progress-notice,
+  .update-progress-dock-notice,
+  .update-progress-notice.ant-notification-notice,
+  .update-progress-dock-notice.ant-notification-notice {
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    width: fit-content !important;
+    max-width: none !important;
+  }
+
+  .update-progress-notice .ant-notification-notice-content,
+  .update-progress-dock-notice .ant-notification-notice-content,
+  .update-progress-notice .ant-notification-notice-description,
+  .update-progress-dock-notice .ant-notification-notice-description {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .update-progress-notice .ant-notification-notice-title,
+  .update-progress-dock-notice .ant-notification-notice-title {
+    margin-bottom: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    line-height: 0 !important;
+  }
+
+  .update-progress-notice .ant-notification-notice-message,
+  .update-progress-dock-notice .ant-notification-notice-message,
+  .update-progress-notice .ant-notification-notice-close,
+  .update-progress-dock-notice .ant-notification-notice-close {
+    display: none !important;
+  }
+
+  .ant-notification-notice-wrapper:has(.update-progress-notice),
+  .ant-notification-notice-wrapper:has(.update-progress-dock-notice) {
+    margin-bottom: 0 !important;
+    width: fit-content !important;
+    max-width: none !important;
+    border-radius: 20px !important;
+  }
+
   .film-dialog-modal .ant-modal-content {
     padding: 14px 16px 12px !important;
   }

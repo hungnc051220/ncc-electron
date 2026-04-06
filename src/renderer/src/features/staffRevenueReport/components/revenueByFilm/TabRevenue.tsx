@@ -17,6 +17,7 @@ const TabRevenue = ({ tableData, columns, isFetching }: TabRevenueProps) => {
       size="small"
       loading={isFetching}
       pagination={false}
+      rowClassName={(row) => (row.isSummary ? "bg-gray-100 dark:bg-app-bg font-bold" : "")}
     />
   );
 };

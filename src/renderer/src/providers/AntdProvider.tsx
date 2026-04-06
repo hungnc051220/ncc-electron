@@ -1,5 +1,5 @@
 import { StyleProvider } from "@ant-design/cssinjs";
-import { ConfigProvider, theme as antdTheme } from "antd";
+import { App, ConfigProvider, theme as antdTheme } from "antd";
 import viVN from "antd/locale/vi_VN";
 import "dayjs/locale/vi";
 import dayjs from "dayjs";
@@ -39,7 +39,7 @@ const AntdProvider = ({ children }: { children: React.ReactNode }) => {
         }}
       >
         <ThemeSync />
-        {children}
+        <App>{children}</App>
       </ConfigProvider>
     </StyleProvider>
   );

@@ -59,6 +59,10 @@ const api: PreloadAPI = {
   getVersion: (): Promise<string> => ipcRenderer.invoke("app:get-version"),
   checkUpdate: () => ipcRenderer.invoke("app:check-update"),
   startDownload: (): Promise<void> => ipcRenderer.invoke("app:start-download"),
+  pauseMockUpdateDownload: (): Promise<void> =>
+    ipcRenderer.invoke("app:pause-mock-update-download"),
+  resumeMockUpdateDownload: (): Promise<void> =>
+    ipcRenderer.invoke("app:resume-mock-update-download"),
   install: (): Promise<void> => ipcRenderer.invoke("app:install-update"),
   onAvailable: (cb) => {
     const handler = (_: unknown, info: UpdateInfo) => cb(info);

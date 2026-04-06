@@ -58,6 +58,8 @@ export interface PreloadAPI {
   getVersion(): Promise<string>;
   checkUpdate(): Promise<UpdateInfo | null>;
   startDownload(): Promise<void>;
+  pauseMockUpdateDownload(): Promise<void>;
+  resumeMockUpdateDownload(): Promise<void>;
   install(): Promise<void>;
   onAvailable(cb: (info: UpdateInfo) => void): () => void;
   onProgress(cb: (progress: UpdateDownloadProgress) => void): () => void;

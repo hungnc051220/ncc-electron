@@ -16,7 +16,7 @@ const StaffRevenueReportPage = () => {
       forceRender: true,
       children: (
         <div className="flex h-full min-h-0 flex-col">
-          <RevenueByFilm dateType={1} />
+          <RevenueByFilm dateType={2} />
         </div>
       )
     },
@@ -26,7 +26,7 @@ const StaffRevenueReportPage = () => {
       forceRender: true,
       children: (
         <div className="flex h-full min-h-0 flex-col">
-          <RevenueByFilm dateType={2} />
+          <RevenueByFilm dateType={1} />
         </div>
       )
     },

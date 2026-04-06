@@ -39,6 +39,7 @@ export interface UpdaterContextType {
   progress: number;
   manualCheck: () => Promise<void>;
   showVersionInfo: () => Promise<void>;
+  toggleMockDownloadPause?: () => Promise<void>;
 }
 
 export interface CurrentSeatState {

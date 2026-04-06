@@ -1,5 +1,10 @@
-import { Button } from "antd";
-import { CheckCircleFilled, CloudDownloadOutlined } from "@ant-design/icons";
+import { Button, theme as antdTheme } from "antd";
+import {
+  CheckCircleFilled,
+  CloudSyncOutlined,
+  CloudDownloadOutlined,
+  MailOutlined
+} from "@ant-design/icons";
 import logoText from "@renderer/assets/images/logo-text.png";
 import { useThemeStore } from "@renderer/store/theme.store";
 
@@ -21,125 +26,231 @@ const VersionInfoModalContent = ({
   onUpdateNow
 }: VersionInfoModalContentProps) => {
   const { theme } = useThemeStore();
+  const { token } = antdTheme.useToken();
   const hasUpdate = Boolean(latestVersion && latestVersion !== currentVersion);
   const isDark = theme === "dark";
-  const shellClassName = isDark
-    ? "bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(30,41,59,0.94))] text-slate-50"
-    : "bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] text-slate-900";
-  const surfaceClassName = isDark ? "bg-[rgba(15,23,42,0.42)]" : "bg-[rgba(255,255,255,0.72)]";
-  const titleClassName = isDark ? "text-white" : "text-slate-900";
-  const subtitleClassName = isDark ? "text-slate-100" : "text-slate-700";
-  const textMutedClassName = isDark ? "text-slate-300" : "text-slate-600";
-  const labelClassName = isDark ? "text-slate-300" : "text-slate-600";
-  const dividerClassName = isDark ? "border-white/10" : "border-slate-200/90";
-  const infoCardClassName = isDark
-    ? "border-white/10 bg-white/6"
-    : "border-slate-200/90 bg-white/82";
-  const infoCurrentVersionClassName = isDark ? "text-white" : "text-slate-900";
-  const headerBackground = isDark
-    ? "radial-gradient(circle at top left, rgba(239,68,68,0.18), transparent 30%), radial-gradient(circle at top right, rgba(59,130,246,0.24), transparent 28%), linear-gradient(135deg, rgba(67,56,202,0.88), rgba(59,130,246,0.82) 58%, rgba(37,99,235,0.9))"
-    : "radial-gradient(circle at top left, rgba(239,68,68,0.18), transparent 34%), radial-gradient(circle at top right, rgba(59,130,246,0.2), transparent 28%), linear-gradient(135deg, rgba(99,102,241,0.72), rgba(96,165,250,0.62) 56%, rgba(59,130,246,0.74))";
-  const headerWaves = isDark
-    ? "repeating-radial-gradient(circle at top right, rgba(255,255,255,0.16) 0, rgba(255,255,255,0.16) 1px, transparent 1px, transparent 12px)"
-    : "repeating-radial-gradient(circle at top right, rgba(255,255,255,0.28) 0, rgba(255,255,255,0.28) 1px, transparent 1px, transparent 12px)";
-  const glowClassName = isDark ? "bg-red-400/10" : "bg-red-300/20";
-  const accentGlowClassName = isDark ? "bg-sky-400/10" : "bg-sky-300/20";
+  const shellStyle = {
+    background: isDark
+      ? "linear-gradient(180deg, rgba(8,15,29,0.98), rgba(13,23,42,0.96))"
+      : "linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.98))",
+    color: token.colorText
+  };
+  const surfaceStyle = {
+    background: isDark ? "rgba(9, 18, 34, 0.54)" : "rgba(255, 255, 255, 0.82)"
+  };
+  const titleStyle = { color: token.colorTextHeading };
+  const subtitleStyle = { color: token.colorTextDescription };
+  const softTextStyle = { color: token.colorTextSecondary };
+  const panelStyle = {
+    borderColor: isDark ? "rgba(255,255,255,0.08)" : token.colorBorderSecondary,
+    background: isDark ? "rgba(255,255,255,0.04)" : token.colorBgElevated,
+    boxShadow: isDark
+      ? "inset 0 1px 0 rgba(255,255,255,0.03)"
+      : "0 18px 40px rgba(15, 23, 42, 0.08)"
+  };
+  const headerStyle = {
+    background: isDark
+      ? `linear-gradient(135deg, ${token.colorPrimaryBg} 0%, rgba(26,39,70,0.94) 42%, rgba(8,18,33,0.98) 100%)`
+      : `linear-gradient(135deg, ${token.colorPrimaryBg} 0%, rgba(230,238,255,0.96) 38%, rgba(186,214,255,0.86) 100%)`
+  };
+  const headerPatternStyle = {
+    backgroundImage: isDark
+      ? "linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(180deg, rgba(255,255,255,0.08) 1px, transparent 1px)"
+      : "linear-gradient(90deg, rgba(255,255,255,0.34) 1px, transparent 1px), linear-gradient(180deg, rgba(255,255,255,0.2) 1px, transparent 1px)",
+    backgroundSize: "22px 22px",
+    maskImage: "linear-gradient(90deg, rgba(0,0,0,0.18), rgba(0,0,0,0.92))",
+    WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0.18), rgba(0,0,0,0.92))"
+  };
+  const headerAccentStyle = {
+    background: isDark
+      ? `radial-gradient(circle, ${token.colorPrimary}55 0%, transparent 72%)`
+      : `radial-gradient(circle, ${token.colorPrimary}33 0%, transparent 72%)`
+  };
+  const badgeStyle = {
+    background: isDark ? `${token.colorPrimary}24` : token.colorPrimaryBg,
+    color: token.colorPrimary,
+    borderColor: isDark ? `${token.colorPrimary}33` : token.colorPrimaryBorder
+  };
+  const statusIconStyle = {
+    background: isDark ? `${token.colorPrimary}22` : token.colorPrimaryBg,
+    color: token.colorPrimary
+  };
+  const updateChipStyle = {
+    background: isDark ? `${token.colorSuccess}1c` : token.colorSuccessBg,
+    color: token.colorSuccess
+  };
 
   return (
     <div className="overflow-hidden rounded-[20px]">
-      <div className={`relative overflow-hidden rounded-[20px] ${shellClassName}`}>
+      <div className="relative overflow-hidden rounded-[20px]" style={shellStyle}>
         <div
-          className={`pointer-events-none absolute -top-14 left-3 h-28 w-28 rounded-full blur-3xl ${glowClassName}`}
-        />
-        <div
-          className={`pointer-events-none absolute top-0 right-0 h-36 w-36 rounded-full blur-3xl ${accentGlowClassName}`}
-        />
-        <div
-          className="relative overflow-hidden px-5 py-4 sm:px-6 sm:py-4"
+          className="pointer-events-none absolute -top-16 left-2 h-32 w-32 rounded-full blur-3xl"
           style={{
-            background: headerBackground
+            background: isDark ? `${token.colorPrimary}22` : `${token.colorPrimary}18`
           }}
-        >
+        />
+        <div
+          className="pointer-events-none absolute top-0 right-0 h-40 w-40 rounded-full blur-3xl"
+          style={{
+            background: isDark ? "rgba(125, 211, 252, 0.10)" : "rgba(96, 165, 250, 0.16)"
+          }}
+        />
+        <div className="relative overflow-hidden px-5 py-5 sm:px-6 sm:py-6" style={headerStyle}>
           <div
-            className="pointer-events-none absolute inset-y-0 right-0 w-2/3 opacity-35"
-            style={{
-              background: headerWaves
-            }}
+            className="pointer-events-none absolute inset-y-0 right-0 w-[72%] opacity-80"
+            style={headerPatternStyle}
           />
-          <img src={logoText} alt="logo" className="relative h-10 w-auto object-contain" />
-        </div>
-
-        <div className={`relative px-5 py-5 sm:px-6 ${surfaceClassName}`}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#76a9ff] text-[#2f5ecf]">
-              <CheckCircleFilled className="text-[16px]" />
-            </div>
-            <div className="min-w-0 pt-0.5">
-              <div
-                className={`text-[17px] leading-6 font-semibold sm:text-[18px] ${titleClassName}`}
-              >
-                {hasUpdate ? "Đã tìm thấy phiên bản mới" : "Bạn đang dùng phiên bản mới nhất"}
-              </div>
-              {!hasUpdate && (
-                <div
-                  className={`mt-1 text-[14px] leading-5 font-semibold sm:text-[15px] ${subtitleClassName}`}
+          <div
+            className="pointer-events-none absolute -top-8 right-8 h-32 w-32 rounded-full blur-3xl"
+            style={headerAccentStyle}
+          />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <img src={logoText} alt="logo" className="h-10 w-auto object-contain sm:h-11" />
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]"
+                  style={badgeStyle}
                 >
-                  {currentVersion ? `Phiên bản ${currentVersion}` : "Đang tải thông tin phiên bản"}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {hasUpdate && (
-            <div className={`mt-4 rounded-2xl border px-4 py-4 ${infoCardClassName}`}>
-              <div className={`text-[14px] leading-5 ${textMutedClassName}`}>
-                Phiên bản hiện tại:{" "}
-                <span className={`font-semibold ${infoCurrentVersionClassName}`}>
-                  {currentVersion}
+                  Trung tâm phiên bản
                 </span>
               </div>
-              <div className={`mt-2 text-[14px] leading-5 ${textMutedClassName}`}>
-                Phiên bản mới nhất:{" "}
-                <span className="font-semibold text-[#8fb7ff]">{latestVersion}</span>
-              </div>
-              <Button
-                type="primary"
-                size="large"
-                icon={<CloudDownloadOutlined />}
-                className="mt-4 h-10 rounded-xl px-5 text-[14px] font-medium"
-                loading={isChecking || isDownloading}
-                onClick={onUpdateNow}
+            </div>
+            <div
+              className="hidden min-w-34 rounded-[18px] border px-3 py-3 text-right backdrop-blur-sm sm:block"
+              style={{
+                borderColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.42)",
+                background: isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.38)"
+              }}
+            >
+              <div
+                className="text-[11px] uppercase tracking-[0.14em]"
+                style={{
+                  color: isDark ? "rgba(255,255,255,0.62)" : "rgba(15,23,42,0.52)"
+                }}
               >
-                Cập nhật ngay
-              </Button>
-            </div>
-          )}
-
-          <div className={`mt-5 border-t pt-4 ${dividerClassName}`}>
-            <div className={`mb-2 text-[16px] font-semibold ${titleClassName} sm:text-[17px]`}>
-              Liên hệ
-            </div>
-            <div className="space-y-2 text-base leading-6">
-              <div className="flex flex-wrap gap-x-2">
-                <span className={`font-normal w-17.5 ${labelClassName}`}>Tác giả:</span>
-                <span className="font-semibold text-orange-500">Nguyễn Cảnh Hưng</span>
+                Phiên bản hiện tại
               </div>
-              <div className="flex flex-wrap gap-x-2">
-                <span className={`font-normal w-17.5 ${labelClassName}`}>Email:</span>
-                <a
-                  href="mailto:hungnc.dev@gmail.com"
-                  className="font-normal text-[#3b82f6]! hover:text-[#2563eb]! dark:text-[#76a9ff] dark:hover:text-[#9ec1ff]"
-                >
-                  hungnc.dev@gmail.com
-                </a>
+              <div
+                className="mt-1 text-[18px] leading-none font-semibold"
+                style={{ color: isDark ? token.colorWhite : token.colorTextHeading }}
+              >
+                {currentVersion || "--"}
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="flex justify-end pt-5">
-            <Button type="primary" size="large" onClick={onClose}>
-              Đóng
-            </Button>
+        <div className="relative px-5 py-5 sm:px-6" style={surfaceStyle}>
+          <div className="grid gap-4">
+            <div className="rounded-[18px] border px-4 py-4 sm:px-5" style={panelStyle}>
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                  style={statusIconStyle}
+                >
+                  {hasUpdate ? (
+                    <CloudSyncOutlined className="text-xl" />
+                  ) : (
+                    <CheckCircleFilled className="text-xl" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[18px] leading-6 font-semibold" style={titleStyle}>
+                    {hasUpdate ? "Đã tìm thấy phiên bản mới" : "Bạn đang dùng phiên bản mới nhất"}
+                  </div>
+                  <div className="mt-1 text-[14px] leading-5" style={subtitleStyle}>
+                    {hasUpdate
+                      ? "Bản cập nhật mới đã được phát hiện. Hãy cập nhật ngay để trải nghiệm những tính năng mới và cải thiện hiệu suất!"
+                      : currentVersion
+                        ? "Hiện không có bản cập nhật mới nào."
+                        : "Đang tải thông tin phiên bản."}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              {hasUpdate && (
+                <div className="rounded-[18px] border px-4 py-4 sm:px-5" style={panelStyle}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div
+                        className="text-[12px] font-semibold uppercase tracking-[0.12em]"
+                        style={softTextStyle}
+                      >
+                        Phiên bản mới nhất
+                      </div>
+                      <div
+                        className="mt-1 text-[18px] font-semibold"
+                        style={{ color: token.colorPrimary }}
+                      >
+                        {latestVersion || "--"}
+                      </div>
+                    </div>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+                      style={updateChipStyle}
+                    >
+                      <CloudDownloadOutlined className="text-[11px]" />
+                      Sẵn sàng cập nhật
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-[18px] border px-4 py-4 sm:px-5" style={panelStyle}>
+                <div
+                  className="text-[13px] font-semibold uppercase tracking-[0.14em]"
+                  style={softTextStyle}
+                >
+                  Liên hệ phát triển
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <div className="text-[12px] uppercase tracking-[0.12em]" style={softTextStyle}>
+                      Tác giả
+                    </div>
+                    <div className="mt-1">
+                      <div className="uppercase version-author-gradient leading-6 font-semibold text-base">
+                        Nguyễn Cảnh Hưng
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[12px] uppercase tracking-[0.12em]" style={softTextStyle}>
+                      Email
+                    </div>
+                    <a
+                      href="mailto:hungnc.dev@gmail.com"
+                      className="mt-1 inline-flex items-center gap-2 text-[14px] font-medium transition-opacity hover:opacity-80"
+                      style={{ color: token.colorPrimary }}
+                    >
+                      <MailOutlined className="text-[13px]" />
+                      hungnc.dev@gmail.com
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">
+              <Button size="middle" className="h-9 rounded-xl px-4" onClick={onClose}>
+                Đóng
+              </Button>
+              {hasUpdate && (
+                <Button
+                  type="primary"
+                  size="middle"
+                  icon={<CloudDownloadOutlined />}
+                  className="h-9 rounded-xl px-4 text-[14px] font-medium shadow-sm"
+                  loading={isChecking || isDownloading}
+                  onClick={onUpdateNow}
+                >
+                  Cập nhật ngay
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

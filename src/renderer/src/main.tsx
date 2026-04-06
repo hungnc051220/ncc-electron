@@ -34,8 +34,8 @@ async function bootstrap() {
   }
 
   createRoot(document.getElementById("root")!).render(
-    <UpdaterProvider>
-      <AntdProvider>
+    <AntdProvider>
+      <UpdaterProvider>
         <QueryClientProvider client={queryClient}>
           <NuqsAdapter>
             <PermissionBootstrap>
@@ -43,8 +43,8 @@ async function bootstrap() {
             </PermissionBootstrap>
           </NuqsAdapter>
         </QueryClientProvider>
-      </AntdProvider>
-    </UpdaterProvider>
+      </UpdaterProvider>
+    </AntdProvider>
   );
 }
 

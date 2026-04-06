@@ -30,6 +30,23 @@ type Row = {
   discountTotal: number;
 };
 
+type FilmGroup = {
+  filmName: string;
+  pricesMap: Record<number, number>;
+  totalInvitationQuantity: number;
+  totalContractQuantity: number;
+  totalQuantity: number;
+  totalSale: number;
+  saleVnPayQr: number;
+  saleVietQr: number;
+  actualSale: number;
+  discountOffline: number;
+  discountOnline: number;
+  discountPartner: number;
+  discountTotal: number;
+  rows: Row[];
+};
+
 type SummaryGroup = {
   off: Row[];
   on: Row[];
@@ -49,6 +66,58 @@ type Props = {
 const getReportTitleByDateType = (dateType: number) =>
   dateType === 1 ? "Báo cáo doanh thu phim theo ngày bán" : "Báo cáo doanh thu theo lịch chiếu";
 
+const sumRows = (rows: Row[]) => {
+  const prices: Record<number, number> = {};
+  let totalPlanScreen = 0;
+  let totalQuantity = 0;
+  let totalInvitationQuantity = 0;
+  let totalContractQuantity = 0;
+  let totalSale = 0;
+  let saleVnPayQr = 0;
+  let saleVietQr = 0;
+  let actualSale = 0;
+  let discountOffline = 0;
+  let discountOnline = 0;
+  let discountPartner = 0;
+  let discountTotal = 0;
+
+  rows.forEach((r) => {
+    totalPlanScreen += 1;
+    totalQuantity += r.totalQuantity;
+    totalInvitationQuantity += r.totalInvitationQuantity;
+    totalContractQuantity += r.totalContractQuantity;
+    totalSale += r.totalSale;
+    saleVnPayQr += r.saleVnPayQr;
+    saleVietQr += r.saleVietQr;
+    actualSale += r.actualSale;
+    discountOffline += r.discountOffline;
+    discountOnline += r.discountOnline;
+    discountPartner += r.discountPartner;
+    discountTotal += r.discountTotal;
+
+    Object.entries(r.pricesMap).forEach(([price, quantity]) => {
+      const numericPrice = Number(price);
+      prices[numericPrice] = (prices[numericPrice] ?? 0) + quantity;
+    });
+  });
+
+  return {
+    prices,
+    totalPlanScreen,
+    totalQuantity,
+    totalInvitationQuantity,
+    totalContractQuantity,
+    totalSale,
+    saleVnPayQr,
+    saleVietQr,
+    actualSale,
+    discountOffline,
+    discountOnline,
+    discountPartner,
+    discountTotal
+  };
+};
+
 const ExportRevenueExcelButton = ({
   tableData,
   allPrices,
@@ -67,6 +136,52 @@ const ExportRevenueExcelButton = ({
     return null;
   }
 
+  const buildFilmGroups = (rows: Row[]): FilmGroup[] => {
+    const groups = rows.reduce<Record<string, FilmGroup>>((acc, row) => {
+      if (!acc[row.filmName]) {
+        acc[row.filmName] = {
+          filmName: row.filmName,
+          pricesMap: {},
+          totalInvitationQuantity: 0,
+          totalContractQuantity: 0,
+          totalQuantity: 0,
+          totalSale: 0,
+          saleVnPayQr: 0,
+          saleVietQr: 0,
+          actualSale: 0,
+          discountOffline: 0,
+          discountOnline: 0,
+          discountPartner: 0,
+          discountTotal: 0,
+          rows: []
+        };
+      }
+
+      const target = acc[row.filmName];
+      target.rows.push(row);
+      target.totalInvitationQuantity += row.totalInvitationQuantity;
+      target.totalContractQuantity += row.totalContractQuantity;
+      target.totalQuantity += row.totalQuantity;
+      target.totalSale += row.totalSale;
+      target.saleVnPayQr += row.saleVnPayQr;
+      target.saleVietQr += row.saleVietQr;
+      target.actualSale += row.actualSale;
+      target.discountOffline += row.discountOffline;
+      target.discountOnline += row.discountOnline;
+      target.discountPartner += row.discountPartner;
+      target.discountTotal += row.discountTotal;
+
+      Object.entries(row.pricesMap).forEach(([price, quantity]) => {
+        const numericPrice = Number(price);
+        target.pricesMap[numericPrice] = (target.pricesMap[numericPrice] ?? 0) + quantity;
+      });
+
+      return acc;
+    }, {});
+
+    return Object.values(groups);
+  };
+
   const exportExcel = async () => {
     const messageKey = `export-staff-revenue-by-film-${dateType}`;
 
@@ -83,6 +198,7 @@ const ExportRevenueExcelButton = ({
       const reportTitle = getReportTitleByDateType(dateType);
       const formattedFromDate = dayjs(fromDate).format("DD/MM/YYYY");
       const formattedToDate = dayjs(toDate).format("DD/MM/YYYY");
+      const filmGroups = buildFilmGroups(tableData);
       const resolvedFileName =
         fileName ??
         `${reportTitle} ${dayjs(fromDate).format("DD-MM-YYYY")}-${dayjs(toDate).format("DD-MM-YYYY")}.xlsx`;
@@ -247,153 +363,154 @@ const ExportRevenueExcelButton = ({
         ws.getRow(r).height = 28;
       });
 
-      tableData.forEach((r) => {
-        ws.addRow([
-          r.filmName,
-          dayjs(r.projectDate).format("DD/MM/YYYY"),
-          r.projectTime,
-          r.roomName,
-          r.isOnline ? "On" : "Off",
-          ...allPrices.map((p) => r.pricesMap[p] ?? ""),
-          r.discountOffline,
-          r.discountOnline,
-          r.discountPartner,
-          r.discountTotal,
-          r.totalQuantity,
-          r.totalInvitationQuantity,
-          r.totalContractQuantity,
-          r.totalSale,
-          r.saleVnPayQr,
-          r.saleVietQr,
-          r.actualSale
+      filmGroups.forEach((film) => {
+        const summaryRow = ws.addRow([
+          film.filmName,
+          "",
+          "",
+          "",
+          "",
+          ...allPrices.map((p) => film.pricesMap[p] ?? ""),
+          film.discountOffline,
+          film.discountOnline,
+          film.discountPartner,
+          film.discountTotal,
+          film.totalQuantity,
+          film.totalInvitationQuantity,
+          film.totalContractQuantity,
+          film.totalSale,
+          film.saleVnPayQr,
+          film.saleVietQr,
+          film.actualSale
         ]);
-      });
 
-      let rowIndex = headerRowIndex + 1;
-
-      tableData.forEach((r) => {
-        if (r.filmRowSpan && r.filmRowSpan > 1) {
-          const startRow = rowIndex;
-          const endRow = rowIndex + r.filmRowSpan - 1;
-
-          ws.mergeCells(startRow, 1, endRow, 1);
-          ws.getCell(startRow, 1).alignment = {
-            horizontal: "left",
-            vertical: "middle",
-            wrapText: true
+        summaryRow.font = { bold: true };
+        summaryRow.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF3F4F6" }
           };
-        }
+        });
 
-        if (!r.filmRowSpan || r.filmRowSpan === 1) {
-          ws.getCell(rowIndex, 1).alignment = {
-            horizontal: "left",
-            vertical: "middle",
-            wrapText: true
-          };
-        }
-
-        if (r.dateRowSpan && r.dateRowSpan > 1) {
-          ws.mergeCells(rowIndex, 2, rowIndex + r.dateRowSpan - 1, 2);
-          ws.getCell(rowIndex, 2).alignment = {
-            horizontal: "center",
-            vertical: "middle"
-          };
-        }
-
-        if (!r.dateRowSpan || r.dateRowSpan === 1) {
-          ws.getCell(rowIndex, 2).alignment = {
-            horizontal: "center",
-            vertical: "middle"
-          };
-        }
-
-        if (r.onlineRowSpan && r.onlineRowSpan > 1) {
-          ws.mergeCells(rowIndex, 5, rowIndex + r.onlineRowSpan - 1, 5);
-        }
-        rowIndex++;
+        film.rows.forEach((r) => {
+          ws.addRow([
+            "",
+            dayjs(r.projectDate).format("DD/MM/YYYY"),
+            r.projectTime,
+            r.roomName,
+            r.isOnline ? "On" : "Off",
+            ...allPrices.map((p) => r.pricesMap[p] ?? ""),
+            r.discountOffline,
+            r.discountOnline,
+            r.discountPartner,
+            r.discountTotal,
+            r.totalQuantity,
+            r.totalInvitationQuantity,
+            r.totalContractQuantity,
+            r.totalSale,
+            r.saleVnPayQr,
+            r.saleVietQr,
+            r.actualSale
+          ]);
+        });
       });
 
       const wsSummary = wb.addWorksheet("Tổng hợp theo ngày");
-      wsSummary.addRow([
+      const summaryHeaderGroup = [
         "Ngày",
         "Loại",
-        ...allPrices.map((p) => p / 1000),
-        "KM Offline",
-        "KM Online",
-        "KM Đại lý",
+        "Tổng ca chiếu",
+        ...allPrices.map((_, index) => (index === 0 ? "Loại giá vé (Đơn vị tính: 1000 đồng)" : "")),
+        "Khuyến mại",
+        "",
+        "",
         "Tổng sau KM",
-        "Tổng",
+        "Tổng vé",
         "Giấy mời",
         "Hợp đồng",
         "Thành tiền",
         "VNPayQR",
         "VietQR",
         "Thực nộp"
-      ]);
+      ];
+      const summaryHeaderDetail = [
+        "",
+        "",
+        "",
+        ...allPrices.map((p) => (p / 1000).toString()),
+        "Offline",
+        "Online",
+        "Đại lý",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ];
 
-      wsSummary.getRow(1).font = { bold: true };
-      wsSummary.getRow(1).alignment = {
-        horizontal: "center",
-        vertical: "middle"
-      };
+      wsSummary.addRow(summaryHeaderGroup);
+      wsSummary.addRow(summaryHeaderDetail);
+
+      const summaryHeaderGroupRow = 1;
+      const summaryHeaderRow = 2;
+      const summaryPriceStartCol = 4;
+      const summaryPriceEndCol = summaryPriceStartCol + allPrices.length - 1;
+      const summaryDiscountStartCol = summaryPriceStartCol + allPrices.length;
+      const summaryDiscountEndCol = summaryDiscountStartCol + 2;
+
+      [
+        1,
+        2,
+        3,
+        summaryDiscountEndCol + 1,
+        summaryDiscountEndCol + 2,
+        summaryDiscountEndCol + 3,
+        summaryDiscountEndCol + 4,
+        summaryDiscountEndCol + 5,
+        summaryDiscountEndCol + 6,
+        summaryDiscountEndCol + 7,
+        summaryDiscountEndCol + 8
+      ].forEach((col) => {
+        wsSummary.mergeCells(summaryHeaderGroupRow, col, summaryHeaderRow, col);
+      });
+
+      if (allPrices.length > 0) {
+        wsSummary.mergeCells(
+          summaryHeaderGroupRow,
+          summaryPriceStartCol,
+          summaryHeaderGroupRow,
+          summaryPriceEndCol
+        );
+      }
+      wsSummary.mergeCells(
+        summaryHeaderGroupRow,
+        summaryDiscountStartCol,
+        summaryHeaderGroupRow,
+        summaryDiscountEndCol
+      );
+
+      [summaryHeaderGroupRow, summaryHeaderRow].forEach((rowNumber) => {
+        wsSummary.getRow(rowNumber).font = { bold: true };
+        wsSummary.getRow(rowNumber).alignment = {
+          horizontal: "center",
+          vertical: "middle",
+          wrapText: true
+        };
+      });
       wsSummary.columns.forEach((c) => (c.width = 14));
 
       Object.entries(summaryByDate).forEach(([date, group]) => {
-        const sum = (rows: Row[]) => {
-          const prices: Record<number, number> = {};
-          let totalQuantity = 0;
-          let totalInvitationQuantity = 0;
-          let totalContractQuantity = 0;
-          let totalSale = 0;
-          let saleVnPayQr = 0;
-          let saleVietQr = 0;
-          let actualSale = 0;
-          let discountOffline = 0;
-          let discountOnline = 0;
-          let discountPartner = 0;
-          let discountTotal = 0;
-
-          rows.forEach((r) => {
-            totalQuantity += r.totalQuantity;
-            totalInvitationQuantity += r.totalInvitationQuantity;
-            totalContractQuantity += r.totalContractQuantity;
-            totalSale += r.totalSale;
-            saleVnPayQr += r.saleVnPayQr;
-            saleVietQr += r.saleVietQr;
-            actualSale += r.actualSale;
-            discountOffline += r.discountOffline;
-            discountOnline += r.discountOnline;
-            discountPartner += r.discountPartner;
-            discountTotal += r.discountTotal;
-
-            Object.entries(r.pricesMap).forEach(([p, q]) => {
-              const price = Number(p);
-              prices[price] = (prices[price] ?? 0) + q;
-            });
-          });
-
-          return {
-            prices,
-            totalQuantity,
-            totalInvitationQuantity,
-            totalContractQuantity,
-            totalSale,
-            saleVnPayQr,
-            saleVietQr,
-            actualSale,
-            discountOffline,
-            discountOnline,
-            discountPartner,
-            discountTotal
-          };
-        };
-
-        const offSum = sum(group.off);
-        const onSum = sum(group.on);
+        const offSum = sumRows(group.off);
+        const onSum = sumRows(group.on);
 
         wsSummary.addRow([
           dayjs(date).format("DD/MM/YYYY"),
           "Off",
+          offSum.totalPlanScreen,
           ...allPrices.map((p) => offSum.prices[p] ?? ""),
           offSum.discountOffline,
           offSum.discountOnline,
@@ -411,6 +528,7 @@ const ExportRevenueExcelButton = ({
         wsSummary.addRow([
           dayjs(date).format("DD/MM/YYYY"),
           "On",
+          onSum.totalPlanScreen,
           ...allPrices.map((p) => onSum.prices[p] ?? ""),
           onSum.discountOffline,
           onSum.discountOnline,
@@ -426,19 +544,50 @@ const ExportRevenueExcelButton = ({
         ]);
       });
 
+      const offlineRows = Object.values(summaryByDate).flatMap((group) => group.off);
+      const onlineRows = Object.values(summaryByDate).flatMap((group) => group.on);
+      const totalRows = [...offlineRows, ...onlineRows];
+      const footerRows = [
+        { label: "Offline", sum: sumRows(offlineRows) },
+        { label: "Online", sum: sumRows(onlineRows) },
+        { label: "Tổng cộng", sum: sumRows(totalRows) }
+      ];
+
+      footerRows.forEach(({ label, sum }) => {
+        const row = wsSummary.addRow([
+          label,
+          "",
+          "",
+          ...allPrices.map((p) => sum.prices[p] ?? ""),
+          sum.discountOffline,
+          sum.discountOnline,
+          sum.discountPartner,
+          sum.discountTotal,
+          sum.totalQuantity,
+          sum.totalInvitationQuantity,
+          sum.totalContractQuantity,
+          sum.totalSale,
+          sum.saleVnPayQr,
+          sum.saleVietQr,
+          sum.actualSale
+        ]);
+
+        row.font = { bold: true };
+      });
+
       ws.columns.forEach((colItem) => {
         colItem.width = 14;
       });
 
       const moneyColsSummary = [
-        3 + allPrices.length,
         4 + allPrices.length,
         5 + allPrices.length,
         6 + allPrices.length,
-        10 + allPrices.length,
+        7 + allPrices.length,
         11 + allPrices.length,
         12 + allPrices.length,
-        13 + allPrices.length
+        13 + allPrices.length,
+        14 + allPrices.length
       ];
 
       moneyColsSummary.forEach((summaryCol) => {
@@ -458,7 +607,7 @@ const ExportRevenueExcelButton = ({
       wsSummary.views = [
         {
           state: "frozen",
-          ySplit: 1
+          ySplit: 2
         }
       ];
 
@@ -482,7 +631,7 @@ const ExportRevenueExcelButton = ({
 
       const summaryStartRow = 1;
       const summaryEndRow = wsSummary.lastRow!.number;
-      const summaryEndCol = 13 + allPrices.length;
+      const summaryEndCol = 14 + allPrices.length;
 
       for (let r = summaryStartRow; r <= summaryEndRow; r++) {
         for (let c = 1; c <= summaryEndCol; c++) {
@@ -493,6 +642,14 @@ const ExportRevenueExcelButton = ({
             right: { style: "thin" }
           };
         }
+      }
+
+      for (let r = headerRowIndex + 1; r <= ws.lastRow!.number; r++) {
+        ws.getCell(r, 1).alignment = {
+          horizontal: "left",
+          vertical: "middle",
+          wrapText: true
+        };
       }
 
       const buf = await wb.xlsx.writeBuffer();

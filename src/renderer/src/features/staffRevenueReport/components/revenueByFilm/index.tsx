@@ -26,6 +26,7 @@ export type SummaryGroup = {
 export type Row = {
   key: string;
   filmName: string;
+  isSummary?: boolean;
   projectDate: string;
   projectTime: string;
   isOnline: boolean;
@@ -45,6 +46,7 @@ export type Row = {
   discountOnline: number;
   discountPartner: number;
   discountTotal: number;
+  children?: Row[];
 };
 
 const RevenueByFilm = ({ dateType }: { dateType: number }) => {
@@ -76,87 +78,97 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     )
   ).sort((a, b) => b - a);
 
-  const tableData: Row[] = [];
-  reportData?.revenuesByFilm.forEach((film) => {
-    const sortedScreens = [...film.planScreens].sort((a, b) => {
-      if (a.projectDate !== b.projectDate) {
-        return a.projectDate.localeCompare(b.projectDate);
-      }
-      return new Date(a.projectTime).getTime() - new Date(b.projectTime).getTime();
-    });
+  const tableData: Row[] =
+    reportData?.revenuesByFilm.map((film) => {
+      const sortedScreens = [...film.planScreens].sort((a, b) => {
+        if (a.projectDate !== b.projectDate) {
+          return a.projectDate.localeCompare(b.projectDate);
+        }
+        if (a.projectTime !== b.projectTime) {
+          return new Date(a.projectTime).getTime() - new Date(b.projectTime).getTime();
+        }
+        return Number(a.isOnline) - Number(b.isOnline);
+      });
 
-    const byDate = sortedScreens.reduce<Record<string, typeof sortedScreens>>((acc, cur) => {
-      (acc[cur.projectDate] ||= []).push(cur);
-      return acc;
-    }, {});
-
-    const totalFilmRows = sortedScreens.length;
-    let isFirstFilmRow = true;
-
-    Object.entries(byDate).forEach(([date, screensOfDate]) => {
-      const off = screensOfDate.filter((s) => !s.isOnline);
-      const on = screensOfDate.filter((s) => s.isOnline);
-
-      const totalDateRows = screensOfDate.length;
-      let isFirstDateRow = true;
-
-      const pushBlock = (screens: typeof screensOfDate, isOnline: boolean) => {
-        screens.forEach((p, idx) => {
-          const pricesMap: Record<number, number> = {};
-          p.prices.forEach((pr) => {
-            pricesMap[pr.price] = pr.totalQuantity;
-          });
-
-          tableData.push({
-            key: `${film.filmId}-${p.planScreenId}-${isOnline}`,
-            filmName: film.filmName,
-            projectDate: date,
-            projectTime: p.projectTime,
-            roomName: p.roomName,
-            isOnline,
-            pricesMap,
-            filmRowSpan: isFirstFilmRow ? totalFilmRows : 0,
-            dateRowSpan: isFirstDateRow ? totalDateRows : 0,
-            onlineRowSpan: idx === 0 ? screens.length : 0,
-            totalInvitationQuantity: p.totalInvitationQuantity,
-            totalContractQuantity: p.totalContractQuantity,
-            totalQuantity: p.totalQuantity,
-            totalSale: p.totalSale,
-            saleVnPayQr: p.saleVnPayQr,
-            saleVietQr: p.saleVietQr,
-            actualSale: p.actualSale || 0,
-            discountOffline: p.discountOffline,
-            discountOnline: p.discountOnline,
-            discountPartner: p.discountPartner,
-            discountTotal: p.discountTotal
-          });
-
-          isFirstFilmRow = false;
-          isFirstDateRow = false;
+      const children = sortedScreens.map((p) => {
+        const pricesMap: Record<number, number> = {};
+        p.prices.forEach((pr) => {
+          pricesMap[pr.price] = pr.totalQuantity;
         });
+
+        return {
+          key: `${film.filmId}-${p.planScreenId}-${p.isOnline}`,
+          filmName: film.filmName,
+          projectDate: p.projectDate,
+          projectTime: p.projectTime,
+          roomName: p.roomName,
+          isOnline: p.isOnline,
+          pricesMap,
+          totalInvitationQuantity: p.totalInvitationQuantity,
+          totalContractQuantity: p.totalContractQuantity,
+          totalQuantity: p.totalQuantity,
+          totalSale: p.totalSale,
+          saleVnPayQr: p.saleVnPayQr,
+          saleVietQr: p.saleVietQr,
+          actualSale: p.actualSale || 0,
+          discountOffline: p.discountOffline,
+          discountOnline: p.discountOnline,
+          discountPartner: p.discountPartner,
+          discountTotal: p.discountTotal
+        };
+      });
+
+      const pricesMap = children.reduce<Record<number, number>>((acc, row) => {
+        Object.entries(row.pricesMap).forEach(([price, quantity]) => {
+          const numericPrice = Number(price);
+          acc[numericPrice] = (acc[numericPrice] ?? 0) + quantity;
+        });
+        return acc;
+      }, {});
+
+      return {
+        key: `film-${film.filmId}`,
+        filmName: film.filmName,
+        isSummary: true,
+        projectDate: "",
+        projectTime: "",
+        roomName: "",
+        isOnline: false,
+        pricesMap,
+        totalInvitationQuantity: film.totalInvitationQuantity,
+        totalContractQuantity: film.totalContractQuantity,
+        totalQuantity: film.totalQuantity,
+        totalSale: film.totalSale,
+        saleVnPayQr: film.saleVnPayQr,
+        saleVietQr: film.saleVietQr,
+        actualSale: film.actualSale || 0,
+        discountOffline: children.reduce((sum, row) => sum + row.discountOffline, 0),
+        discountOnline: children.reduce((sum, row) => sum + row.discountOnline, 0),
+        discountPartner: children.reduce((sum, row) => sum + row.discountPartner, 0),
+        discountTotal: children.reduce((sum, row) => sum + row.discountTotal, 0),
+        children
       };
+    }) || [];
 
-      pushBlock(off, false);
-      pushBlock(on, true);
-    });
-  });
+  const detailRows = tableData.flatMap((row) => row.children || []);
 
-  const summaryByDate = tableData.reduce<Record<string, SummaryGroup>>((acc, row) => {
-    if (!acc[row.projectDate]) {
-      acc[row.projectDate] = { off: [], on: [] };
+  const summaryByDate = detailRows.reduce<Record<string, SummaryGroup>>((acc, row) => {
+    const projectDate = row.projectDate;
+
+    if (!acc[projectDate]) {
+      acc[projectDate] = { off: [], on: [] };
     }
-    row.isOnline ? acc[row.projectDate].on.push(row) : acc[row.projectDate].off.push(row);
+    row.isOnline ? acc[projectDate].on.push(row) : acc[projectDate].off.push(row);
     return acc;
   }, {});
 
   const filmColumn = {
-    title: "Phim",
+    title: "Phim / Ngày",
     dataIndex: "filmName",
     fixed: "left" as const,
     width: 260,
-    onCell: (row: Row) => ({
-      rowSpan: row.filmRowSpan
-    })
+    render: (_: unknown, row: Row) =>
+      row.isSummary ? <strong>{row.filmName}</strong> : dayjs(row.projectDate).format("DD/MM/YYYY")
   };
 
   const columns: ColumnsType<Row> = [
@@ -164,14 +176,6 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     {
       title: "Nội dung chi tiết",
       children: [
-        {
-          title: "Ngày",
-          key: "projectDate",
-          dataIndex: "projectDate",
-          width: 110,
-          render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
-          onCell: (row: Row) => ({ rowSpan: row.dateRowSpan })
-        },
         {
           title: "Giờ",
           key: "projectTime",
@@ -189,8 +193,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
           key: "isOnline",
           dataIndex: "isOnline",
           width: 60,
-          render: (value: boolean) => (value ? "On" : "Off"),
-          onCell: (row: Row) => ({ rowSpan: row.onlineRowSpan })
+          render: (value: boolean, row: Row) => (row.isSummary ? "" : value ? "On" : "Off")
         }
       ],
       fixed: "left"
@@ -335,7 +338,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
             <Filter filterValues={filterValues} onSearch={onSearch} />
             {filterValues.dateRange?.length === 2 && (
               <ExportRevenueExcelButton
-                tableData={tableData}
+                tableData={detailRows}
                 allPrices={allPrices as number[]}
                 summaryByDate={summaryByDate}
                 fromDate={filterValues.dateRange[0]}

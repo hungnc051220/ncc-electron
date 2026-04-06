@@ -1,0 +1,82 @@
+import { Button, theme as antdTheme } from "antd";
+import {
+  CloudDownloadOutlined,
+  EyeOutlined,
+  PauseOutlined,
+  CaretRightOutlined
+} from "@ant-design/icons";
+
+type UpdateProgressDockProps = {
+  percent: number;
+  latestVersion?: string | null;
+  onExpand: () => void;
+  isPaused?: boolean;
+  onTogglePause?: () => void;
+  showMockControls?: boolean;
+};
+
+const UpdateProgressDock = ({
+  percent,
+  latestVersion,
+  onExpand,
+  isPaused = false,
+  onTogglePause,
+  showMockControls = false
+}: UpdateProgressDockProps) => {
+  const { token } = antdTheme.useToken();
+
+  return (
+    <div
+      className="flex min-w-[268px] items-center gap-3 rounded-[20px] border px-3 py-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm"
+      style={{
+        background: token.colorBgElevated,
+        borderColor: token.colorBorderSecondary
+      }}
+    >
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]"
+        style={{
+          background: token.colorPrimaryBg,
+          color: token.colorPrimary
+        }}
+      >
+        <CloudDownloadOutlined className="text-[18px]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div
+          className="truncate text-[13px] font-semibold"
+          style={{ color: token.colorTextHeading }}
+        >
+          Đang tải bản cập nhật
+        </div>
+        <div className="truncate text-[12px]" style={{ color: token.colorTextSecondary }}>
+          {latestVersion ? `Phiên bản ${latestVersion} • ${percent}%` : `Tiến độ tải • ${percent}%`}
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        {showMockControls && onTogglePause && (
+          <Button
+            type="text"
+            size="small"
+            icon={isPaused ? <CaretRightOutlined /> : <PauseOutlined />}
+            className="h-8 rounded-[12px] px-2"
+            onClick={onTogglePause}
+          >
+            {isPaused ? "Tiếp tục" : "Tạm dừng"}
+          </Button>
+        )}
+        <Button
+          type="text"
+          size="small"
+          icon={<EyeOutlined />}
+          className="h-8 rounded-[12px] px-2"
+          onClick={onExpand}
+        >
+          Mở lại
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default UpdateProgressDock;

@@ -10,6 +10,7 @@ export type SummaryRow = {
   key: string;
   projectDate: string;
   isOnline: boolean;
+  totalPlanScreen: number;
   pricesMap: Record<number, number>;
   totalQuantity: number;
   totalInvitationQuantity: number;
@@ -41,6 +42,7 @@ const TabSummary = ({
 }: TabSummaryProps) => {
   const sumGroup = (rows: Row[]) => {
     const prices: Record<number, number> = {};
+    let totalPlanScreen = 0;
     let totalQuantity = 0;
     let totalInvitationQuantity = 0;
     let totalContractQuantity = 0;
@@ -54,6 +56,7 @@ const TabSummary = ({
     let discountTotal = 0;
 
     rows.forEach((r) => {
+      totalPlanScreen += 1;
       totalQuantity += r.totalQuantity;
       totalInvitationQuantity += r.totalInvitationQuantity;
       totalContractQuantity += r.totalContractQuantity;
@@ -74,6 +77,7 @@ const TabSummary = ({
 
     return {
       prices,
+      totalPlanScreen,
       totalQuantity,
       totalInvitationQuantity,
       totalContractQuantity,
@@ -98,6 +102,7 @@ const TabSummary = ({
       key: `${date}-off`,
       projectDate: date,
       isOnline: false,
+      totalPlanScreen: offSum.totalPlanScreen,
       pricesMap: offSum.prices,
       totalQuantity: offSum.totalQuantity,
       totalInvitationQuantity: offSum.totalInvitationQuantity,
@@ -116,6 +121,7 @@ const TabSummary = ({
       key: `${date}-on`,
       projectDate: date,
       isOnline: true,
+      totalPlanScreen: onSum.totalPlanScreen,
       pricesMap: onSum.prices,
       totalQuantity: onSum.totalQuantity,
       totalInvitationQuantity: onSum.totalInvitationQuantity,
@@ -146,6 +152,15 @@ const TabSummary = ({
       dataIndex: "isOnline",
       width: 60,
       render: (value: boolean) => (value ? "On" : "Off"),
+      fixed: "left"
+    },
+    {
+      title: "Tổng ca chiếu",
+      key: "totalPlanScreen",
+      dataIndex: "totalPlanScreen",
+      width: 120,
+      align: "right",
+      render: (value: number) => formatNumber(value),
       fixed: "left"
     },
     // {
@@ -190,7 +205,7 @@ const TabSummary = ({
       render: (value: number) => formatMoney(value)
     },
     {
-      title: "Tổng",
+      title: "Tổng vé",
       key: "totalQuantity",
       dataIndex: "totalQuantity",
       align: "right",
@@ -271,37 +286,38 @@ const TabSummary = ({
                   <strong>{label}</strong>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={1}></Table.Summary.Cell>
-                <Table.Summary.Cell index={2} align="right">
+                <Table.Summary.Cell index={2}></Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="right">
                   <strong>{formatMoney(value?.discountOffline || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={3} align="right">
+                <Table.Summary.Cell index={4} align="right">
                   <strong>{formatMoney(value?.discountOnline || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={4} align="right">
+                <Table.Summary.Cell index={5} align="right">
                   <strong>{formatMoney(value?.discountPartner || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={5} align="right">
+                <Table.Summary.Cell index={6} align="right">
                   <strong>{formatMoney(value?.discountTotal || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={6} align="right">
+                <Table.Summary.Cell index={7} align="right">
                   <strong>{formatNumber(value?.totalQuantity || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={7} align="right">
+                <Table.Summary.Cell index={8} align="right">
                   <strong>{formatNumber(value?.totalInvitationQuantity || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={8} align="right">
+                <Table.Summary.Cell index={9} align="right">
                   <strong>{formatNumber(value?.totalContractQuantity || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={9} align="right">
+                <Table.Summary.Cell index={10} align="right">
                   <strong>{formatMoney(value?.totalSale || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={10} align="right">
+                <Table.Summary.Cell index={11} align="right">
                   <strong>{formatMoney(value?.saleVnPayQr || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={11} align="right">
+                <Table.Summary.Cell index={12} align="right">
                   <strong>{formatMoney(value?.saleVietQr || 0)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={12} align="right">
+                <Table.Summary.Cell index={13} align="right">
                   <strong>{formatMoney(value?.actualSale || 0)}</strong>
                 </Table.Summary.Cell>
               </Table.Summary.Row>
