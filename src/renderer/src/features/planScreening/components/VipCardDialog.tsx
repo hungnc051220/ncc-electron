@@ -49,7 +49,7 @@ const NoticeCard = ({ tone, icon, children }: NoticeCardProps) => (
     className={`rounded-xl border px-3 py-2 text-sm shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm ${noticeToneClassName[tone]}`}
   >
     <div className="flex items-start gap-2.5">
-      <span className="notice-icon mt-[1px] inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+      <span className="notice-icon mt-px inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
         {icon}
       </span>
       <span className="pt-px leading-6">{children}</span>

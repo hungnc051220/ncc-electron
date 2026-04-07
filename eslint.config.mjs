@@ -4,10 +4,25 @@ import eslintConfigPrettier from "@electron-toolkit/eslint-config-prettier";
 import eslintPluginReact from "eslint-plugin-react";
 import eslintPluginReactHooks from "eslint-plugin-react-hooks";
 import eslintPluginReactRefresh from "eslint-plugin-react-refresh";
+import tailwindCanonicalClasses from "eslint-plugin-tailwind-canonical-classes";
 
 export default defineConfig(
   { ignores: ["**/node_modules", "**/dist", "**/out"] },
   tseslint.configs.recommended,
+  {
+    files: ["src/renderer/src/**/*.{js,jsx,ts,tsx}"],
+    plugins: {
+      "tailwind-canonical-classes": tailwindCanonicalClasses
+    },
+    rules: {
+      "tailwind-canonical-classes/tailwind-canonical-classes": [
+        "warn",
+        {
+          cssPath: "./src/renderer/src/assets/css/main.css"
+        }
+      ]
+    }
+  },
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat["jsx-runtime"],
   {

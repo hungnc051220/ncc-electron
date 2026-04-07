@@ -1,9 +1,12 @@
 import { MoreOutlined } from "@ant-design/icons";
+import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { getPrintErrorMessage } from "@renderer/lib/print";
 import {
   buildTicketsFromOrder,
@@ -12,11 +15,12 @@ import {
   formatNumber
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { OrderDetailProps } from "@shared/types";
+import { OrderDetailProps, OrderStatus } from "@shared/types";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
-import { Dropdown, message, Tabs } from "antd";
+import { Checkbox, Dropdown, Form, Modal, Select, message, Tabs } from "antd";
 import dayjs from "dayjs";
-import { Eye, Printer } from "lucide-react";
+import { Eye, Printer, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import OrderDetailDialog from "./components/OrderDetailDialog";
@@ -45,13 +49,21 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+type CancelOrderFormValues = {
+  cancelReasonId: number;
+  isRefund: boolean;
+};
+
 const OrderHistoryPage = () => {
+  const [cancelForm] = Form.useForm<CancelOrderFormValues>();
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
   const [activeKey, setActiveKey] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
+  const [selectedCancelOrder, setSelectedCancelOrder] = useState<OrderDetailProps | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -62,6 +74,7 @@ const OrderHistoryPage = () => {
   const { can } = usePermission();
   const canView = can("order_history", "view");
   const canPrint = can("order_history", "print");
+  const cancelOrder = useCancelOrder();
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -81,6 +94,33 @@ const OrderHistoryPage = () => {
   }, [current, pageSize, filterValues, activeKey]);
 
   const { data: orders, isFetching } = useOrders(params);
+  const {
+    data: cancellationReasons,
+    fetchNextPage,
+    hasNextPage,
+    isFetching: isFetchingCancellationReasons,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["cancellation-reasons"],
+    queryFn: ({ pageParam = 1 }) =>
+      cancellationReasonsApi.getAll({ current: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
+
+  const cancelReasonOptions = useMemo(
+    () =>
+      cancellationReasons?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.reason
+        }))
+      ) ?? [],
+    [cancellationReasons]
+  );
 
   useEffect(() => {
     const reopenOrderIdParam = searchParams.get("reopenOrderId");
@@ -132,6 +172,54 @@ const OrderHistoryPage = () => {
       });
     }
   };
+
+  const handleOpenCancelDialog = useCallback(
+    (orderDetail: OrderDetailProps) => {
+      setSelectedCancelOrder(orderDetail);
+      cancelForm.resetFields();
+      setCancelDialogOpen(true);
+    },
+    [cancelForm]
+  );
+
+  const handleCancelDialogClose = useCallback(
+    (open: boolean) => {
+      setCancelDialogOpen(open);
+
+      if (!open) {
+        cancelForm.resetFields();
+        setSelectedCancelOrder(null);
+      }
+    },
+    [cancelForm]
+  );
+
+  const handleCancelOrder = useCallback(
+    (values: CancelOrderFormValues) => {
+      if (!selectedCancelOrder) {
+        return;
+      }
+
+      cancelOrder.mutate(
+        {
+          planScreenId: selectedCancelOrder.planScreening.id,
+          orderIds: [selectedCancelOrder.order.id],
+          cancelReasonId: values.cancelReasonId,
+          isRefund: values.isRefund
+        },
+        {
+          onSuccess: () => {
+            handleCancelDialogClose(false);
+            message.success("Huỷ vé thành công");
+          },
+          onError: (error: unknown) => {
+            message.error(getApiErrorMessage(error, "Huỷ vé thất bại"));
+          }
+        }
+      );
+    },
+    [cancelOrder, handleCancelDialogClose, selectedCancelOrder]
+  );
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
@@ -254,44 +342,50 @@ const OrderHistoryPage = () => {
       fixed: "right"
     },
 
-    ...(canView || canPrint
-      ? [
-          {
-            title: "",
-            key: "operation",
-            width: 50,
-            render: (_: unknown, record: OrderDetailProps) => {
-              const items = [
-                ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
-                ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : [])
-              ];
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_: unknown, record: OrderDetailProps) => {
+        const canCancel = record.order.orderStatusId !== OrderStatus.CANCELLED;
+        const menuItems = [
+          ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
+          ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : []),
+          ...(canCancel ? [{ key: "3", icon: <X size={16} />, label: "Huỷ vé" }] : [])
+        ];
 
-              return (
-                <Dropdown
-                  menu={{
-                    items,
-                    onClick: (e) => {
-                      if (e.key === "1") {
-                        handleViewDetail(record);
-                      }
+        if (menuItems.length === 0) {
+          return null;
+        }
 
-                      if (e.key === "2") {
-                        handlePrint(record);
-                      }
-                    }
-                  }}
-                  arrow
-                  trigger={["click"]}
-                >
-                  <MoreOutlined />
-                </Dropdown>
-              );
-            },
-            align: "center" as const,
-            fixed: "right" as const
-          }
-        ]
-      : [])
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: (e) => {
+                if (e.key === "1") {
+                  handleViewDetail(record);
+                }
+
+                if (e.key === "2") {
+                  handlePrint(record);
+                }
+
+                if (e.key === "3") {
+                  handleOpenCancelDialog(record);
+                }
+              }
+            }}
+            arrow
+            trigger={["click"]}
+          >
+            <MoreOutlined />
+          </Dropdown>
+        );
+      },
+      align: "center" as const,
+      fixed: "right" as const
+    }
   ];
 
   const onSearch = (values: ValuesProps) => {
@@ -364,6 +458,62 @@ const OrderHistoryPage = () => {
           selectedItem={selectedItem}
         />
       )}
+
+      <Modal
+        title="Xác nhận hủy vé"
+        open={cancelDialogOpen}
+        onOk={() => cancelForm.submit()}
+        onCancel={() => handleCancelDialogClose(false)}
+        okText="Xác nhận"
+        cancelText="Đóng"
+        okButtonProps={{
+          loading: cancelOrder.isPending
+        }}
+        cancelButtonProps={{
+          disabled: cancelOrder.isPending
+        }}
+        modalRender={(dom) => (
+          <Form<CancelOrderFormValues>
+            form={cancelForm}
+            onFinish={handleCancelOrder}
+            autoComplete="off"
+            layout="vertical"
+            initialValues={{
+              isRefund: false
+            }}
+          >
+            {dom}
+          </Form>
+        )}
+      >
+        <Form.Item<CancelOrderFormValues>
+          name="cancelReasonId"
+          label="Lý do hủy vé"
+          rules={[{ required: true, message: "Chọn lý do hủy vé" }]}
+        >
+          <Select
+            loading={isFetchingCancellationReasons || isFetchingNextPage}
+            options={cancelReasonOptions}
+            placeholder="Chọn lý do hủy vé"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
+            allowClear
+          />
+        </Form.Item>
+
+        <Form.Item<CancelOrderFormValues> name="isRefund" valuePropName="checked">
+          <Checkbox>Hoàn tiền</Checkbox>
+        </Form.Item>
+      </Modal>
     </div>
   );
 };

@@ -46,6 +46,7 @@ export type Row = {
   discountOnline: number;
   discountPartner: number;
   discountTotal: number;
+  internalDiscountTotal: number;
   children?: Row[];
 };
 
@@ -96,6 +97,9 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
           pricesMap[pr.price] = pr.totalQuantity;
         });
 
+        const crmDiscount = p.crmDiscount ?? {};
+        const internalDiscount = p.internalDiscount ?? {};
+
         return {
           key: `${film.filmId}-${p.planScreenId}-${p.isOnline}`,
           filmName: film.filmName,
@@ -111,10 +115,11 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
           saleVnPayQr: p.saleVnPayQr,
           saleVietQr: p.saleVietQr,
           actualSale: p.actualSale || 0,
-          discountOffline: p.discountOffline,
-          discountOnline: p.discountOnline,
-          discountPartner: p.discountPartner,
-          discountTotal: p.discountTotal
+          discountOffline: crmDiscount.discountOffline ?? p.discountOffline ?? 0,
+          discountOnline: crmDiscount.discountOnline ?? p.discountOnline ?? 0,
+          discountPartner: crmDiscount.discountPartner ?? p.discountPartner ?? 0,
+          discountTotal: crmDiscount.discountTotal ?? p.discountTotal ?? 0,
+          internalDiscountTotal: internalDiscount.discountTotal ?? 0
         };
       });
 
@@ -146,6 +151,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
         discountOnline: children.reduce((sum, row) => sum + row.discountOnline, 0),
         discountPartner: children.reduce((sum, row) => sum + row.discountPartner, 0),
         discountTotal: children.reduce((sum, row) => sum + row.discountTotal, 0),
+        internalDiscountTotal: children.reduce((sum, row) => sum + row.internalDiscountTotal, 0),
         children
       };
     }) || [];
@@ -199,6 +205,35 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
       fixed: "left"
     },
     {
+      title: "Tổng vé",
+      key: "totalQuantity",
+      dataIndex: "totalQuantity",
+      align: "right",
+      render: (value: number) => formatNumber(value)
+    },
+    {
+      title: "Giấy mời",
+      key: "totalInvitationQuantity",
+      dataIndex: "totalInvitationQuantity",
+      render: (value: number) => formatNumber(value),
+      align: "right"
+    },
+    {
+      title: "Hợp đồng",
+      key: "totalContractQuantity",
+      dataIndex: "totalContractQuantity",
+      render: (value: number) => formatNumber(value),
+      align: "right"
+    },
+    {
+      title: "Thành tiền",
+      key: "totalSale",
+      dataIndex: "totalSale",
+      render: (value: number) => formatMoney(value),
+      align: "right",
+      width: 150
+    },
+    {
       title: "Khuyến mại",
       children: [
         {
@@ -230,39 +265,17 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     {
       title: "Tổng sau KM",
       key: "discountTotal",
-      dataIndex: "discountTotal",
+      width: 110,
+      align: "right",
+      render: (_: number, row: Row) => formatMoney(row.totalSale - row.discountTotal)
+    },
+    {
+      title: "Giảm giá",
+      key: "internalDiscountTotal",
+      dataIndex: "internalDiscountTotal",
       width: 110,
       align: "right",
       render: (value: number) => formatMoney(value)
-    },
-    {
-      title: "Tổng vé",
-      key: "totalQuantity",
-      dataIndex: "totalQuantity",
-      align: "right",
-      render: (value: number) => formatNumber(value)
-    },
-    {
-      title: "Giấy mời",
-      key: "totalInvitationQuantity",
-      dataIndex: "totalInvitationQuantity",
-      render: (value: number) => formatNumber(value),
-      align: "right"
-    },
-    {
-      title: "Hợp đồng",
-      key: "totalContractQuantity",
-      dataIndex: "totalContractQuantity",
-      render: (value: number) => formatNumber(value),
-      align: "right"
-    },
-    {
-      title: "Thành tiền",
-      key: "totalSale",
-      dataIndex: "totalSale",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
     },
     {
       title: "Tiền VNPayQR",

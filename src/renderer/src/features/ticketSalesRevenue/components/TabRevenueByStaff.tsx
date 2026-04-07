@@ -91,13 +91,6 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
     },
     {
       title: "Doanh thu Offline",
-      dataIndex: "actualOffSale",
-      key: "actualOffSale",
-      align: "right",
-      render: (_, { actualOffSale }) => formatMoney(actualOffSale || 0)
-    },
-    {
-      title: "Tiền thực nộp",
       dataIndex: "totalSale",
       key: "totalSale",
       align: "right",

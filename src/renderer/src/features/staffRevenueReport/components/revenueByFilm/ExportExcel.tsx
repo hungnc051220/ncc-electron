@@ -28,6 +28,7 @@ type Row = {
   discountOnline: number;
   discountPartner: number;
   discountTotal: number;
+  internalDiscountTotal: number;
 };
 
 type FilmGroup = {
@@ -44,6 +45,7 @@ type FilmGroup = {
   discountOnline: number;
   discountPartner: number;
   discountTotal: number;
+  internalDiscountTotal: number;
   rows: Row[];
 };
 
@@ -80,6 +82,7 @@ const sumRows = (rows: Row[]) => {
   let discountOnline = 0;
   let discountPartner = 0;
   let discountTotal = 0;
+  let internalDiscountTotal = 0;
 
   rows.forEach((r) => {
     totalPlanScreen += 1;
@@ -94,6 +97,7 @@ const sumRows = (rows: Row[]) => {
     discountOnline += r.discountOnline;
     discountPartner += r.discountPartner;
     discountTotal += r.discountTotal;
+    internalDiscountTotal += r.internalDiscountTotal;
 
     Object.entries(r.pricesMap).forEach(([price, quantity]) => {
       const numericPrice = Number(price);
@@ -114,7 +118,8 @@ const sumRows = (rows: Row[]) => {
     discountOffline,
     discountOnline,
     discountPartner,
-    discountTotal
+    discountTotal,
+    internalDiscountTotal
   };
 };
 
@@ -153,6 +158,7 @@ const ExportRevenueExcelButton = ({
           discountOnline: 0,
           discountPartner: 0,
           discountTotal: 0,
+          internalDiscountTotal: 0,
           rows: []
         };
       }
@@ -170,6 +176,7 @@ const ExportRevenueExcelButton = ({
       target.discountOnline += row.discountOnline;
       target.discountPartner += row.discountPartner;
       target.discountTotal += row.discountTotal;
+      target.internalDiscountTotal += row.internalDiscountTotal;
 
       Object.entries(row.pricesMap).forEach(([price, quantity]) => {
         const numericPrice = Number(price);
@@ -210,14 +217,15 @@ const ExportRevenueExcelButton = ({
         "Phòng",
         "Loại",
         ...allPrices.map((p) => (p / 1000).toString()),
-        "KM Offline",
-        "KM Online",
-        "KM Đại lý",
-        "Tổng sau KM",
         "Tổng",
         "Giấy mời",
         "Hợp đồng",
         "Thành tiền",
+        "KM Offline",
+        "KM Online",
+        "KM Đại lý",
+        "Tổng sau KM",
+        "Giảm giá",
         "VNPayQR",
         "VietQR",
         "Thực nộp"
@@ -272,7 +280,20 @@ const ExportRevenueExcelButton = ({
       ws.mergeCells(headerGroupRowIndex, priceStartCol, headerGroupRowIndex, priceEndCol);
       ws.getCell(headerGroupRowIndex, priceStartCol).value = "Loại giá vé (Đơn vị tính: 1000 đồng)";
 
-      const discountStartCol = priceEndCol + 1;
+      const totalStartCol = priceEndCol + 1;
+      const amountCol = totalStartCol + 3;
+
+      let totalCol = totalStartCol;
+
+      const totalHeaders = ["Tổng vé", "Giấy mời", "Hợp đồng", "Thành tiền"];
+
+      totalHeaders.forEach((title) => {
+        ws.mergeCells(headerGroupRowIndex, totalCol, headerGroupRowIndex + 1, totalCol);
+        ws.getCell(headerGroupRowIndex, totalCol).value = title;
+        totalCol++;
+      });
+
+      const discountStartCol = amountCol + 1;
       const discountEndCol = discountStartCol + 2;
 
       ws.mergeCells(headerGroupRowIndex, discountStartCol, headerGroupRowIndex, discountEndCol);
@@ -288,21 +309,36 @@ const ExportRevenueExcelButton = ({
       );
       ws.getCell(headerGroupRowIndex, discountTotalCol).value = "Tổng sau KM";
 
-      const totalStartCol = discountTotalCol + 1;
-      const totalEndCol = totalStartCol + 6;
+      const internalDiscountCol = discountTotalCol + 1;
+
+      ws.mergeCells(
+        headerGroupRowIndex,
+        internalDiscountCol,
+        headerGroupRowIndex + 1,
+        internalDiscountCol
+      );
+      ws.getCell(headerGroupRowIndex, internalDiscountCol).value = "Giảm giá";
+
+      const paymentStartCol = internalDiscountCol + 1;
+      const paymentHeaders = ["VNPayQR", "VietQR", "Thực nộp"];
+
+      paymentHeaders.forEach((title, index) => {
+        const paymentCol = paymentStartCol + index;
+        ws.mergeCells(headerGroupRowIndex, paymentCol, headerGroupRowIndex + 1, paymentCol);
+        ws.getCell(headerGroupRowIndex, paymentCol).value = title;
+      });
 
       const discountHeaders = ["Offline", "Online", "Đại lý"];
-
-      let totalCol = totalStartCol;
-
-      const COL_AMOUNT = totalCol + 3;
-      const COL_VNPAY = totalCol + 4;
-      const COL_VIETQR = totalCol + 5;
-      const COL_ACTUAL = totalCol + 6;
+      const COL_AMOUNT = amountCol;
+      const COL_VNPAY = paymentStartCol;
+      const COL_VIETQR = paymentStartCol + 1;
+      const COL_ACTUAL = paymentStartCol + 2;
       const COL_DISCOUNT_OFFLINE = discountStartCol;
       const COL_DISCOUNT_ONLINE = discountStartCol + 1;
       const COL_DISCOUNT_PARTNER = discountStartCol + 2;
       const COL_DISCOUNT_TOTAL = discountStartCol + 3;
+      const COL_INTERNAL_DISCOUNT = internalDiscountCol;
+      const totalEndCol = COL_ACTUAL;
 
       const moneyFormat = "#,##0";
 
@@ -311,28 +347,13 @@ const ExportRevenueExcelButton = ({
         COL_DISCOUNT_ONLINE,
         COL_DISCOUNT_PARTNER,
         COL_DISCOUNT_TOTAL,
+        COL_INTERNAL_DISCOUNT,
         COL_AMOUNT,
         COL_VNPAY,
         COL_VIETQR,
         COL_ACTUAL
       ].forEach((col) => {
         ws.getColumn(col).numFmt = moneyFormat;
-      });
-
-      const totalHeaders = [
-        "Tổng",
-        "Giấy mời",
-        "Hợp đồng",
-        "Thành tiền",
-        "VNPayQR",
-        "VietQR",
-        "Thực nộp"
-      ];
-
-      totalHeaders.forEach((title) => {
-        ws.mergeCells(headerGroupRowIndex, totalCol, headerGroupRowIndex + 1, totalCol);
-        ws.getCell(headerGroupRowIndex, totalCol).value = title;
-        totalCol++;
       });
 
       const headerRowIndex = headerGroupRowIndex + 1;
@@ -371,14 +392,15 @@ const ExportRevenueExcelButton = ({
           "",
           "",
           ...allPrices.map((p) => film.pricesMap[p] ?? ""),
-          film.discountOffline,
-          film.discountOnline,
-          film.discountPartner,
-          film.discountTotal,
           film.totalQuantity,
           film.totalInvitationQuantity,
           film.totalContractQuantity,
           film.totalSale,
+          film.discountOffline,
+          film.discountOnline,
+          film.discountPartner,
+          film.totalSale - film.discountTotal,
+          film.internalDiscountTotal,
           film.saleVnPayQr,
           film.saleVietQr,
           film.actualSale
@@ -401,14 +423,15 @@ const ExportRevenueExcelButton = ({
             r.roomName,
             r.isOnline ? "On" : "Off",
             ...allPrices.map((p) => r.pricesMap[p] ?? ""),
-            r.discountOffline,
-            r.discountOnline,
-            r.discountPartner,
-            r.discountTotal,
             r.totalQuantity,
             r.totalInvitationQuantity,
             r.totalContractQuantity,
             r.totalSale,
+            r.discountOffline,
+            r.discountOnline,
+            r.discountPartner,
+            r.totalSale - r.discountTotal,
+            r.internalDiscountTotal,
             r.saleVnPayQr,
             r.saleVietQr,
             r.actualSale
@@ -422,14 +445,15 @@ const ExportRevenueExcelButton = ({
         "Loại",
         "Tổng ca chiếu",
         ...allPrices.map((_, index) => (index === 0 ? "Loại giá vé (Đơn vị tính: 1000 đồng)" : "")),
-        "Khuyến mại",
-        "",
-        "",
-        "Tổng sau KM",
         "Tổng vé",
         "Giấy mời",
         "Hợp đồng",
         "Thành tiền",
+        "Khuyến mại",
+        "",
+        "",
+        "Tổng sau KM",
+        "Giảm giá",
         "VNPayQR",
         "VietQR",
         "Thực nộp"
@@ -439,12 +463,13 @@ const ExportRevenueExcelButton = ({
         "",
         "",
         ...allPrices.map((p) => (p / 1000).toString()),
+        "",
+        "",
+        "",
+        "",
         "Offline",
         "Online",
         "Đại lý",
-        "",
-        "",
-        "",
         "",
         "",
         "",
@@ -459,21 +484,23 @@ const ExportRevenueExcelButton = ({
       const summaryHeaderRow = 2;
       const summaryPriceStartCol = 4;
       const summaryPriceEndCol = summaryPriceStartCol + allPrices.length - 1;
-      const summaryDiscountStartCol = summaryPriceStartCol + allPrices.length;
+      const summaryTotalStartCol = summaryPriceStartCol + allPrices.length;
+      const summaryDiscountStartCol = summaryTotalStartCol + 4;
       const summaryDiscountEndCol = summaryDiscountStartCol + 2;
 
       [
         1,
         2,
         3,
+        summaryTotalStartCol,
+        summaryTotalStartCol + 1,
+        summaryTotalStartCol + 2,
+        summaryTotalStartCol + 3,
         summaryDiscountEndCol + 1,
         summaryDiscountEndCol + 2,
         summaryDiscountEndCol + 3,
         summaryDiscountEndCol + 4,
-        summaryDiscountEndCol + 5,
-        summaryDiscountEndCol + 6,
-        summaryDiscountEndCol + 7,
-        summaryDiscountEndCol + 8
+        summaryDiscountEndCol + 5
       ].forEach((col) => {
         wsSummary.mergeCells(summaryHeaderGroupRow, col, summaryHeaderRow, col);
       });
@@ -512,14 +539,15 @@ const ExportRevenueExcelButton = ({
           "Off",
           offSum.totalPlanScreen,
           ...allPrices.map((p) => offSum.prices[p] ?? ""),
-          offSum.discountOffline,
-          offSum.discountOnline,
-          offSum.discountPartner,
-          offSum.discountTotal,
           offSum.totalQuantity,
           offSum.totalInvitationQuantity,
           offSum.totalContractQuantity,
           offSum.totalSale,
+          offSum.discountOffline,
+          offSum.discountOnline,
+          offSum.discountPartner,
+          offSum.totalSale - offSum.discountTotal,
+          offSum.internalDiscountTotal,
           offSum.saleVnPayQr,
           offSum.saleVietQr,
           offSum.actualSale
@@ -530,14 +558,15 @@ const ExportRevenueExcelButton = ({
           "On",
           onSum.totalPlanScreen,
           ...allPrices.map((p) => onSum.prices[p] ?? ""),
-          onSum.discountOffline,
-          onSum.discountOnline,
-          onSum.discountPartner,
-          onSum.discountTotal,
           onSum.totalQuantity,
           onSum.totalInvitationQuantity,
           onSum.totalContractQuantity,
           onSum.totalSale,
+          onSum.discountOffline,
+          onSum.discountOnline,
+          onSum.discountPartner,
+          onSum.totalSale - onSum.discountTotal,
+          onSum.internalDiscountTotal,
           onSum.saleVnPayQr,
           onSum.saleVietQr,
           onSum.actualSale
@@ -559,14 +588,15 @@ const ExportRevenueExcelButton = ({
           "",
           "",
           ...allPrices.map((p) => sum.prices[p] ?? ""),
-          sum.discountOffline,
-          sum.discountOnline,
-          sum.discountPartner,
-          sum.discountTotal,
           sum.totalQuantity,
           sum.totalInvitationQuantity,
           sum.totalContractQuantity,
           sum.totalSale,
+          sum.discountOffline,
+          sum.discountOnline,
+          sum.discountPartner,
+          sum.totalSale - sum.discountTotal,
+          sum.internalDiscountTotal,
           sum.saleVnPayQr,
           sum.saleVietQr,
           sum.actualSale
@@ -580,14 +610,14 @@ const ExportRevenueExcelButton = ({
       });
 
       const moneyColsSummary = [
-        4 + allPrices.length,
-        5 + allPrices.length,
-        6 + allPrices.length,
-        7 + allPrices.length,
+        8 + allPrices.length,
+        9 + allPrices.length,
+        10 + allPrices.length,
         11 + allPrices.length,
         12 + allPrices.length,
         13 + allPrices.length,
-        14 + allPrices.length
+        14 + allPrices.length,
+        15 + allPrices.length
       ];
 
       moneyColsSummary.forEach((summaryCol) => {
@@ -631,7 +661,7 @@ const ExportRevenueExcelButton = ({
 
       const summaryStartRow = 1;
       const summaryEndRow = wsSummary.lastRow!.number;
-      const summaryEndCol = 14 + allPrices.length;
+      const summaryEndCol = 15 + allPrices.length;
 
       for (let r = summaryStartRow; r <= summaryEndRow; r++) {
         for (let c = 1; c <= summaryEndCol; c++) {

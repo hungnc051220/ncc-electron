@@ -27,14 +27,14 @@ const UpdateProgressDock = ({
 
   return (
     <div
-      className="flex min-w-[268px] items-center gap-3 rounded-[20px] border px-3 py-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm"
+      className="flex min-w-67 items-center gap-3 rounded-[20px] border px-3 py-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm"
       style={{
         background: token.colorBgElevated,
         borderColor: token.colorBorderSecondary
       }}
     >
       <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
         style={{
           background: token.colorPrimaryBg,
           color: token.colorPrimary
@@ -59,7 +59,7 @@ const UpdateProgressDock = ({
             type="text"
             size="small"
             icon={isPaused ? <CaretRightOutlined /> : <PauseOutlined />}
-            className="h-8 rounded-[12px] px-2"
+            className="h-8 rounded-xl px-2"
             onClick={onTogglePause}
           >
             {isPaused ? "Tiếp tục" : "Tạm dừng"}
@@ -69,7 +69,7 @@ const UpdateProgressDock = ({
           type="text"
           size="small"
           icon={<EyeOutlined />}
-          className="h-8 rounded-[12px] px-2"
+          className="h-8 rounded-xl px-2"
           onClick={onExpand}
         >
           Mở lại

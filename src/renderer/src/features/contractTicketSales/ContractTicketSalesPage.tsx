@@ -177,7 +177,7 @@ const ContractTicketSalesPage = () => {
       dataIndex: "projectDate",
       render: (_, record) =>
         record.planScreening?.projectDate
-          ? dayjs(record.planScreening.projectDate, "YYYY-MM-DD").utc().format("DD/MM/YYYY")
+          ? dayjs(record.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY")
           : "",
       width: 100
     },
@@ -187,7 +187,7 @@ const ContractTicketSalesPage = () => {
       dataIndex: "projectTime",
       render: (_, record) =>
         record.planScreening?.projectTime
-          ? dayjs(record.planScreening.projectTime).utc().format("HH:mm")
+          ? dayjs(record.planScreening.projectTime).format("HH:mm")
           : "",
       width: 100
     },

@@ -145,7 +145,7 @@ export const buildTicketsFromOrder = async (
     seats.forEach((seat) => {
       tickets.push({
         cinemaName: "TRUNG TÂM CHIẾU PHIM QUỐC GIA",
-        address: "Số 87 Láng Hạ, Ba Đình, Hà Nội",
+        address: "Số 87 Láng Hạ, Ô Chợ Dừa, Hà Nội",
         movieName: data.film.filmName,
         showTime: dayjs(data.planScreening.projectTime).format("HH:mm"),
         date: dayjs(data.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),

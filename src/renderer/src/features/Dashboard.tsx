@@ -31,7 +31,7 @@ const Dashboard = () => {
         <div className="absolute bottom-10 left-1/3 h-44 w-44 rounded-full bg-amber-100/30 blur-3xl dark:bg-indigo-500/10" />
       </div>
 
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 flex w-[36vw] min-w-[320px] max-w-[520px] items-end justify-end opacity-100 dark:opacity-70">
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 flex w-[36vw] min-w-[320px] max-w-130 items-end justify-end opacity-100 dark:opacity-70">
         <img
           src={bgDashboard}
           alt="bg-dashboard"
@@ -70,14 +70,14 @@ const Dashboard = () => {
               description="Tra cứu mã đặt chỗ và in vé online cho khách."
               color="blue"
               href="print-online-tickets"
-              icon={mainIcon2}
+              icon={mainIcon3}
             />
             <MainCard
               title="Chương trình KM"
               description="Phát hành voucher, quà tặng và ưu đãi cho khách."
               color="green"
               href="vouchers"
-              icon={mainIcon3}
+              icon={mainIcon2}
             />
           </div>
 

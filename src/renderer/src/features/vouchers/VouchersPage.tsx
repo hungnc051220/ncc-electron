@@ -2,11 +2,47 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { useVouchers } from "@renderer/hooks/vouchers/useVouchers";
-import { formatNumber } from "@renderer/lib/utils";
-import { BatchProps } from "@shared/types";
+import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { BatchVoucherProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
+
+const VOUCHER_TYPE_ID = {
+  percent: 1,
+  amount: 2,
+  ticket: 3,
+  text: 4
+} as const;
+
+const getVoucherValueLabel = (voucher: BatchVoucherProps) => {
+  switch (voucher.valueType) {
+    case VOUCHER_TYPE_ID.percent:
+      return `${voucher.discountValue}%`;
+    case VOUCHER_TYPE_ID.amount:
+      return formatMoney(voucher.discountValue || 0);
+    case VOUCHER_TYPE_ID.ticket:
+      return `${formatNumber(voucher.discountValue || 1)} vé miễn phí`;
+    case VOUCHER_TYPE_ID.text:
+      return voucher.rewardTextValue || "Hiện vật / mô tả";
+    default:
+      return voucher.rewardTextValue || "--";
+  }
+};
+
+const getCustomerGroupBadgeClassName = (memberTierName: string) => {
+  const normalizedName = memberTierName.trim().toLowerCase();
+
+  if (normalizedName === "vip") {
+    return "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200";
+  }
+
+  if (normalizedName === "vvip") {
+    return "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200";
+  }
+
+  return "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200";
+};
 
 const VouchersPage = () => {
   const [current, setCurrent] = useState(1);
@@ -14,13 +50,12 @@ const VouchersPage = () => {
 
   const params = useMemo(
     () => ({
-      url: "/api/v1/Voucher/available-vouchers",
+      url: "/api/v1/Voucher/voucher-batch",
       method: "POST",
       data: {
         pageIndex: current,
         pageSize: pageSize,
-        movieVersion: 1,
-        salesChannel: 2
+        status: 1
       }
     }),
     [current, pageSize]
@@ -28,41 +63,155 @@ const VouchersPage = () => {
 
   const { data: vouchers, isFetching } = useVouchers(params);
 
-  const columns: TableProps<BatchProps>["columns"] = [
+  const columns: TableProps<BatchVoucherProps>["columns"] = [
     {
       title: "STT",
       key: "no",
       align: "center",
       render: (_, __, index) => (current - 1) * pageSize + index + 1,
-      width: 50,
+      width: 64,
       fixed: "left"
     },
     {
       title: "Chiến dịch voucher",
-      key: "batchName",
-      dataIndex: "batchName"
+      key: "name",
+      dataIndex: "name",
+      width: 300,
+      render: (value: string) => (
+        <span className="font-medium text-slate-900 dark:text-slate-100">{value || "--"}</span>
+      ),
+      fixed: "left"
+    },
+    {
+      title: "Mô tả",
+      key: "description",
+      dataIndex: "description",
+      width: 400,
+      render: (value: string) => (
+        <span className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+          {value || "--"}
+        </span>
+      )
+    },
+    {
+      title: "Nhóm khách hàng",
+      key: "distributionRules",
+      dataIndex: "distributionRules",
+      width: 200,
+      render: (value: BatchVoucherProps["distributionRules"]) => {
+        if (!value || value.length === 0) {
+          return (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-slate-300">
+              Tất cả khách hàng
+            </span>
+          );
+        }
+
+        const visibleRules = value.slice(0, 2);
+        const hiddenCount = value.length - visibleRules.length;
+
+        return (
+          <div className="flex flex-wrap gap-1.5 py-1">
+            {visibleRules.map((rule) => (
+              <span
+                key={rule.memberTierId}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${getCustomerGroupBadgeClassName(rule.memberTierName)}`}
+              >
+                {rule.memberTierName}
+              </span>
+            ))}
+            {hiddenCount > 0 && (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                +{hiddenCount} nhóm
+              </span>
+            )}
+          </div>
+        );
+      }
     },
     {
       title: "Giá trị",
-      key: "discountValue",
-      dataIndex: "discountValue"
+      key: "valueType",
+      dataIndex: "valueType",
+      width: 190,
+      render: (_: number, record) => (
+        <span className="font-medium text-slate-900 dark:text-slate-100">
+          {getVoucherValueLabel(record)}
+        </span>
+      ),
+      align: "right"
     },
     {
-      title: "Loại",
-      key: "valueTypeName",
-      dataIndex: "valueTypeName"
+      title: "Giá trị đơn tối thiểu",
+      key: "minOrderAmount",
+      dataIndex: "minOrderAmount",
+      width: 150,
+      align: "right",
+      render: (value: number) => (
+        <span className="font-medium text-slate-700 dark:text-slate-200">
+          {value > 0 ? formatMoney(value) : "Không yêu cầu"}
+        </span>
+      )
+    },
+    {
+      title: "Áp dụng tối đa/khách",
+      key: "perCustomerLimit",
+      dataIndex: "perCustomerLimit",
+      width: 200,
+      align: "right",
+      render: (value: number) => (
+        <span className="font-medium text-slate-700 dark:text-slate-200">
+          {value > 0 ? formatNumber(value) : "Không giới hạn"}
+        </span>
+      )
+    },
+    {
+      title: "Tổng số lượng",
+      key: "totalQuantity",
+      dataIndex: "totalQuantity",
+      width: 130,
+      align: "right",
+      render: (value: number) => (
+        <span className="font-medium text-slate-900 dark:text-slate-100">
+          {formatNumber(value || 0)}
+        </span>
+      )
+    },
+    {
+      title: "Đã sử dụng",
+      key: "usedCount",
+      dataIndex: "usedCount",
+      width: 130,
+      align: "right",
+      render: (value: number) => {
+        return (
+          <span className="font-medium text-slate-900 dark:text-slate-100">
+            {formatNumber(value || 0)}
+          </span>
+        );
+      }
     },
     {
       title: "Bắt đầu từ",
       key: "startAt",
       dataIndex: "startAt",
-      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
+      width: 120,
+      render: (value: string) => (
+        <span className="font-medium text-slate-700 dark:text-slate-200">
+          {dayjs(value).format("DD/MM/YYYY")}
+        </span>
+      )
     },
     {
       title: "Kết thúc",
       key: "endAt",
       dataIndex: "endAt",
-      render: (value: string) => dayjs(value).format("DD/MM/YYYY")
+      width: 120,
+      render: (value: string) => (
+        <span className="font-medium text-slate-700 dark:text-slate-200">
+          {dayjs(value).format("DD/MM/YYYY")}
+        </span>
+      )
     }
   ];
 
@@ -80,7 +229,7 @@ const VouchersPage = () => {
       <PageHeader left={<AppBreadcrumb />} />
 
       <AutoHeightTable
-        rowKey={(record) => record.batchId}
+        rowKey="id"
         dataSource={vouchers?.data?.items || []}
         columns={columns}
         bordered

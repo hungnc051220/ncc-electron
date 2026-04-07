@@ -106,25 +106,25 @@ const UpdateProgressNotification = ({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-[16px] px-3 py-2" style={{ background: token.colorFillAlter }}>
+        <div className="rounded-2xl px-3 py-2" style={{ background: token.colorFillAlter }}>
           Đã tải:{" "}
           <span className="font-medium" style={{ color: token.colorTextHeading }}>
             {formatBytes(progress.transferred)}
           </span>
         </div>
-        <div className="rounded-[16px] px-3 py-2" style={{ background: token.colorFillAlter }}>
+        <div className="rounded-2xl px-3 py-2" style={{ background: token.colorFillAlter }}>
           Tổng dung lượng:{" "}
           <span className="font-medium" style={{ color: token.colorTextHeading }}>
             {formatBytes(progress.total)}
           </span>
         </div>
-        <div className="rounded-[16px] px-3 py-2" style={{ background: token.colorFillAlter }}>
+        <div className="rounded-2xl px-3 py-2" style={{ background: token.colorFillAlter }}>
           Tốc độ:{" "}
           <span className="font-medium" style={{ color: token.colorTextHeading }}>
             {formatSpeed(progress.bytesPerSecond)}
           </span>
         </div>
-        <div className="rounded-[16px] px-3 py-2" style={{ background: token.colorFillAlter }}>
+        <div className="rounded-2xl px-3 py-2" style={{ background: token.colorFillAlter }}>
           Tiến độ:{" "}
           <span className="font-medium" style={{ color: token.colorTextHeading }}>
             {progress.percent}%

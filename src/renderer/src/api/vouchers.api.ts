@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { BatchProps, MediasoftApiResponse } from "@shared/types";
+import { BatchProps, BatchVoucherProps, MediasoftApiResponse } from "@shared/types";
 
 export interface VoucherDto {
   url: string;
@@ -7,8 +7,7 @@ export interface VoucherDto {
   data: {
     pageIndex: number;
     pageSize: number;
-    movieVersion: number;
-    salesChannel: number;
+    status: number;
   };
 }
 
@@ -24,7 +23,7 @@ export interface AvailableForPosDto {
 }
 
 export const vouchersApi = {
-  getAll: async (dto: VoucherDto): Promise<MediasoftApiResponse<BatchProps>> => {
+  getAll: async (dto: VoucherDto): Promise<MediasoftApiResponse<BatchVoucherProps>> => {
     const res = await api.post("/api/v1/proxy/to-mediasoft", dto);
     return res.data;
   },
