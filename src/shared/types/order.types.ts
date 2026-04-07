@@ -172,6 +172,7 @@ export interface OrderDetailProps {
   planScreening: PlanScreeningDetailProps;
   film: FilmProps;
   room: RoomProps;
+  planDetails: OrderDetailProps[];
 }
 
 export interface CancellationTicketProps {

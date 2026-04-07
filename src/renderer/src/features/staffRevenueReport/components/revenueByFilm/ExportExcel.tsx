@@ -609,22 +609,35 @@ const ExportRevenueExcelButton = ({
         colItem.width = 14;
       });
 
-      const moneyColsSummary = [
-        8 + allPrices.length,
-        9 + allPrices.length,
-        10 + allPrices.length,
-        11 + allPrices.length,
-        12 + allPrices.length,
-        13 + allPrices.length,
-        14 + allPrices.length,
-        15 + allPrices.length
+      const summaryCountCols = [
+        3,
+        ...allPrices.map((_, index) => summaryPriceStartCol + index),
+        summaryTotalStartCol,
+        summaryTotalStartCol + 1,
+        summaryTotalStartCol + 2
+      ];
+      const summaryMoneyCols = [
+        summaryTotalStartCol + 3,
+        summaryDiscountStartCol,
+        summaryDiscountStartCol + 1,
+        summaryDiscountStartCol + 2,
+        summaryDiscountEndCol + 1,
+        summaryDiscountEndCol + 2,
+        summaryDiscountEndCol + 3,
+        summaryDiscountEndCol + 4,
+        summaryDiscountEndCol + 5
       ];
 
-      moneyColsSummary.forEach((summaryCol) => {
+      summaryCountCols.forEach((summaryCol) => {
+        wsSummary.getColumn(summaryCol).numFmt = "#,##0";
+      });
+
+      summaryMoneyCols.forEach((summaryCol) => {
         wsSummary.getColumn(summaryCol).numFmt = "#,##0";
       });
 
       ws.getColumn(1).width = 40;
+      wsSummary.getColumn(1).width = 14;
 
       ws.views = [
         {
@@ -637,7 +650,8 @@ const ExportRevenueExcelButton = ({
       wsSummary.views = [
         {
           state: "frozen",
-          ySplit: 2
+          ySplit: 2,
+          xSplit: 1
         }
       ];
 

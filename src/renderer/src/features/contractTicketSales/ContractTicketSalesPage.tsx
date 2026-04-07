@@ -30,6 +30,8 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+type PlanDetail = OrderDetailProps["planDetails"][number];
+
 const ContractTicketSalesPage = () => {
   const navigate = useNavigate();
   const userId = useAuthStore((s) => s.userId);
@@ -143,6 +145,34 @@ const ContractTicketSalesPage = () => {
       : [])
   ];
 
+  const getPlanDetails = useCallback(
+    (record: OrderDetailProps): PlanDetail[] =>
+      record.planDetails?.length
+        ? record.planDetails
+        : record.planScreening || record.film || record.room
+          ? [record]
+          : [],
+    []
+  );
+
+  const getDisplayPlans = useCallback(
+    (record: OrderDetailProps) =>
+      Array.from(
+        new Map(
+          getPlanDetails(record).map((item) => {
+            const filmName = item.film?.filmName || "";
+            const roomName = item.room?.name || "";
+            const projectDate = item.planScreening?.projectDate || "";
+            const projectTime = item.planScreening?.projectTime || "";
+            const schedule = [projectDate, projectTime].filter(Boolean).join("|");
+
+            return [`${filmName}-${roomName}-${schedule}`, item];
+          })
+        ).values()
+      ),
+    [getPlanDetails]
+  );
+
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
       title: "STT",
@@ -159,37 +189,45 @@ const ContractTicketSalesPage = () => {
       render: (_, record) => record.order?.customerFirstName
     },
     {
-      title: "Tên phim",
-      key: "filmName",
-      dataIndex: "filmName",
-      render: (_, record) => record.film?.filmName
-    },
-    {
-      title: "Phòng chiếu",
-      key: "roomName",
-      dataIndex: "roomName",
-      render: (_, record) => record.room?.name,
-      width: 120
-    },
-    {
-      title: "Ngày chiếu",
-      key: "projectDate",
-      dataIndex: "projectDate",
-      render: (_, record) =>
-        record.planScreening?.projectDate
-          ? dayjs(record.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY")
-          : "",
-      width: 100
-    },
-    {
-      title: "Giờ chiếu",
-      key: "projectTime",
-      dataIndex: "projectTime",
-      render: (_, record) =>
-        record.planScreening?.projectTime
-          ? dayjs(record.planScreening.projectTime).format("HH:mm")
-          : "",
-      width: 100
+      title: "Suất chiếu",
+      key: "scheduleSummary",
+      width: 360,
+      render: (_, record) => {
+        const plans = getDisplayPlans(record);
+
+        if (!plans.length) {
+          return "";
+        }
+
+        return (
+          <div className="space-y-1">
+            {plans.map((item, index) => {
+              const filmName = item.film?.filmName || "Không có tên phim";
+              const roomName = item.room?.name ? `Phòng ${item.room.name}` : "";
+              const projectDate = item.planScreening?.projectDate;
+              const projectTime = item.planScreening?.projectTime;
+              const schedule = [
+                projectDate ? dayjs(projectDate, "YYYY-MM-DD").format("DD/MM/YYYY") : "",
+                projectTime ? dayjs(projectTime).format("HH:mm") : ""
+              ]
+                .filter(Boolean)
+                .join(" - ");
+
+              return (
+                <div
+                  key={`${item.planScreening?.id ?? record.order.id}-${index}`}
+                  className="leading-5"
+                >
+                  <div className="font-medium">{filmName}</div>
+                  <div className="text-xs text-gray-500">
+                    {[roomName, schedule].filter(Boolean).join(" | ") || "Chưa có lịch chiếu"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
     },
     {
       title: "Số vé",

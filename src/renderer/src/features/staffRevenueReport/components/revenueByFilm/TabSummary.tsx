@@ -174,6 +174,35 @@ const TabSummary = ({
     //   children: priceColumns
     // },
     {
+      title: "Tổng vé",
+      key: "totalQuantity",
+      dataIndex: "totalQuantity",
+      align: "right",
+      render: (value: number) => formatNumber(value)
+    },
+    {
+      title: "Giấy mời",
+      key: "totalInvitationQuantity",
+      dataIndex: "totalInvitationQuantity",
+      render: (value: number) => formatNumber(value),
+      align: "right"
+    },
+    {
+      title: "Hợp đồng",
+      key: "totalContractQuantity",
+      dataIndex: "totalContractQuantity",
+      render: (value: number) => formatNumber(value),
+      align: "right"
+    },
+    {
+      title: "Thành tiền",
+      key: "totalSale",
+      dataIndex: "totalSale",
+      render: (value: number) => formatMoney(value),
+      align: "right",
+      width: 150
+    },
+    {
       title: "Khuyến mại",
       children: [
         {
@@ -206,7 +235,7 @@ const TabSummary = ({
       title: "Tổng sau KM",
       key: "discountTotal",
       dataIndex: "discountTotal",
-      width: 110,
+      width: 150,
       align: "right",
       render: (_: number, row: SummaryRow) => formatMoney(row.totalSale - row.discountTotal)
     },
@@ -214,38 +243,9 @@ const TabSummary = ({
       title: "Giảm giá",
       key: "internalDiscountTotal",
       dataIndex: "internalDiscountTotal",
-      width: 110,
+      width: 150,
       align: "right",
       render: (value: number) => formatMoney(value)
-    },
-    {
-      title: "Tổng vé",
-      key: "totalQuantity",
-      dataIndex: "totalQuantity",
-      align: "right",
-      render: (value: number) => formatNumber(value)
-    },
-    {
-      title: "Giấy mời",
-      key: "totalInvitationQuantity",
-      dataIndex: "totalInvitationQuantity",
-      render: (value: number) => formatNumber(value),
-      align: "right"
-    },
-    {
-      title: "Hợp đồng",
-      key: "totalContractQuantity",
-      dataIndex: "totalContractQuantity",
-      render: (value: number) => formatNumber(value),
-      align: "right"
-    },
-    {
-      title: "Thành tiền",
-      key: "totalSale",
-      dataIndex: "totalSale",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
     },
     {
       title: "Tiền VNPayQR",
@@ -300,46 +300,45 @@ const TabSummary = ({
                   const crmDiscount = value?.crmDiscount ?? {};
                   const internalDiscount = value?.internalDiscount ?? {};
                   const crmDiscountTotal = crmDiscount.discountTotal ?? value?.discountTotal ?? 0;
+                  const totalAfterDiscount = (value?.totalSale || 0) - crmDiscountTotal;
 
                   return (
                     <>
-                      <Table.Summary.Cell index={0}>
+                      <Table.Summary.Cell index={0} colSpan={3}>
                         <strong>{label}</strong>
                       </Table.Summary.Cell>
-                      <Table.Summary.Cell index={1}></Table.Summary.Cell>
-                      <Table.Summary.Cell index={2}></Table.Summary.Cell>
                       <Table.Summary.Cell index={3} align="right">
+                        <strong>{formatNumber(value?.totalQuantity || 0)}</strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={4} align="right">
+                        <strong>{formatNumber(value?.totalInvitationQuantity || 0)}</strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={5} align="right">
+                        <strong>{formatNumber(value?.totalContractQuantity || 0)}</strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={6} align="right">
+                        <strong>{formatMoney(value?.totalSale || 0)}</strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={7} align="right">
                         <strong>
                           {formatMoney(crmDiscount.discountOffline ?? value?.discountOffline ?? 0)}
                         </strong>
                       </Table.Summary.Cell>
-                      <Table.Summary.Cell index={4} align="right">
+                      <Table.Summary.Cell index={8} align="right">
                         <strong>
                           {formatMoney(crmDiscount.discountOnline ?? value?.discountOnline ?? 0)}
                         </strong>
                       </Table.Summary.Cell>
-                      <Table.Summary.Cell index={5} align="right">
+                      <Table.Summary.Cell index={9} align="right">
                         <strong>
                           {formatMoney(crmDiscount.discountPartner ?? value?.discountPartner ?? 0)}
                         </strong>
                       </Table.Summary.Cell>
-                      <Table.Summary.Cell index={6} align="right">
-                        <strong>{formatMoney((value?.totalSale || 0) - crmDiscountTotal)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={7} align="right">
-                        <strong>{formatMoney(internalDiscount.discountTotal ?? 0)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={8} align="right">
-                        <strong>{formatNumber(value?.totalQuantity || 0)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={9} align="right">
-                        <strong>{formatNumber(value?.totalInvitationQuantity || 0)}</strong>
-                      </Table.Summary.Cell>
                       <Table.Summary.Cell index={10} align="right">
-                        <strong>{formatNumber(value?.totalContractQuantity || 0)}</strong>
+                        <strong>{formatMoney(totalAfterDiscount)}</strong>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={11} align="right">
-                        <strong>{formatMoney(value?.totalSale || 0)}</strong>
+                        <strong>{formatMoney(internalDiscount.discountTotal ?? 0)}</strong>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={12} align="right">
                         <strong>{formatMoney(value?.saleVnPayQr || 0)}</strong>
