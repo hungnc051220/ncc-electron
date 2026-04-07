@@ -1,6 +1,4 @@
-import { app, BrowserWindow } from "electron";
-import { readFileSync } from "fs";
-import { join } from "path";
+import { BrowserWindow } from "electron";
 import { PrintTicketPayload } from "@shared/types";
 
 export const createPrintService = () => {
@@ -42,24 +40,261 @@ export const createPrintService = () => {
     return printWindow;
   }
 
-  function getTicketTemplatePath() {
-    return app.isPackaged
-      ? join(process.resourcesPath, "ticket.html")
-      : join(process.cwd(), "src/main/ticket.html");
-  }
-
-  // 🔹 Render HTML template từ file để dễ chỉnh layout
+  // 🔹 Render HTML template inline để tránh phụ thuộc file ngoài khi build
   function renderTicketHTML(ticket: PrintTicketPayload) {
-    const template = readFileSync(getTicketTemplatePath(), "utf-8");
-    const ticketData = JSON.stringify({
-      ...ticket,
-      paymentMethod: ticket.paymentMethod || ""
-    });
+    const floorText = ticket.floor
+      ? String(ticket.floor).trim().toLowerCase().startsWith("tầng")
+        ? String(ticket.floor).trim()
+        : `Tầng ${String(ticket.floor).trim()}`
+      : "";
+    const paymentMethod = ticket.paymentMethod || "";
+    const posName = ticket.posName || "";
+    const staffName = ticket.staffName || "";
+    const discountImage = ticket.discountImage
+      ? `<img class="qr-side-image" src="${ticket.discountImage}" alt="discount" />`
+      : "";
 
-    return template.replace(
-      "window.__TICKET_DATA__ = window.__TICKET_DATA__ || null;",
-      ["window.__TICKET_DATA__ = ", ticketData, ";"].join("")
-    );
+    return `<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, Tahoma, sans-serif;
+        font-size: 12px;
+        color: #000;
+      }
+
+      .ticket {
+        width: 80mm;
+        padding: 4px;
+      }
+
+      .center {
+        text-align: center;
+      }
+
+      .bold {
+        font-weight: 700;
+      }
+
+      .title {
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .ticket-title {
+        font-size: 16px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-top: 6px;
+        text-align: center;
+      }
+
+      .sub {
+        font-size: 11px;
+        margin-top: 2px;
+      }
+
+      .info-wrapper {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px 16px;
+        margin-top: 8px;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .label-footer {
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .en-label {
+        font-size: 10px;
+      }
+
+      .value {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .movie {
+        text-align: center;
+        text-transform: uppercase;
+        margin-top: 4px;
+      }
+
+      .qr {
+        margin-top: 10px;
+      }
+
+      .qr-layout {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .qr-side {
+        width: 78px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .qr-side-image {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+
+      .qr-main {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .ticket-code {
+        margin-top: 6px;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: center;
+      }
+
+      .footer {
+        text-align: center;
+        font-size: 10px;
+        margin-top: 6px;
+      }
+
+      .flex-center {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      @media print {
+        body {
+          margin: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ticket">
+      <div class="center">
+        <div class="title">${ticket.cinemaName}</div>
+        <div>NATIONAL CINEMA CENTER</div>
+        <div class="sub">${ticket.address}</div>
+      </div>
+
+      <div class="ticket-title">VÉ XEM PHIM (TICKET)</div>
+
+      <div class="movie">${ticket.movieName}</div>
+
+      <div class="info-wrapper">
+        <div class="row">
+          <div>
+            <span class="label">Giờ:</span>
+            <p class="en-label">Time:</p>
+          </div>
+          <span class="value">${ticket.showTime}</span>
+        </div>
+
+        <div class="row">
+          <div>
+            <span class="label">Ghế:</span>
+            <p class="en-label">Seat:</p>
+          </div>
+          <span class="value">${ticket.seat}</span>
+        </div>
+
+        <div class="row">
+          <div>
+            <span class="label">Ngày:</span>
+            <p class="en-label">Date:</p>
+          </div>
+          <span class="value">${ticket.date}</span>
+        </div>
+
+        <div class="row">
+          <div>
+            <span class="label">Phòng:</span>
+            <p class="en-label">Room:</p>
+          </div>
+          <span class="value">${ticket.room}</span>
+        </div>
+
+        <div class="row">
+          <div>
+            <span class="label">Giá vé:</span>
+            <p class="en-label">Price:</p>
+          </div>
+          <span class="value">${ticket.price}</span>
+        </div>
+
+        <div class="center value flex-center">${floorText}</div>
+      </div>
+
+      <div class="qr">
+        <div class="qr-layout">
+          <div class="qr-side">
+            ${discountImage}
+            <div class="ticket-code">${ticket.ticketCode}</div>
+          </div>
+          <div class="qr-main">
+            <img src="${ticket.qrData}" alt="qr" width="100" height="100" />
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">www.chieuphimquocgia.com.vn</div>
+      <div class="info-wrapper">
+        <div class="row">
+          <span class="en-label">Máy bán:</span>
+          <span class="label-footer">${posName}</span>
+        </div>
+        <div class="row">
+          <span class="en-label">Hình thức TT</span>
+          <span class="label-footer">${paymentMethod}</span>
+        </div>
+        <div class="row">
+          <span class="en-label">Nhân viên:</span>
+          <span class="label-footer">${staffName}</span>
+        </div>
+        <div class="row">
+          <span class="en-label">Hotline:</span>
+          <span class="label-footer">024.35141791</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
   }
 
   function enqueue(task: () => Promise<void>) {

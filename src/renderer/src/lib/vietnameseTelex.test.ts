@@ -26,6 +26,28 @@ describe("vietnameseTelex", () => {
     expect(applyTelexKey("huy", "r")).toBe("huỷ");
   });
 
+  it("restores telex tone keys when the same tone key is pressed again", () => {
+    expect(typeSequence("ass")).toBe("as");
+    expect(typeSequence("hoass")).toBe("hoas");
+    expect(applyTelexKey("á", "s")).toBe("as");
+    expect(applyTelexKey("ấ", "s")).toBe("aas");
+    expect(applyTelexKey("nguyễn", "x")).toBe("nguyeenx");
+    expect(applyTelexKey("Á", "s")).toBe("AS");
+    expect(applyVirtualKeyboardButton("á", "s")).toBe("as");
+  });
+
+  it("restores telex shape keys when the same transform key is pressed again", () => {
+    expect(typeSequence("aaa")).toBe("aa");
+    expect(applyTelexKey("â", "a")).toBe("aa");
+    expect(applyTelexKey("ă", "w")).toBe("aw");
+    expect(applyTelexKey("ê", "e")).toBe("ee");
+    expect(applyTelexKey("ô", "o")).toBe("oo");
+    expect(applyTelexKey("ư", "w")).toBe("uw");
+    expect(applyTelexKey("đ", "d")).toBe("dd");
+    expect(applyTelexKey("ấ", "a")).toBe("aas");
+    expect(applyTelexKey("Đ", "d")).toBe("DD");
+  });
+
   it("repositions tone correctly in compound Vietnamese words", () => {
     expect(typeSequence("hoafng")).toBe("hoàng");
     expect(typeSequence("hoangf")).toBe("hoàng");
@@ -41,6 +63,9 @@ describe("vietnameseTelex", () => {
 
   it("removes marks with z", () => {
     expect(applyTelexKey("hóa", "z")).toBe("hoa");
+    expect(applyTelexKey("ấ", "z")).toBe("a");
+    expect(applyTelexKey("nguyễn", "z")).toBe("nguyen");
+    expect(applyTelexKey("Điện", "z")).toBe("Dien");
     expect(applyTelexKey("đ", "z")).toBe("d");
   });
 
@@ -59,5 +84,18 @@ describe("vietnameseTelex", () => {
     expect(applyVirtualKeyboardButton("nguyễ", "n")).toBe("nguyễn");
     expect(applyVirtualKeyboardButton("hoàng", "{space}")).toBe("hoàng ");
     expect(applyVirtualKeyboardButton("hoàng", "{bksp}")).toBe("hoàn");
+  });
+
+  it("simulates longer real-world typing flows close to Unikey", () => {
+    expect(typeSequence("Tooi ddang gox tieesng Vieetj")).toBe("Tôi đang gõ tiếng Việt");
+    expect(typeSequence("Nguyeenx Vaan A")).toBe("Nguyễn Vân A");
+    expect(typeSequence("hoafng hown")).toBe("hoàng hơn");
+    expect(typeSequence("DDieenj anhr Vieetj Nam")).toBe("Điện ảnh Việt Nam");
+    expect(typeSequence("thuwowng hieeuj")).toBe("thương hiệu");
+    expect(typeSequence("chuyeejn")).toBe("chuyện");
+    expect(typeSequence("chuyeejnz")).toBe("chuyen");
+    expect(typeSequence("nguyeenxx")).toBe("nguyeenx");
+    expect(typeSequence("DDawng")).toBe("Đăng");
+    expect(typeSequence("Tooiss")).toBe("Toois");
   });
 });

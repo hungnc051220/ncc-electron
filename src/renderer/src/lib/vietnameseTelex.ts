@@ -6,6 +6,10 @@ const TONE_KEYS = {
   j: 5
 } as const;
 
+const TONE_BY_INDEX = Object.fromEntries(
+  Object.entries(TONE_KEYS).map(([key, value]) => [value, key])
+) as Record<number, keyof typeof TONE_KEYS>;
+
 type ToneKey = keyof typeof TONE_KEYS;
 type FamilyKey = "a" | "aw" | "aa" | "e" | "ee" | "i" | "o" | "oo" | "ow" | "u" | "uw" | "y";
 
@@ -90,38 +94,6 @@ const transformLastCharacter = (word: string, families: FamilyKey[], nextFamily:
   return replaceCharAt(word, index, getVariants(nextFamily, meta.uppercase)[meta.tone]);
 };
 
-const removeLastMark = (word: string) => {
-  const chars = [...word];
-
-  for (let index = chars.length - 1; index >= 0; index -= 1) {
-    const meta = CHAR_META.get(chars[index]);
-    if (!meta) continue;
-
-    if (meta.tone > 0) {
-      return replaceCharAt(word, index, getVariants(meta.family, meta.uppercase)[0]);
-    }
-
-    const familyFallback: Partial<Record<FamilyKey, FamilyKey>> = {
-      aw: "a",
-      aa: "a",
-      ee: "e",
-      oo: "o",
-      ow: "o",
-      uw: "u"
-    };
-
-    const fallbackFamily = familyFallback[meta.family];
-    if (fallbackFamily) {
-      return replaceCharAt(word, index, getVariants(fallbackFamily, meta.uppercase)[0]);
-    }
-  }
-
-  if (word.endsWith("đ")) return `${word.slice(0, -1)}d`;
-  if (word.endsWith("Đ")) return `${word.slice(0, -1)}D`;
-
-  return null;
-};
-
 const normalizeTonePlacement = (word: string) => {
   const chars = [...word];
   const tonedChar = chars.find((char) => {
@@ -195,6 +167,79 @@ const getToneTargetIndex = (word: string) => {
   return candidates[1].index;
 };
 
+const FAMILY_TELEX_SUFFIX: Partial<Record<FamilyKey, string>> = {
+  aw: "w",
+  aa: "a",
+  ee: "e",
+  oo: "o",
+  ow: "w",
+  uw: "w"
+};
+
+const FAMILY_TELEX_BASE: Record<FamilyKey, FamilyKey> = {
+  a: "a",
+  aw: "a",
+  aa: "a",
+  e: "e",
+  ee: "e",
+  i: "i",
+  o: "o",
+  oo: "o",
+  ow: "o",
+  u: "u",
+  uw: "u",
+  y: "y"
+};
+
+const getWordToneMeta = (word: string) => {
+  const tonedChar = [...word].find((char) => {
+    const meta = CHAR_META.get(char);
+    return meta && meta.tone > 0;
+  });
+
+  return tonedChar ? CHAR_META.get(tonedChar) ?? null : null;
+};
+
+const removeAllMarksFromWord = (word: string) =>
+  [...word]
+    .map((char) => {
+      if (char === "đ") return "d";
+      if (char === "Đ") return "D";
+
+      const meta = CHAR_META.get(char);
+      if (!meta) return char;
+
+      return getVariants(FAMILY_TELEX_BASE[meta.family], meta.uppercase)[0];
+    })
+    .join("");
+
+const expandWordToTelex = (word: string) => {
+  const toneMeta = getWordToneMeta(word);
+  const rawWord = [...word]
+    .map((char) => {
+      if (char === "đ") return "dd";
+      if (char === "Đ") return "DD";
+
+      const meta = CHAR_META.get(char);
+      if (!meta) return char;
+
+      const baseChar = getVariants(FAMILY_TELEX_BASE[meta.family], meta.uppercase)[0];
+      const familySuffix = FAMILY_TELEX_SUFFIX[meta.family];
+
+      if (!familySuffix) return baseChar;
+
+      return `${baseChar}${meta.uppercase ? familySuffix.toUpperCase() : familySuffix}`;
+    })
+    .join("");
+
+  if (!toneMeta || toneMeta.tone === 0) return rawWord;
+
+  const toneKey = TONE_BY_INDEX[toneMeta.tone];
+  if (!toneKey) return rawWord;
+
+  return `${rawWord}${toneMeta.uppercase ? toneKey.toUpperCase() : toneKey}`;
+};
+
 const applyToneToWord = (word: string, toneKey: ToneKey) => {
   const targetIndex = getToneTargetIndex(word);
   if (targetIndex < 0) return null;
@@ -226,36 +271,57 @@ export const applyTelexKey = (currentValue: string, rawKey: string) => {
   const { word, start } = wordMatch;
 
   if (lowerKey in TONE_KEYS) {
+    const wordToneMeta = getWordToneMeta(word);
+    if (wordToneMeta?.tone === TONE_KEYS[lowerKey as ToneKey]) {
+      return `${currentValue.slice(0, start)}${expandWordToTelex(word)}`;
+    }
+
     const nextWord = applyToneToWord(word, lowerKey as ToneKey);
     if (!nextWord) return `${currentValue}${key}`;
     return `${currentValue.slice(0, start)}${nextWord}`;
   }
 
   if (lowerKey === "z") {
-    const nextWord = removeLastMark(word);
-    if (!nextWord) return `${currentValue}${key}`;
+    const nextWord = removeAllMarksFromWord(word);
+    if (nextWord === word) return `${currentValue}${key}`;
     return `${currentValue.slice(0, start)}${nextWord}`;
   }
 
   if (lowerKey === "d") {
+    if (word.endsWith("đ") || word.endsWith("Đ")) {
+      return `${currentValue.slice(0, start)}${expandWordToTelex(word)}`;
+    }
+
     if (word.endsWith("d")) return `${currentValue.slice(0, -1)}đ`;
     if (word.endsWith("D")) return `${currentValue.slice(0, -1)}Đ`;
     return `${currentValue}${key}`;
   }
 
   if (lowerKey === "a") {
+    if (["aa"].includes(CHAR_META.get([...word].at(-1) ?? "")?.family ?? "")) {
+      return `${currentValue.slice(0, start)}${expandWordToTelex(word)}`;
+    }
+
     const nextWord = transformLastCharacter(word, ["a"], "aa");
     if (!nextWord) return `${currentValue}${key}`;
     return `${currentValue.slice(0, start)}${nextWord}`;
   }
 
   if (lowerKey === "e") {
+    if (["ee"].includes(CHAR_META.get([...word].at(-1) ?? "")?.family ?? "")) {
+      return `${currentValue.slice(0, start)}${expandWordToTelex(word)}`;
+    }
+
     const nextWord = transformLastCharacter(word, ["e"], "ee");
     if (!nextWord) return `${currentValue}${key}`;
     return `${currentValue.slice(0, start)}${nextWord}`;
   }
 
   if (lowerKey === "o") {
+    if (["oo"].includes(CHAR_META.get([...word].at(-1) ?? "")?.family ?? "")) {
+      return `${currentValue.slice(0, start)}${expandWordToTelex(word)}`;
+    }
+
     const nextWord = transformLastCharacter(word, ["o"], "oo");
     if (!nextWord) return `${currentValue}${key}`;
     return `${currentValue.slice(0, start)}${nextWord}`;
@@ -266,6 +332,10 @@ export const applyTelexKey = (currentValue: string, rawKey: string) => {
     const index = chars.length - 1;
     const meta = CHAR_META.get(chars[index]);
     if (!meta) return `${currentValue}${key}`;
+
+    if (["aw", "ow", "uw"].includes(meta.family)) {
+      return `${currentValue.slice(0, start)}${expandWordToTelex(word)}`;
+    }
 
     const nextFamilyByCurrent: Partial<Record<FamilyKey, FamilyKey>> = {
       a: "aw",
