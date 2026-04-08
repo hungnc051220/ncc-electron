@@ -56,10 +56,16 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     queryKey: ["users"],
     queryFn: ({ pageParam, searchText }) =>
       usersApi.getAll({ current: pageParam, pageSize: 20, keyword: searchText }),
-    mapOption: (user) => ({
-      value: user.id,
-      label: user.customerFirstName || user.username
-    })
+    mapOption: (user) => {
+      const fullName = [user.customerFirstName, user.customerLastName]
+        .filter((value): value is string => !!value?.trim())
+        .join(" ");
+
+      return {
+        value: user.id,
+        label: fullName || user.username
+      };
+    }
   });
 
   const manufacturerSelect = useInfiniteSelectOptions({

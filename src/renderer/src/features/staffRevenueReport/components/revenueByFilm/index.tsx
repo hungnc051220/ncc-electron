@@ -15,6 +15,7 @@ export interface ValuesProps {
   userId?: number;
   userName?: string;
   manufacturerId?: number;
+  manufacturerName?: string;
   filmId?: number;
   dateRange?: [string, string];
 }
@@ -49,6 +50,23 @@ export type Row = {
   internalDiscountTotal: number;
   children?: Row[];
 };
+
+export type RevenueColumnMode = "default" | "user" | "manufacturer";
+
+export const getRevenueColumnMode = (filterValues: ValuesProps): RevenueColumnMode => {
+  if (filterValues.manufacturerId) {
+    return "manufacturer";
+  }
+
+  if (filterValues.userId) {
+    return "user";
+  }
+
+  return "default";
+};
+
+export const getActualRemittance = (row: Pick<Row, "actualSale" | "discountTotal" | "saleVietQr" | "saleVnPayQr">) =>
+  row.actualSale - row.discountTotal - row.saleVietQr - row.saleVnPayQr;
 
 const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
@@ -157,6 +175,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     }) || [];
 
   const detailRows = tableData.flatMap((row) => row.children || []);
+  const columnMode = getRevenueColumnMode(filterValues);
 
   const summaryByDate = detailRows.reduce<Record<string, SummaryGroup>>((acc, row) => {
     const projectDate = row.projectDate;
@@ -226,81 +245,52 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
       align: "right"
     },
     {
-      title: "Thành tiền",
-      key: "totalSale",
-      dataIndex: "totalSale",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
-    },
-    {
-      title: "Khuyến mại",
-      children: [
-        {
-          title: "Offline",
-          key: "discountOffline",
-          dataIndex: "discountOffline",
-          width: 110,
-          align: "right",
-          render: (value: number) => formatMoney(value)
-        },
-        {
-          title: "Online",
-          key: "discountOnline",
-          dataIndex: "discountOnline",
-          width: 110,
-          align: "right",
-          render: (value: number) => formatMoney(value)
-        },
-        {
-          title: "Đại lý",
-          key: "discountPartner",
-          dataIndex: "discountPartner",
-          width: 110,
-          align: "right",
-          render: (value: number) => formatMoney(value)
-        }
-      ]
-    },
-    {
-      title: "Tổng sau KM",
-      key: "discountTotal",
-      width: 110,
-      align: "right",
-      render: (_: number, row: Row) => formatMoney(row.totalSale - row.discountTotal)
-    },
-    {
-      title: "Giảm giá",
-      key: "internalDiscountTotal",
-      dataIndex: "internalDiscountTotal",
-      width: 110,
-      align: "right",
-      render: (value: number) => formatMoney(value)
-    },
-    {
-      title: "Tiền VNPayQR",
-      key: "saleVnPayQr",
-      dataIndex: "saleVnPayQr",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
-    },
-    {
-      title: "Tiền VietQR",
-      key: "saleVietQr",
-      dataIndex: "saleVietQr",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
-    },
-    {
-      title: "Thực nộp",
+      title: "Tổng doanh thu",
       key: "actualSale",
       dataIndex: "actualSale",
       render: (value: number) => formatMoney(value),
       align: "right",
       width: 150
-    }
+    },
+    ...(columnMode === "manufacturer"
+      ? []
+      : [
+          {
+            title: "Khuyến mại",
+            key: "discountTotal",
+            dataIndex: "discountTotal",
+            width: 150,
+            align: "right" as const,
+            render: (value: number) => formatMoney(value)
+          },
+          {
+            title: "Giảm giá",
+            key: "internalDiscountTotal",
+            dataIndex: "internalDiscountTotal",
+            width: 110,
+            align: "right" as const,
+            render: (value: number) => formatMoney(value)
+          },
+          ...(columnMode === "user"
+            ? [
+                {
+                  title: "Thực nộp",
+                  key: "actualRemittance",
+                  width: 160,
+                  align: "right" as const,
+                  render: (_: number, row: Row) => formatMoney(getActualRemittance(row))
+                }
+              ]
+            : [
+                {
+                  title: "Tổng doanh thu sau KM",
+                  key: "totalRevenueAfterDiscount",
+                  width: 180,
+                  align: "right" as const,
+                  render: (_: number, row: Row) => formatMoney(row.actualSale - row.discountTotal)
+                }
+              ])
+        ])
   ];
 
   const items: TabsProps["items"] = [
@@ -328,6 +318,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
             totalRevenue={reportData?.totalRevenue}
             totalRevenueOnline={reportData?.totalRevenueOnline}
             totalRevenueOffline={reportData?.totalRevenueOffline}
+            columnMode={columnMode}
           />
         </div>
       ) : (
@@ -347,7 +338,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
         defaultActiveKey="1"
         className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 mr-2">
             <Filter filterValues={filterValues} onSearch={onSearch} />
             {filterValues.dateRange?.length === 2 && (
               <ExportRevenueExcelButton
@@ -358,6 +349,8 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
                 toDate={filterValues.dateRange[1]}
                 dateType={dateType}
                 employeeName={filterValues?.userName}
+                manufacturerName={filterValues?.manufacturerName}
+                columnMode={columnMode}
               />
             )}
           </div>

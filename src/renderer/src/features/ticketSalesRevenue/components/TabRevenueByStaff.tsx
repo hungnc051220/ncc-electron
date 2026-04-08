@@ -153,11 +153,6 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={7} align="right">
                   <Text className="font-bold">
-                    {formatMoney(formatData?.totalByEmployee?.actualOffSale || 0)}
-                  </Text>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={8} align="right">
-                  <Text className="font-bold">
                     {formatMoney(formatData?.totalByEmployee?.totalSale || 0)}
                   </Text>
                 </Table.Summary.Cell>

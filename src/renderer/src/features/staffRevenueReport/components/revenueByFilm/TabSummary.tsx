@@ -1,7 +1,7 @@
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { TotalRevenueOnlineProps, TotalRevenueProps } from "@shared/types";
 import { Table } from "antd";
-import { Row, SummaryGroup } from ".";
+import { Row, SummaryGroup, RevenueColumnMode, getActualRemittance } from ".";
 import type { TableProps } from "antd";
 import dayjs from "dayjs";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
@@ -32,6 +32,7 @@ interface TabSummaryProps {
   totalRevenue?: TotalRevenueProps;
   totalRevenueOnline?: TotalRevenueOnlineProps;
   totalRevenueOffline?: TotalRevenueOnlineProps;
+  columnMode: RevenueColumnMode;
 }
 
 const TabSummary = ({
@@ -39,7 +40,8 @@ const TabSummary = ({
   isFetching,
   totalRevenue,
   totalRevenueOnline,
-  totalRevenueOffline
+  totalRevenueOffline,
+  columnMode
 }: TabSummaryProps) => {
   const sumGroup = (rows: Row[]) => {
     const prices: Record<number, number> = {};
@@ -195,82 +197,53 @@ const TabSummary = ({
       align: "right"
     },
     {
-      title: "Thành tiền",
-      key: "totalSale",
-      dataIndex: "totalSale",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
-    },
-    {
-      title: "Khuyến mại",
-      children: [
-        {
-          title: "Offline",
-          key: "discountOffline",
-          dataIndex: "discountOffline",
-          width: 110,
-          align: "right",
-          render: (value: number) => formatMoney(value)
-        },
-        {
-          title: "Online",
-          key: "discountOnline",
-          dataIndex: "discountOnline",
-          width: 110,
-          align: "right",
-          render: (value: number) => formatMoney(value)
-        },
-        {
-          title: "Đại lý",
-          key: "discountPartner",
-          dataIndex: "discountPartner",
-          width: 110,
-          align: "right",
-          render: (value: number) => formatMoney(value)
-        }
-      ]
-    },
-    {
-      title: "Tổng sau KM",
-      key: "discountTotal",
-      dataIndex: "discountTotal",
-      width: 150,
-      align: "right",
-      render: (_: number, row: SummaryRow) => formatMoney(row.totalSale - row.discountTotal)
-    },
-    {
-      title: "Giảm giá",
-      key: "internalDiscountTotal",
-      dataIndex: "internalDiscountTotal",
-      width: 150,
-      align: "right",
-      render: (value: number) => formatMoney(value)
-    },
-    {
-      title: "Tiền VNPayQR",
-      key: "saleVnPayQr",
-      dataIndex: "saleVnPayQr",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
-    },
-    {
-      title: "Tiền VietQR",
-      key: "saleVietQr",
-      dataIndex: "saleVietQr",
-      render: (value: number) => formatMoney(value),
-      align: "right",
-      width: 150
-    },
-    {
-      title: "Thực nộp",
+      title: "Tổng doanh thu",
       key: "actualSale",
       dataIndex: "actualSale",
       render: (value: number) => formatMoney(value),
       align: "right",
       width: 150
-    }
+    },
+    ...(columnMode === "manufacturer"
+      ? []
+      : [
+          {
+            title: "Khuyến mại",
+            key: "discountTotal",
+            dataIndex: "discountTotal",
+            width: 150,
+            align: "right" as const,
+            render: (value: number) => formatMoney(value)
+          },
+          {
+            title: "Giảm giá",
+            key: "internalDiscountTotal",
+            dataIndex: "internalDiscountTotal",
+            width: 150,
+            align: "right" as const,
+            render: (value: number) => formatMoney(value)
+          },
+          ...(columnMode === "user"
+            ? [
+                {
+                  title: "Thực nộp",
+                  key: "actualRemittance",
+                  width: 170,
+                  align: "right" as const,
+                  render: (_: number, row: SummaryRow) => formatMoney(getActualRemittance(row))
+                }
+              ]
+            : [
+                {
+                  title: "Tổng doanh thu sau KM",
+                  key: "totalRevenueAfterDiscount",
+                  width: 170,
+                  align: "right" as const,
+                  render: (_: number, row: SummaryRow) =>
+                    formatMoney(row.actualSale - row.discountTotal)
+                }
+              ])
+        ])
   ];
 
   return (
@@ -300,7 +273,12 @@ const TabSummary = ({
                   const crmDiscount = value?.crmDiscount ?? {};
                   const internalDiscount = value?.internalDiscount ?? {};
                   const crmDiscountTotal = crmDiscount.discountTotal ?? value?.discountTotal ?? 0;
-                  const totalAfterDiscount = (value?.totalSale || 0) - crmDiscountTotal;
+                  const totalRevenueAfterDiscount = (value?.actualSale || 0) - crmDiscountTotal;
+                  const actualRemittance =
+                    (value?.actualSale || 0) -
+                    crmDiscountTotal -
+                    (value?.saleVietQr || 0) -
+                    (value?.saleVnPayQr || 0);
 
                   return (
                     <>
@@ -317,38 +295,25 @@ const TabSummary = ({
                         <strong>{formatNumber(value?.totalContractQuantity || 0)}</strong>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={6} align="right">
-                        <strong>{formatMoney(value?.totalSale || 0)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={7} align="right">
-                        <strong>
-                          {formatMoney(crmDiscount.discountOffline ?? value?.discountOffline ?? 0)}
-                        </strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={8} align="right">
-                        <strong>
-                          {formatMoney(crmDiscount.discountOnline ?? value?.discountOnline ?? 0)}
-                        </strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={9} align="right">
-                        <strong>
-                          {formatMoney(crmDiscount.discountPartner ?? value?.discountPartner ?? 0)}
-                        </strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={10} align="right">
-                        <strong>{formatMoney(totalAfterDiscount)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={11} align="right">
-                        <strong>{formatMoney(internalDiscount.discountTotal ?? 0)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={12} align="right">
-                        <strong>{formatMoney(value?.saleVnPayQr || 0)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={13} align="right">
-                        <strong>{formatMoney(value?.saleVietQr || 0)}</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={14} align="right">
                         <strong>{formatMoney(value?.actualSale || 0)}</strong>
                       </Table.Summary.Cell>
+                      {columnMode !== "manufacturer" && (
+                        <>
+                          <Table.Summary.Cell index={7} align="right">
+                            <strong>{formatMoney(crmDiscountTotal)}</strong>
+                          </Table.Summary.Cell>
+                          <Table.Summary.Cell index={8} align="right">
+                            <strong>{formatMoney(internalDiscount.discountTotal ?? 0)}</strong>
+                          </Table.Summary.Cell>
+                          <Table.Summary.Cell index={9} align="right">
+                            <strong>
+                              {formatMoney(
+                                columnMode === "user" ? actualRemittance : totalRevenueAfterDiscount
+                              )}
+                            </strong>
+                          </Table.Summary.Cell>
+                        </>
+                      )}
                     </>
                   );
                 })()}

@@ -6,6 +6,7 @@ import { Button, message } from "antd";
 import ExcelJS from "exceljs";
 import { DownloadIcon } from "lucide-react";
 import dayjs from "dayjs";
+import { RevenueColumnMode, getActualRemittance } from ".";
 
 type Row = {
   filmName: string;
@@ -62,11 +63,13 @@ type Props = {
   toDate: string;
   dateType: number;
   employeeName?: string;
+  manufacturerName?: string;
   fileName?: string;
+  columnMode: RevenueColumnMode;
 };
 
 const getReportTitleByDateType = (dateType: number) =>
-  dateType === 1 ? "Báo cáo doanh thu phim theo ngày bán" : "Báo cáo doanh thu theo lịch chiếu";
+  dateType === 2 ? "Báo cáo doanh thu phim theo ngày bán" : "Báo cáo doanh thu theo lịch chiếu";
 
 const sumRows = (rows: Row[]) => {
   const prices: Record<number, number> = {};
@@ -130,8 +133,10 @@ const ExportRevenueExcelButton = ({
   fromDate,
   toDate,
   dateType,
-  employeeName = "Tất cả",
-  fileName
+  employeeName,
+  manufacturerName,
+  fileName,
+  columnMode
 }: Props) => {
   const { can } = usePermission();
   const canExport = can("staff_revenue_report", "export");
@@ -201,14 +206,30 @@ const ExportRevenueExcelButton = ({
 
     try {
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet("Doanh thu theo phim");
+      const ws = wb.addWorksheet("Chi tiết");
       const reportTitle = getReportTitleByDateType(dateType);
       const formattedFromDate = dayjs(fromDate).format("DD/MM/YYYY");
       const formattedToDate = dayjs(toDate).format("DD/MM/YYYY");
       const filmGroups = buildFilmGroups(tableData);
+      const offlineRows = Object.values(summaryByDate).flatMap((group) => group.off);
+      const onlineRows = Object.values(summaryByDate).flatMap((group) => group.on);
+      const totalRows = [...offlineRows, ...onlineRows];
+      const detailSummaryRows = [
+        { label: "Offline", sum: sumRows(offlineRows) },
+        { label: "Online", sum: sumRows(onlineRows) },
+        { label: "Tổng cộng", sum: sumRows(totalRows) }
+      ];
+      const subtitleLines = [
+        `Từ ngày: ${formattedFromDate}  -  Đến ngày: ${formattedToDate}`,
+        employeeName ? `Nhân viên: ${employeeName}` : null,
+        manufacturerName ? `Hãng phim: ${manufacturerName}` : null
+      ].filter((line): line is string => !!line);
       const resolvedFileName =
         fileName ??
-        `${reportTitle} ${dayjs(fromDate).format("DD-MM-YYYY")}-${dayjs(toDate).format("DD-MM-YYYY")}.xlsx`;
+        `${reportTitle} ${dayjs(fromDate).format("DD.MM.YYYY")}-${dayjs(toDate).format("DD.MM.YYYY")}.xlsx`;
+      const showDiscountColumns = columnMode !== "manufacturer";
+      const showActualRemittance = columnMode === "user";
+      const lastRevenueColumnTitle = showActualRemittance ? "Thực nộp" : "Tổng doanh thu sau KM";
 
       const header = [
         "Phim",
@@ -220,15 +241,8 @@ const ExportRevenueExcelButton = ({
         "Tổng",
         "Giấy mời",
         "Hợp đồng",
-        "Thành tiền",
-        "KM Offline",
-        "KM Online",
-        "KM Đại lý",
-        "Tổng sau KM",
-        "Giảm giá",
-        "VNPayQR",
-        "VietQR",
-        "Thực nộp"
+        "Tổng doanh thu",
+        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", lastRevenueColumnTitle] : [])
       ];
 
       const totalColumns = header.length;
@@ -240,27 +254,16 @@ const ExportRevenueExcelButton = ({
       ws.getRow(1).font = { bold: true, size: 16 };
       ws.getRow(1).alignment = { horizontal: "center" };
 
-      ws.addRow([]);
-      ws.mergeCells(ws.lastRow!.number, 1, ws.lastRow!.number, totalColumns);
-
-      ws.getCell(ws.lastRow!.number, 1).value =
-        `Từ ngày: ${formattedFromDate}  -  Đến ngày: ${formattedToDate}`;
-
-      ws.getRow(ws.lastRow!.number).alignment = {
-        horizontal: "center",
-        vertical: "middle"
-      };
-      ws.getRow(ws.lastRow!.number).font = { italic: true };
-
-      ws.addRow([]);
-      ws.mergeCells(ws.lastRow!.number, 1, ws.lastRow!.number, totalColumns);
-
-      ws.getCell(ws.lastRow!.number, 1).value = `Nhân viên: ${employeeName}`;
-      ws.getRow(ws.lastRow!.number).alignment = {
-        horizontal: "center",
-        vertical: "middle"
-      };
-      ws.getRow(ws.lastRow!.number).font = { italic: true };
+      subtitleLines.forEach((line) => {
+        ws.addRow([]);
+        ws.mergeCells(ws.lastRow!.number, 1, ws.lastRow!.number, totalColumns);
+        ws.getCell(ws.lastRow!.number, 1).value = line;
+        ws.getRow(ws.lastRow!.number).alignment = {
+          horizontal: "center",
+          vertical: "middle"
+        };
+        ws.getRow(ws.lastRow!.number).font = { italic: true };
+      });
 
       ws.addRow([]);
 
@@ -285,7 +288,7 @@ const ExportRevenueExcelButton = ({
 
       let totalCol = totalStartCol;
 
-      const totalHeaders = ["Tổng vé", "Giấy mời", "Hợp đồng", "Thành tiền"];
+      const totalHeaders = ["Tổng vé", "Giấy mời", "Hợp đồng", "Tổng doanh thu"];
 
       totalHeaders.forEach((title) => {
         ws.mergeCells(headerGroupRowIndex, totalCol, headerGroupRowIndex + 1, totalCol);
@@ -293,68 +296,40 @@ const ExportRevenueExcelButton = ({
         totalCol++;
       });
 
-      const discountStartCol = amountCol + 1;
-      const discountEndCol = discountStartCol + 2;
-
-      ws.mergeCells(headerGroupRowIndex, discountStartCol, headerGroupRowIndex, discountEndCol);
-      ws.getCell(headerGroupRowIndex, discountStartCol).value = "Khuyến mại";
-
-      const discountTotalCol = discountEndCol + 1;
-
-      ws.mergeCells(
-        headerGroupRowIndex,
-        discountTotalCol,
-        headerGroupRowIndex + 1,
-        discountTotalCol
-      );
-      ws.getCell(headerGroupRowIndex, discountTotalCol).value = "Tổng sau KM";
-
-      const internalDiscountCol = discountTotalCol + 1;
-
-      ws.mergeCells(
-        headerGroupRowIndex,
-        internalDiscountCol,
-        headerGroupRowIndex + 1,
-        internalDiscountCol
-      );
-      ws.getCell(headerGroupRowIndex, internalDiscountCol).value = "Giảm giá";
-
-      const paymentStartCol = internalDiscountCol + 1;
-      const paymentHeaders = ["VNPayQR", "VietQR", "Thực nộp"];
-
-      paymentHeaders.forEach((title, index) => {
-        const paymentCol = paymentStartCol + index;
-        ws.mergeCells(headerGroupRowIndex, paymentCol, headerGroupRowIndex + 1, paymentCol);
-        ws.getCell(headerGroupRowIndex, paymentCol).value = title;
-      });
-
-      const discountHeaders = ["Offline", "Online", "Đại lý"];
       const COL_AMOUNT = amountCol;
-      const COL_VNPAY = paymentStartCol;
-      const COL_VIETQR = paymentStartCol + 1;
-      const COL_ACTUAL = paymentStartCol + 2;
-      const COL_DISCOUNT_OFFLINE = discountStartCol;
-      const COL_DISCOUNT_ONLINE = discountStartCol + 1;
-      const COL_DISCOUNT_PARTNER = discountStartCol + 2;
-      const COL_DISCOUNT_TOTAL = discountStartCol + 3;
-      const COL_INTERNAL_DISCOUNT = internalDiscountCol;
-      const totalEndCol = COL_ACTUAL;
+      const COL_DISCOUNT_OFFLINE = showDiscountColumns ? amountCol + 1 : undefined;
+      const COL_INTERNAL_DISCOUNT = showDiscountColumns ? amountCol + 2 : undefined;
+      const COL_LAST_REVENUE = showDiscountColumns ? amountCol + 3 : undefined;
+      const totalEndCol = COL_LAST_REVENUE ?? COL_AMOUNT;
 
       const moneyFormat = "#,##0";
 
-      [
-        COL_DISCOUNT_OFFLINE,
-        COL_DISCOUNT_ONLINE,
-        COL_DISCOUNT_PARTNER,
-        COL_DISCOUNT_TOTAL,
-        COL_INTERNAL_DISCOUNT,
-        COL_AMOUNT,
-        COL_VNPAY,
-        COL_VIETQR,
-        COL_ACTUAL
-      ].forEach((col) => {
+      [COL_AMOUNT, COL_DISCOUNT_OFFLINE, COL_INTERNAL_DISCOUNT, COL_LAST_REVENUE]
+        .filter((col): col is number => typeof col === "number")
+        .forEach((col) => {
         ws.getColumn(col).numFmt = moneyFormat;
       });
+
+      if (showDiscountColumns && COL_DISCOUNT_OFFLINE && COL_INTERNAL_DISCOUNT && COL_LAST_REVENUE) {
+        ws.mergeCells(
+          headerGroupRowIndex,
+          COL_DISCOUNT_OFFLINE,
+          headerGroupRowIndex + 1,
+          COL_DISCOUNT_OFFLINE
+        );
+        ws.getCell(headerGroupRowIndex, COL_DISCOUNT_OFFLINE).value = "Khuyến mại";
+
+        ws.mergeCells(
+          headerGroupRowIndex,
+          COL_INTERNAL_DISCOUNT,
+          headerGroupRowIndex + 1,
+          COL_INTERNAL_DISCOUNT
+        );
+        ws.getCell(headerGroupRowIndex, COL_INTERNAL_DISCOUNT).value = "Giảm giá";
+
+        ws.mergeCells(headerGroupRowIndex, COL_LAST_REVENUE, headerGroupRowIndex + 1, COL_LAST_REVENUE);
+        ws.getCell(headerGroupRowIndex, COL_LAST_REVENUE).value = lastRevenueColumnTitle;
+      }
 
       const headerRowIndex = headerGroupRowIndex + 1;
       const headerRow = ws.getRow(headerRowIndex);
@@ -370,10 +345,6 @@ const ExportRevenueExcelButton = ({
         headerRow.getCell(col++).value = (p / 1000).toString();
       });
 
-      discountHeaders.forEach((title) => {
-        headerRow.getCell(col++).value = title;
-      });
-
       [headerGroupRowIndex, headerRowIndex].forEach((r) => {
         ws.getRow(r).font = { bold: true };
         ws.getRow(r).alignment = {
@@ -383,6 +354,43 @@ const ExportRevenueExcelButton = ({
         };
         ws.getRow(r).height = 28;
       });
+
+      const detailSummaryStartRowIndex = ws.lastRow!.number + 1;
+
+      detailSummaryRows.forEach(({ label, sum }) => {
+        const row = ws.addRow([
+          label,
+          "",
+          "",
+          "",
+          "",
+          ...allPrices.map((p) => sum.prices[p] ?? ""),
+          sum.totalQuantity,
+          sum.totalInvitationQuantity,
+          sum.totalContractQuantity,
+          sum.actualSale,
+          ...(showDiscountColumns
+            ? [
+                sum.discountTotal,
+                sum.internalDiscountTotal,
+                showActualRemittance
+                  ? getActualRemittance(sum)
+                  : sum.actualSale - sum.discountTotal
+              ]
+            : [])
+        ]);
+
+        row.font = { bold: true };
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFE6F4EA" }
+          };
+        });
+      });
+
+      ws.addRow([]);
 
       filmGroups.forEach((film) => {
         const summaryRow = ws.addRow([
@@ -395,15 +403,16 @@ const ExportRevenueExcelButton = ({
           film.totalQuantity,
           film.totalInvitationQuantity,
           film.totalContractQuantity,
-          film.totalSale,
-          film.discountOffline,
-          film.discountOnline,
-          film.discountPartner,
-          film.totalSale - film.discountTotal,
-          film.internalDiscountTotal,
-          film.saleVnPayQr,
-          film.saleVietQr,
-          film.actualSale
+          film.actualSale,
+          ...(showDiscountColumns
+            ? [
+                film.discountTotal,
+                film.internalDiscountTotal,
+                showActualRemittance
+                  ? getActualRemittance(film)
+                  : film.actualSale - film.discountTotal
+              ]
+            : [])
         ]);
 
         summaryRow.font = { bold: true };
@@ -426,20 +435,19 @@ const ExportRevenueExcelButton = ({
             r.totalQuantity,
             r.totalInvitationQuantity,
             r.totalContractQuantity,
-            r.totalSale,
-            r.discountOffline,
-            r.discountOnline,
-            r.discountPartner,
-            r.totalSale - r.discountTotal,
-            r.internalDiscountTotal,
-            r.saleVnPayQr,
-            r.saleVietQr,
-            r.actualSale
+            r.actualSale,
+            ...(showDiscountColumns
+              ? [
+                  r.discountTotal,
+                  r.internalDiscountTotal,
+                  showActualRemittance ? getActualRemittance(r) : r.actualSale - r.discountTotal
+                ]
+              : [])
           ]);
         });
       });
 
-      const wsSummary = wb.addWorksheet("Tổng hợp theo ngày");
+      const wsSummary = wb.addWorksheet("Tổng hợp");
       const summaryHeaderGroup = [
         "Ngày",
         "Loại",
@@ -448,15 +456,8 @@ const ExportRevenueExcelButton = ({
         "Tổng vé",
         "Giấy mời",
         "Hợp đồng",
-        "Thành tiền",
-        "Khuyến mại",
-        "",
-        "",
-        "Tổng sau KM",
-        "Giảm giá",
-        "VNPayQR",
-        "VietQR",
-        "Thực nộp"
+        "Tổng doanh thu",
+        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", lastRevenueColumnTitle] : [])
       ];
       const summaryHeaderDetail = [
         "",
@@ -466,15 +467,7 @@ const ExportRevenueExcelButton = ({
         "",
         "",
         "",
-        "",
-        "Offline",
-        "Online",
-        "Đại lý",
-        "",
-        "",
-        "",
-        "",
-        ""
+        ...(showDiscountColumns ? ["", "", ""] : [])
       ];
 
       wsSummary.addRow(summaryHeaderGroup);
@@ -485,10 +478,8 @@ const ExportRevenueExcelButton = ({
       const summaryPriceStartCol = 4;
       const summaryPriceEndCol = summaryPriceStartCol + allPrices.length - 1;
       const summaryTotalStartCol = summaryPriceStartCol + allPrices.length;
-      const summaryDiscountStartCol = summaryTotalStartCol + 4;
-      const summaryDiscountEndCol = summaryDiscountStartCol + 2;
-
-      [
+      const summaryDiscountStartCol = showDiscountColumns ? summaryTotalStartCol + 4 : undefined;
+      const summaryStaticMergeCols = [
         1,
         2,
         3,
@@ -496,12 +487,12 @@ const ExportRevenueExcelButton = ({
         summaryTotalStartCol + 1,
         summaryTotalStartCol + 2,
         summaryTotalStartCol + 3,
-        summaryDiscountEndCol + 1,
-        summaryDiscountEndCol + 2,
-        summaryDiscountEndCol + 3,
-        summaryDiscountEndCol + 4,
-        summaryDiscountEndCol + 5
-      ].forEach((col) => {
+        ...(showDiscountColumns && summaryDiscountStartCol
+          ? [summaryDiscountStartCol, summaryDiscountStartCol + 1, summaryDiscountStartCol + 2]
+          : [])
+      ];
+
+      summaryStaticMergeCols.forEach((col) => {
         wsSummary.mergeCells(summaryHeaderGroupRow, col, summaryHeaderRow, col);
       });
 
@@ -513,13 +504,6 @@ const ExportRevenueExcelButton = ({
           summaryPriceEndCol
         );
       }
-      wsSummary.mergeCells(
-        summaryHeaderGroupRow,
-        summaryDiscountStartCol,
-        summaryHeaderGroupRow,
-        summaryDiscountEndCol
-      );
-
       [summaryHeaderGroupRow, summaryHeaderRow].forEach((rowNumber) => {
         wsSummary.getRow(rowNumber).font = { bold: true };
         wsSummary.getRow(rowNumber).alignment = {
@@ -542,15 +526,16 @@ const ExportRevenueExcelButton = ({
           offSum.totalQuantity,
           offSum.totalInvitationQuantity,
           offSum.totalContractQuantity,
-          offSum.totalSale,
-          offSum.discountOffline,
-          offSum.discountOnline,
-          offSum.discountPartner,
-          offSum.totalSale - offSum.discountTotal,
-          offSum.internalDiscountTotal,
-          offSum.saleVnPayQr,
-          offSum.saleVietQr,
-          offSum.actualSale
+          offSum.actualSale,
+          ...(showDiscountColumns
+            ? [
+                offSum.discountTotal,
+                offSum.internalDiscountTotal,
+                showActualRemittance
+                  ? getActualRemittance(offSum)
+                  : offSum.actualSale - offSum.discountTotal
+              ]
+            : [])
         ]);
 
         wsSummary.addRow([
@@ -561,21 +546,19 @@ const ExportRevenueExcelButton = ({
           onSum.totalQuantity,
           onSum.totalInvitationQuantity,
           onSum.totalContractQuantity,
-          onSum.totalSale,
-          onSum.discountOffline,
-          onSum.discountOnline,
-          onSum.discountPartner,
-          onSum.totalSale - onSum.discountTotal,
-          onSum.internalDiscountTotal,
-          onSum.saleVnPayQr,
-          onSum.saleVietQr,
-          onSum.actualSale
+          onSum.actualSale,
+          ...(showDiscountColumns
+            ? [
+                onSum.discountTotal,
+                onSum.internalDiscountTotal,
+                showActualRemittance
+                  ? getActualRemittance(onSum)
+                  : onSum.actualSale - onSum.discountTotal
+              ]
+            : [])
         ]);
       });
 
-      const offlineRows = Object.values(summaryByDate).flatMap((group) => group.off);
-      const onlineRows = Object.values(summaryByDate).flatMap((group) => group.on);
-      const totalRows = [...offlineRows, ...onlineRows];
       const footerRows = [
         { label: "Offline", sum: sumRows(offlineRows) },
         { label: "Online", sum: sumRows(onlineRows) },
@@ -591,15 +574,16 @@ const ExportRevenueExcelButton = ({
           sum.totalQuantity,
           sum.totalInvitationQuantity,
           sum.totalContractQuantity,
-          sum.totalSale,
-          sum.discountOffline,
-          sum.discountOnline,
-          sum.discountPartner,
-          sum.totalSale - sum.discountTotal,
-          sum.internalDiscountTotal,
-          sum.saleVnPayQr,
-          sum.saleVietQr,
-          sum.actualSale
+          sum.actualSale,
+          ...(showDiscountColumns
+            ? [
+                sum.discountTotal,
+                sum.internalDiscountTotal,
+                showActualRemittance
+                  ? getActualRemittance(sum)
+                  : sum.actualSale - sum.discountTotal
+              ]
+            : [])
         ]);
 
         row.font = { bold: true };
@@ -618,14 +602,9 @@ const ExportRevenueExcelButton = ({
       ];
       const summaryMoneyCols = [
         summaryTotalStartCol + 3,
-        summaryDiscountStartCol,
-        summaryDiscountStartCol + 1,
-        summaryDiscountStartCol + 2,
-        summaryDiscountEndCol + 1,
-        summaryDiscountEndCol + 2,
-        summaryDiscountEndCol + 3,
-        summaryDiscountEndCol + 4,
-        summaryDiscountEndCol + 5
+        ...(showDiscountColumns && summaryDiscountStartCol
+          ? [summaryDiscountStartCol, summaryDiscountStartCol + 1, summaryDiscountStartCol + 2]
+          : [])
       ];
 
       summaryCountCols.forEach((summaryCol) => {
@@ -642,7 +621,7 @@ const ExportRevenueExcelButton = ({
       ws.views = [
         {
           state: "frozen",
-          ySplit: headerRowIndex,
+          ySplit: detailSummaryStartRowIndex + detailSummaryRows.length - 1,
           xSplit: 1
         }
       ];
@@ -675,7 +654,7 @@ const ExportRevenueExcelButton = ({
 
       const summaryStartRow = 1;
       const summaryEndRow = wsSummary.lastRow!.number;
-      const summaryEndCol = 15 + allPrices.length;
+      const summaryEndCol = summaryHeaderGroup.length;
 
       for (let r = summaryStartRow; r <= summaryEndRow; r++) {
         for (let c = 1; c <= summaryEndCol; c++) {
@@ -689,6 +668,14 @@ const ExportRevenueExcelButton = ({
       }
 
       for (let r = headerRowIndex + 1; r <= ws.lastRow!.number; r++) {
+        ws.getCell(r, 1).alignment = {
+          horizontal: "left",
+          vertical: "middle",
+          wrapText: true
+        };
+      }
+
+      for (let r = detailSummaryStartRowIndex; r < detailSummaryStartRowIndex + detailSummaryRows.length; r++) {
         ws.getCell(r, 1).alignment = {
           horizontal: "left",
           vertical: "middle",

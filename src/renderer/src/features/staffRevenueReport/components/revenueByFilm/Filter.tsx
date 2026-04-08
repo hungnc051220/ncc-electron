@@ -51,15 +51,24 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     filterValues.manufacturerId
   );
   const [selectedFilmId, setSelectedFilmId] = useState<number | undefined>(filterValues.filmId);
+  const selectedUserId = Form.useWatch("userId", form);
+  const watchedManufacturerId = Form.useWatch("manufacturerId", form);
+  const watchedFilmId = Form.useWatch("filmId", form);
 
   const userSelect = useInfiniteSelectOptions({
     queryKey: ["users"],
     queryFn: ({ pageParam, searchText }) =>
       usersApi.getAll({ current: pageParam, pageSize: 20, keyword: searchText }),
-    mapOption: (user) => ({
-      value: user.id,
-      label: user.customerFirstName || user.username
-    })
+    mapOption: (user) => {
+      const fullName = [user.customerFirstName, user.customerLastName]
+        .filter((value): value is string => !!value?.trim())
+        .join(" ");
+
+      return {
+        value: user.id,
+        label: fullName || user.username
+      };
+    }
   });
 
   const manufacturerSelect = useInfiniteSelectOptions({
@@ -170,10 +179,40 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     form.setFieldValue("manufacturerId", value);
   };
 
+  const handleUserChange = (value: number | undefined) => {
+    userSelect.onClear();
+
+    if (!value) {
+      form.setFieldValue("userId", undefined);
+      return;
+    }
+
+    setSelectedManufacturerId(undefined);
+    setSelectedFilmId(undefined);
+    manufacturerSelect.resetSearch();
+    filmSelect.resetSearch();
+    form.setFieldsValue({
+      userId: value,
+      manufacturerId: undefined,
+      filmId: undefined
+    });
+  };
+
   const handleFilmChange = (value: number | undefined) => {
-    setSelectedFilmId(value);
     filmSelect.onClear();
-    form.setFieldValue("filmId", value);
+
+    if (!value) {
+      setSelectedFilmId(undefined);
+      form.setFieldValue("filmId", undefined);
+      return;
+    }
+
+    setSelectedFilmId(value);
+    userSelect.resetSearch();
+    form.setFieldsValue({
+      userId: undefined,
+      filmId: value
+    });
   };
 
   const onClear = () => {
@@ -198,7 +237,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           Bộ lọc
         </Button>
         {!isEmptyFilter && (
-          <div className="absolute size-3 -right-1 -top-1">
+          <div className="absolute right-0 top-0 z-10 size-3 translate-x-1/3 -translate-y-1/3">
             <span className="relative flex size-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex size-3 rounded-full bg-primary"></span>
@@ -218,7 +257,22 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             form={form}
             onFinish={(values) => {
               setOpen(false);
-              onSearch(mapFormValuesToFilterValues(values));
+              const selectedUserOption = userSelect.options.find((option) => option.value === values.userId);
+              const selectedManufacturerOption = manufacturerOptions.find(
+                (option) => option.value === values.manufacturerId
+              );
+
+              onSearch({
+                ...mapFormValuesToFilterValues(values),
+                userName:
+                  typeof selectedUserOption?.label === "string"
+                    ? selectedUserOption.label
+                    : undefined,
+                manufacturerName:
+                  typeof selectedManufacturerOption?.label === "string"
+                    ? selectedManufacturerOption.label
+                    : undefined
+              });
             }}
           >
             {dom}
@@ -243,6 +297,8 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             placeholder="Chọn nhân viên"
             onPopupScroll={userSelect.onPopupScroll}
             onClear={userSelect.onClear}
+            onChange={handleUserChange}
+            disabled={!!watchedManufacturerId || !!watchedFilmId}
             allowClear
           />
         </Form.Item>
@@ -259,6 +315,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             onPopupScroll={manufacturerSelect.onPopupScroll}
             onClear={() => handleManufacturerChange(undefined)}
             onChange={handleManufacturerChange}
+            disabled={!!selectedUserId}
             allowClear
           />
         </Form.Item>
@@ -275,6 +332,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             onPopupScroll={filmSelect.onPopupScroll}
             onClear={() => handleFilmChange(undefined)}
             onChange={handleFilmChange}
+            disabled={!!selectedUserId}
             allowClear
           />
         </Form.Item>

@@ -78,9 +78,9 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
         page.data.map((user) => ({
           value: user.id.toString(),
           label:
-            user.customerFirstName && user.customerLastName
-              ? `${user.customerFirstName} ${user.customerLastName}`
-              : user.username
+            [user.customerFirstName, user.customerLastName]
+              .filter((value): value is string => !!value?.trim())
+              .join(" ") || user.username
         }))
       ) ?? [];
 
