@@ -58,7 +58,23 @@ jobs:
           "enable_devtools=$enableDevTools" >> $env:GITHUB_OUTPUT
           "is_prerelease=$isPrerelease" >> $env:GITHUB_OUTPUT
 
+      - name: Check existing release version
+        id: release_check
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.meta.outputs.tag }}"
+          $existingTag = git ls-remote --tags origin "refs/tags/$tag"
+
+          if ($existingTag) {
+            "should_release=false" >> $env:GITHUB_OUTPUT
+            "Release skipped because tag $tag already exists on origin." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "should_release=true" >> $env:GITHUB_OUTPUT
+            "Release will continue for new tag $tag." >> $env:GITHUB_STEP_SUMMARY
+          }
+
       - name: Build app
+        if: steps.release_check.outputs.should_release == 'true'
         shell: pwsh
         env:
           APP_RELEASE_CHANNEL: ${{ steps.meta.outputs.channel }}
@@ -71,6 +87,7 @@ jobs:
             --config.publish.channel=${{ steps.meta.outputs.channel }}
 
       - name: Publish GitHub release
+        if: steps.release_check.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
