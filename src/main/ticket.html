@@ -1,70 +1,10 @@
-import { BrowserWindow } from "electron";
-import { PrintTicketPayload } from "@shared/types";
-
-const TICKET_WIDTH_MM = 80;
-const TICKET_HEIGHT_MM = 100;
-const MM_TO_MICRONS = 1000;
-
-export const createPrintService = () => {
-  let printWindow: BrowserWindow | null = null;
-  let printQueue: Promise<void> = Promise.resolve();
-
-  function disposePrintWindow() {
-    if (printWindow && !printWindow.isDestroyed()) {
-      printWindow.destroy();
-    }
-    printWindow = null;
-  }
-
-  function isPrintCanceledError(error: unknown) {
-    return (
-      error instanceof Error &&
-      typeof error.message === "string" &&
-      error.message.toLowerCase().includes("canceled")
-    );
-  }
-
-  // 🔹 Tạo hoặc reuse hidden window
-  function getPrintWindow(): BrowserWindow {
-    if (printWindow && !printWindow.isDestroyed()) {
-      return printWindow;
-    }
-
-    printWindow = new BrowserWindow({
-      show: false,
-      webPreferences: {
-        sandbox: true
-      }
-    });
-
-    printWindow.on("closed", () => {
-      printWindow = null;
-    });
-
-    return printWindow;
-  }
-
-  // 🔹 Render HTML template inline để tránh phụ thuộc file ngoài khi build
-  function renderTicketHTML(ticket: PrintTicketPayload) {
-    const floorText = ticket.floor
-      ? String(ticket.floor).trim().toLowerCase().startsWith("tầng")
-        ? String(ticket.floor).trim()
-        : `Tầng ${String(ticket.floor).trim()}`
-      : "";
-    const paymentMethod = ticket.paymentMethod || "";
-    const posName = ticket.posName || "";
-    const staffName = ticket.staffName || "";
-    const discountImage = ticket.discountImage
-      ? `<img class="qr-side-image" src="${ticket.discountImage}" alt="discount" />`
-      : "";
-
-    return `<!doctype html>
+<!doctype html>
 <html>
   <head>
     <meta charset="UTF-8" />
     <style>
       @page {
-        size: ${TICKET_WIDTH_MM}mm ${TICKET_HEIGHT_MM}mm;
+        size: 80mm 100mm;
         margin: 0;
       }
 
@@ -76,8 +16,8 @@ export const createPrintService = () => {
       body {
         margin: 0;
         padding: 0;
-        width: ${TICKET_WIDTH_MM}mm;
-        min-width: ${TICKET_WIDTH_MM}mm;
+        width: 80mm;
+        min-width: 80mm;
         font-family: Arial, Tahoma, sans-serif;
         font-size: 12px;
         color: #000;
@@ -94,13 +34,12 @@ export const createPrintService = () => {
       }
 
       .ticket-shell {
-        width: ${TICKET_WIDTH_MM}mm;
+        width: 80mm;
         padding: 1.5mm;
       }
 
       .ticket {
         width: 100%;
-        font-family: Arial, Tahoma, sans-serif;
         padding: 0;
       }
 
@@ -242,8 +181,8 @@ export const createPrintService = () => {
         html,
         body {
           margin: 0;
-          width: ${TICKET_WIDTH_MM}mm;
-          min-width: ${TICKET_WIDTH_MM}mm;
+          width: 80mm;
+          min-width: 80mm;
         }
       }
     </style>
@@ -252,14 +191,14 @@ export const createPrintService = () => {
     <div class="ticket-shell">
       <div class="ticket">
         <div class="center">
-          <div class="title">${ticket.cinemaName}</div>
+          <div class="title">TRUNG TÂM CHIẾU PHIM QUỐC GIA</div>
           <div>NATIONAL CINEMA CENTER</div>
-          <div class="sub">${ticket.address}</div>
+          <div class="sub">87 Láng Hạ, Chợ Dừa, Đống Đa, Hà Nội</div>
         </div>
 
         <div class="ticket-title">VÉ XEM PHIM (TICKET)</div>
 
-        <div class="movie">${ticket.movieName}</div>
+        <div class="movie">HẸN EM NGÀY NHẤT THỰC T16</div>
 
         <div class="info-wrapper">
           <div class="row">
@@ -267,7 +206,7 @@ export const createPrintService = () => {
               <span class="label">Giờ:</span>
               <p class="en-label">Time:</p>
             </div>
-            <span class="value">${ticket.showTime}</span>
+            <span class="value">10:00</span>
           </div>
 
           <div class="row">
@@ -275,7 +214,7 @@ export const createPrintService = () => {
               <span class="label">Ghế:</span>
               <p class="en-label">Seat:</p>
             </div>
-            <span class="value">${ticket.seat}</span>
+            <span class="value">A3</span>
           </div>
 
           <div class="row">
@@ -283,7 +222,7 @@ export const createPrintService = () => {
               <span class="label">Ngày:</span>
               <p class="en-label">Date:</p>
             </div>
-            <span class="value">${ticket.date}</span>
+            <span class="value">08/04/26</span>
           </div>
 
           <div class="row">
@@ -291,7 +230,7 @@ export const createPrintService = () => {
               <span class="label">Phòng:</span>
               <p class="en-label">Room:</p>
             </div>
-            <span class="value">${ticket.room}</span>
+            <span class="value">12</span>
           </div>
 
           <div class="row">
@@ -299,19 +238,28 @@ export const createPrintService = () => {
               <span class="label">Giá vé:</span>
               <p class="en-label">Price:</p>
             </div>
-            <span class="value">${ticket.price}</span>
+            <span class="value">55,000</span>
           </div>
 
-          <div class="value">${floorText}</div>
+          <div class="value">Tầng 2</div>
         </div>
 
         <div class="qr qr-grid">
           <div class="qr-side">
-            ${discountImage}
-            <div class="ticket-code">Mã vé: ${ticket.ticketCode}</div>
+            <img
+              class="qr-side-image"
+              src="https://res.anvui.vn/dwi5f2bje/image/upload/v1775553388/attachments_ncc/admin/tr%E1%BA%BB%20em-1775553387529.jpg"
+              alt="discount"
+            />
+            <div class="ticket-code">Mã vé: W919512AF</div>
           </div>
           <div class="qr-main">
-            <img src="${ticket.qrData}" alt="qr" width="100" height="100" />
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=W919512AF"
+              alt="qr"
+              width="100"
+              height="100"
+            />
           </div>
         </div>
 
@@ -319,15 +267,15 @@ export const createPrintService = () => {
         <div class="info-wrapper">
           <div class="row">
             <span class="en-label">Máy bán:</span>
-            <span class="label-footer">${posName}</span>
+            <span class="label-footer">POS01</span>
           </div>
           <div class="row">
-            <span class="en-label">Hình thức TT:</span>
-            <span class="label-footer">${paymentMethod}</span>
+            <span class="en-label">Hình thức TT</span>
+            <span class="label-footer">Tiền mặt</span>
           </div>
           <div class="row">
             <span class="en-label">Nhân viên:</span>
-            <span class="label-footer">${staffName}</span>
+            <span class="label-footer">Thu ngân 01</span>
           </div>
           <div class="row">
             <span class="en-label">Hotline:</span>
@@ -337,73 +285,4 @@ export const createPrintService = () => {
       </div>
     </div>
   </body>
-</html>`;
-  }
-
-  function enqueue(task: () => Promise<void>) {
-    const taskPromise = printQueue.then(task);
-
-    printQueue = taskPromise.catch((err) => {
-      console.error("Print queue error:", err);
-    });
-
-    return taskPromise;
-  }
-
-  // 🔹 In 1 ticket (retry 1 lần)
-  async function printSingleTicket(
-    ticket: PrintTicketPayload,
-    printerName?: string,
-    retry = true
-  ): Promise<void> {
-    const win = getPrintWindow();
-    const html = renderTicketHTML(ticket);
-
-    await win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
-    await win.webContents.executeJavaScript(`
-      Promise.all(
-        Array.from(document.images).map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((resolve) => {
-            const done = () => resolve();
-            img.addEventListener("load", done, { once: true });
-            img.addEventListener("error", done, { once: true });
-          });
-        })
-      )
-    `);
-
-    await new Promise<void>((resolve, reject) => {
-      win.webContents.print(
-        {
-          silent: true,
-          deviceName: printerName,
-          printBackground: true,
-          margins: { marginType: "none" },
-          pageSize: {
-            width: TICKET_WIDTH_MM * MM_TO_MICRONS,
-            height: TICKET_HEIGHT_MM * MM_TO_MICRONS
-          }
-        },
-        (success, error) => {
-          if (!success) reject(new Error(error));
-          else resolve();
-        }
-      );
-    }).catch(async (err) => {
-      disposePrintWindow();
-
-      if (retry && !isPrintCanceledError(err)) {
-        console.warn("Retry printing...");
-        await printSingleTicket(ticket, printerName, false);
-      } else {
-        throw err;
-      }
-    });
-  }
-
-  return {
-    enqueue,
-    printSingleTicket
-  };
-};
+</html>
