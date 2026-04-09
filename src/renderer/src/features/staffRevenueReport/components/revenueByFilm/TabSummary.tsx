@@ -226,6 +226,22 @@ const TabSummary = ({
           ...(columnMode === "user"
             ? [
                 {
+                  title: "VNPayQR",
+                  key: "saleVnPayQr",
+                  dataIndex: "saleVnPayQr",
+                  width: 150,
+                  align: "right" as const,
+                  render: (value: number) => formatMoney(value)
+                },
+                {
+                  title: "VietQR",
+                  key: "saleVietQr",
+                  dataIndex: "saleVietQr",
+                  width: 150,
+                  align: "right" as const,
+                  render: (value: number) => formatMoney(value)
+                },
+                {
                   title: "Thực nộp",
                   key: "actualRemittance",
                   width: 170,
@@ -305,13 +321,23 @@ const TabSummary = ({
                           <Table.Summary.Cell index={8} align="right">
                             <strong>{formatMoney(internalDiscount.discountTotal ?? 0)}</strong>
                           </Table.Summary.Cell>
-                          <Table.Summary.Cell index={9} align="right">
-                            <strong>
-                              {formatMoney(
-                                columnMode === "user" ? actualRemittance : totalRevenueAfterDiscount
-                              )}
-                            </strong>
-                          </Table.Summary.Cell>
+                          {columnMode === "user" ? (
+                            <>
+                              <Table.Summary.Cell index={9} align="right">
+                                <strong>{formatMoney(value?.saleVnPayQr || 0)}</strong>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={10} align="right">
+                                <strong>{formatMoney(value?.saleVietQr || 0)}</strong>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={11} align="right">
+                                <strong>{formatMoney(actualRemittance)}</strong>
+                              </Table.Summary.Cell>
+                            </>
+                          ) : (
+                            <Table.Summary.Cell index={9} align="right">
+                              <strong>{formatMoney(totalRevenueAfterDiscount)}</strong>
+                            </Table.Summary.Cell>
+                          )}
                         </>
                       )}
                     </>

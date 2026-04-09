@@ -98,50 +98,11 @@ const CustomerRolesPage = () => {
       dataIndex: "systemName"
     },
     {
-      title: "Miễn phí vận chuyển",
-      key: "freeShipping",
-      dataIndex: "freeShipping",
-      align: "center",
-      width: 200,
-      render: (value: boolean) =>
-        value ? (
-          <Check className="mx-auto size-4 text-green-500" />
-        ) : (
-          <X className="mx-auto size-4 text-red-500" />
-        )
-    },
-    {
-      title: "Miễn thuế",
-      key: "taxExempt",
-      dataIndex: "taxExempt",
-      align: "center",
-      width: 100,
-      render: (value: boolean) =>
-        value ? (
-          <Check className="mx-auto size-4 text-green-500" />
-        ) : (
-          <X className="mx-auto size-4 text-red-500" />
-        )
-    },
-    {
       title: "Kích hoạt",
       key: "active",
       dataIndex: "active",
       align: "center",
       width: 90,
-      render: (value: boolean) =>
-        value ? (
-          <Check className="mx-auto size-4 text-green-500" />
-        ) : (
-          <X className="mx-auto size-4 text-red-500" />
-        )
-    },
-    {
-      title: "Nhóm hệ thống",
-      key: "isSystemRole",
-      dataIndex: "isSystemRole",
-      align: "center",
-      width: 150,
       render: (value: boolean) =>
         value ? (
           <Check className="mx-auto size-4 text-green-500" />

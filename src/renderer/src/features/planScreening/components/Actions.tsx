@@ -344,7 +344,11 @@ const Actions = ({
       return;
     }
 
-    if (!posName || !posShortName) return;
+    if (!posName || !posShortName) {
+      message.error("Chưa cấu hình máy POS, không thể thao tác");
+      return;
+    }
+
     const floorNo = selectedSeats[0]?.floor || 1;
 
     const body: OrderDto = {
@@ -377,6 +381,7 @@ const Actions = ({
               orderId: order.id,
               orderTotal: order.orderTotal,
               orderDiscount: order.orderDiscount,
+              paymentMethodSystemName: order.paymentMethodSystemName,
               voucherCode: order.voucherCode,
               createdOnUtc: order.createdOnUtc,
               filmName: data.filmInfo.filmName,
@@ -425,7 +430,11 @@ const Actions = ({
       return;
     }
 
-    if (!posName || !posShortName) return;
+    if (!posName || !posShortName) {
+      message.error("Chưa cấu hình máy POS, không thể thao tác");
+      return;
+    }
+
     const floorNo = selectedSeats[0]?.floor || 1;
 
     const body: OrderDto = {

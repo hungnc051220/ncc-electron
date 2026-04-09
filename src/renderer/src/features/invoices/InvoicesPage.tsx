@@ -15,6 +15,12 @@ import { InvoiceStatusBadge } from "./components/InvoiceStatusBadge";
 import UpdateStatusInvoiceDialog from "./components/UpdateStatusInvoiceDialog";
 import dayjs from "dayjs";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareDate = (left?: string | null, right?: string | null) =>
+  dayjs(left).valueOf() - dayjs(right).valueOf();
+
 const InvoicesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogUpdateStatusOpen, setDialogUpdateStatusOpen] = useState(false);
@@ -78,6 +84,11 @@ const InvoicesPage = () => {
       title: "Loại hóa đơn",
       key: "invoiceType",
       dataIndex: "invoiceType",
+      sorter: (a, b) =>
+        compareText(
+          a.invoiceType === "personal" ? "Cá nhân" : "Đơn vị",
+          b.invoiceType === "personal" ? "Cá nhân" : "Đơn vị"
+        ),
       render: (value: string) => (value === "personal" ? "Cá nhân" : "Đơn vị"),
       fixed: "left"
     },
@@ -85,69 +96,82 @@ const InvoicesPage = () => {
       title: "Mã vé",
       key: "barCode",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.barCode, b.order?.barCode),
       render: (order) => order?.barCode
     },
     {
       title: "Tên người mua/đơn vị",
       key: "partyA",
-      dataIndex: "partyA"
+      dataIndex: "partyA",
+      sorter: (a, b) => compareText(a.partyA, b.partyA)
     },
     {
       title: "Địa chỉ",
       key: "address",
-      dataIndex: "address"
+      dataIndex: "address",
+      sorter: (a, b) => compareText(a.address, b.address)
     },
     {
       title: "Email",
       key: "email",
-      dataIndex: "email"
+      dataIndex: "email",
+      sorter: (a, b) => compareText(a.email, b.email)
     },
     {
       title: "Số điện thoại",
       key: "phoneNumber",
-      dataIndex: "phoneNumber"
+      dataIndex: "phoneNumber",
+      sorter: (a, b) => compareText(a.phoneNumber, b.phoneNumber)
     },
     {
       title: "Mã số thuế",
       key: "taxCode",
-      dataIndex: "taxCode"
+      dataIndex: "taxCode",
+      sorter: (a, b) => compareText(a.taxCode, b.taxCode)
     },
     {
       title: "Căn cước công dân",
       key: "citizenId",
-      dataIndex: "citizenId"
+      dataIndex: "citizenId",
+      sorter: (a, b) => compareText(a.citizenId, b.citizenId)
     },
     {
       title: "Đại diện",
       key: "representative",
-      dataIndex: "representative"
+      dataIndex: "representative",
+      sorter: (a, b) => compareText(a.representative, b.representative)
     },
     {
       title: "Chức vụ",
       key: "position",
-      dataIndex: "position"
+      dataIndex: "position",
+      sorter: (a, b) => compareText(a.position, b.position)
     },
     {
       title: "Hợp đồng số",
       key: "contractCode",
-      dataIndex: "contractCode"
+      dataIndex: "contractCode",
+      sorter: (a, b) => compareText(a.contractCode, b.contractCode)
     },
     {
       title: "Thời gian tạo",
       key: "createdAt",
       dataIndex: "createdAt",
+      sorter: (a, b) => compareDate(a.createdAt, b.createdAt),
       render: (value: string) => dayjs(value).format("HH:mm DD/MM/YYYY")
     },
     {
       title: "Thời gian sửa",
       key: "updatedAt",
       dataIndex: "updatedAt",
+      sorter: (a, b) => compareDate(a.updatedAt, b.updatedAt),
       render: (value: string) => (value ? dayjs(value).format("HH:mm DD/MM/YYYY") : "")
     },
     {
       title: "Trạng thái",
       key: "status",
       dataIndex: "status",
+      sorter: (a, b) => compareText(a.status, b.status),
       render: (status: InvoiceStatus) => <InvoiceStatusBadge status={status} />,
       fixed: "right"
     },

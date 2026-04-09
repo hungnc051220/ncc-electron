@@ -22,6 +22,17 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
+const compareNaturalText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
+
+const compareDate = (left?: string | null, right?: string | null) =>
+  dayjs(left).valueOf() - dayjs(right).valueOf();
+
 const InvitationTicketsPage = () => {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(1);
@@ -103,6 +114,7 @@ const InvitationTicketsPage = () => {
       title: "Mã vé",
       key: "barCode",
       dataIndex: "barCode",
+      sorter: (a, b) => compareText(a.order?.barCode, b.order?.barCode),
       render: (_, record) => record.order?.barCode || "",
       fixed: "left"
     },
@@ -110,18 +122,21 @@ const InvitationTicketsPage = () => {
       title: "Phim",
       key: "filmName",
       dataIndex: "filmName",
+      sorter: (a, b) => compareText(a.film?.filmName, b.film?.filmName),
       render: (_, record) => record.film?.filmName || ""
     },
     {
       title: "Phòng chiếu",
       key: "roomName",
       dataIndex: "roomName",
+      sorter: (a, b) => compareNaturalText(a.room?.name, b.room?.name),
       render: (_, record) => record.room?.name || ""
     },
     {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "projectDate",
+      sorter: (a, b) => compareDate(a.planScreening?.projectDate, b.planScreening?.projectDate),
       render: (_, record) => {
         return record.planScreening?.projectDate
           ? dayjs(record.planScreening?.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY")
@@ -132,6 +147,7 @@ const InvitationTicketsPage = () => {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
+      sorter: (a, b) => compareDate(a.planScreening?.projectTime, b.planScreening?.projectTime),
       render: (_, record) => {
         return record.planScreening?.projectTime
           ? dayjs(record.planScreening?.projectTime).format("HH:mm")
@@ -142,6 +158,11 @@ const InvitationTicketsPage = () => {
       title: "Số vé",
       key: "quantity",
       dataIndex: "quantity",
+      sorter: (a, b) =>
+        compareNumber(
+          a.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0) || 0,
+          b.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0) || 0
+        ),
       render: (_, record) => {
         const tickets = record.order?.items || [];
         const totalQuantity = tickets.reduce((acc, cur) => acc + cur.quantity, 0);
@@ -152,6 +173,24 @@ const InvitationTicketsPage = () => {
       title: "Vị trí ghế",
       key: "cancelChairValue",
       dataIndex: "cancelChairValue",
+      sorter: (a, b) => {
+        const aChairs = [
+          ...(a.order?.items?.map((item) => item.listChairValueF1) || []),
+          ...(a.order?.items?.map((item) => item.listChairValueF2) || []),
+          ...(a.order?.items?.map((item) => item.listChairValueF3) || [])
+        ]
+          .filter(Boolean)
+          .join(", ");
+        const bChairs = [
+          ...(b.order?.items?.map((item) => item.listChairValueF1) || []),
+          ...(b.order?.items?.map((item) => item.listChairValueF2) || []),
+          ...(b.order?.items?.map((item) => item.listChairValueF3) || [])
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        return compareText(aChairs, bChairs);
+      },
       render: (_, record) => {
         const chairsF1 = record.order?.items?.map((item) => item.listChairValueF1);
         const chairsF2 = record.order?.items?.map((item) => item.listChairValueF2);
@@ -164,6 +203,15 @@ const InvitationTicketsPage = () => {
       title: "Người tạo",
       key: "createdBy",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareText(
+          [a.order?.seller?.customerFirstName, a.order?.seller?.customerLastName]
+            .filter(Boolean)
+            .join(" "),
+          [b.order?.seller?.customerFirstName, b.order?.seller?.customerLastName]
+            .filter(Boolean)
+            .join(" ")
+        ),
       render: (order) =>
         [order?.seller?.customerFirstName, order?.seller?.customerLastName]
           .filter(Boolean)
@@ -173,17 +221,21 @@ const InvitationTicketsPage = () => {
       title: "Thời gian tạo",
       key: "createdAt",
       dataIndex: "createdAt",
+      sorter: (a, b) => compareDate(a.order?.createdOnUtc, b.order?.createdOnUtc),
       render: (_, record) => dayjs(record.order.createdOnUtc).format("HH:mm DD/MM/YYYY")
     },
     {
       title: "Ghi chú",
       key: "note",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.note, b.order?.note),
       render: (order) => order?.note
     },
     {
       title: "Thời gian xuất vé",
       key: "createdAt",
+      sorter: (a, b) =>
+        compareDate(a.order?.invitationTickets?.createdAt, b.order?.invitationTickets?.createdAt),
       render: (_, record) => {
         return record.order?.invitationTickets?.createdAt
           ? dayjs(record.order.invitationTickets.createdAt).format("HH:mm DD/MM/YYYY")
@@ -196,6 +248,8 @@ const InvitationTicketsPage = () => {
     {
       title: "Xuất vé mời qua email",
       key: "invitationTickets",
+      sorter: (a, b) =>
+        compareText(a.order?.invitationTickets?.status, b.order?.invitationTickets?.status),
       render: (_, record) => {
         return (
           <div className="flex justify-center">

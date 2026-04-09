@@ -230,6 +230,9 @@ const ExportRevenueExcelButton = ({
       const showDiscountColumns = columnMode !== "manufacturer";
       const showActualRemittance = columnMode === "user";
       const lastRevenueColumnTitle = showActualRemittance ? "Thực nộp" : "Tổng doanh thu sau KM";
+      const userRevenueHeaders = showActualRemittance
+        ? ["VNPayQR", "VietQR", lastRevenueColumnTitle]
+        : [lastRevenueColumnTitle];
 
       const header = [
         "Phim",
@@ -242,7 +245,7 @@ const ExportRevenueExcelButton = ({
         "Giấy mời",
         "Hợp đồng",
         "Tổng doanh thu",
-        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", lastRevenueColumnTitle] : [])
+        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", ...userRevenueHeaders] : [])
       ];
 
       const totalColumns = header.length;
@@ -299,18 +302,36 @@ const ExportRevenueExcelButton = ({
       const COL_AMOUNT = amountCol;
       const COL_DISCOUNT_OFFLINE = showDiscountColumns ? amountCol + 1 : undefined;
       const COL_INTERNAL_DISCOUNT = showDiscountColumns ? amountCol + 2 : undefined;
-      const COL_LAST_REVENUE = showDiscountColumns ? amountCol + 3 : undefined;
+      const COL_VNPAY_QR = showActualRemittance ? amountCol + 3 : undefined;
+      const COL_VIET_QR = showActualRemittance ? amountCol + 4 : undefined;
+      const COL_LAST_REVENUE = showDiscountColumns
+        ? showActualRemittance
+          ? amountCol + 5
+          : amountCol + 3
+        : undefined;
       const totalEndCol = COL_LAST_REVENUE ?? COL_AMOUNT;
 
       const moneyFormat = "#,##0";
 
-      [COL_AMOUNT, COL_DISCOUNT_OFFLINE, COL_INTERNAL_DISCOUNT, COL_LAST_REVENUE]
+      [
+        COL_AMOUNT,
+        COL_DISCOUNT_OFFLINE,
+        COL_INTERNAL_DISCOUNT,
+        COL_VNPAY_QR,
+        COL_VIET_QR,
+        COL_LAST_REVENUE
+      ]
         .filter((col): col is number => typeof col === "number")
         .forEach((col) => {
-        ws.getColumn(col).numFmt = moneyFormat;
-      });
+          ws.getColumn(col).numFmt = moneyFormat;
+        });
 
-      if (showDiscountColumns && COL_DISCOUNT_OFFLINE && COL_INTERNAL_DISCOUNT && COL_LAST_REVENUE) {
+      if (
+        showDiscountColumns &&
+        COL_DISCOUNT_OFFLINE &&
+        COL_INTERNAL_DISCOUNT &&
+        COL_LAST_REVENUE
+      ) {
         ws.mergeCells(
           headerGroupRowIndex,
           COL_DISCOUNT_OFFLINE,
@@ -327,7 +348,20 @@ const ExportRevenueExcelButton = ({
         );
         ws.getCell(headerGroupRowIndex, COL_INTERNAL_DISCOUNT).value = "Giảm giá";
 
-        ws.mergeCells(headerGroupRowIndex, COL_LAST_REVENUE, headerGroupRowIndex + 1, COL_LAST_REVENUE);
+        if (showActualRemittance && COL_VNPAY_QR && COL_VIET_QR) {
+          ws.mergeCells(headerGroupRowIndex, COL_VNPAY_QR, headerGroupRowIndex + 1, COL_VNPAY_QR);
+          ws.getCell(headerGroupRowIndex, COL_VNPAY_QR).value = "VNPayQR";
+
+          ws.mergeCells(headerGroupRowIndex, COL_VIET_QR, headerGroupRowIndex + 1, COL_VIET_QR);
+          ws.getCell(headerGroupRowIndex, COL_VIET_QR).value = "VietQR";
+        }
+
+        ws.mergeCells(
+          headerGroupRowIndex,
+          COL_LAST_REVENUE,
+          headerGroupRowIndex + 1,
+          COL_LAST_REVENUE
+        );
         ws.getCell(headerGroupRowIndex, COL_LAST_REVENUE).value = lastRevenueColumnTitle;
       }
 
@@ -373,9 +407,8 @@ const ExportRevenueExcelButton = ({
             ? [
                 sum.discountTotal,
                 sum.internalDiscountTotal,
-                showActualRemittance
-                  ? getActualRemittance(sum)
-                  : sum.actualSale - sum.discountTotal
+                ...(showActualRemittance ? [sum.saleVnPayQr, sum.saleVietQr] : []),
+                showActualRemittance ? getActualRemittance(sum) : sum.actualSale - sum.discountTotal
               ]
             : [])
         ]);
@@ -408,6 +441,7 @@ const ExportRevenueExcelButton = ({
             ? [
                 film.discountTotal,
                 film.internalDiscountTotal,
+                ...(showActualRemittance ? [film.saleVnPayQr, film.saleVietQr] : []),
                 showActualRemittance
                   ? getActualRemittance(film)
                   : film.actualSale - film.discountTotal
@@ -440,6 +474,7 @@ const ExportRevenueExcelButton = ({
               ? [
                   r.discountTotal,
                   r.internalDiscountTotal,
+                  ...(showActualRemittance ? [r.saleVnPayQr, r.saleVietQr] : []),
                   showActualRemittance ? getActualRemittance(r) : r.actualSale - r.discountTotal
                 ]
               : [])
@@ -457,7 +492,7 @@ const ExportRevenueExcelButton = ({
         "Giấy mời",
         "Hợp đồng",
         "Tổng doanh thu",
-        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", lastRevenueColumnTitle] : [])
+        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", ...userRevenueHeaders] : [])
       ];
       const summaryHeaderDetail = [
         "",
@@ -479,6 +514,20 @@ const ExportRevenueExcelButton = ({
       const summaryPriceEndCol = summaryPriceStartCol + allPrices.length - 1;
       const summaryTotalStartCol = summaryPriceStartCol + allPrices.length;
       const summaryDiscountStartCol = showDiscountColumns ? summaryTotalStartCol + 4 : undefined;
+      const summaryVnpayCol =
+        showDiscountColumns && showActualRemittance && summaryDiscountStartCol
+          ? summaryDiscountStartCol + 2
+          : undefined;
+      const summaryVietqrCol =
+        showDiscountColumns && showActualRemittance && summaryDiscountStartCol
+          ? summaryDiscountStartCol + 3
+          : undefined;
+      const summaryLastRevenueCol =
+        showDiscountColumns && summaryDiscountStartCol
+          ? showActualRemittance
+            ? summaryDiscountStartCol + 4
+            : summaryDiscountStartCol + 2
+          : undefined;
       const summaryStaticMergeCols = [
         1,
         2,
@@ -488,7 +537,13 @@ const ExportRevenueExcelButton = ({
         summaryTotalStartCol + 2,
         summaryTotalStartCol + 3,
         ...(showDiscountColumns && summaryDiscountStartCol
-          ? [summaryDiscountStartCol, summaryDiscountStartCol + 1, summaryDiscountStartCol + 2]
+          ? [
+              summaryDiscountStartCol,
+              summaryDiscountStartCol + 1,
+              ...(showActualRemittance && summaryVnpayCol && summaryVietqrCol
+                ? [summaryVnpayCol, summaryVietqrCol, summaryLastRevenueCol!]
+                : [summaryLastRevenueCol!])
+            ]
           : [])
       ];
 
@@ -531,6 +586,7 @@ const ExportRevenueExcelButton = ({
             ? [
                 offSum.discountTotal,
                 offSum.internalDiscountTotal,
+                ...(showActualRemittance ? [offSum.saleVnPayQr, offSum.saleVietQr] : []),
                 showActualRemittance
                   ? getActualRemittance(offSum)
                   : offSum.actualSale - offSum.discountTotal
@@ -551,6 +607,7 @@ const ExportRevenueExcelButton = ({
             ? [
                 onSum.discountTotal,
                 onSum.internalDiscountTotal,
+                ...(showActualRemittance ? [onSum.saleVnPayQr, onSum.saleVietQr] : []),
                 showActualRemittance
                   ? getActualRemittance(onSum)
                   : onSum.actualSale - onSum.discountTotal
@@ -579,9 +636,8 @@ const ExportRevenueExcelButton = ({
             ? [
                 sum.discountTotal,
                 sum.internalDiscountTotal,
-                showActualRemittance
-                  ? getActualRemittance(sum)
-                  : sum.actualSale - sum.discountTotal
+                ...(showActualRemittance ? [sum.saleVnPayQr, sum.saleVietQr] : []),
+                showActualRemittance ? getActualRemittance(sum) : sum.actualSale - sum.discountTotal
               ]
             : [])
         ]);
@@ -603,7 +659,13 @@ const ExportRevenueExcelButton = ({
       const summaryMoneyCols = [
         summaryTotalStartCol + 3,
         ...(showDiscountColumns && summaryDiscountStartCol
-          ? [summaryDiscountStartCol, summaryDiscountStartCol + 1, summaryDiscountStartCol + 2]
+          ? [
+              summaryDiscountStartCol,
+              summaryDiscountStartCol + 1,
+              ...(showActualRemittance && summaryVnpayCol && summaryVietqrCol
+                ? [summaryVnpayCol, summaryVietqrCol, summaryLastRevenueCol!]
+                : [summaryLastRevenueCol!])
+            ]
           : [])
       ];
 
@@ -675,7 +737,11 @@ const ExportRevenueExcelButton = ({
         };
       }
 
-      for (let r = detailSummaryStartRowIndex; r < detailSummaryStartRowIndex + detailSummaryRows.length; r++) {
+      for (
+        let r = detailSummaryStartRowIndex;
+        r < detailSummaryStartRowIndex + detailSummaryRows.length;
+        r++
+      ) {
         ws.getCell(r, 1).alignment = {
           horizontal: "left",
           vertical: "middle",

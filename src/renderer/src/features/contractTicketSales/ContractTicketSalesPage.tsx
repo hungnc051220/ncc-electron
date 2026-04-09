@@ -32,6 +32,14 @@ export interface ValuesProps {
 
 type PlanDetail = OrderDetailProps["planDetails"][number];
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
+const compareDate = (left?: string | null, right?: string | null) =>
+  dayjs(left).valueOf() - dayjs(right).valueOf();
+
 const ContractTicketSalesPage = () => {
   const navigate = useNavigate();
   const userId = useAuthStore((s) => s.userId);
@@ -186,12 +194,36 @@ const ContractTicketSalesPage = () => {
       title: "Tên khách hàng",
       key: "customerFirstName",
       dataIndex: "customerFirstName",
+      sorter: (a, b) => compareText(a.order?.customerFirstName, b.order?.customerFirstName),
       render: (_, record) => record.order?.customerFirstName
     },
     {
       title: "Suất chiếu",
       key: "scheduleSummary",
       width: 360,
+      sorter: (a, b) =>
+        compareText(
+          getDisplayPlans(a)
+            .map((item) =>
+              [
+                item.film?.filmName || "",
+                item.room?.name || "",
+                item.planScreening?.projectDate || "",
+                item.planScreening?.projectTime || ""
+              ].join(" | ")
+            )
+            .join(" || "),
+          getDisplayPlans(b)
+            .map((item) =>
+              [
+                item.film?.filmName || "",
+                item.room?.name || "",
+                item.planScreening?.projectDate || "",
+                item.planScreening?.projectTime || ""
+              ].join(" | ")
+            )
+            .join(" || ")
+        ),
       render: (_, record) => {
         const plans = getDisplayPlans(record);
 
@@ -233,6 +265,11 @@ const ContractTicketSalesPage = () => {
       title: "Số vé",
       key: "ticketCount",
       dataIndex: "ticketCount",
+      sorter: (a, b) =>
+        compareNumber(
+          a.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0),
+          b.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0)
+        ),
       render: (_, record) => record.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0),
       align: "right"
     },
@@ -240,22 +277,25 @@ const ContractTicketSalesPage = () => {
       title: "Giá trị hợp đồng",
       key: "orderTotal",
       dataIndex: "orderTotal",
+      sorter: (a, b) => compareNumber(a.order?.orderTotal, b.order?.orderTotal),
       render: (_, record) => formatMoney(record.order?.orderTotal || 0)
     },
     {
       title: "Ghi chú",
       key: "note",
+      sorter: (a, b) => compareText(a.order?.note, b.order?.note),
       render: (_, record) => record?.order?.note
     },
     {
-      title: "Ngày tạo",
+      title: "Thời gian tạo",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
+      sorter: (a, b) => compareDate(a.order?.createdOnUtc, b.order?.createdOnUtc),
       render: (_, record) =>
         record.order?.createdOnUtc
-          ? dayjs(record.order.createdOnUtc).utc().format("DD/MM/YYYY")
+          ? dayjs(record.order.createdOnUtc).format("HH:mm DD/MM/YYYY")
           : "",
-      width: 100
+      width: 150
     },
     ...(actionItems.length
       ? [

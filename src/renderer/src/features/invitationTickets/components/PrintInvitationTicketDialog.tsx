@@ -154,7 +154,7 @@ const PrintInvitationTicketDialog = ({
         filmNameEn: selectedItem.film?.filmNameEn,
         duration: selectedItem.film?.duration,
         date: dayjs(selectedItem?.planScreening?.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
-        datetime: dayjs(selectedItem?.planScreening?.projectTime).utc().format("HH:mm"),
+        datetime: dayjs(selectedItem?.planScreening?.projectTime).format("HH:mm"),
         room: selectedItem.room?.name,
         seat: selectedItem.order.items[0].listChairValueF1,
         imageSource: values.background,

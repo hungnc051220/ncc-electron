@@ -16,6 +16,7 @@ export interface AuditLogProps {
 export interface RevenueByEmployeeProps {
   userId: number;
   userName: string;
+  fullName?: string;
   onQuantity: number | null;
   offQuantity: number | null;
   totalQuantity: number | null;

@@ -65,8 +65,9 @@ export const getRevenueColumnMode = (filterValues: ValuesProps): RevenueColumnMo
   return "default";
 };
 
-export const getActualRemittance = (row: Pick<Row, "actualSale" | "discountTotal" | "saleVietQr" | "saleVnPayQr">) =>
-  row.actualSale - row.discountTotal - row.saleVietQr - row.saleVnPayQr;
+export const getActualRemittance = (
+  row: Pick<Row, "actualSale" | "discountTotal" | "saleVietQr" | "saleVnPayQr">
+) => row.actualSale - row.discountTotal - row.saleVietQr - row.saleVnPayQr;
 
 const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
@@ -273,6 +274,22 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
           },
           ...(columnMode === "user"
             ? [
+                {
+                  title: "VNPayQR",
+                  key: "saleVnPayQr",
+                  dataIndex: "saleVnPayQr",
+                  width: 140,
+                  align: "right" as const,
+                  render: (value: number) => formatMoney(value)
+                },
+                {
+                  title: "VietQR",
+                  key: "saleVietQr",
+                  dataIndex: "saleVietQr",
+                  width: 140,
+                  align: "right" as const,
+                  render: (value: number) => formatMoney(value)
+                },
                 {
                   title: "Thực nộp",
                   key: "actualRemittance",

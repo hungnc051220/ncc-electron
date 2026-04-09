@@ -13,11 +13,8 @@ import {
 
 export interface CustomerRoleDto {
   name: string;
-  freeShipping: boolean;
-  taxExempt: boolean;
-  active: boolean;
-  isSystemRole: boolean;
   systemName: string;
+  active: boolean;
 }
 
 export const customerRolesApi = {
@@ -30,11 +27,21 @@ export const customerRolesApi = {
     return res.data;
   },
   create: async (dto: CustomerRoleDto): Promise<CustomerRoleProps> => {
-    const res = await api.post("/api/pos/customer-role", dto);
+    const res = await api.post("/api/pos/customer-role", {
+      ...dto,
+      freeShipping: false,
+      taxExempt: false,
+      isSystemRole: true
+    });
     return res.data;
   },
   update: async (id: number, dto: CustomerRoleDto): Promise<CustomerRoleProps> => {
-    const res = await api.patch(`/api/pos/customer-role/${id}`, dto);
+    const res = await api.patch(`/api/pos/customer-role/${id}`, {
+      ...dto,
+      freeShipping: false,
+      taxExempt: false,
+      isSystemRole: true
+    });
     return res.data;
   },
   delete: async (id: number) => {

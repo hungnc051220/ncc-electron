@@ -88,13 +88,13 @@ const CancellationTicketsPage = () => {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "projectDate",
-      render: (value: string) => dayjs(value, "YYYY-MM-DD").utc().format("DD/MM/YYYY")
+      render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY")
     },
     {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
-      render: (value: string) => dayjs(value).utc().format("HH:mm")
+      render: (value: string) => dayjs(value).format("HH:mm")
     },
     {
       title: "Số vé",

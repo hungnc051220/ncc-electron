@@ -53,6 +53,8 @@ const emptyRow: SharingRateFormItem = {
   rate: undefined
 };
 
+const normalizePercentageValue = (value: number) => Number((value * 100).toFixed(2));
+
 const RevenueSharingDialog = ({
   open,
   onOpenChange,
@@ -224,7 +226,7 @@ const RevenueSharingDialog = ({
       .map((item) => ({
         id: item.id,
         dateRange: [dayjs(item.fromDate), dayjs(item.toDate)] as [Dayjs, Dayjs],
-        rate: item.rate * 100
+        rate: normalizePercentageValue(item.rate)
       }));
 
     form.setFieldValue("sharingRates", sharingRates.length ? sharingRates : [emptyRow]);

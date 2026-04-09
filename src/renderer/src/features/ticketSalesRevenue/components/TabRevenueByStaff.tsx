@@ -15,6 +15,11 @@ interface TabRevenueByStaffProps {
   toDate?: Dayjs;
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
   const [current, setCurrent] = useState(1);
   const hasDateRange = !!fromDate && !!toDate;
@@ -48,9 +53,18 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
       fixed: "start"
     },
     {
-      title: "Tên nhân viên",
+      title: "Tên đăng nhập",
       dataIndex: "userName",
       key: "userName",
+      sorter: (a, b) => compareText(a.userName, b.userName),
+      width: 200,
+      fixed: "start"
+    },
+    {
+      title: "Tên nhân viên",
+      dataIndex: "fullName",
+      key: "fullName",
+      sorter: (a, b) => compareText(a.fullName, b.fullName),
       width: 200,
       fixed: "start"
     },
@@ -58,6 +72,7 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
       title: "Online",
       dataIndex: "onQuantity",
       key: "onQuantity",
+      sorter: (a, b) => compareNumber(a.onQuantity, b.onQuantity),
       align: "right",
       render: (_, { onQuantity }) => formatNumber(onQuantity || 0)
     },
@@ -65,6 +80,7 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
       title: "Offline",
       dataIndex: "offQuantity",
       key: "offQuantity",
+      sorter: (a, b) => compareNumber(a.offQuantity, b.offQuantity),
       align: "right",
       render: (_, { offQuantity }) => formatNumber(offQuantity || 0)
     },
@@ -72,6 +88,7 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
       title: "Tổng vé",
       dataIndex: "totalQuantity",
       key: "totalQuantity",
+      sorter: (a, b) => compareNumber(a.totalQuantity, b.totalQuantity),
       align: "right",
       render: (_, { totalQuantity }) => formatNumber(totalQuantity || 0)
     },
@@ -79,6 +96,7 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
       title: "Doanh thu VNPayQR",
       dataIndex: "offSaleVnPayQr",
       key: "offSaleVnPayQr",
+      sorter: (a, b) => compareNumber(a.offSaleVnPayQr, b.offSaleVnPayQr),
       align: "right",
       render: (_, { offSaleVnPayQr }) => formatMoney(offSaleVnPayQr || 0)
     },
@@ -86,6 +104,7 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
       title: "Doanh thu VietQR",
       dataIndex: "offSaleVietQr",
       key: "offSaleVietQr",
+      sorter: (a, b) => compareNumber(a.offSaleVietQr, b.offSaleVietQr),
       align: "right",
       render: (_, { offSaleVietQr }) => formatMoney(offSaleVietQr || 0)
     },
@@ -93,6 +112,7 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
       title: "Doanh thu Offline",
       dataIndex: "totalSale",
       key: "totalSale",
+      sorter: (a, b) => compareNumber(a.totalSale, b.totalSale),
       align: "right",
       render: (_, { totalSale }) => formatMoney(totalSale || 0)
     }

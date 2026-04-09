@@ -24,6 +24,17 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
+const compareNaturalText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
+
+const compareDate = (left?: string | null, right?: string | null) =>
+  dayjs(left).valueOf() - dayjs(right).valueOf();
+
 const RefundsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -97,6 +108,7 @@ const RefundsPage = () => {
       title: "Mã vé",
       key: "barCode",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.barCode, b.order?.barCode),
       render: (order) => order.barCode,
       fixed: "left"
     },
@@ -104,6 +116,7 @@ const RefundsPage = () => {
       title: "Mã thanh toán",
       key: "id",
       dataIndex: "order",
+      sorter: (a, b) => compareNumber(a.order?.id, b.order?.id),
       render: (order) => order.id,
       fixed: "left"
     },
@@ -111,6 +124,8 @@ const RefundsPage = () => {
       title: "Thời gian hủy vé",
       key: "createdOnUtc",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareDate(a.order?.cancelTicket?.createdOnUtc, b.order?.cancelTicket?.createdOnUtc),
       render: (_, { order }) =>
         order?.cancelTicket?.createdOnUtc
           ? dayjs(order.cancelTicket.createdOnUtc).format("HH:mm DD/MM/YYYY")
@@ -120,12 +135,18 @@ const RefundsPage = () => {
       title: "Lý do hủy vé",
       key: "reason",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.cancelTicket?.reason, b.order?.cancelTicket?.reason),
       render: (_, { order }) => order?.cancelTicket?.reason
     },
     {
       title: "Tên khách hàng",
       key: "customerName",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareText(
+          [a.order?.customerFirstName, a.order?.customerLastName].filter(Boolean).join(" "),
+          [b.order?.customerFirstName, b.order?.customerLastName].filter(Boolean).join(" ")
+        ),
       render: (order) =>
         [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" ")
     },
@@ -133,48 +154,64 @@ const RefundsPage = () => {
       title: "Số điện thoại",
       key: "customerPhone",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.customerPhone, b.order?.customerPhone),
       render: (order) => order.customerPhone
     },
     {
       title: "Email",
       key: "customerEmail",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.customerEmail, b.order?.customerEmail),
       render: (order) => order.customerEmail
     },
     {
       title: "Phòng chiếu",
       key: "roomName",
       dataIndex: "room",
+      sorter: (a, b) => compareNaturalText(a.room?.name, b.room?.name),
       render: (room) => room?.name
     },
     {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "planScreening",
+      sorter: (a, b) => compareDate(a.planScreening?.projectDate, b.planScreening?.projectDate),
       render: (planScreening) => dayjs(planScreening?.projectDate).format("DD/MM/YYYY")
     },
     {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "planScreening",
+      sorter: (a, b) => compareDate(a.planScreening?.projectTime, b.planScreening?.projectTime),
       render: (planScreening) => dayjs(planScreening?.projectTime).format("HH:mm")
     },
     {
       title: "Số lượng vé",
       key: "numberOfTickets",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareNumber(
+          a.order?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+          b.order?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+        ),
       render: (_, record) => record.order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
     },
     {
       title: "Vị trí ghế",
       key: "positions",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareText(
+          a.order?.items?.map((item) => item.listChairValueF1).join(", "),
+          b.order?.items?.map((item) => item.listChairValueF1).join(", ")
+        ),
       render: (_, record) => record.order.items?.map((item) => item.listChairValueF1).join(", ")
     },
     {
       title: "Số tiền đã hoàn",
       key: "refundedAmount",
       dataIndex: "order",
+      sorter: (a, b) => compareNumber(a.order?.refundedAmount, b.order?.refundedAmount),
       render: (_, record) => formatMoney(record.order.refundedAmount),
       fixed: "right",
       align: "right"
@@ -183,6 +220,7 @@ const RefundsPage = () => {
       title: "Trạng thái xử lý",
       key: "refundStatusId",
       dataIndex: "order",
+      sorter: (a, b) => compareNumber(a.order?.refundStatusId, b.order?.refundStatusId),
       render: (_, record) => <RefundStatusBadge status={record.order.refundStatusId} />,
       fixed: "right"
     },

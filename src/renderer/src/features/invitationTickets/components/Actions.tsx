@@ -213,7 +213,10 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
       return;
     }
 
-    if (!posName || !posShortName) return;
+    if (!posName || !posShortName) {
+      message.error("Chưa cấu hình máy POS, không thể thao tác");
+      return;
+    }
 
     const floorNo = selectedSeats[0]?.floor || 1;
     const body: OrderDto = {

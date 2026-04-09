@@ -38,6 +38,17 @@ export interface ValuesProps {
   premieredDay?: Dayjs | null;
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
+const compareNaturalText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
+
+const compareDate = (left?: string | null, right?: string | null) =>
+  dayjs(left).valueOf() - dayjs(right).valueOf();
+
 const FilmsPage = () => {
   const [activeKey, setActiveKey] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -131,6 +142,7 @@ const FilmsPage = () => {
       title: "Tên phim",
       key: "filmName",
       dataIndex: "filmName",
+      sorter: (a, b) => compareText(a.filmName, b.filmName),
       fixed: "left",
       width: 400
     },
@@ -138,6 +150,7 @@ const FilmsPage = () => {
       title: "Phiên bản",
       key: "versionCode",
       dataIndex: "versionCode",
+      sorter: (a, b) => compareNaturalText(a.versionCode, b.versionCode),
       width: 100,
       align: "center"
     },
@@ -145,6 +158,8 @@ const FilmsPage = () => {
       title: "Hãng phát hành",
       key: "manufacturerId",
       dataIndex: "manufacturerId",
+      sorter: (a, b) =>
+        compareText(manufacturerMap.get(a.manufacturerId), manufacturerMap.get(b.manufacturerId)),
       render: (value: number) => manufacturerMap.get(value) || "",
       width: 200
     },
@@ -152,6 +167,7 @@ const FilmsPage = () => {
       title: "Ngày khởi chiếu",
       key: "premieredDay",
       dataIndex: "premieredDay",
+      sorter: (a, b) => compareDate(a.premieredDay, b.premieredDay),
       render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
       width: 150
     },
@@ -159,6 +175,7 @@ const FilmsPage = () => {
       title: "Thời lượng",
       key: "duration",
       dataIndex: "duration",
+      sorter: (a, b) => compareNumber(a.duration, b.duration),
       render: (value: number) => `${value} phút`,
       align: "right",
       width: 150
@@ -167,6 +184,7 @@ const FilmsPage = () => {
       title: "Nước sản xuất",
       key: "countryName",
       dataIndex: "countryName",
+      sorter: (a, b) => compareText(a.country?.name, b.country?.name),
       render: (_, record) => record.country?.name,
       width: 150
     },
@@ -174,6 +192,7 @@ const FilmsPage = () => {
       title: "Giá cộng thêm",
       key: "proposedPrice",
       dataIndex: "proposedPrice",
+      sorter: (a, b) => compareNumber(a.proposedPrice, b.proposedPrice),
       render: (value: number) => formatMoney(value || 0),
       align: "right",
       width: 150
@@ -182,6 +201,7 @@ const FilmsPage = () => {
       title: "Bán online",
       key: "sellOnline",
       dataIndex: "sellOnline",
+      sorter: (a, b) => Number(a.sellOnline) - Number(b.sellOnline),
       render: (value: boolean) => (
         <div className="flex items-center justify-center">
           {value ? (

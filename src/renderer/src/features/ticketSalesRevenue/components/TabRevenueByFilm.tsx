@@ -15,6 +15,11 @@ interface TabRevenueByFilmProps {
   toDate?: Dayjs;
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
   const [current, setCurrent] = useState(1);
   const hasDateRange = !!fromDate && !!toDate;
@@ -51,6 +56,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Tên phim",
       dataIndex: "filmName",
       key: "filmName",
+      sorter: (a, b) => compareText(a.filmName, b.filmName),
       width: 400,
       fixed: "start"
     },
@@ -58,6 +64,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Online",
       dataIndex: "onQuantity",
       key: "onQuantity",
+      sorter: (a, b) => compareNumber(a.onQuantity, b.onQuantity),
       align: "right",
       render: (_, { onQuantity }) => formatNumber(onQuantity || 0)
     },
@@ -65,6 +72,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Offline",
       dataIndex: "offQuantity",
       key: "offQuantity",
+      sorter: (a, b) => compareNumber(a.offQuantity, b.offQuantity),
       align: "right",
       render: (_, { offQuantity }) => formatNumber(offQuantity || 0)
     },
@@ -72,6 +80,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Tổng vé",
       dataIndex: "totalQuantity",
       key: "totalQuantity",
+      sorter: (a, b) => compareNumber(a.totalQuantity, b.totalQuantity),
       align: "right",
       render: (_, { totalQuantity }) => formatNumber(totalQuantity || 0)
     },
@@ -79,6 +88,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Doanh thu VietQR",
       dataIndex: "offSaleVietQr",
       key: "offSaleVietQr",
+      sorter: (a, b) => compareNumber(a.offSaleVietQr, b.offSaleVietQr),
       align: "right",
       render: (_, { offSaleVietQr }) => formatMoney(offSaleVietQr || 0)
     },
@@ -86,6 +96,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Doanh thu Online",
       dataIndex: "onSaleTotal",
       key: "onSaleTotal",
+      sorter: (a, b) => compareNumber(a.onSaleTotal, b.onSaleTotal),
       align: "right",
       render: (_, { onSaleTotal }) => formatMoney(onSaleTotal || 0)
     },
@@ -93,6 +104,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Doanh thu Offline",
       dataIndex: "actualOffSale",
       key: "actualOffSale",
+      sorter: (a, b) => compareNumber(a.actualOffSale, b.actualOffSale),
       align: "right",
       render: (_, { actualOffSale }) => formatMoney(actualOffSale || 0)
     },
@@ -100,6 +112,7 @@ const TabRevenueByFilm = ({ fromDate, toDate }: TabRevenueByFilmProps) => {
       title: "Doanh thu tổng",
       dataIndex: "totalSale",
       key: "totalSale",
+      sorter: (a, b) => compareNumber(a.totalSale, b.totalSale),
       align: "right",
       render: (_, { totalSale }) => formatMoney(totalSale || 0)
     }

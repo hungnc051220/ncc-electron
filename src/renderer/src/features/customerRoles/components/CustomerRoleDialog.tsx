@@ -28,18 +28,12 @@ const CustomerRoleDialog = ({
   const initialValues: FieldType = editingCustomerRole
     ? {
         name: editingCustomerRole.name,
-        freeShipping: editingCustomerRole.freeShipping,
-        taxExempt: editingCustomerRole.taxExempt,
-        active: editingCustomerRole.active,
-        isSystemRole: editingCustomerRole.isSystemRole,
-        systemName: editingCustomerRole.systemName
+        systemName: editingCustomerRole.systemName,
+        active: editingCustomerRole.active
       }
     : {
         name: "",
-        freeShipping: false,
-        taxExempt: false,
         active: true,
-        isSystemRole: false,
         systemName: ""
       };
 
@@ -113,17 +107,8 @@ const CustomerRoleDialog = ({
         </Form.Item>
 
         <div className="grid grid-cols-2 gap-y-3">
-          <Form.Item<FieldType> name="freeShipping" valuePropName="checked" noStyle>
-            <Checkbox>Miễn phí vận chuyển</Checkbox>
-          </Form.Item>
-          <Form.Item<FieldType> name="taxExempt" valuePropName="checked" noStyle>
-            <Checkbox>Miễn thuế</Checkbox>
-          </Form.Item>
           <Form.Item<FieldType> name="active" valuePropName="checked" noStyle>
             <Checkbox>Kích hoạt</Checkbox>
-          </Form.Item>
-          <Form.Item<FieldType> name="isSystemRole" valuePropName="checked" noStyle>
-            <Checkbox>Nhóm hệ thống</Checkbox>
           </Form.Item>
         </div>
       </Form>

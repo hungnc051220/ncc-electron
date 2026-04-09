@@ -21,6 +21,7 @@ vi.mock("./Countdown", () => ({
 const baseQrData = {
   orderId: 77,
   qrcode: "vietqr://payload",
+  paymentMethodSystemName: "VIETQR",
   referenceLabelCode: "REF",
   accountName: "TRUNG TAM CHIEU PHIM",
   accountNumber: "123456789",
@@ -81,5 +82,26 @@ describe("QrCodeDialog", () => {
     expect(
       screen.queryByRole("button", { name: "Check lại giao dịch TT" })
     ).not.toBeInTheDocument();
+  });
+
+  it("shows VietQR brand image when QR payload is VietQR", () => {
+    render(<QrCodeDialog open dataQr={baseQrData} />);
+
+    expect(screen.getByRole("img", { name: "VietQR" })).toBeInTheDocument();
+  });
+
+  it("shows VNPayQR brand image when QR payload is VNPay", () => {
+    render(
+      <QrCodeDialog
+        open
+        dataQr={{
+          ...baseQrData,
+          qrcode: "vnpay://payload",
+          paymentMethodSystemName: "VNPAY"
+        }}
+      />
+    );
+
+    expect(screen.getByRole("img", { name: "VNPayQR" })).toBeInTheDocument();
   });
 });

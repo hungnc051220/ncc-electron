@@ -2,8 +2,18 @@ import { FilterOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Form, Input, Modal } from "antd";
 import { useState } from "react";
 import { ValuesProps } from "../RefundsPage";
+import dayjs from "dayjs";
+import type { TimeRangePickerProps } from "antd";
 
 const { RangePicker } = DatePicker;
+
+const rangePresets: TimeRangePickerProps["presets"] = [
+  { label: "Hôm nay", value: [dayjs().startOf("day"), dayjs().endOf("day")] },
+  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
+  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
+  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
+  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
+];
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
@@ -79,7 +89,7 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
           <Input placeholder="Nhập email" />
         </Form.Item>
         <Form.Item name="dateRange" label="Thời gian mua">
-          <RangePicker format="DD/MM/YYYY" className="w-full" />
+          <RangePicker presets={rangePresets} format="DD/MM/YYYY" className="w-full" />
         </Form.Item>
       </Modal>
     </>

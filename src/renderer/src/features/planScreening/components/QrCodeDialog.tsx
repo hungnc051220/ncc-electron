@@ -1,5 +1,7 @@
 import { formatMoney } from "@renderer/lib/utils";
-import { QrDialogData } from "@shared/types";
+import vietQrImage from "@renderer/assets/images/vietqr.png";
+import vnPayImage from "@renderer/assets/images/vnpay2.png";
+import { PaymentType, QrDialogData } from "@shared/types";
 import { Button, Modal, QRCode } from "antd";
 import dayjs from "dayjs";
 import { Hourglass } from "lucide-react";
@@ -15,6 +17,26 @@ interface QrCodeDialogProps {
   isCheckingTransaction?: boolean;
 }
 
+const getQrBrandAsset = (paymentMethodSystemName?: string) => {
+  const normalizedValue = paymentMethodSystemName?.replace(/^Payments\./, "").trim();
+
+  if (normalizedValue === PaymentType.VIETQR) {
+    return {
+      src: vietQrImage,
+      alt: "VietQR"
+    };
+  }
+
+  if (normalizedValue === PaymentType.VNPAY) {
+    return {
+      src: vnPayImage,
+      alt: "VNPayQR"
+    };
+  }
+
+  return null;
+};
+
 const QrCodeDialog = ({
   open,
   onCancel,
@@ -29,6 +51,7 @@ const QrCodeDialog = ({
     ? dataQr.orderTotal || 0
     : (dataQr.orderTotal || 0) + (dataQr.orderDiscount || 0);
   const displayDiscount = isU22Voucher ? 0 : dataQr.orderDiscount || 0;
+  const qrBrand = getQrBrandAsset(dataQr.paymentMethodSystemName);
 
   useEffect(() => {
     if (!open) {
@@ -133,6 +156,13 @@ const QrCodeDialog = ({
           </div>
           <div className="w-2/5">
             <div className="flex flex-col items-center">
+              {qrBrand && (
+                <img
+                  src={qrBrand.src}
+                  alt={qrBrand.alt}
+                  className="mb-4 w-25 h-auto object-contain"
+                />
+              )}
               <div className="p-5 relative">
                 <QRCode value={dataQr.qrcode} size={200} />
                 <div className="absolute inset-0 pointer-events-none flex justify-between items-between">
@@ -143,9 +173,7 @@ const QrCodeDialog = ({
                 </div>
               </div>
 
-              <p className="text-center font-bold text-base mt-4">{dataQr.accountNumber}</p>
-              <p className="text-center font-bold text-base">{dataQr.accountName}</p>
-              <p className="text-center font-bold text-base">{dataQr.accountBankName}</p>
+              <p className="text-center font-bold text-base mt-4">{dataQr.orderId}</p>
             </div>
           </div>
         </div>

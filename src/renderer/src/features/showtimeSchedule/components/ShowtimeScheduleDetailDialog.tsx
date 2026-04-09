@@ -51,7 +51,7 @@ const ShowtimeScheduleDetailDialog = ({
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
-      render: (value) => dayjs.utc(value).format("HH:mm"),
+      render: (value) => dayjs(value).format("HH:mm"),
       width: 80
     },
     {
