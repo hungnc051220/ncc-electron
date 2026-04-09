@@ -43,7 +43,6 @@ export const navConfig: NavConfigItem[] = [
       {
         label: "Cài đặt",
         key: "settings",
-        permissionKey: "settings",
         to: "/settings",
         hiddenInMenu: true
       },
@@ -173,7 +172,7 @@ export const navConfig: NavConfigItem[] = [
         label: "Bán vé khách lẻ",
         key: "showtimes",
         permissionKey: "showtimes",
-        to: "/showtimes"
+        to: "/showtimes?resetDate=1"
       },
       {
         label: "In vé online",

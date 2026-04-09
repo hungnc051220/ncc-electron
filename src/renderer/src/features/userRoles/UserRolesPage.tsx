@@ -32,6 +32,62 @@ type PermissionTreeRow = {
   isGroup?: boolean;
 };
 
+const SETTINGS_PERMISSION_KEYS = ["settings_pos", "settings_endpoint", "settings_interface"];
+
+const buildAggregateValues = (rows: PermissionTreeRow[]): Record<PermissionAction, boolean> =>
+  permissionActions.reduce(
+    (acc, action) => {
+      const applicableRows = rows.filter((row) => row.actions.includes(action));
+      acc[action] =
+        applicableRows.length > 0 && applicableRows.every((row) => row.values[action]);
+      return acc;
+    },
+    {} as Record<PermissionAction, boolean>
+  );
+
+const buildGroupRow = (
+  id: string,
+  label: string,
+  children: PermissionTreeRow[],
+  module?: string
+): PermissionTreeRow => ({
+  id,
+  key: id,
+  label,
+  module,
+  actions: permissionActions.filter((action) => children.some((child) => child.actions.includes(action))),
+  values: buildAggregateValues(children),
+  children,
+  isGroup: true
+});
+
+const mapFeatureToTreeRow = (feature: PermissionMatrixRow): PermissionTreeRow => ({
+  id: feature.id,
+  key: feature.key,
+  label: feature.label,
+  route: feature.route,
+  module: feature.module,
+  actions: feature.actions,
+  values: feature.values
+});
+
+const getLeafRows = (row: PermissionTreeRow): PermissionTreeRow[] => {
+  if (!row.children?.length) {
+    return [row];
+  }
+
+  return row.children.flatMap(getLeafRows);
+};
+
+const getLeafPermissionKeys = (row: PermissionTreeRow) => getLeafRows(row).map((item) => item.key);
+
+const hasAnyDescendantValue = (row: PermissionTreeRow, action: PermissionAction) =>
+  row.children?.some((child) =>
+    child.actions.includes(action)
+      ? child.values[action] || hasAnyDescendantValue(child, action)
+      : hasAnyDescendantValue(child, action)
+  ) ?? false;
+
 const buildTreeRows = (rows: PermissionMatrixRow[]): PermissionTreeRow[] => {
   const grouped = rows.reduce(
     (acc, row) => {
@@ -42,39 +98,39 @@ const buildTreeRows = (rows: PermissionMatrixRow[]): PermissionTreeRow[] => {
   );
 
   return Object.entries(grouped).map(([module, features]) => {
-    const supportedActions = permissionActions.filter((action) =>
-      features.some((feature) => feature.actions.includes(action))
-    );
+    if (module !== "Hệ thống") {
+      return buildGroupRow(
+        `group:${module}`,
+        module,
+        features.map(mapFeatureToTreeRow),
+        module
+      );
+    }
 
-    const values = permissionActions.reduce(
-      (acc, action) => {
-        const applicableFeatures = features.filter((feature) => feature.actions.includes(action));
-        acc[action] =
-          applicableFeatures.length > 0 &&
-          applicableFeatures.every((feature) => feature.values[action]);
-        return acc;
-      },
-      {} as Record<PermissionAction, boolean>
+    const systemSettingFeatures = features.filter((feature) =>
+      SETTINGS_PERMISSION_KEYS.includes(feature.key)
     );
+    const otherFeatures = features.filter((feature) => !SETTINGS_PERMISSION_KEYS.includes(feature.key));
 
-    return {
-      id: `group:${module}`,
-      key: `group:${module}`,
-      label: module,
-      module,
-      actions: supportedActions,
-      values,
-      isGroup: true,
-      children: features.map((feature) => ({
-        id: feature.id,
-        key: feature.key,
-        label: feature.label,
-        route: feature.route,
-        module: feature.module,
-        actions: feature.actions,
-        values: feature.values
-      }))
-    };
+    const children: PermissionTreeRow[] = otherFeatures.map(mapFeatureToTreeRow);
+
+    if (systemSettingFeatures.length) {
+      children.push(
+        buildGroupRow(
+          "group:system_settings",
+          "Thiết lập hệ thống",
+          systemSettingFeatures.map((feature) => ({
+            ...mapFeatureToTreeRow(feature),
+            label: feature.label.startsWith("Thiết lập hệ thống - ")
+              ? feature.label.replace("Thiết lập hệ thống - ", "")
+              : feature.label
+          })),
+          module
+        )
+      );
+    }
+
+    return buildGroupRow(`group:${module}`, module, children, module);
   });
 };
 
@@ -195,9 +251,7 @@ const UserRolesPage = () => {
       width: 90,
       align: "center",
       render: (_, record) => {
-        const featureKeys = record.isGroup
-          ? (record.children ?? []).map((item) => item.key)
-          : [record.key];
+        const featureKeys = record.isGroup ? getLeafPermissionKeys(record) : [record.key];
         const { checked, indeterminate } = getRowToggleState(record);
 
         return (
@@ -228,15 +282,11 @@ const UserRolesPage = () => {
           checked={record.values[action]}
           disabled={!record.actions.includes(action)}
           indeterminate={
-            record.isGroup &&
-            !!record.children?.some(
-              (item) => item.actions.includes(action) && item.values[action]
-            ) &&
-            !record.values[action]
+            record.isGroup && hasAnyDescendantValue(record, action) && !record.values[action]
           }
           onChange={(e) =>
             onTogglePermission(
-              record.isGroup ? (record.children ?? []).map((item) => item.key) : [record.key],
+              record.isGroup ? getLeafPermissionKeys(record) : [record.key],
               action,
               e.target.checked
             )

@@ -15,6 +15,11 @@ const VOUCHER_TYPE_ID = {
   text: 4
 } as const;
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const getVoucherValueLabel = (voucher: BatchVoucherProps) => {
   switch (voucher.valueType) {
     case VOUCHER_TYPE_ID.percent:
@@ -77,6 +82,7 @@ const VouchersPage = () => {
       key: "name",
       dataIndex: "name",
       width: 300,
+      sorter: (a, b) => compareText(a.name, b.name),
       render: (value: string) => (
         <span className="font-medium text-slate-900 dark:text-slate-100">{value || "--"}</span>
       ),
@@ -87,6 +93,7 @@ const VouchersPage = () => {
       key: "description",
       dataIndex: "description",
       width: 400,
+      sorter: (a, b) => compareText(a.description, b.description),
       render: (value: string) => (
         <span className="text-sm leading-6 text-slate-600 dark:text-slate-300">
           {value || "--"}
@@ -134,6 +141,7 @@ const VouchersPage = () => {
       key: "valueType",
       dataIndex: "valueType",
       width: 190,
+      sorter: (a, b) => compareText(getVoucherValueLabel(a), getVoucherValueLabel(b)),
       render: (_: number, record) => (
         <span className="font-medium text-slate-900 dark:text-slate-100">
           {getVoucherValueLabel(record)}
@@ -145,8 +153,9 @@ const VouchersPage = () => {
       title: "Giá trị đơn tối thiểu",
       key: "minOrderAmount",
       dataIndex: "minOrderAmount",
-      width: 150,
+      width: 180,
       align: "right",
+      sorter: (a, b) => compareNumber(a.minOrderAmount, b.minOrderAmount),
       render: (value: number) => (
         <span className="font-medium text-slate-700 dark:text-slate-200">
           {value > 0 ? formatMoney(value) : "Không yêu cầu"}
@@ -159,6 +168,7 @@ const VouchersPage = () => {
       dataIndex: "perCustomerLimit",
       width: 200,
       align: "right",
+      sorter: (a, b) => compareNumber(a.perCustomerLimit, b.perCustomerLimit),
       render: (value: number) => (
         <span className="font-medium text-slate-700 dark:text-slate-200">
           {value > 0 ? formatNumber(value) : "Không giới hạn"}
@@ -171,6 +181,7 @@ const VouchersPage = () => {
       dataIndex: "totalQuantity",
       width: 130,
       align: "right",
+      sorter: (a, b) => compareNumber(a.totalQuantity, b.totalQuantity),
       render: (value: number) => (
         <span className="font-medium text-slate-900 dark:text-slate-100">
           {formatNumber(value || 0)}
@@ -183,6 +194,7 @@ const VouchersPage = () => {
       dataIndex: "usedCount",
       width: 130,
       align: "right",
+      sorter: (a, b) => compareNumber(a.usedCount, b.usedCount),
       render: (value: number) => {
         return (
           <span className="font-medium text-slate-900 dark:text-slate-100">
@@ -196,6 +208,7 @@ const VouchersPage = () => {
       key: "startAt",
       dataIndex: "startAt",
       width: 120,
+      sorter: (a, b) => dayjs(a.startAt).valueOf() - dayjs(b.startAt).valueOf(),
       render: (value: string) => (
         <span className="font-medium text-slate-700 dark:text-slate-200">
           {dayjs(value).format("DD/MM/YYYY")}
@@ -207,6 +220,7 @@ const VouchersPage = () => {
       key: "endAt",
       dataIndex: "endAt",
       width: 120,
+      sorter: (a, b) => dayjs(a.endAt).valueOf() - dayjs(b.endAt).valueOf(),
       render: (value: string) => (
         <span className="font-medium text-slate-700 dark:text-slate-200">
           {dayjs(value).format("DD/MM/YYYY")}

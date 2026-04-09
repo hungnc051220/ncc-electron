@@ -30,6 +30,11 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const PrintOnlineTicketsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -145,6 +150,7 @@ const PrintOnlineTicketsPage = () => {
       title: "Mã đặt vé",
       key: "barCode",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order.barCode, b.order.barCode),
       render: (order) => order.barCode,
       fixed: "left"
     },
@@ -152,12 +158,18 @@ const PrintOnlineTicketsPage = () => {
       title: "Mã thanh toán",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
+      sorter: (a, b) => compareNumber(a.order.id, b.order.id),
       render: (_, record) => record.order.id
     },
     {
       title: "Tên khách hàng",
       key: "customerName",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareText(
+          [a.order.customerFirstName, a.order.customerLastName].filter(Boolean).join(" "),
+          [b.order.customerFirstName, b.order.customerLastName].filter(Boolean).join(" ")
+        ),
       render: (order) =>
         [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" ")
     },
@@ -165,24 +177,36 @@ const PrintOnlineTicketsPage = () => {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "planScreening",
+      sorter: (a, b) =>
+        dayjs(a.planScreening?.projectDate).valueOf() -
+        dayjs(b.planScreening?.projectDate).valueOf(),
       render: (planScreening) => dayjs(planScreening?.projectDate).format("DD/MM/YYYY")
     },
     {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "planScreening",
+      sorter: (a, b) =>
+        dayjs(a.planScreening?.projectTime).valueOf() -
+        dayjs(b.planScreening?.projectTime).valueOf(),
       render: (planScreening) => dayjs(planScreening?.projectTime).format("HH:mm")
     },
     {
       title: "Phòng chiếu",
       key: "roomName",
       dataIndex: "room",
+      sorter: (a, b) => compareText(a.room?.name, b.room?.name),
       render: (room) => room?.name
     },
     {
       title: "Số lượng vé",
       key: "numberOfTickets",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareNumber(
+          a.order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+          b.order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+        ),
       render: (_, record) => record.order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
     },
     {
@@ -195,7 +219,8 @@ const PrintOnlineTicketsPage = () => {
       title: "Đã in",
       dataIndex: "order",
       key: "printedOnUtc",
-      width: 60,
+      width: 100,
+      sorter: (a, b) => Number(!!a.order.printedOnUtc) - Number(!!b.order.printedOnUtc),
       render: (order) => (
         <div className="flex items-center justify-center">
           {order?.printedOnUtc ? (

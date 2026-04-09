@@ -62,7 +62,7 @@ const Dashboard = () => {
               title="Bán vé khách lẻ"
               description="Bán vé trực tiếp cho khách tại quầy giao dịch."
               color="red"
-              href="showtimes"
+              href="showtimes?resetDate=1"
               icon={mainIcon1}
             />
             <MainCard

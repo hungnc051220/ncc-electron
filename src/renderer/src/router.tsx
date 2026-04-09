@@ -96,7 +96,7 @@ export const router = createHashRouter([
           },
           {
             path: "/settings",
-            element: withAccess("settings", <SettingPage />)
+            element: <SettingPage />
           },
           {
             path: "/films",

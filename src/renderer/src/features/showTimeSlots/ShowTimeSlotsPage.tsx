@@ -13,6 +13,9 @@ import { useCallback, useMemo, useState } from "react";
 import ShowTimeSlotDialog from "./components/ShowTimeSlotDialog";
 import DeleteShowTimeSlotDialog from "./components/DeleteShowTimeSlotDialog";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
 const ShowTimeSlotsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -80,23 +83,27 @@ const ShowTimeSlotsPage = () => {
     {
       title: "Tên khung giờ",
       key: "name",
-      dataIndex: "name"
+      dataIndex: "name",
+      sorter: (a, b) => compareText(a.name, b.name)
     },
     {
       title: "Loại ngày",
       key: "dateTypeId",
       dataIndex: "dateTypeId",
+      sorter: (a, b) => a.dateTypeId - b.dateTypeId,
       render: (value: number) => (value === 1 ? "Ngày thường" : "Ngày lễ")
     },
     {
       title: "Thời gian bắt đầu",
       key: "fromTime",
-      dataIndex: "fromTime"
+      dataIndex: "fromTime",
+      sorter: (a, b) => compareText(a.fromTime, b.fromTime)
     },
     {
       title: "Thời gian kết thúc",
       key: "toTime",
-      dataIndex: "toTime"
+      dataIndex: "toTime",
+      sorter: (a, b) => compareText(a.toTime, b.toTime)
     },
     ...(actionItems.length
       ? [

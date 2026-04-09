@@ -13,6 +13,9 @@ import { useCallback, useMemo, useState } from "react";
 import CancellationReasonDialog from "./components/CancellationReasonDialog";
 import DeleteCancellationReasonDialog from "./components/DeleteCancellationReasonDialog";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
 const CancellationReasonsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -81,7 +84,8 @@ const CancellationReasonsPage = () => {
     {
       title: "Lý do hủy",
       key: "reason",
-      dataIndex: "reason"
+      dataIndex: "reason",
+      sorter: (a, b) => compareText(a.reason, b.reason)
     },
     ...(actionItems.length
       ? [

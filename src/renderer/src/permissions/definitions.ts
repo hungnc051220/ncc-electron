@@ -36,11 +36,24 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     actions: ["access", "list", "view"]
   },
   {
-    key: "settings",
+    key: "settings_pos",
     module: "Hệ thống",
-    label: "Thiết lập hệ thống",
+    label: "Thiết lập hệ thống - Cấu hình máy POS",
     route: "/settings",
     actions: ["access", "view", "update", "configure"]
+  },
+  {
+    key: "settings_endpoint",
+    module: "Hệ thống",
+    label: "Thiết lập hệ thống - Cấu hình Endpoint",
+    route: "/settings",
+    actions: ["access", "view", "update", "configure"]
+  },
+  {
+    key: "settings_interface",
+    module: "Hệ thống",
+    label: "Cấu hình giao diện",
+    actions: ["access"]
   },
   {
     key: "films",

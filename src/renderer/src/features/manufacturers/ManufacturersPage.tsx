@@ -14,6 +14,9 @@ import ManufacturerDialog from "./components/ManufacturerDialog";
 import { formatNumber } from "@renderer/lib/utils";
 import ChangeHiddenManufacturerDialog from "./components/ChangeHiddenManufacturerDialog";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
 const ManufacturersPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -107,17 +110,20 @@ const ManufacturersPage = () => {
       title: "Hãng phim phát hành",
       key: "name",
       dataIndex: "name",
+      sorter: (a, b) => compareText(a.name, b.name),
       fixed: "left"
     },
     {
       title: "Tên công ty",
       key: "fullName",
-      dataIndex: "fullName"
+      dataIndex: "fullName",
+      sorter: (a, b) => compareText(a.fullName, b.fullName)
     },
     {
       title: "Địa chỉ công ty",
       key: "address",
-      dataIndex: "address"
+      dataIndex: "address",
+      sorter: (a, b) => compareText(a.address, b.address)
     },
     {
       title: "Ẩn/Hiện",
@@ -133,7 +139,8 @@ const ManufacturersPage = () => {
         </div>
       ),
       align: "center",
-      width: 100
+      width: 100,
+      sorter: (a, b) => Number(a.isHidden) - Number(b.isHidden)
     },
     ...(canUpdate || canDelete
       ? [

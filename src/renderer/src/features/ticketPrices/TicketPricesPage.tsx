@@ -13,6 +13,11 @@ import { useCallback, useMemo, useState } from "react";
 import DeleteTicketPriceDialog from "./components/DeleteTicketPriceDialog";
 import TicketPriceDialog from "./components/TicketPriceDialog";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const TicketPricesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -81,24 +86,28 @@ const TicketPricesPage = () => {
       title: "Mã phiên bản",
       key: "versionCode",
       dataIndex: "versionCode",
-      width: 150
+      width: 150,
+      sorter: (a, b) => compareText(a.versionCode, b.versionCode)
     },
     {
       title: "Loại ghế",
       key: "position",
       dataIndex: "position",
+      sorter: (a, b) => compareText(a.position?.name, b.position?.name),
       render: (_, record) => record.position?.name
     },
     {
       title: "Ca chiếu",
       key: "daypart",
       dataIndex: "daypart",
+      sorter: (a, b) => compareText(a.daypart?.name, b.daypart?.name),
       render: (_, record) => record.daypart?.name
     },
     {
       title: "Giá vé",
       key: "price",
       dataIndex: "price",
+      sorter: (a, b) => compareNumber(a.price, b.price),
       render: (price) => formatMoney(price),
       align: "right",
       width: 200

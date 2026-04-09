@@ -197,7 +197,7 @@ const getWordToneMeta = (word: string) => {
     return meta && meta.tone > 0;
   });
 
-  return tonedChar ? CHAR_META.get(tonedChar) ?? null : null;
+  return tonedChar ? (CHAR_META.get(tonedChar) ?? null) : null;
 };
 
 const removeAllMarksFromWord = (word: string) =>

@@ -13,6 +13,11 @@ import { useCallback, useMemo, useState } from "react";
 import CustomerRoleDialog from "./components/CustomerRoleDialog";
 import DeleteCustomerRoleDialog from "./components/DeleteCustomerRoleDialog";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const CustomerRolesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -85,24 +90,28 @@ const CustomerRolesPage = () => {
       title: "Mã",
       key: "id",
       dataIndex: "id",
-      width: 90
+      width: 90,
+      sorter: (a, b) => compareNumber(a.id, b.id)
     },
     {
       title: "Tên nhóm người dùng",
       key: "name",
-      dataIndex: "name"
+      dataIndex: "name",
+      sorter: (a, b) => compareText(a.name, b.name)
     },
     {
       title: "Tên hệ thống",
       key: "systemName",
-      dataIndex: "systemName"
+      dataIndex: "systemName",
+      sorter: (a, b) => compareText(a.systemName, b.systemName)
     },
     {
       title: "Kích hoạt",
       key: "active",
       dataIndex: "active",
       align: "center",
-      width: 90,
+      width: 120,
+      sorter: (a, b) => Number(a.active) - Number(b.active),
       render: (value: boolean) =>
         value ? (
           <Check className="mx-auto size-4 text-green-500" />

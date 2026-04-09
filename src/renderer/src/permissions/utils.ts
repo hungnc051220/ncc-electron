@@ -70,11 +70,21 @@ export const legacyMenusToAssignments = (
   }
 
   return PERMISSION_CATALOG.flatMap((definition) => {
+    const isSplitSettingsPermission = [
+      "settings_pos",
+      "settings_endpoint",
+      "settings_interface"
+    ].includes(definition.key);
+
     const legacy = legacyMenus.find(
       (item) =>
         item.menu === definition.key ||
         item.menu === definition.route ||
-        item.menuName === definition.label
+        item.menuName === definition.label ||
+        (isSplitSettingsPermission &&
+          (item.menu === "settings" ||
+            item.menuName === "Thiết lập hệ thống" ||
+            item.menu === "/settings"))
     );
 
     if (!legacy) {
@@ -152,11 +162,11 @@ export const canAccessRoute = (
     return false;
   }
 
-  const permission = PERMISSION_CATALOG.find((item) => item.route === route);
+  const permissions = PERMISSION_CATALOG.filter((item) => item.route === route);
 
-  if (!permission) {
+  if (!permissions.length) {
     return false;
   }
 
-  return hasPermission(assignments, permission.key, "access");
+  return permissions.some((permission) => hasPermission(assignments, permission.key, "access"));
 };

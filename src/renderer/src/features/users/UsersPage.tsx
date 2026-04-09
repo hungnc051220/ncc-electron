@@ -21,6 +21,11 @@ export interface ValuesProps {
   keyword?: string;
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const UsersPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -95,6 +100,11 @@ const UsersPage = () => {
     setCurrent(page);
   };
 
+  const getFullName = useCallback(
+    (user: UserProps) => [user.customerFirstName, user.customerLastName].filter(Boolean).join(" "),
+    []
+  );
+
   const getActionItems = useCallback(
     (user: UserProps): MenuProps["items"] => [
       ...(canUpdate
@@ -139,34 +149,39 @@ const UsersPage = () => {
       key: "id",
       dataIndex: "id",
       width: 150,
+      sorter: (a, b) => compareNumber(a.id, b.id),
       fixed: "left"
     },
     {
       title: "Họ và tên",
       key: "fullName",
       dataIndex: "fullName",
-      render: (_, record) =>
-        [record.customerFirstName, record.customerLastName].filter(Boolean).join(" ")
+      render: (_, record) => getFullName(record),
+      sorter: (a, b) => compareText(getFullName(a), getFullName(b))
     },
     {
       title: "Tên đăng nhập",
       key: "username",
-      dataIndex: "username"
+      dataIndex: "username",
+      sorter: (a, b) => compareText(a.username, b.username)
     },
     {
       title: "Số điện thoại",
       key: "mobile",
-      dataIndex: "mobile"
+      dataIndex: "mobile",
+      sorter: (a, b) => compareText(a.mobile, b.mobile)
     },
     {
       title: "Email",
       key: "email",
-      dataIndex: "email"
+      dataIndex: "email",
+      sorter: (a, b) => compareText(a.email, b.email)
     },
     {
       title: "Địa chỉ",
       key: "address",
-      dataIndex: "address"
+      dataIndex: "address",
+      sorter: (a, b) => compareText(a.address, b.address)
     },
     {
       title: "Hiển thị",
@@ -183,8 +198,9 @@ const UsersPage = () => {
           </div>
         );
       },
-      width: 80,
-      align: "center"
+      width: 100,
+      align: "center",
+      sorter: (a, b) => Number(a.isHidden) - Number(b.isHidden)
     },
     ...(canUpdate || canDelete
       ? [

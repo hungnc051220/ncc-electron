@@ -13,6 +13,9 @@ import { useCallback, useMemo, useState } from "react";
 import DeleteSeatTypeDialog from "./components/DeleteSeatTypeDialog";
 import SeatTypesDialog from "./components/SeatTypeDialog";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
 const SeatTypesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -80,17 +83,20 @@ const SeatTypesPage = () => {
     {
       title: "Mã",
       key: "positionCode",
-      dataIndex: "positionCode"
+      dataIndex: "positionCode",
+      sorter: (a, b) => compareText(a.positionCode, b.positionCode)
     },
     {
       title: "Loại ghế, vị trí",
       key: "name",
-      dataIndex: "name"
+      dataIndex: "name",
+      sorter: (a, b) => compareText(a.name, b.name)
     },
     {
       title: "Là ghế ngồi",
       key: "isSeat",
       dataIndex: "isSeat",
+      sorter: (a, b) => Number(a.isSeat) - Number(b.isSeat),
       render: (value: boolean) =>
         value ? <Check className="size-4 text-green-500" /> : <X className="size-4 text-red-500" />
     },
@@ -98,6 +104,7 @@ const SeatTypesPage = () => {
       title: "Mặc định",
       key: "isDefault",
       dataIndex: "isDefault",
+      sorter: (a, b) => Number(a.isDefault) - Number(b.isDefault),
       render: (value: boolean) =>
         value ? <Check className="size-4 text-green-500" /> : <X className="size-4 text-red-500" />
     },

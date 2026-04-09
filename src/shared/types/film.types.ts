@@ -76,6 +76,7 @@ export interface FilmCategoryProps {
   name: string;
   description: string;
   published?: boolean;
+  createdOnUtc: string;
 }
 
 export interface FilmVersionProps {

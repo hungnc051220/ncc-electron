@@ -364,11 +364,11 @@ const AddSchedulingDialog = ({
                 options={filmOptions}
                 placeholder="Chọn phim"
                 loading={isFetchingFilms}
-                showSearch
-                optionFilterProp="label"
-                filterOption={(input, option) =>
-                  `${option?.label ?? ""}`.toLowerCase().includes(input.toLowerCase())
-                }
+                showSearch={{
+                  optionFilterProp: "label",
+                  filterOption: (input, option) =>
+                    `${option?.label ?? ""}`.toLowerCase().includes(input.toLowerCase())
+                }}
               />
             </Form.Item>
             <Form.Item<FieldType>

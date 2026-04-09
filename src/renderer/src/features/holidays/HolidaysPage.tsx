@@ -31,6 +31,9 @@ const formatWeekday = (date: string) => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
 const HolidaysPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -91,18 +94,21 @@ const HolidaysPage = () => {
       title: "Ngày",
       key: "dateValue",
       dataIndex: "dateValue",
+      sorter: (a, b) => dayjs(a.dateValue).valueOf() - dayjs(b.dateValue).valueOf(),
       render: (value: string) => dayjs(value).format("DD/MM/YYYY")
     },
     {
       title: "Thứ",
       key: "dateValue",
       dataIndex: "dateValue",
+      sorter: (a, b) => compareText(formatWeekday(a.dateValue), formatWeekday(b.dateValue)),
       render: (value: string) => formatWeekday(value)
     },
     {
       title: "Loại ngày",
       key: "dateTypeId",
       dataIndex: "dateTypeId",
+      sorter: (a, b) => a.dateTypeId - b.dateTypeId,
       render: (value: number) => (value === 1 ? "Ngày thường" : "Ngày lễ")
     },
     ...(actionItems.length

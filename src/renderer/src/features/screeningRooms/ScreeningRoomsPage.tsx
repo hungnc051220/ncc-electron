@@ -15,6 +15,11 @@ import ScreeningRoomsDialog from "./components/ScreeningRoomsDialog";
 import { useNavigate } from "react-router";
 import ChangeHiddenScreeningRoomDialog from "./components/ChangeHiddenScreeningRoomDialog";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const ScreeningRoomsPage = () => {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,54 +116,63 @@ const ScreeningRoomsPage = () => {
       title: "Phòng chiếu",
       key: "name",
       dataIndex: "name",
-      width: 250
+      width: 250,
+      sorter: (a, b) => compareText(a.name, b.name)
     },
     {
       title: "Số tầng",
       key: "numberOfFloor",
       dataIndex: "numberOfFloor",
-      align: "right"
+      align: "right",
+      sorter: (a, b) => compareNumber(a.numberOfFloor, b.numberOfFloor)
     },
     {
       title: "Số hàng Tầng 1",
       key: "deepSizeF1",
       dataIndex: "deepSizeF1",
-      align: "right"
+      align: "right",
+      sorter: (a, b) => compareNumber(a.deepSizeF1, b.deepSizeF1)
     },
     {
       title: "Số ghế Tầng 1",
       key: "wideSizeF1",
       dataIndex: "wideSizeF1",
-      align: "right"
+      align: "right",
+      sorter: (a, b) => compareNumber(a.wideSizeF1, b.wideSizeF1)
     },
     {
       title: "Số hàng Tầng 2",
       key: "deepSizeF2",
       dataIndex: "deepSizeF2",
-      align: "right"
+      align: "right",
+      sorter: (a, b) => compareNumber(a.deepSizeF2, b.deepSizeF2)
     },
     {
       title: "Số ghế Tầng 2",
       key: "wideSizeF2",
       dataIndex: "wideSizeF2",
-      align: "right"
+      align: "right",
+      sorter: (a, b) => compareNumber(a.wideSizeF2, b.wideSizeF2)
     },
     {
       title: "Số hàng Tầng 3",
       key: "deepSizeF3",
       dataIndex: "deepSizeF3",
-      align: "right"
+      align: "right",
+      sorter: (a, b) => compareNumber(a.deepSizeF3, b.deepSizeF3)
     },
     {
       title: "Số ghế Tầng 3",
       key: "wideSizeF3",
       dataIndex: "wideSizeF3",
-      align: "right"
+      align: "right",
+      sorter: (a, b) => compareNumber(a.wideSizeF3, b.wideSizeF3)
     },
     {
       title: "Quy luật xếp ghế",
       key: "ruleOrder",
-      dataIndex: "ruleOrder"
+      dataIndex: "ruleOrder",
+      sorter: (a, b) => compareText(a.ruleOrder, b.ruleOrder)
     },
     {
       title: "Ẩn/Hiện",
@@ -174,7 +188,8 @@ const ScreeningRoomsPage = () => {
         </div>
       ),
       align: "center",
-      width: 100
+      width: 100,
+      sorter: (a, b) => Number(a.hidden) - Number(b.hidden)
     },
     ...(canUpdate || canConfigure || canDelete
       ? [

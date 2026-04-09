@@ -99,7 +99,7 @@ const UpdateProgressNotification = ({
         <Progress
           percent={progress.percent}
           strokeColor={token.colorPrimary}
-          trailColor={token.colorFillSecondary}
+          railColor={token.colorFillSecondary}
           size={["100%", 10]}
           showInfo
         />

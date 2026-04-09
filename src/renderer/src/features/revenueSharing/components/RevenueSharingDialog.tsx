@@ -487,17 +487,22 @@ const RevenueSharingDialog = ({
                     <Form.Item
                       {...restField}
                       label="Phần trăm chủ phim"
-                      name={[name, "rate"]}
                       rules={[{ required: true, message: "Vui lòng nhập % chủ phim" }]}
                       className="w-48"
                     >
-                      <InputNumber
-                        placeholder="Nhập % chủ phim"
-                        min={0}
-                        max={100}
-                        className="w-full"
-                        addonAfter="%"
-                      />
+                      <Space.Compact className="w-full">
+                        <Form.Item {...restField} name={[name, "rate"]} noStyle>
+                          <InputNumber
+                            placeholder="Nhập % chủ phim"
+                            min={0}
+                            max={100}
+                            className="w-full"
+                          />
+                        </Form.Item>
+                        <Button disabled className="pointer-events-none px-3! text-slate-500!">
+                          %
+                        </Button>
+                      </Space.Compact>
                     </Form.Item>
 
                     <Button

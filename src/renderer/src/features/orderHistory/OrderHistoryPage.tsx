@@ -54,6 +54,11 @@ type CancelOrderFormValues = {
   isRefund: boolean;
 };
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const OrderHistoryPage = () => {
   const [cancelForm] = Form.useForm<CancelOrderFormValues>();
   const [current, setCurrent] = useState(1);
@@ -234,6 +239,7 @@ const OrderHistoryPage = () => {
       title: "Mã đơn",
       key: "id",
       dataIndex: "id",
+      sorter: (a, b) => compareNumber(a.order.id, b.order.id),
       render: (_, record) => record.order.id,
       fixed: "left"
     },
@@ -241,6 +247,7 @@ const OrderHistoryPage = () => {
       title: "Mã đặt vé",
       key: "barCode",
       dataIndex: "barCode",
+      sorter: (a, b) => compareText(a.order.barCode, b.order.barCode),
       render: (_, record) => record.order.barCode,
       fixed: "left"
     },
@@ -248,12 +255,15 @@ const OrderHistoryPage = () => {
       title: "Tiền thanh toán",
       key: "orderTotal",
       dataIndex: "orderTotal",
+      sorter: (a, b) => compareNumber(a.order.orderTotal, b.order.orderTotal),
       render: (_, record) => formatMoney(record.order.orderTotal)
     },
     {
       title: "Thời gian mua",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
+      sorter: (a, b) =>
+        dayjs(a.order.createdOnUtc).valueOf() - dayjs(b.order.createdOnUtc).valueOf(),
       render: (_, record) => dayjs(record.order.createdOnUtc).format("HH:mm DD/MM/YYYY")
     },
     ...(activeKey === "2"
@@ -262,6 +272,7 @@ const OrderHistoryPage = () => {
             title: "Máy bán",
             key: "posName",
             dataIndex: "posName",
+            sorter: (a, b) => compareText(a.order.items?.[0]?.posName, b.order.items?.[0]?.posName),
             render: (_, record) => record.order.items?.[0]?.posName
           }
         ]
@@ -270,6 +281,11 @@ const OrderHistoryPage = () => {
       title: "Tên khách hàng",
       key: "customerName",
       dataIndex: "customerName",
+      sorter: (a, b) =>
+        compareText(
+          [a.order.customerFirstName, a.order.customerLastName].filter(Boolean).join(" "),
+          [b.order.customerFirstName, b.order.customerLastName].filter(Boolean).join(" ")
+        ),
       render: (_, record) =>
         [record.order.customerFirstName, record.order.customerLastName].filter(Boolean).join(" ")
     },
@@ -277,30 +293,37 @@ const OrderHistoryPage = () => {
       title: "Số điện thoại",
       key: "customerPhone",
       dataIndex: "customerPhone",
+      sorter: (a, b) => compareText(a.order.customerPhone, b.order.customerPhone),
       render: (_, record) => record.order.customerPhone
     },
     {
       title: "Email",
       key: "customerEmail",
       dataIndex: "customerEmail",
+      sorter: (a, b) => compareText(a.order.customerEmail, b.order.customerEmail),
       render: (_, record) => record.order.customerEmail
     },
     {
       title: "Tên phim",
       key: "filmName",
       dataIndex: "filmName",
+      sorter: (a, b) => compareText(a.film?.filmName, b.film?.filmName),
       render: (_, record) => record.film?.filmName
     },
     {
       title: "Phòng chiếu",
       key: "roomName",
       dataIndex: "room",
+      sorter: (a, b) => compareText(a.room?.name, b.room?.name),
       render: (room) => room?.name
     },
     {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "projectDate",
+      sorter: (a, b) =>
+        dayjs(a.planScreening?.projectDate, "YYYY-MM-DD").valueOf() -
+        dayjs(b.planScreening?.projectDate, "YYYY-MM-DD").valueOf(),
       render: (_, record) =>
         record.planScreening
           ? dayjs(record.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY")
@@ -310,6 +333,9 @@ const OrderHistoryPage = () => {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
+      sorter: (a, b) =>
+        dayjs(a.planScreening?.projectTime).valueOf() -
+        dayjs(b.planScreening?.projectTime).valueOf(),
       render: (_, record) =>
         record.planScreening ? dayjs(record.planScreening.projectTime).format("HH:mm") : ""
     },
@@ -317,6 +343,11 @@ const OrderHistoryPage = () => {
       title: "Số vé",
       key: "numberOfTickets",
       dataIndex: "numberOfTickets",
+      sorter: (a, b) =>
+        compareNumber(
+          a.order.items.reduce((total, item) => total + item.quantity, 0),
+          b.order.items.reduce((total, item) => total + item.quantity, 0)
+        ),
       render: (_, record) => record.order.items.reduce((a, b) => a + b.quantity, 0)
     },
     {
@@ -329,6 +360,7 @@ const OrderHistoryPage = () => {
       title: "Trạng thái thanh toán",
       key: "paymentStatusId",
       dataIndex: "paymentStatusId",
+      sorter: (a, b) => compareNumber(a.order.paymentStatusId, b.order.paymentStatusId),
       render: (_, record) => (
         <OrderStatusBadge status={record.order.paymentStatusId} type="payment" />
       ),
@@ -338,6 +370,7 @@ const OrderHistoryPage = () => {
       title: "Trạng thái đơn",
       key: "orderStatusId",
       dataIndex: "orderStatusId",
+      sorter: (a, b) => compareNumber(a.order.orderStatusId, b.order.orderStatusId),
       render: (_, record) => <OrderStatusBadge status={record.order.orderStatusId} type="order" />,
       fixed: "right"
     },

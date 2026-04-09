@@ -23,6 +23,11 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const RevenueSharingPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRevenueSharing, setSelectedRevenueSharing] =
@@ -222,23 +227,28 @@ const RevenueSharingPage = () => {
     {
       title: "Hãng phim",
       key: "manufacturerName",
-      dataIndex: "manufacturerName"
+      dataIndex: "manufacturerName",
+      sorter: (a, b) => compareText(a.manufacturerName, b.manufacturerName)
     },
     {
       title: "Tên phim",
       key: "filmName",
-      dataIndex: "filmName"
+      dataIndex: "filmName",
+      sorter: (a, b) => compareText(a.filmName, b.filmName)
     },
     {
       title: "Ngày phát hành",
       key: "premieredDay",
       dataIndex: "premieredDay",
+      sorter: (a, b) => dayjs(a.premieredDay).valueOf() - dayjs(b.premieredDay).valueOf(),
       render: (value: string) => dayjs(value).format("DD/MM/YYYY")
     },
     {
       title: "Doanh thu NCC",
       key: "revenueNCC",
       dataIndex: "revenueNCC",
+      sorter: (a, b) =>
+        compareNumber(a.totalRevenue - a.sharedRevenue, b.totalRevenue - b.sharedRevenue),
       render: (_, record) => formatMoney(record.totalRevenue - record.sharedRevenue),
       align: "right"
     },
@@ -246,6 +256,7 @@ const RevenueSharingPage = () => {
       title: "Doanh thu chủ phim",
       key: "sharedRevenue",
       dataIndex: "sharedRevenue",
+      sorter: (a, b) => compareNumber(a.sharedRevenue, b.sharedRevenue),
       render: (value: number) => formatMoney(value),
       align: "right"
     },
@@ -253,6 +264,7 @@ const RevenueSharingPage = () => {
       title: "Doanh thu",
       key: "totalRevenue",
       dataIndex: "totalRevenue",
+      sorter: (a, b) => compareNumber(a.totalRevenue, b.totalRevenue),
       render: (value: number) => formatMoney(value),
       align: "right"
     },

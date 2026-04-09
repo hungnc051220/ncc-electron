@@ -15,6 +15,11 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
 const CancellationTicketsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -51,6 +56,7 @@ const CancellationTicketsPage = () => {
       title: "Thời gian hủy",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
+      sorter: (a, b) => dayjs(a.createdOnUtc).valueOf() - dayjs(b.createdOnUtc).valueOf(),
       render: (value: string) => dayjs(value).format("HH:mm DD/MM/YYYY"),
       width: 150
     },
@@ -58,6 +64,11 @@ const CancellationTicketsPage = () => {
       title: "Tên khách hàng",
       key: "customerName",
       dataIndex: "order",
+      sorter: (a, b) =>
+        compareText(
+          [a.order?.customerFirstName, a.order?.customerLastName].filter(Boolean).join(" "),
+          [b.order?.customerFirstName, b.order?.customerLastName].filter(Boolean).join(" ")
+        ),
       render: (order) =>
         [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" ")
     },
@@ -65,41 +76,49 @@ const CancellationTicketsPage = () => {
       title: "Số điện thoại",
       key: "customerPhone",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.customerPhone, b.order?.customerPhone),
       render: (order) => order?.customerPhone
     },
     {
       title: "Email",
       key: "customerEmail",
       dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.customerEmail, b.order?.customerEmail),
       render: (order) => order?.customerEmail
     },
     {
       title: "Phim",
       key: "filmName",
       dataIndex: "filmName",
+      sorter: (a, b) => compareText(a.filmName, b.filmName),
       width: 500
     },
     {
       title: "Phòng",
       key: "roomName",
-      dataIndex: "roomName"
+      dataIndex: "roomName",
+      sorter: (a, b) => compareText(a.roomName, b.roomName)
     },
     {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "projectDate",
+      sorter: (a, b) =>
+        dayjs(a.projectDate, "YYYY-MM-DD").valueOf() - dayjs(b.projectDate, "YYYY-MM-DD").valueOf(),
       render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY")
     },
     {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
+      sorter: (a, b) => dayjs(a.projectTime).valueOf() - dayjs(b.projectTime).valueOf(),
       render: (value: string) => dayjs(value).format("HH:mm")
     },
     {
       title: "Số vé",
       key: "quantity",
-      dataIndex: "quantity"
+      dataIndex: "quantity",
+      sorter: (a, b) => compareNumber(a.quantity, b.quantity)
     },
     {
       title: "Vị trí ghế",
@@ -113,12 +132,14 @@ const CancellationTicketsPage = () => {
     {
       title: "Người hủy",
       key: "userName",
-      dataIndex: "userName"
+      dataIndex: "userName",
+      sorter: (a, b) => compareText(a.userName, b.userName)
     },
     {
       title: "Lý do hủy",
       key: "reason",
-      dataIndex: "reason"
+      dataIndex: "reason",
+      sorter: (a, b) => compareText(a.reason, b.reason)
     }
   ];
 

@@ -14,6 +14,9 @@ import DeleteFilmCategoryDialog from "./components/DeleteFilmCategoryDialog";
 import FilmCategoryDialog from "./components/FilmCategoryDialog";
 import dayjs from "dayjs";
 
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
 const FilmCategoriesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -81,18 +84,21 @@ const FilmCategoriesPage = () => {
     {
       title: "Tên thể loại",
       key: "name",
-      dataIndex: "name"
+      dataIndex: "name",
+      sorter: (a, b) => compareText(a.name, b.name)
     },
     {
       title: "Mô tả",
       key: "description",
       dataIndex: "description",
+      sorter: (a, b) => compareText(a.description, b.description),
       render: (value?: string) => value || "-"
     },
     {
       title: "Thời gian tạo",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
+      sorter: (a, b) => dayjs(a.createdOnUtc).valueOf() - dayjs(b.createdOnUtc).valueOf(),
       render: (value?: string) => (value ? dayjs(value).format("HH:mm DD/MM/YYYY") : "-"),
       width: 150
     },
@@ -102,6 +108,7 @@ const FilmCategoriesPage = () => {
       dataIndex: "published",
       align: "center",
       width: 100,
+      sorter: (a, b) => Number(a.published) - Number(b.published),
       render: (value?: boolean) => <Checkbox checked={!!value} disabled />
     },
     ...(actionItems.length

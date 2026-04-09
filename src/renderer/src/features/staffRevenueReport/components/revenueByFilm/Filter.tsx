@@ -257,7 +257,9 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             form={form}
             onFinish={(values) => {
               setOpen(false);
-              const selectedUserOption = userSelect.options.find((option) => option.value === values.userId);
+              const selectedUserOption = userSelect.options.find(
+                (option) => option.value === values.userId
+              );
               const selectedManufacturerOption = manufacturerOptions.find(
                 (option) => option.value === values.manufacturerId
               );

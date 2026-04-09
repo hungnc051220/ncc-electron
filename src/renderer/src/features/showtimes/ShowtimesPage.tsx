@@ -4,7 +4,7 @@ import { DetailPlanScreeningProps, PlanScreeningProps } from "@shared/types";
 import { Button, Checkbox, DatePicker, Table } from "antd";
 import dayjs from "dayjs";
 import { useQueryState } from "nuqs";
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { DatePickerProps, TableProps } from "antd";
 import type { Dayjs } from "dayjs";
@@ -17,17 +17,32 @@ dayjs.extend(customParseFormat);
 
 const ShowtimesPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tick = useRealtimeClock();
   const callbackUrl = searchParams.get("callbackUrl");
   const id = searchParams.get("id");
   const returnTo = searchParams.get("returnTo");
   const reopenOrderId = searchParams.get("reopenOrderId");
+  const shouldResetDate = searchParams.get("resetDate") === "1";
 
   const [date, setDate] = useQueryState("date", {
     defaultValue: dayjs().format("YYYY-MM-DD")
   });
   const [showPast, setShowPast] = useState(false);
+  const today = dayjs().format("YYYY-MM-DD");
+
+  useEffect(() => {
+    if (!shouldResetDate) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("resetDate");
+
+    if (date !== today) {
+      void setDate(today);
+    }
+
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [date, searchParams, setDate, setSearchParams, shouldResetDate, today]);
 
   const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
   const toDate = dayjs(date, "YYYY-MM-DD").endOf("month").format("DD-MM-YYYY");
