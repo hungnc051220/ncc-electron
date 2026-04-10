@@ -291,13 +291,22 @@ function loadRenderer(win: BrowserWindow, route: string) {
 }
 
 const getTemplatePath = () => {
-  if (app.isPackaged) {
-    // khi đã build .exe
-    return path.join(process.resourcesPath, "resources", "ticket-template.html");
+  const candidates = app.isPackaged
+    ? [
+        path.join(process.resourcesPath, "resources", "ticket-template.html"),
+        path.join(process.resourcesPath, "ticket-template.html"),
+        path.join(app.getAppPath(), "resources", "ticket-template.html"),
+        path.join(process.resourcesPath, "app.asar.unpacked", "resources", "ticket-template.html")
+      ]
+    : [path.join(__dirname, "../../resources/ticket-template.html")];
+
+  const templatePath = candidates.find((candidate) => fs.existsSync(candidate));
+
+  if (!templatePath) {
+    throw new Error(`Không tìm thấy file ticket-template.html. Candidates: ${candidates.join(", ")}`);
   }
 
-  // khi chạy dev
-  return path.join(__dirname, "../../resources/ticket-template.html");
+  return templatePath;
 };
 
 function renderTemplate(html, data) {
@@ -306,6 +315,27 @@ function renderTemplate(html, data) {
     result = result.replaceAll(`{{${key}}}`, value);
   });
   return result;
+}
+
+function getExportTicketLogPath() {
+  return path.join(app.getPath("userData"), "logs", "export-ticket.log");
+}
+
+function writeExportTicketLog(message: string, meta?: unknown) {
+  try {
+    const logPath = getExportTicketLogPath();
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+
+    const timestamp = new Date().toISOString();
+    const metaText =
+      meta === undefined
+        ? ""
+        : ` ${typeof meta === "string" ? meta : JSON.stringify(meta, null, 2)}`;
+
+    fs.appendFileSync(logPath, `[${timestamp}] ${message}${metaText}\n`, "utf-8");
+  } catch (logError) {
+    console.error("[export-ticket][log-write-failed]", logError);
+  }
 }
 
 async function renderTicketImage(htmlContent, outputPath) {
@@ -580,20 +610,16 @@ app.whenReady().then(() => {
     event.sender.send("theme:update", currentTheme);
   });
 
-  function getAppRootDir() {
+  function getDefaultExportDir() {
     if (!app.isPackaged) {
-      // Dev: dùng thư mục project
-      return path.join(process.cwd(), "dev-data");
+      return path.join(process.cwd(), "dev-data", "temp");
     }
 
-    // Prod: thư mục cài app
-    return path.dirname(app.getPath("exe"));
+    return path.join(app.getPath("downloads"), "ncc-system", "temp");
   }
 
   ipcMain.handle("get-default-export-folder", () => {
-    const appRoot = getAppRootDir();
-
-    const tempDir = path.join(appRoot, "temp");
+    const tempDir = getDefaultExportDir();
 
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
@@ -640,30 +666,52 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("export-ticket", async (_, payload) => {
-    const templatePath = getTemplatePath();
-    const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+    try {
+      const templatePath = getTemplatePath();
+      writeExportTicketLog("templatePath", templatePath);
+      writeExportTicketLog("payload", {
+        barCode: payload.barCode,
+        folder: payload.folder,
+        imageSource: payload.imageSource,
+        filmName: payload.filmName
+      });
 
-    const html = renderTemplate(htmlTemplate, {
-      filmName: payload.filmName,
-      filmNameEn: payload.filmNameEn,
-      countryName: payload.countryName,
-      duration: payload.duration,
-      date: payload.date,
-      datetime: payload.datetime,
-      room: payload.room,
-      seat: payload.seat,
-      imageSource: payload.imageSource,
-      qrImage: payload.qrImage,
-      barCode: payload.barCode,
-      categories: payload.categories,
-      floor: payload.floor
-    });
+      const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
 
-    const outputPath = path.join(payload.folder, `${payload.barCode}.png`);
+      const html = renderTemplate(htmlTemplate, {
+        filmName: payload.filmName,
+        filmNameEn: payload.filmNameEn,
+        countryName: payload.countryName,
+        duration: payload.duration,
+        date: payload.date,
+        datetime: payload.datetime,
+        room: payload.room,
+        seat: payload.seat,
+        imageSource: payload.imageSource,
+        qrImage: payload.qrImage,
+        barCode: payload.barCode,
+        categories: payload.categories,
+        floor: payload.floor
+      });
 
-    await renderTicketImage(html, outputPath);
+      const outputPath = path.join(payload.folder, `${payload.barCode}.png`);
+      writeExportTicketLog("outputPath", outputPath);
 
-    return outputPath;
+      fs.mkdirSync(payload.folder, { recursive: true });
+
+      await renderTicketImage(html, outputPath);
+
+      writeExportTicketLog("success", outputPath);
+      return outputPath;
+    } catch (error) {
+      console.error("[export-ticket] failed:", error);
+      writeExportTicketLog("failed", {
+        message: error instanceof Error ? error.message : "Unknown export-ticket error",
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      const message = error instanceof Error ? error.message : "Unknown export-ticket error";
+      throw new Error(`Xuất vé thất bại: ${message}`);
+    }
   });
 
   ipcMain.on("app:quit", () => {

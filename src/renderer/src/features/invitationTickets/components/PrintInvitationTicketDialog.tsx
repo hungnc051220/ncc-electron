@@ -171,7 +171,7 @@ const PrintInvitationTicketDialog = ({
     } catch (error) {
       setLoading(false);
       console.error(error);
-      message.error("Xuất vé thất bại");
+      message.error(getApiErrorMessage(error, "Xuất vé thất bại"));
       return outputPath;
     }
   };
