@@ -4,9 +4,9 @@ import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { getPlanScreeningDateTime } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import {
   Button,
@@ -119,21 +119,15 @@ const AddSchedulingDialog = ({
     });
   }, [selectedRoomId, selectedDate, form, open]);
 
-  const {
-    data: rooms,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage
-  } = useInfiniteQuery({
+  const roomSelect = useInfiniteSelectOptions({
     queryKey: ["screening-rooms"],
-    queryFn: ({ pageParam = 1 }) =>
+    queryFn: ({ pageParam }) =>
       screeningRoomsApi.getAll({ current: pageParam, pageSize: 20, hidden: false }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.name
+    }),
+    prefetchAll: true
   });
 
   const { data: planPricing } = useTicketPricesByPlan({
@@ -177,17 +171,8 @@ const AddSchedulingDialog = ({
   }, [films]);
 
   const roomOptions = useMemo(() => {
-    return (
-      rooms?.pages
-        .flatMap((page) =>
-          page.data.map((item) => ({
-            value: item.id,
-            label: item.name
-          }))
-        )
-        .sort((a, b) => compareNullableText(a.label, b.label)) ?? []
-    );
-  }, [rooms]);
+    return [...roomSelect.options].sort((a, b) => compareNullableText(a.label, b.label));
+  }, [roomSelect.options]);
 
   useEffect(() => {
     if (planPricing && open) {
@@ -424,17 +409,8 @@ const AddSchedulingDialog = ({
               <Select
                 options={roomOptions}
                 placeholder="Chọn phòng chiếu"
-                onPopupScroll={(e) => {
-                  const target = e.target as HTMLElement;
-                  if (
-                    target.scrollTop + target.offsetHeight === target.scrollHeight &&
-                    hasNextPage &&
-                    !isFetchingNextPage
-                  ) {
-                    fetchNextPage();
-                  }
-                }}
-                loading={isFetchingNextPage || isFetching}
+                virtual={false}
+                loading={roomSelect.loading}
               />
             </Form.Item>
             <Form.Item<FieldType>

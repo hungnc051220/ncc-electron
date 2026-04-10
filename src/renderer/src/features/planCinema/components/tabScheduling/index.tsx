@@ -3,6 +3,7 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
+import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -140,40 +141,25 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const canUpdate = can("plan_cinema", "update");
   const canDelete = can("plan_cinema", "delete");
 
-  const {
-    data: rooms,
-    fetchNextPage,
-    hasNextPage,
-    isFetching: isFetchingScreeningRooms,
-    isFetchingNextPage
-  } = useInfiniteQuery({
+  const roomSelect = useInfiniteSelectOptions({
     queryKey: ["screening-rooms"],
-    queryFn: ({ pageParam = 1 }) =>
+    queryFn: ({ pageParam }) =>
       screeningRoomsApi.getAll({
         current: pageParam,
         pageSize: 20,
         hidden: false,
         sort: "name.asc"
       }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
+    mapOption: (item) => ({
+      value: item.id,
+      label: item.name
+    }),
+    prefetchAll: true
   });
 
   const roomOptions = useMemo(() => {
-    return (
-      rooms?.pages
-        .flatMap((page) =>
-          page.data.map((item) => ({
-            value: item.id,
-            label: item.name
-          }))
-        )
-        .sort((a, b) => compareNullableText(a.label, b.label)) ?? []
-    );
-  }, [rooms]);
+    return [...roomSelect.options].sort((a, b) => compareNullableText(a.label, b.label));
+  }, [roomSelect.options]);
 
   const deletePlanScreening = useDeletePlanScreening();
 
@@ -310,17 +296,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
             className="w-50"
             options={roomOptions}
             placeholder="Chọn phòng chiếu"
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                target.scrollTop + target.offsetHeight === target.scrollHeight &&
-                hasNextPage &&
-                !isFetchingNextPage
-              ) {
-                fetchNextPage();
-              }
-            }}
-            loading={isFetchingNextPage || isFetchingScreeningRooms}
+            virtual={false}
+            loading={roomSelect.loading}
           />
           {canUpdate && (
             <AddSchedulingDialog
