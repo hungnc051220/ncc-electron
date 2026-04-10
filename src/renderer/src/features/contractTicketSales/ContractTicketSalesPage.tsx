@@ -16,6 +16,7 @@ import type { PaginationProps, TableProps } from "antd";
 import { Button, Dropdown, message } from "antd";
 import dayjs from "dayjs";
 import { Armchair, FileText, PlusIcon, Printer, SquarePen } from "lucide-react";
+import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import ContractTicketSaleDialog from "./components/ContractTicketSaleDialog";
@@ -39,6 +40,15 @@ const compareNumber = (left?: number | null, right?: number | null) => (left || 
 
 const compareDate = (left?: string | null, right?: string | null) =>
   dayjs(left).valueOf() - dayjs(right).valueOf();
+
+interface ContractTicketSaleRow {
+  key: string;
+  orderDetail: OrderDetailProps;
+  planDetail: PlanDetail;
+  rowSpan: number;
+  isFirstRow: boolean;
+  contractIndex: number;
+}
 
 const ContractTicketSalesPage = () => {
   const navigate = useNavigate();
@@ -181,12 +191,80 @@ const ContractTicketSalesPage = () => {
     [getPlanDetails]
   );
 
-  const columns: TableProps<OrderDetailProps>["columns"] = [
+  const getTicketCountByPlan = useCallback(
+    (record: OrderDetailProps, planScreeningId?: number | null) => {
+      if (!planScreeningId) {
+        return 0;
+      }
+
+      return (
+        record.order?.items?.reduce(
+          (acc, item) => (item.planScreenId === planScreeningId ? acc + item.quantity : acc),
+          0
+        ) || 0
+      );
+    },
+    []
+  );
+
+  const flattenedRows = useMemo<ContractTicketSaleRow[]>(
+    () =>
+      (tickets?.data || []).flatMap((record, recordIndex) => {
+        const plans = getDisplayPlans(record);
+        const rowSpan = Math.max(plans.length, 1);
+        const fallbackPlan = plans[0] ?? record;
+
+        return (plans.length ? plans : [fallbackPlan]).map((planDetail, planIndex) => ({
+          key: `${record.order.id}-${planDetail.planScreening?.id ?? "unknown"}-${planIndex}`,
+          orderDetail: record,
+          planDetail,
+          rowSpan,
+          isFirstRow: planIndex === 0,
+          contractIndex: (current - 1) * pageSize + recordIndex + 1
+        }));
+      }),
+    [current, getDisplayPlans, pageSize, tickets?.data]
+  );
+
+  const renderPlanSchedule = useCallback((item: PlanDetail) => {
+    const filmName = item.film?.filmName || "Không có tên phim";
+    const roomName = item.room?.name ? `Phòng ${item.room.name}` : "";
+    const projectDate = item.planScreening?.projectDate;
+    const projectTime = item.planScreening?.projectTime;
+    const schedule = [
+      projectDate ? dayjs(projectDate, "YYYY-MM-DD").format("DD/MM/YYYY") : "",
+      projectTime ? dayjs(projectTime).format("HH:mm") : ""
+    ]
+      .filter(Boolean)
+      .join(" - ");
+
+    return (
+      <div className="leading-5">
+        <div className="font-medium">{filmName}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          {[roomName, schedule].filter(Boolean).join(" | ") || "Chưa có lịch chiếu"}
+        </div>
+      </div>
+    );
+  }, []);
+
+  const renderMergedCell = useCallback(
+    (isFirstRow: boolean, rowSpan: number, children: ReactNode) => ({
+      children,
+      props: {
+        rowSpan: isFirstRow ? rowSpan : 0
+      }
+    }),
+    []
+  );
+
+  const columns: TableProps<ContractTicketSaleRow>["columns"] = [
     {
       title: "STT",
       key: "no",
       align: "center",
-      render: (_, __, index) => (current - 1) * pageSize + index + 1,
+      render: (_, record) =>
+        renderMergedCell(record.isFirstRow, record.rowSpan, record.contractIndex),
       width: 50,
       fixed: "left"
     },
@@ -194,8 +272,14 @@ const ContractTicketSalesPage = () => {
       title: "Tên khách hàng",
       key: "customerFirstName",
       dataIndex: "customerFirstName",
-      sorter: (a, b) => compareText(a.order?.customerFirstName, b.order?.customerFirstName),
-      render: (_, record) => record.order?.customerFirstName
+      sorter: (a, b) =>
+        compareText(a.orderDetail.order?.customerFirstName, b.orderDetail.order?.customerFirstName),
+      render: (_, record) =>
+        renderMergedCell(
+          record.isFirstRow,
+          record.rowSpan,
+          record.orderDetail.order?.customerFirstName
+        )
     },
     {
       title: "Suất chiếu",
@@ -203,98 +287,86 @@ const ContractTicketSalesPage = () => {
       width: 360,
       sorter: (a, b) =>
         compareText(
-          getDisplayPlans(a)
-            .map((item) =>
-              [
-                item.film?.filmName || "",
-                item.room?.name || "",
-                item.planScreening?.projectDate || "",
-                item.planScreening?.projectTime || ""
-              ].join(" | ")
-            )
-            .join(" || "),
-          getDisplayPlans(b)
-            .map((item) =>
-              [
-                item.film?.filmName || "",
-                item.room?.name || "",
-                item.planScreening?.projectDate || "",
-                item.planScreening?.projectTime || ""
-              ].join(" | ")
-            )
-            .join(" || ")
+          [
+            a.planDetail.film?.filmName || "",
+            a.planDetail.room?.name || "",
+            a.planDetail.planScreening?.projectDate || "",
+            a.planDetail.planScreening?.projectTime || ""
+          ].join(" | "),
+          [
+            b.planDetail.film?.filmName || "",
+            b.planDetail.room?.name || "",
+            b.planDetail.planScreening?.projectDate || "",
+            b.planDetail.planScreening?.projectTime || ""
+          ].join(" | ")
         ),
-      render: (_, record) => {
-        const plans = getDisplayPlans(record);
-
-        if (!plans.length) {
-          return "";
-        }
-
-        return (
-          <div className="space-y-1">
-            {plans.map((item, index) => {
-              const filmName = item.film?.filmName || "Không có tên phim";
-              const roomName = item.room?.name ? `Phòng ${item.room.name}` : "";
-              const projectDate = item.planScreening?.projectDate;
-              const projectTime = item.planScreening?.projectTime;
-              const schedule = [
-                projectDate ? dayjs(projectDate, "YYYY-MM-DD").format("DD/MM/YYYY") : "",
-                projectTime ? dayjs(projectTime).format("HH:mm") : ""
-              ]
-                .filter(Boolean)
-                .join(" - ");
-
-              return (
-                <div
-                  key={`${item.planScreening?.id ?? record.order.id}-${index}`}
-                  className="leading-5"
-                >
-                  <div className="font-medium">{filmName}</div>
-                  <div className="text-xs text-gray-500">
-                    {[roomName, schedule].filter(Boolean).join(" | ") || "Chưa có lịch chiếu"}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      }
+      render: (_, record) => renderPlanSchedule(record.planDetail)
     },
     {
       title: "Số vé",
+      key: "ticketCountByScreening",
+      width: 120,
+      sorter: (a, b) =>
+        compareNumber(
+          getTicketCountByPlan(a.orderDetail, a.planDetail.planScreening?.id),
+          getTicketCountByPlan(b.orderDetail, b.planDetail.planScreening?.id)
+        ),
+      render: (_, record) =>
+        formatNumber(getTicketCountByPlan(record.orderDetail, record.planDetail.planScreening?.id)),
+      align: "right"
+    },
+    {
+      title: "Tổng số vé",
       key: "ticketCount",
       dataIndex: "ticketCount",
       sorter: (a, b) =>
         compareNumber(
-          a.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0),
-          b.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0)
+          a.orderDetail.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0),
+          b.orderDetail.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0)
         ),
-      render: (_, record) => record.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0),
+      render: (_, record) =>
+        renderMergedCell(
+          record.isFirstRow,
+          record.rowSpan,
+          record.orderDetail.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0)
+        ),
       align: "right"
     },
     {
       title: "Giá trị hợp đồng",
       key: "orderTotal",
       dataIndex: "orderTotal",
-      sorter: (a, b) => compareNumber(a.order?.orderTotal, b.order?.orderTotal),
-      render: (_, record) => formatMoney(record.order?.orderTotal || 0)
+      sorter: (a, b) =>
+        compareNumber(a.orderDetail.order?.orderTotal, b.orderDetail.order?.orderTotal),
+      render: (_, record) =>
+        renderMergedCell(
+          record.isFirstRow,
+          record.rowSpan,
+          formatMoney(record.orderDetail.order?.orderTotal || 0)
+        ),
+      align: "right"
     },
     {
       title: "Ghi chú",
       key: "note",
-      sorter: (a, b) => compareText(a.order?.note, b.order?.note),
-      render: (_, record) => record?.order?.note
+      sorter: (a, b) => compareText(a.orderDetail.order?.note, b.orderDetail.order?.note),
+      render: (_, record) =>
+        renderMergedCell(record.isFirstRow, record.rowSpan, record.orderDetail.order?.note)
     },
     {
       title: "Thời gian tạo",
       key: "createdOnUtc",
       dataIndex: "createdOnUtc",
-      sorter: (a, b) => compareDate(a.order?.createdOnUtc, b.order?.createdOnUtc),
+      sorter: (a, b) =>
+        compareDate(a.orderDetail.order?.createdOnUtc, b.orderDetail.order?.createdOnUtc),
       render: (_, record) =>
-        record.order?.createdOnUtc
-          ? dayjs(record.order.createdOnUtc).format("HH:mm DD/MM/YYYY")
-          : "",
+        renderMergedCell(
+          record.isFirstRow,
+          record.rowSpan,
+          record.orderDetail.order?.createdOnUtc
+            ? dayjs(record.orderDetail.order.createdOnUtc).format("HH:mm DD/MM/YYYY")
+            : ""
+        ),
       width: 150
     },
     ...(actionItems.length
@@ -303,31 +375,34 @@ const ContractTicketSalesPage = () => {
             title: "",
             key: "operation",
             width: 50,
-            render: (_: unknown, record: OrderDetailProps) => (
-              <Dropdown
-                menu={{
-                  items: actionItems,
-                  onClick: (e) => {
-                    if (e.key === "1") {
-                      handleEdit(record.order);
+            render: (_: unknown, record: ContractTicketSaleRow) =>
+              renderMergedCell(
+                record.isFirstRow,
+                record.rowSpan,
+                <Dropdown
+                  menu={{
+                    items: actionItems,
+                    onClick: (e) => {
+                      if (e.key === "1") {
+                        handleEdit(record.orderDetail.order);
+                      }
+                      if (e.key === "2") {
+                        handleUpdateSeat(record.orderDetail.order);
+                      }
+                      if (e.key === "3") {
+                        handlePrint(record.orderDetail);
+                      }
+                      if (e.key === "4") {
+                        handleDetailInvoice(record.orderDetail.order);
+                      }
                     }
-                    if (e.key === "2") {
-                      handleUpdateSeat(record.order);
-                    }
-                    if (e.key === "3") {
-                      handlePrint(record);
-                    }
-                    if (e.key === "4") {
-                      handleDetailInvoice(record.order);
-                    }
-                  }
-                }}
-                arrow
-                trigger={["click"]}
-              >
-                <MoreOutlined />
-              </Dropdown>
-            ),
+                  }}
+                  arrow
+                  trigger={["click"]}
+                >
+                  <MoreOutlined />
+                </Dropdown>
+              ),
             align: "center" as const,
             fixed: "right" as const
           }
@@ -365,8 +440,8 @@ const ContractTicketSalesPage = () => {
       />
 
       <AutoHeightTable
-        rowKey={(record) => record.order.id}
-        dataSource={tickets?.data || []}
+        rowKey={(record) => record.key}
+        dataSource={flattenedRows}
         columns={columns}
         bordered
         size="small"

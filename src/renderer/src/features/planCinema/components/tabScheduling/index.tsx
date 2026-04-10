@@ -1,15 +1,15 @@
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
-import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
-import { Button, DatePicker, message, Select } from "antd";
+import { Button, DatePicker, message, Modal, Select } from "antd";
 import dayjs, { Dayjs } from "dayjs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddSchedulingDialog from "./AddSchedulingDialog";
 
 interface TabSchedulingProps {
@@ -58,10 +58,15 @@ const compareNullableText = (left?: string | null, right?: string | null) => {
   });
 };
 
+const formatScreeningDate = (value?: string) => dayjs(value).format("DD/MM/YYYY");
+
+const formatScreeningTime = (value?: string) => dayjs(value).format("HH:mm");
+
 const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [roomId, setRoomId] = useState<number | undefined>(undefined);
   const [date, setDate] = useState<Dayjs | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const params = useMemo(() => {
     return {
@@ -73,7 +78,64 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     };
   }, [planCinemaId, roomId, date]);
 
-  const { data, isFetching } = usePlanScreenings(params);
+  const {
+    data: screeningsPages,
+    isFetching: isFetchingScreenings,
+    fetchNextPage: fetchNextScreeningsPage,
+    hasNextPage: hasNextScreeningsPage,
+    isFetchingNextPage: isFetchingNextScreeningsPage
+  } = useInfiniteQuery({
+    queryKey: ["plan-screenings-all", params],
+    queryFn: ({ pageParam = 1 }) =>
+      planScreeningsApi.getAll({
+        ...params,
+        current: pageParam,
+        pageSize: 100
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.current < lastPage.pageCount ? lastPage.current + 1 : undefined,
+    enabled: !!planCinemaId
+  });
+
+  useEffect(() => {
+    if (hasNextScreeningsPage && !isFetchingNextScreeningsPage) {
+      fetchNextScreeningsPage();
+    }
+  }, [fetchNextScreeningsPage, hasNextScreeningsPage, isFetchingNextScreeningsPage]);
+
+  const screenings = useMemo(
+    () => screeningsPages?.pages.flatMap((page) => page.data) ?? [],
+    [screeningsPages]
+  );
+  const selectedScreenings = useMemo(
+    () =>
+      screenings.filter((screening) => selectedRowKeys.includes(screening.id)).sort((a, b) => {
+        const left = `${a.projectDate} ${a.projectTime}`;
+        const right = `${b.projectDate} ${b.projectTime}`;
+        return dayjs(left).valueOf() - dayjs(right).valueOf();
+      }),
+    [screenings, selectedRowKeys]
+  );
+  const renderScreeningSummary = (screening: PlanScreeningDetailProps) => (
+    <div className="mt-3 rounded-md border border-[var(--ant-color-border)] bg-[var(--ant-color-fill-tertiary)] px-3 py-2">
+      <div className="font-medium text-[var(--ant-color-text)]">{screening.filmInfo?.filmName}</div>
+      <div className="mt-1 grid gap-1 text-sm text-[var(--ant-color-text-secondary)]">
+        <div>
+          <strong className="text-[var(--ant-color-text)]">Ngày chiếu:</strong>{" "}
+          {formatScreeningDate(screening.projectDate)}
+        </div>
+        <div>
+          <strong className="text-[var(--ant-color-text)]">Giờ chiếu:</strong>{" "}
+          {formatScreeningTime(screening.projectTime)}
+        </div>
+        <div>
+          <strong className="text-[var(--ant-color-text)]">Phòng:</strong>{" "}
+          {screening.roomInfo?.name}
+        </div>
+      </div>
+    </div>
+  );
   const { can } = usePermission();
   const canUpdate = can("plan_cinema", "update");
   const canDelete = can("plan_cinema", "delete");
@@ -119,6 +181,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     deletePlanScreening.mutate(selectedRowKeys as number[], {
       onSuccess: () => {
         setSelectedRowKeys([]);
+        setConfirmDeleteOpen(false);
         message.success("Xóa ca chiếu trong kế hoạch thành công");
       },
       onError: (error: unknown) => {
@@ -214,8 +277,6 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     })
   };
 
-  if (!data) return null;
-
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="flex shrink-0 items-center justify-between pb-2">
@@ -226,7 +287,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           <Button
             size="small"
             disabled={selectedRowKeys.length === 0 || !canDelete}
-            onClick={handleDeleteFilms}
+            onClick={() => setConfirmDeleteOpen(true)}
             variant="outlined"
             color="red"
             loading={deletePlanScreening.isPending}
@@ -276,14 +337,45 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           containerClassName="min-w-0"
           rowKey="id"
           columns={columns}
-          dataSource={data?.data || []}
+          dataSource={screenings}
           size="small"
           bordered
-          loading={isFetching}
+          loading={isFetchingScreenings || isFetchingNextScreeningsPage}
           pagination={false}
           rowSelection={canDelete ? { type: "checkbox", ...rowSelection } : undefined}
         />
       </div>
+
+      <Modal
+        open={confirmDeleteOpen}
+        title="Xác nhận xóa ca chiếu"
+        onOk={handleDeleteFilms}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        okButtonProps={{
+          danger: true
+        }}
+        confirmLoading={deletePlanScreening.isPending}
+        destroyOnHidden
+      >
+        {selectedScreenings.length <= 1 ? (
+          <div className="space-y-3">
+            Bạn có chắc chắn muốn xóa suất chiếu này không?
+            {selectedScreenings[0] && renderScreeningSummary(selectedScreenings[0])}
+            <div>Thao tác không thể thu hồi.</div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            Bạn có chắc chắn muốn xóa <strong>{selectedScreenings.length}</strong> suất chiếu sau
+            không?
+            <div className="max-h-60 space-y-2 overflow-y-auto rounded-md border border-[var(--ant-color-border-secondary)] p-2">
+              {selectedScreenings.map((screening) => (
+                <div key={screening.id}>{renderScreeningSummary(screening)}</div>
+              ))}
+            </div>
+            <div>Thao tác không thể thu hồi.</div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

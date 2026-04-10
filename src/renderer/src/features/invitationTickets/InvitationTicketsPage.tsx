@@ -1,15 +1,19 @@
 "use client";
 
+import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
+import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown } from "antd";
+import { Button, Dropdown, Form, Modal, Select, message } from "antd";
 import dayjs from "dayjs";
 import { Check, Eye, Printer, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -21,6 +25,10 @@ import PrintInvitationTicketDialog from "./components/PrintInvitationTicketDialo
 export interface ValuesProps {
   dateRange?: [string, string];
 }
+
+type CancelOrderFormValues = {
+  cancelReasonId: number;
+};
 
 const compareText = (left?: string | null, right?: string | null) =>
   (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
@@ -42,11 +50,16 @@ const InvitationTicketsPage = () => {
   });
   const [dialogPrintOpen, setDialogPrintOpen] = useState(false);
   const [dialogViewDetailOpen, setDialogViewDetailOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
+  const [selectedCancelOrder, setSelectedCancelOrder] = useState<OrderDetailProps | null>(null);
+  const [cancelForm] = Form.useForm<CancelOrderFormValues>();
   const { can } = usePermission();
   const canCreate = can("invitation_tickets", "create");
   const canView = can("invitation_tickets", "view");
   const canPrint = can("invitation_tickets", "print");
+  const canDelete = can("invitation_tickets", "delete");
+  const cancelOrder = useCancelOrder();
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -67,6 +80,33 @@ const InvitationTicketsPage = () => {
   }, [current, pageSize, filterValues]);
 
   const { data: invitationTickets, isFetching } = useOrders(params);
+  const {
+    data: cancellationReasons,
+    fetchNextPage,
+    hasNextPage,
+    isFetching: isFetchingCancellationReasons,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["cancellation-reasons"],
+    queryFn: ({ pageParam = 1 }) =>
+      cancellationReasonsApi.getAll({ current: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
+
+  const cancelReasonOptions = useMemo(
+    () =>
+      cancellationReasons?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.reason
+        }))
+      ) ?? [],
+    [cancellationReasons]
+  );
 
   const handleViewShowtimes = () => {
     navigate(`/showtimes?callbackUrl=/invitation-tickets&id=create`);
@@ -96,9 +136,57 @@ const InvitationTicketsPage = () => {
     }
   }, []);
 
+  const handleOpenCancelDialog = useCallback(
+    (item: OrderDetailProps) => {
+      setSelectedCancelOrder(item);
+      cancelForm.resetFields();
+      setCancelDialogOpen(true);
+    },
+    [cancelForm]
+  );
+
+  const handleCancelDialogClose = useCallback(
+    (open: boolean) => {
+      setCancelDialogOpen(open);
+
+      if (!open) {
+        cancelForm.resetFields();
+        setSelectedCancelOrder(null);
+      }
+    },
+    [cancelForm]
+  );
+
+  const handleCancelOrder = useCallback(
+    (values: CancelOrderFormValues) => {
+      if (!selectedCancelOrder) {
+        return;
+      }
+
+      cancelOrder.mutate(
+        {
+          planScreenId: selectedCancelOrder.planScreening.id,
+          orderIds: [selectedCancelOrder.order.id],
+          cancelReasonId: values.cancelReasonId
+        },
+        {
+          onSuccess: () => {
+            handleCancelDialogClose(false);
+            message.success("Huỷ vé mời thành công");
+          },
+          onError: (error: unknown) => {
+            message.error(getApiErrorMessage(error, "Huỷ vé mời thất bại"));
+          }
+        }
+      );
+    },
+    [cancelOrder, handleCancelDialogClose, selectedCancelOrder]
+  );
+
   const actionItems = [
     ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
-    ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "Xuất vé mời" }] : [])
+    ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "Xuất vé mời" }] : []),
+    ...(canDelete ? [{ key: "3", icon: <X size={16} />, label: "Hủy vé mời" }] : [])
   ];
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
@@ -281,6 +369,9 @@ const InvitationTicketsPage = () => {
                     if (e.key === "2") {
                       handlePrint(record);
                     }
+                    if (e.key === "3") {
+                      handleOpenCancelDialog(record);
+                    }
                   }
                 }}
                 arrow
@@ -360,6 +451,52 @@ const InvitationTicketsPage = () => {
           selectedItem={selectedItem}
         />
       )}
+
+      <Modal
+        title="Xác nhận hủy vé mời"
+        open={cancelDialogOpen}
+        onOk={() => cancelForm.submit()}
+        onCancel={() => handleCancelDialogClose(false)}
+        okButtonProps={{
+          loading: cancelOrder.isPending
+        }}
+        cancelButtonProps={{
+          disabled: cancelOrder.isPending
+        }}
+        modalRender={(dom) => (
+          <Form<CancelOrderFormValues>
+            form={cancelForm}
+            onFinish={handleCancelOrder}
+            autoComplete="off"
+            layout="vertical"
+          >
+            {dom}
+          </Form>
+        )}
+      >
+        <Form.Item<CancelOrderFormValues>
+          name="cancelReasonId"
+          label="Lý do hủy vé"
+          rules={[{ required: true, message: "Chọn lý do hủy vé" }]}
+        >
+          <Select
+            loading={isFetchingCancellationReasons || isFetchingNextPage}
+            options={cancelReasonOptions}
+            placeholder="Chọn lý do hủy vé"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
+            allowClear
+          />
+        </Form.Item>
+      </Modal>
     </div>
   );
 };

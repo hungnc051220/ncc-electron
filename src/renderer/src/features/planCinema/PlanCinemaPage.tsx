@@ -87,8 +87,8 @@ const PlanCinemaPage = () => {
               className={cn(
                 "group flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-100",
                 "px-3 py-2.5 cursor-pointer select-none",
-                !isSelected && "hover:bg-goku/80",
-                isSelected ? "bg-trunks text-white" : "bg-transparent"
+                !isSelected && "hover:bg-goku/80 dark:hover:bg-app-bg/80",
+                isSelected ? "bg-trunks dark:bg-app-bg text-white" : "bg-transparent"
               )}
               onClick={() => setSelectedPlan(plan)}
             >

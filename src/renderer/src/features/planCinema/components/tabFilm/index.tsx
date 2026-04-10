@@ -16,7 +16,7 @@ import { useUpdatePlanFilm } from "@renderer/hooks/planFilms/useUpdatePlanCinema
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanFilmProps } from "@shared/types";
 import type { TableColumnsType, TableProps } from "antd";
-import { Button, message } from "antd";
+import { Button, message, Modal } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import AddMovies from "./AddMovies";
 
@@ -35,6 +35,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
 
   const [dataSource, setDataSource] = useState<PlanFilmProps[]>([]);
   const [selectedFilmIds, setSelectedFilmIds] = useState<number[]>([]);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -52,6 +53,10 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
 
   const updatePlanFilm = useUpdatePlanFilm();
   const deletePlanFilm = useDeletePlanFilm();
+  const selectedFilms = useMemo(
+    () => dataSource.filter((film) => selectedFilmIds.includes(film.filmId)),
+    [dataSource, selectedFilmIds]
+  );
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!canUpdate) return;
@@ -95,6 +100,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
       {
         onSuccess: () => {
           setSelectedFilmIds([]);
+          setConfirmDeleteOpen(false);
           message.success("Xóa phim trong kế hoạch thành công");
         },
         onError: (error: unknown) => {
@@ -182,7 +188,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
             color="red"
             disabled={selectedFilmIds.length === 0 || !canDelete}
             loading={deletePlanFilm.isPending}
-            onClick={handleDeleteFilms}
+            onClick={() => setConfirmDeleteOpen(true)}
           >
             Xóa
           </Button>
@@ -219,6 +225,56 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
           </SortableContext>
         </DndContext>
       </div>
+
+      <Modal
+        open={confirmDeleteOpen}
+        title="Xác nhận xóa phim"
+        onOk={handleDeleteFilms}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        okButtonProps={{
+          danger: true
+        }}
+        confirmLoading={deletePlanFilm.isPending}
+        destroyOnHidden
+      >
+        {selectedFilms.length <= 1 ? (
+          <div className="space-y-3">
+            Bạn có chắc chắn muốn xóa phim này khỏi kế hoạch không?
+            {selectedFilms[0] && (
+              <div className="mt-3 rounded-md border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-fill-tertiary)] px-3 py-2">
+                <div>
+                  <strong>Tên phim:</strong> {selectedFilms[0].film?.filmName}
+                </div>
+                <div>
+                  <strong>Phiên bản:</strong> {selectedFilms[0].film?.versionCode}
+                </div>
+              </div>
+            )}
+            <div>Thao tác không thể thu hồi.</div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            Bạn có chắc chắn muốn xóa <strong>{selectedFilms.length}</strong> phim sau khỏi kế
+            hoạch không?
+            <div className="mt-3 max-h-60 space-y-2 overflow-y-auto rounded-md border border-[var(--ant-color-border-secondary)] p-2">
+              {selectedFilms.map((film) => (
+                <div
+                  key={film.filmId}
+                  className="rounded-md border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-fill-tertiary)] px-3 py-2"
+                >
+                  <div>
+                    <strong>Tên phim:</strong> {film.film?.filmName}
+                  </div>
+                  <div>
+                    <strong>Phiên bản:</strong> {film.film?.versionCode}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div>Thao tác không thể thu hồi.</div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

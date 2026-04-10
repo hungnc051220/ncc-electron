@@ -22,6 +22,7 @@ import {
 } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const MIN_SCREENING_BREAK_MINUTES = 10;
@@ -60,6 +61,19 @@ const AddSchedulingDialog = ({
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
   const [isSamePrice, setIsSamePrice] = useState(false);
+  const [confirmOfflineOpen, setConfirmOfflineOpen] = useState(false);
+  const [pendingSubmitBody, setPendingSubmitBody] = useState<{
+    planCinemaId: number;
+    projectDate: string;
+    projectTime: string;
+    filmId: number;
+    roomId: number;
+    priceOfPosition1: string;
+    priceOfPosition2: string;
+    priceOfPosition3: string;
+    priceOfPosition4: string;
+    isOnlineSelling?: boolean;
+  } | null>(null);
   const { can } = usePermission();
   const canUpdate = can("plan_cinema", "update");
   const defaultFormValues = useMemo(
@@ -93,6 +107,8 @@ const AddSchedulingDialog = ({
     form.resetFields();
     form.setFieldsValue(defaultFormValues);
     setIsSamePrice(false);
+    setConfirmOfflineOpen(false);
+    setPendingSubmitBody(null);
   };
 
   useEffect(() => {
@@ -257,6 +273,33 @@ const AddSchedulingDialog = ({
     return `Các ca chiếu trong cùng một phòng phải cách nhau ít nhất ${MIN_SCREENING_BREAK_MINUTES} phút.`;
   };
 
+  const submitCreatePlanScreening = (body: {
+    planCinemaId: number;
+    projectDate: string;
+    projectTime: string;
+    filmId: number;
+    roomId: number;
+    priceOfPosition1: string;
+    priceOfPosition2: string;
+    priceOfPosition3: string;
+    priceOfPosition4: string;
+    isOnlineSelling?: boolean;
+  }) => {
+    createPlanScreening.mutate(
+      { ...body, isOnlineSelling: body.isOnlineSelling ? 1 : 0 },
+      {
+        onSuccess: () => {
+          message.success("Thêm ca chiếu vào kế hoạch thành công");
+          resetForm();
+          setOpen(false);
+        },
+        onError: (error: unknown) => {
+          message.error(getApiErrorMessage(error, "Thêm ca chiếu vào kế hoạch thất bại"));
+        }
+      }
+    );
+  };
+
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
     const uniformPrice = Number(values.price);
     const hasUniformPrice = isSamePrice && Number.isFinite(uniformPrice);
@@ -304,24 +347,26 @@ const AddSchedulingDialog = ({
       isOnlineSelling: values.isOnlineSelling
     };
 
-    createPlanScreening.mutate(
-      { ...body, isOnlineSelling: values.isOnlineSelling ? 1 : 0 },
-      {
-        onSuccess: () => {
-          message.success("Thêm ca chiếu vào kế hoạch thành công");
-          resetForm();
-          setOpen(false);
-        },
-        onError: (error: unknown) => {
-          message.error(getApiErrorMessage(error, "Thêm ca chiếu vào kế hoạch thất bại"));
-        }
-      }
-    );
+    if (values.isOnlineSelling === false) {
+      setPendingSubmitBody(body);
+      setConfirmOfflineOpen(true);
+      return;
+    }
+
+    submitCreatePlanScreening(body);
   };
 
   const onCancel = () => {
     setOpen(false);
     resetForm();
+  };
+
+  const handleConfirmOfflineSubmit = () => {
+    if (!pendingSubmitBody) {
+      return;
+    }
+
+    submitCreatePlanScreening(pendingSubmitBody);
   };
 
   if (!canUpdate) {
@@ -478,6 +523,46 @@ const AddSchedulingDialog = ({
             )}
           </div>
         </Form>
+      </Modal>
+
+      <Modal
+        open={confirmOfflineOpen}
+        centered
+        width={480}
+        title={
+          <div className="flex items-start gap-3">
+            <div className="flex size-11 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-500/15 text-amber-600 dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-300">
+              <AlertTriangle className="size-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="text-base font-semibold text-[var(--ant-color-text)]">
+                Không bán online ca chiếu này?
+              </div>
+              <div className="text-sm font-normal text-[var(--ant-color-text-description)]">
+                Ca chiếu sẽ chỉ được bán tại quầy.
+              </div>
+            </div>
+          </div>
+        }
+        okText="Xác nhận lưu"
+        cancelText="Quay lại"
+        onOk={handleConfirmOfflineSubmit}
+        onCancel={() => {
+          setConfirmOfflineOpen(false);
+          setPendingSubmitBody(null);
+        }}
+        okButtonProps={{
+          loading: createPlanScreening.isPending
+        }}
+        cancelButtonProps={{
+          disabled: createPlanScreening.isPending
+        }}
+      >
+        <div className="rounded-2xl my-4 border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--ant-color-text)] shadow-sm dark:border-amber-400/35 dark:bg-amber-400/10">
+          <div className="text-[var(--ant-color-text-secondary)]">
+            Bạn có muốn tiếp tục tạo ca chiếu với trạng thái <strong>không bán online</strong>?
+          </div>
+        </div>
       </Modal>
     </>
   );

@@ -15,7 +15,7 @@ import {
   formatNumber
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { OrderDetailProps, OrderStatus } from "@shared/types";
+import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Checkbox, Dropdown, Form, Modal, Select, message, Tabs } from "antd";
@@ -269,6 +269,16 @@ const OrderHistoryPage = () => {
     ...(activeKey === "2"
       ? [
           {
+            title: "Nhân viên bán",
+            key: "seller",
+            dataIndex: "seller",
+            sorter: (a, b) => compareText(a.order.items?.[0]?.posName, b.order.items?.[0]?.posName),
+            render: (_, record) =>
+              [record.order?.seller?.customerFirstName, record.order?.seller?.customerLastName]
+                .filter(Boolean)
+                .join(" ") || record.order?.seller?.username
+          },
+          {
             title: "Máy bán",
             key: "posName",
             dataIndex: "posName",
@@ -380,10 +390,16 @@ const OrderHistoryPage = () => {
       key: "operation",
       width: 50,
       render: (_: unknown, record: OrderDetailProps) => {
-        const canCancel = record.order.orderStatusId !== OrderStatus.CANCELLED;
+        const canCancel =
+          record.order.orderStatusId !== OrderStatus.CANCELLED &&
+          record.order.orderStatusId !== OrderStatus.FAIL;
+        const canPrintTicket =
+          canPrint &&
+          record.order.orderStatusId === OrderStatus.COMPLETED &&
+          record.order.paymentStatusId === PaymentStatus.PAID;
         const menuItems = [
           ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
-          ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : []),
+          ...(canPrintTicket ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : []),
           ...(canCancel ? [{ key: "3", icon: <X size={16} />, label: "Huỷ vé" }] : [])
         ];
 
