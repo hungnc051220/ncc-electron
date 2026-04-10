@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import ChangePassword from "./components/ChangePassword";
 import SettingEndpoint from "./components/SettingEndpoint";
 import SettingPos from "./components/SettingPos";
+import SettingPrinter from "./components/SettingPrinter";
 
 const { Content } = Layout;
 
@@ -36,6 +37,11 @@ const SettingPage = () => {
         label: "Cấu hình máy POS",
         permissionKey: "settings_pos",
         content: <SettingPos />
+      },
+      {
+        key: "settings-printer",
+        label: "Cấu hình máy in",
+        content: <SettingPrinter />
       },
       {
         key: "settings-endpoint",

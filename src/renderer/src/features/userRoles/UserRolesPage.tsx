@@ -38,8 +38,7 @@ const buildAggregateValues = (rows: PermissionTreeRow[]): Record<PermissionActio
   permissionActions.reduce(
     (acc, action) => {
       const applicableRows = rows.filter((row) => row.actions.includes(action));
-      acc[action] =
-        applicableRows.length > 0 && applicableRows.every((row) => row.values[action]);
+      acc[action] = applicableRows.length > 0 && applicableRows.every((row) => row.values[action]);
       return acc;
     },
     {} as Record<PermissionAction, boolean>
@@ -55,7 +54,9 @@ const buildGroupRow = (
   key: id,
   label,
   module,
-  actions: permissionActions.filter((action) => children.some((child) => child.actions.includes(action))),
+  actions: permissionActions.filter((action) =>
+    children.some((child) => child.actions.includes(action))
+  ),
   values: buildAggregateValues(children),
   children,
   isGroup: true
@@ -99,18 +100,15 @@ const buildTreeRows = (rows: PermissionMatrixRow[]): PermissionTreeRow[] => {
 
   return Object.entries(grouped).map(([module, features]) => {
     if (module !== "Hệ thống") {
-      return buildGroupRow(
-        `group:${module}`,
-        module,
-        features.map(mapFeatureToTreeRow),
-        module
-      );
+      return buildGroupRow(`group:${module}`, module, features.map(mapFeatureToTreeRow), module);
     }
 
     const systemSettingFeatures = features.filter((feature) =>
       SETTINGS_PERMISSION_KEYS.includes(feature.key)
     );
-    const otherFeatures = features.filter((feature) => !SETTINGS_PERMISSION_KEYS.includes(feature.key));
+    const otherFeatures = features.filter(
+      (feature) => !SETTINGS_PERMISSION_KEYS.includes(feature.key)
+    );
 
     const children: PermissionTreeRow[] = otherFeatures.map(mapFeatureToTreeRow);
 

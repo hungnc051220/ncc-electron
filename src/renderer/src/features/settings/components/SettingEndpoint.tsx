@@ -10,7 +10,19 @@ import { disconnectSocket, initSocket } from "@renderer/socket/socket";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { AppConfig } from "@shared/types";
 import type { FormProps } from "antd";
-import { Alert, Avatar, Button, Card, Col, Form, Input, Row, Skeleton, Typography, message } from "antd";
+import {
+  Alert,
+  Avatar,
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  Row,
+  Skeleton,
+  Typography,
+  message
+} from "antd";
 import { useEffect, useState } from "react";
 
 const { Paragraph, Text, Title } = Typography;
@@ -88,9 +100,7 @@ const SettingEndpoint = () => {
                 <Title level={4} className="mb-1!">
                   Kết nối hệ thống
                 </Title>
-                <Text type="secondary">
-                  Thông tin kết nối hiện tại của API và socket realtime.
-                </Text>
+                <Text type="secondary">Thông tin kết nối hiện tại của API và socket realtime.</Text>
               </div>
             </div>
           </div>
@@ -179,8 +189,8 @@ const SettingEndpoint = () => {
                 </div>
               </Col>
 
-              <Col xs={24}>
-                <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 shadow-sm dark:border-sky-900/60 dark:from-sky-950/40 dark:to-cyan-950/20">
+              <Col xs={24} className="mt-4">
+                <div className="rounded-2xl border border-sky-200 bg-linear-to-br from-sky-50 to-cyan-50 p-4 shadow-sm dark:border-sky-900/60 dark:from-sky-950/40 dark:to-cyan-950/20">
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-200">
                       <InfoCircleOutlined />
@@ -190,8 +200,8 @@ const SettingEndpoint = () => {
                         Gợi ý cấu hình
                       </p>
                       <Text className="block text-sm leading-6 text-sky-800 dark:text-sky-200">
-                        Nên dùng URL đầy đủ gồm giao thức `http://` hoặc `https://`. Socket
-                        realtime sẽ tự chuyển sang `ws://` hoặc `wss://`.
+                        Nên dùng URL đầy đủ gồm giao thức `http://` hoặc `https://`. Socket realtime
+                        sẽ tự chuyển sang `ws://` hoặc `wss://`.
                       </Text>
                     </div>
                   </div>

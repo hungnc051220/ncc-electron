@@ -91,7 +91,7 @@ const ChangePassword = () => {
             </div>
 
             <div className="w-full sm:w-auto">
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-900/70 dark:bg-emerald-950/40 sm:min-w-[220px]">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-900/70 dark:bg-emerald-950/40 sm:min-w-55">
                 <Text type="secondary" className="block text-xs uppercase tracking-[0.18em]">
                   Trạng thái tài khoản
                 </Text>
@@ -111,7 +111,7 @@ const ChangePassword = () => {
                 <Text type="secondary" className="mb-2 block text-xs uppercase tracking-[0.16em]">
                   Họ và tên
                 </Text>
-                <p className="mb-0 break-words text-base font-semibold text-slate-800 dark:text-slate-100">
+                <p className="mb-0 wrap-break-word text-base font-semibold text-slate-800 dark:text-slate-100">
                   {user?.fullname || "-"}
                 </p>
               </div>
@@ -143,7 +143,7 @@ const ChangePassword = () => {
                 </Text>
                 <div className="flex items-start gap-2">
                   <PhoneOutlined className="mt-1 text-slate-400 dark:text-slate-500" />
-                  <p className="mb-0 break-words text-base font-medium text-slate-700 dark:text-slate-200">
+                  <p className="mb-0 wrap-break-word text-base font-medium text-slate-700 dark:text-slate-200">
                     {user?.mobile || "-"}
                   </p>
                 </div>
@@ -153,7 +153,7 @@ const ChangePassword = () => {
                 <Text type="secondary" className="mb-2 block text-xs uppercase tracking-[0.16em]">
                   Địa chỉ
                 </Text>
-                <p className="mb-0 break-words text-base font-medium text-slate-700 dark:text-slate-200">
+                <p className="mb-0 wrap-break-word text-base font-medium text-slate-700 dark:text-slate-200">
                   {user?.address || "-"}
                 </p>
               </div>
@@ -174,7 +174,9 @@ const ChangePassword = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="mb-0 break-words text-base font-medium text-slate-700 dark:text-slate-200">-</p>
+                  <p className="mb-0 wrap-break-word text-base font-medium text-slate-700 dark:text-slate-200">
+                    -
+                  </p>
                 )}
               </div>
             </div>
@@ -233,7 +235,7 @@ const ChangePassword = () => {
               </Col>
 
               <Col xs={24}>
-                <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 dark:border-amber-900/60 dark:from-amber-950/40 dark:to-orange-950/20">
+                <div className="rounded-2xl border border-amber-200 bg-linear-to-br from-amber-50 to-orange-50 p-4 dark:border-amber-900/60 dark:from-amber-950/40 dark:to-orange-950/20">
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-200">
                       <InfoCircleOutlined />

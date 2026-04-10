@@ -58,7 +58,7 @@ const SettingPos = () => {
               <Text type="secondary" className="mb-2 block text-xs uppercase tracking-[0.16em]">
                 Tên máy hiện tại
               </Text>
-              <p className="mb-0 break-words text-base font-semibold text-slate-800 dark:text-slate-100">
+              <p className="mb-0 wrap-break-word text-base font-semibold text-slate-800 dark:text-slate-100">
                 {posName || "-"}
               </p>
             </div>
@@ -127,7 +127,7 @@ const SettingPos = () => {
               </Col>
 
               <Col xs={24}>
-                <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 shadow-sm dark:border-emerald-900/60 dark:from-emerald-950/40 dark:to-teal-950/20">
+                <div className="rounded-2xl border border-emerald-200 bg-linear-to-br from-emerald-50 to-teal-50 p-4 dark:border-emerald-900/60 dark:from-emerald-950/40 dark:to-teal-950/20">
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200">
                       <InfoCircleOutlined />
@@ -137,8 +137,8 @@ const SettingPos = () => {
                         Gợi ý đặt tên
                       </p>
                       <Text className="block text-sm leading-6 text-emerald-800 dark:text-emerald-200">
-                        Nên đặt theo vị trí quầy hoặc khu vực vận hành để nhân viên dễ nhận biết
-                        khi in vé và đối soát.
+                        Nên đặt theo vị trí quầy hoặc khu vực vận hành để nhân viên dễ nhận biết khi
+                        in vé và đối soát.
                       </Text>
                     </div>
                   </div>
