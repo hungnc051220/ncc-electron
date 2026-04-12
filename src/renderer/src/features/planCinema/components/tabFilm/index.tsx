@@ -10,11 +10,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import { planFilmsApi } from "@renderer/api/planFilm.api";
 import { useDeletePlanFilm } from "@renderer/hooks/planFilms/useDeletePlanFilm";
-import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
+import { planFilmsKeys } from "@renderer/hooks/planFilms/keys";
 import { useUpdatePlanFilm } from "@renderer/hooks/planFilms/useUpdatePlanCinema";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanFilmProps } from "@shared/types";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
 import { Button, message, Modal } from "antd";
 import { useEffect, useMemo, useState } from "react";
@@ -39,24 +41,56 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
 
   const params = useMemo(
     () => ({
-      current: 1,
-      pageSize: 100,
       planCinemaId
     }),
     [planCinemaId]
   );
 
-  const { data, isFetching } = usePlanFilms(params);
+  const {
+    data: filmPages,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: [...planFilmsKeys.all, "all-pages", params],
+    queryFn: ({ pageParam = 1 }) =>
+      planFilmsApi.getAll({
+        current: pageParam,
+        pageSize: 100,
+        planCinemaId
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.current < lastPage.pageCount ? lastPage.current + 1 : undefined,
+    enabled: !!planCinemaId,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always"
+  });
   const { can } = usePermission();
   const canUpdate = can("plan_cinema", "update");
   const canDelete = can("plan_cinema", "delete");
 
   const updatePlanFilm = useUpdatePlanFilm();
   const deletePlanFilm = useDeletePlanFilm();
+  const films = useMemo(() => filmPages?.pages.flatMap((page) => page.data) ?? [], [filmPages]);
   const selectedFilms = useMemo(
     () => dataSource.filter((film) => selectedFilmIds.includes(film.filmId)),
     [dataSource, selectedFilmIds]
   );
+
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    setSelectedFilmIds([]);
+    setConfirmDeleteOpen(false);
+    setDataSource([]);
+  }, [planCinemaId]);
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!canUpdate) return;
@@ -111,10 +145,8 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
   };
 
   useEffect(() => {
-    if (data?.data) {
-      setDataSource(data.data);
-    }
-  }, [data]);
+    setDataSource(films);
+  }, [films]);
 
   interface RowProps extends React.HTMLAttributes<HTMLTableRowElement> {
     "data-row-key": string;
@@ -173,7 +205,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
     }
   };
 
-  if (!data) return null;
+  if (!filmPages) return null;
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
@@ -196,8 +228,8 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
         {canUpdate && (
           <AddMovies
             planCinemaId={planCinemaId!}
-            selectedFilmIds={data.data.map((item) => item.filmId)}
-            planFilms={data.data}
+            selectedFilmIds={films.map((item) => item.filmId)}
+            planFilms={films}
           />
         )}
       </div>
@@ -218,7 +250,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
               dataSource={dataSource}
               size="small"
               bordered
-              loading={isFetching}
+              loading={isFetching || isFetchingNextPage}
               pagination={false}
               rowSelection={canDelete ? { type: "checkbox", ...rowSelection } : undefined}
             />
@@ -241,7 +273,7 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
           <div className="space-y-3">
             Bạn có chắc chắn muốn xóa phim này khỏi kế hoạch không?
             {selectedFilms[0] && (
-              <div className="mt-3 rounded-md border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-fill-tertiary)] px-3 py-2">
+              <div className="mt-3 rounded-md border border-(--ant-color-border-secondary) bg-(--ant-color-fill-tertiary) px-3 py-2">
                 <div>
                   <strong>Tên phim:</strong> {selectedFilms[0].film?.filmName}
                 </div>
@@ -254,13 +286,13 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
           </div>
         ) : (
           <div className="space-y-3">
-            Bạn có chắc chắn muốn xóa <strong>{selectedFilms.length}</strong> phim sau khỏi kế
-            hoạch không?
-            <div className="mt-3 max-h-60 space-y-2 overflow-y-auto rounded-md border border-[var(--ant-color-border-secondary)] p-2">
+            Bạn có chắc chắn muốn xóa <strong>{selectedFilms.length}</strong> phim sau khỏi kế hoạch
+            không?
+            <div className="mt-3 max-h-60 space-y-2 overflow-y-auto rounded-md border border-(--ant-color-border-secondary) p-2">
               {selectedFilms.map((film) => (
                 <div
                   key={film.filmId}
-                  className="rounded-md border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-fill-tertiary)] px-3 py-2"
+                  className="rounded-md border border-(--ant-color-border-secondary) bg-(--ant-color-fill-tertiary) px-3 py-2"
                 >
                   <div>
                     <strong>Tên phim:</strong> {film.film?.filmName}

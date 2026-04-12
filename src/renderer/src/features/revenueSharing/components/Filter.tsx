@@ -2,22 +2,15 @@ import { FilterOutlined } from "@ant-design/icons";
 import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useQuery } from "@tanstack/react-query";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { ValuesProps } from "../RevenueSharingPage";
-import type { TimeRangePickerProps } from "antd";
 import type { Dayjs } from "dayjs";
 
 const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;

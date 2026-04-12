@@ -1,8 +1,7 @@
 import { FilterOutlined } from "@ant-design/icons";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
-import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { ValuesProps } from "../CancellationTicketsPage";
 import { filterEmptyValues } from "@renderer/lib/utils";
@@ -11,13 +10,6 @@ import { usersApi } from "@renderer/api/users.api";
 import { filmsApi } from "@renderer/api/films.api";
 
 const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;

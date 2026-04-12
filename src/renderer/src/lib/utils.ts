@@ -1,4 +1,8 @@
 import { OrderDetailProps, PaymentType, PrintTicketPayload } from "@shared/types";
+import {
+  DEFAULT_BRANCH_SETTINGS,
+  useSettingBranchStore
+} from "@renderer/store/settingBranch.store";
 import type { InputNumberProps } from "antd";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -125,6 +129,22 @@ export const sortSeats = (seats: string[]): string[] => {
   });
 };
 
+type SeatValueSource = {
+  listChairValueF1?: string | null;
+  listChairValueF2?: string | null;
+  listChairValueF3?: string | null;
+};
+
+export const extractSeatValues = (items?: SeatValueSource[] | null): string[] =>
+  (items ?? []).flatMap((item) =>
+    [item.listChairValueF1, item.listChairValueF2, item.listChairValueF3]
+      .flatMap((value) => value?.split(",") ?? [])
+      .map((seat) => seat.trim())
+      .filter(Boolean)
+  );
+
+export const formatSeatValues = (items?: SeatValueSource[] | null) => extractSeatValues(items).join(", ");
+
 export const buildTicketsFromOrder = async (
   data: OrderDetailProps,
   staffName?: string,
@@ -132,20 +152,19 @@ export const buildTicketsFromOrder = async (
 ): Promise<PrintTicketPayload[]> => {
   const tickets: PrintTicketPayload[] = [];
   const qrBase64 = await QRCode.toDataURL(data.order.barCode);
+  const { cinemaName, address } = useSettingBranchStore.getState();
+  const branchCinemaName = cinemaName || DEFAULT_BRANCH_SETTINGS.cinemaName;
+  const branchAddress = address || DEFAULT_BRANCH_SETTINGS.address;
 
   data.order.items.forEach((item) => {
-    const seats = sortSeats([
-      ...(item.listChairValueF1?.split(",") ?? []),
-      ...(item.listChairValueF2?.split(",") ?? []),
-      ...(item.listChairValueF3?.split(",") ?? [])
-    ])
+    const seats = sortSeats(extractSeatValues([item]))
       .map((s) => s.trim())
       .filter(Boolean);
 
     seats.forEach((seat) => {
       tickets.push({
-        cinemaName: "TRUNG TÂM CHIẾU PHIM QUỐC GIA",
-        address: "Số 87 Láng Hạ, Ô Chợ Dừa, Hà Nội",
+        cinemaName: branchCinemaName,
+        address: branchAddress,
         movieName: data.film.filmName,
         showTime: dayjs(data.planScreening.projectTime).format("HH:mm"),
         date: dayjs(data.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),

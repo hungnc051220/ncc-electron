@@ -2,13 +2,13 @@ import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
-import { formatMoney } from "@renderer/lib/utils";
+import { formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, message } from "antd";
+import { Button, Descriptions, message, Typography } from "antd";
 import { Dispatch, SetStateAction, useMemo } from "react";
 
 const buildMergedNoOnlinePayload = (
@@ -62,6 +62,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
   const { data: user } = useUserDetail(userId!);
   const { can } = usePermission();
   const canUpdate = can("online_seat_booking", "update");
+  const isPlanScreeningPast = isPlanScreeningLocked(data?.projectDate, data?.projectTime);
 
   const updatePlanScreening = useUpdatePlanScreening();
 
@@ -69,6 +70,7 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
     [selectedSeats]
   );
+  const selectedSeatCodes = selectedSeats.map((s) => s.code).join(", ");
 
   const items: DescriptionsProps["items"] = [
     {
@@ -85,9 +87,14 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
       key: "3",
       label: "Ghế đã chọn",
       children: (
-        <p className="flex-1 text-right line-clamp-1 max-w-full">
-          {selectedSeats.map((s) => s.code).join(", ")}
-        </p>
+        <div className="flex flex-1 justify-end overflow-hidden">
+          <Typography.Text
+            className="max-w-full text-right"
+            ellipsis={{ tooltip: selectedSeatCodes || undefined }}
+          >
+            {selectedSeatCodes || "-"}
+          </Typography.Text>
+        </div>
       )
     },
     {
@@ -136,7 +143,12 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
             variant="outlined"
             color="danger"
             className="h-full! font-bold"
-            disabled={selectedSeats.length === 0 || updatePlanScreening.isPending || !canUpdate}
+            disabled={
+              selectedSeats.length === 0 ||
+              updatePlanScreening.isPending ||
+              !canUpdate ||
+              isPlanScreeningPast
+            }
             onClick={() => onUpdateSeatsOnline("offline")}
           >
             Hủy bán online
@@ -146,7 +158,12 @@ const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: Act
             color="primary"
             className="h-full! font-bold"
             onClick={() => onUpdateSeatsOnline("online")}
-            disabled={selectedSeats.length === 0 || updatePlanScreening.isPending || !canUpdate}
+            disabled={
+              selectedSeats.length === 0 ||
+              updatePlanScreening.isPending ||
+              !canUpdate ||
+              isPlanScreeningPast
+            }
           >
             Bán online
           </Button>

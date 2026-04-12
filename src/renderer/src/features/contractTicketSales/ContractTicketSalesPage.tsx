@@ -13,7 +13,7 @@ import {
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown, message } from "antd";
+import { Button, Dropdown, Tooltip, message } from "antd";
 import dayjs from "dayjs";
 import { Armchair, FileText, PlusIcon, Printer, SquarePen } from "lucide-react";
 import type { ReactNode } from "react";
@@ -207,6 +207,29 @@ const ContractTicketSalesPage = () => {
     []
   );
 
+  const getSeatsByPlan = useCallback(
+    (record: OrderDetailProps, planScreeningId?: number | null) => {
+      if (!planScreeningId) {
+        return "";
+      }
+
+      const seats =
+        record.order?.items?.flatMap((item) => {
+          if (item.planScreenId !== planScreeningId) {
+            return [];
+          }
+
+          return [item.listChairValueF1, item.listChairValueF2, item.listChairValueF3]
+            .flatMap((value) => value?.split(",") ?? [])
+            .map((seat) => seat.trim())
+            .filter(Boolean);
+        }) ?? [];
+
+      return seats.join(", ");
+    },
+    []
+  );
+
   const flattenedRows = useMemo<ContractTicketSaleRow[]>(
     () =>
       (tickets?.data || []).flatMap((record, recordIndex) => {
@@ -314,6 +337,29 @@ const ContractTicketSalesPage = () => {
       render: (_, record) =>
         formatNumber(getTicketCountByPlan(record.orderDetail, record.planDetail.planScreening?.id)),
       align: "right"
+    },
+    {
+      title: "Vị trí ghế",
+      key: "seatPositions",
+      width: 220,
+      sorter: (a, b) =>
+        compareText(
+          getSeatsByPlan(a.orderDetail, a.planDetail.planScreening?.id),
+          getSeatsByPlan(b.orderDetail, b.planDetail.planScreening?.id)
+        ),
+      render: (_, record) => {
+        const seats = getSeatsByPlan(record.orderDetail, record.planDetail.planScreening?.id);
+
+        if (!seats) {
+          return "";
+        }
+
+        return (
+          <Tooltip title={seats}>
+            <div className="max-w-50 truncate">{seats}</div>
+          </Tooltip>
+        );
+      }
     },
     {
       title: "Tổng số vé",

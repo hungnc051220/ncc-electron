@@ -8,22 +8,16 @@ import { useDeleteSharingRate } from "@renderer/hooks/sharingRates/useDeleteShar
 import { useSharingRates } from "@renderer/hooks/sharingRates/useSharingRates";
 import { useUpdateSharingRate } from "@renderer/hooks/sharingRates/useUpdateSharingRate";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { ReportRevenueSharingProps } from "@shared/types";
 import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import type { FormProps, TimeRangePickerProps } from "antd";
+import type { FormProps } from "antd";
 import { Button, DatePicker, Form, InputNumber, Modal, Select, Space, message } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
 const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
 
 type SharingRateFormItem = {
   id?: number;

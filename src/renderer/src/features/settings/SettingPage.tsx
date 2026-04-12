@@ -6,6 +6,7 @@ import type { MenuProps } from "antd";
 import { Layout, Menu } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import ChangePassword from "./components/ChangePassword";
+import SettingBranch from "./components/SettingBranch";
 import SettingEndpoint from "./components/SettingEndpoint";
 import SettingPos from "./components/SettingPos";
 import SettingPrinter from "./components/SettingPrinter";
@@ -28,9 +29,10 @@ const SettingPage = () => {
   const sections = useMemo<SettingsSection[]>(
     () => [
       {
-        key: "change-password",
-        label: "Cấu hình tài khoản",
-        content: <ChangePassword />
+        key: "settings-branch",
+        label: "Cài đặt chi nhánh",
+        permissionKey: "settings_branch",
+        content: <SettingBranch />
       },
       {
         key: "settings-pos",
@@ -48,6 +50,11 @@ const SettingPage = () => {
         label: "Cấu hình Endpoint",
         permissionKey: "settings_endpoint",
         content: <SettingEndpoint />
+      },
+      {
+        key: "change-password",
+        label: "Cấu hình tài khoản",
+        content: <ChangePassword />
       }
     ],
     []

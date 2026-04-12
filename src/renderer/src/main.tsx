@@ -14,8 +14,10 @@ import { useAuthStore } from "./store/auth.store";
 import { initApi } from "./api/client";
 import { connectSocket, initSocket } from "./socket/socket";
 import PermissionBootstrap from "./permissions/PermissionBootstrap";
+import { useSettingBranchStore } from "./store/settingBranch.store";
 
 useSettingPosStore.getState();
+useSettingBranchStore.getState();
 
 window.api?.onThemeUpdate((theme) => {
   useThemeStore.getState().setTheme(theme);

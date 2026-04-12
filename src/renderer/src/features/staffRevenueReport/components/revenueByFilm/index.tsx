@@ -69,6 +69,10 @@ export const getActualRemittance = (
   row: Pick<Row, "actualSale" | "discountTotal" | "saleVietQr" | "saleVnPayQr">
 ) => row.actualSale - row.discountTotal - row.saleVietQr - row.saleVnPayQr;
 
+export const getTotalTicketAndContract = (
+  row: Pick<Row, "totalQuantity" | "totalContractQuantity">
+) => row.totalQuantity + row.totalContractQuantity;
+
 const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
@@ -244,6 +248,12 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
       dataIndex: "totalContractQuantity",
       render: (value: number) => formatNumber(value),
       align: "right"
+    },
+    {
+      title: "Vé bán + HĐ",
+      key: "totalTicketAndContract",
+      align: "right",
+      render: (_: number, row: Row) => formatNumber(getTotalTicketAndContract(row))
     },
     {
       title: "Tổng doanh thu",

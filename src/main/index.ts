@@ -303,7 +303,9 @@ const getTemplatePath = () => {
   const templatePath = candidates.find((candidate) => fs.existsSync(candidate));
 
   if (!templatePath) {
-    throw new Error(`Không tìm thấy file ticket-template.html. Candidates: ${candidates.join(", ")}`);
+    throw new Error(
+      `Không tìm thấy file ticket-template.html. Candidates: ${candidates.join(", ")}`
+    );
   }
 
   return templatePath;

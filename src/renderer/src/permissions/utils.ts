@@ -71,6 +71,7 @@ export const legacyMenusToAssignments = (
 
   return PERMISSION_CATALOG.flatMap((definition) => {
     const isSplitSettingsPermission = [
+      "settings_branch",
       "settings_pos",
       "settings_endpoint",
       "settings_interface"

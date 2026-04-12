@@ -32,7 +32,12 @@ type PermissionTreeRow = {
   isGroup?: boolean;
 };
 
-const SETTINGS_PERMISSION_KEYS = ["settings_pos", "settings_endpoint", "settings_interface"];
+const SETTINGS_PERMISSION_KEYS = [
+  "settings_branch",
+  "settings_pos",
+  "settings_endpoint",
+  "settings_interface"
+];
 
 const buildAggregateValues = (rows: PermissionTreeRow[]): Record<PermissionAction, boolean> =>
   permissionActions.reduce(

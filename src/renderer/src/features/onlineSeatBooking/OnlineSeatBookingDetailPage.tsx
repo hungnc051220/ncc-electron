@@ -5,7 +5,7 @@ import { ListSeat } from "@shared/types";
 import { Spin } from "antd";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
-import SeatsOnline from "../planScreening/components/SeatsOnline";
+import Seats from "../planScreening/components/Seats";
 import Actions from "./components/Actions";
 
 const OnlineSeatBookingDetailPage = () => {
@@ -18,10 +18,11 @@ const OnlineSeatBookingDetailPage = () => {
   return (
     <Spin spinning={isFetching}>
       <div className="relative flex flex-col h-screen overflow-hidden select-none">
-        <SeatsOnline
+        <Seats
           data={data}
           selectedSeats={selectedSeats}
           setSelectedSeats={setSelectedSeats}
+          selectionMode="emptyOnly"
         />
         {data && (
           <Actions

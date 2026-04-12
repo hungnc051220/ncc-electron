@@ -3,7 +3,12 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
-import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
+import {
+  filterEmptyValues,
+  formatMoney,
+  formatNumber,
+  formatSeatValues
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, RefundStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
@@ -201,11 +206,8 @@ const RefundsPage = () => {
       key: "positions",
       dataIndex: "order",
       sorter: (a, b) =>
-        compareText(
-          a.order?.items?.map((item) => item.listChairValueF1).join(", "),
-          b.order?.items?.map((item) => item.listChairValueF1).join(", ")
-        ),
-      render: (_, record) => record.order.items?.map((item) => item.listChairValueF1).join(", ")
+        compareText(formatSeatValues(a.order?.items), formatSeatValues(b.order?.items)),
+      render: (_, record) => formatSeatValues(record.order.items)
     },
     {
       title: "Số tiền đã hoàn",

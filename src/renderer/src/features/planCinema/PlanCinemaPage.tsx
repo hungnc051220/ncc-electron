@@ -1,30 +1,25 @@
+import { ReloadOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import PageHeader from "@renderer/components/PageHeader";
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { cn } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanCinemaProps } from "@shared/types";
-import type { CollapseProps, PaginationProps, TimeRangePickerProps } from "antd";
+import type { CollapseProps, PaginationProps } from "antd";
 import { Button, Collapse, DatePicker, Empty, Pagination, Spin } from "antd";
-import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { useMemo, useState } from "react";
+import AddPlanCinemaDialog from "./components/AddPlanCinemaDialog";
 import DeletePlanDialog from "./components/DeletePlanCinemaDialog";
 import ApproveRejectActions from "./components/tabFilm/ApproveRejectActions";
-import SendForApproveActions from "./components/tabFilm/SendForApproveActions";
-import AddPlanCinemaDialog from "./components/AddPlanCinemaDialog";
 import ArchivedActions from "./components/tabFilm/ArchivedActions";
-import TabsList from "./components/TabsList";
 import RestoreActions from "./components/tabFilm/RestoreActions";
+import SendForApproveActions from "./components/tabFilm/SendForApproveActions";
+import TabsList from "./components/TabsList";
 
 const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
 
 const PlanCinemaPage = () => {
   const [activeKey, setActiveKey] = useState<string | string[]>("0");
@@ -59,7 +54,7 @@ const PlanCinemaPage = () => {
     [current, currentActiveKey, fromDate, toDate]
   );
 
-  const { data, isFetching } = usePlanCinemas(params);
+  const { data, isFetching, refetch } = usePlanCinemas(params);
   const { can } = usePermission();
   const canCreate = can("plan_cinema", "create");
   const canUpdate = can("plan_cinema", "update");
@@ -194,7 +189,14 @@ const PlanCinemaPage = () => {
     <div className="flex h-full min-h-0 flex-col space-y-4 overflow-hidden p-4">
       <PageHeader
         left={<AppBreadcrumb />}
-        right={canCreate && currentActiveKey === "0" ? <AddPlanCinemaDialog /> : undefined}
+        right={
+          <div className="flex items-center gap-2">
+            <Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>
+              Làm mới
+            </Button>
+            {canCreate && currentActiveKey === "0" ? <AddPlanCinemaDialog /> : undefined}
+          </div>
+        }
       />
       <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <div className="flex flex-1 min-h-0 gap-5">

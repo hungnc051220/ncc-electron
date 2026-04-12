@@ -511,10 +511,10 @@ const AddSchedulingDialog = ({
               <AlertTriangle className="size-5" />
             </div>
             <div className="space-y-1">
-              <div className="text-base font-semibold text-[var(--ant-color-text)]">
+              <div className="text-base font-semibold text-(--ant-color-text)">
                 Không bán online ca chiếu này?
               </div>
-              <div className="text-sm font-normal text-[var(--ant-color-text-description)]">
+              <div className="text-sm font-normal text-(--ant-color-text-description)">
                 Ca chiếu sẽ chỉ được bán tại quầy.
               </div>
             </div>
@@ -534,8 +534,8 @@ const AddSchedulingDialog = ({
           disabled: createPlanScreening.isPending
         }}
       >
-        <div className="rounded-2xl my-4 border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--ant-color-text)] shadow-sm dark:border-amber-400/35 dark:bg-amber-400/10">
-          <div className="text-[var(--ant-color-text-secondary)]">
+        <div className="rounded-2xl my-4 border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-(--ant-color-text) shadow-sm dark:border-amber-400/35 dark:bg-amber-400/10">
+          <div className="text-(--ant-color-text-secondary)">
             Bạn có muốn tiếp tục tạo ca chiếu với trạng thái <strong>không bán online</strong>?
           </div>
         </div>

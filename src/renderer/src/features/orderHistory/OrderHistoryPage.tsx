@@ -11,6 +11,7 @@ import { getPrintErrorMessage } from "@renderer/lib/print";
 import {
   buildTicketsFromOrder,
   filterEmptyValues,
+  formatSeatValues,
   formatMoney,
   formatNumber
 } from "@renderer/lib/utils";
@@ -364,7 +365,7 @@ const OrderHistoryPage = () => {
       title: "Vị trí ghế",
       key: "positions",
       dataIndex: "positions",
-      render: (_, record) => record.order.items.map((item) => item.listChairValueF1).join(", ")
+      render: (_, record) => formatSeatValues(record.order.items)
     },
     {
       title: "Trạng thái thanh toán",

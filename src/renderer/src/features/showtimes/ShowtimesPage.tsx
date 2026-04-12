@@ -15,6 +15,9 @@ import { cn } from "@renderer/lib/utils";
 
 dayjs.extend(customParseFormat);
 
+const capitalizeFirstLetter = (value: string) =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+
 const ShowtimesPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -178,10 +181,11 @@ const ShowtimesPage = () => {
           <p className="font-semibold">Ngày chiếu</p>
           <DatePicker
             value={dayjs(date)}
-            format="dddd DD/MM/YYYY"
+            format={(value) => capitalizeFirstLetter(value.format("dddd DD/MM/YYYY"))}
             onChange={(date) => setDate(dayjs(date).format("YYYY-MM-DD"))}
             allowClear={false}
             cellRender={cellRender}
+            style={{ width: 200 }}
           />
 
           <Checkbox checked={showPast} onChange={(e) => setShowPast(e.target.checked)}>

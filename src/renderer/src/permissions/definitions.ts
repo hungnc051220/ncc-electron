@@ -15,6 +15,27 @@ export const PERMISSION_ACTION_LABELS: Record<PermissionAction, string> = {
 
 export const PERMISSION_CATALOG: PermissionDefinition[] = [
   {
+    key: "settings_branch",
+    module: "Hệ thống",
+    label: "Thiết lập hệ thống - Cài đặt chi nhánh",
+    route: "/settings",
+    actions: ["access", "view", "update", "configure"]
+  },
+  {
+    key: "settings_pos",
+    module: "Hệ thống",
+    label: "Thiết lập hệ thống - Cấu hình máy POS",
+    route: "/settings",
+    actions: ["access", "view", "update", "configure"]
+  },
+  {
+    key: "settings_endpoint",
+    module: "Hệ thống",
+    label: "Thiết lập hệ thống - Cấu hình Endpoint",
+    route: "/settings",
+    actions: ["access", "view", "update", "configure"]
+  },
+  {
     key: "users",
     module: "Hệ thống",
     label: "Quản lý người dùng",
@@ -34,20 +55,6 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     label: "Xem seri máy",
     route: "/machine-serials",
     actions: ["access", "list", "view"]
-  },
-  {
-    key: "settings_pos",
-    module: "Hệ thống",
-    label: "Thiết lập hệ thống - Cấu hình máy POS",
-    route: "/settings",
-    actions: ["access", "view", "update", "configure"]
-  },
-  {
-    key: "settings_endpoint",
-    module: "Hệ thống",
-    label: "Thiết lập hệ thống - Cấu hình Endpoint",
-    route: "/settings",
-    actions: ["access", "view", "update", "configure"]
   },
   {
     key: "settings_interface",

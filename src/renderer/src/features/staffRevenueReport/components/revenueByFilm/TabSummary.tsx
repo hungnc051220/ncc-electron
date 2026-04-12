@@ -1,7 +1,13 @@
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { TotalRevenueOnlineProps, TotalRevenueProps } from "@shared/types";
 import { Table } from "antd";
-import { Row, SummaryGroup, RevenueColumnMode, getActualRemittance } from ".";
+import {
+  Row,
+  SummaryGroup,
+  RevenueColumnMode,
+  getActualRemittance,
+  getTotalTicketAndContract
+} from ".";
 import type { TableProps } from "antd";
 import dayjs from "dayjs";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
@@ -197,6 +203,12 @@ const TabSummary = ({
       align: "right"
     },
     {
+      title: "Vé bán + HĐ",
+      key: "totalTicketAndContract",
+      align: "right",
+      render: (_: number, row: SummaryRow) => formatNumber(getTotalTicketAndContract(row))
+    },
+    {
       title: "Tổng doanh thu",
       key: "actualSale",
       dataIndex: "actualSale",
@@ -253,7 +265,7 @@ const TabSummary = ({
                 {
                   title: "Tổng doanh thu sau KM",
                   key: "totalRevenueAfterDiscount",
-                  width: 170,
+                  width: 200,
                   align: "right" as const,
                   render: (_: number, row: SummaryRow) =>
                     formatMoney(row.actualSale - row.discountTotal)
@@ -311,30 +323,37 @@ const TabSummary = ({
                         <strong>{formatNumber(value?.totalContractQuantity || 0)}</strong>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={6} align="right">
+                        <strong>
+                          {formatNumber(
+                            (value?.totalQuantity || 0) + (value?.totalContractQuantity || 0)
+                          )}
+                        </strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={7} align="right">
                         <strong>{formatMoney(value?.actualSale || 0)}</strong>
                       </Table.Summary.Cell>
                       {columnMode !== "manufacturer" && (
                         <>
-                          <Table.Summary.Cell index={7} align="right">
+                          <Table.Summary.Cell index={8} align="right">
                             <strong>{formatMoney(crmDiscountTotal)}</strong>
                           </Table.Summary.Cell>
-                          <Table.Summary.Cell index={8} align="right">
+                          <Table.Summary.Cell index={9} align="right">
                             <strong>{formatMoney(internalDiscount.discountTotal ?? 0)}</strong>
                           </Table.Summary.Cell>
                           {columnMode === "user" ? (
                             <>
-                              <Table.Summary.Cell index={9} align="right">
+                              <Table.Summary.Cell index={10} align="right">
                                 <strong>{formatMoney(value?.saleVnPayQr || 0)}</strong>
                               </Table.Summary.Cell>
-                              <Table.Summary.Cell index={10} align="right">
+                              <Table.Summary.Cell index={11} align="right">
                                 <strong>{formatMoney(value?.saleVietQr || 0)}</strong>
                               </Table.Summary.Cell>
-                              <Table.Summary.Cell index={11} align="right">
+                              <Table.Summary.Cell index={12} align="right">
                                 <strong>{formatMoney(actualRemittance)}</strong>
                               </Table.Summary.Cell>
                             </>
                           ) : (
-                            <Table.Summary.Cell index={9} align="right">
+                            <Table.Summary.Cell index={10} align="right">
                               <strong>{formatMoney(totalRevenueAfterDiscount)}</strong>
                             </Table.Summary.Cell>
                           )}

@@ -8,12 +8,12 @@ import { MoreOutlined } from "@ant-design/icons";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { extractSeatValues, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown, Form, Modal, Select, message } from "antd";
+import { Button, Dropdown, Form, Modal, Select, Tooltip, message } from "antd";
 import dayjs from "dayjs";
 import { Check, Eye, Printer, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -183,11 +183,17 @@ const InvitationTicketsPage = () => {
     [cancelOrder, handleCancelDialogClose, selectedCancelOrder]
   );
 
-  const actionItems = [
-    ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
-    ...(canPrint ? [{ key: "2", icon: <Printer size={16} />, label: "Xuất vé mời" }] : []),
-    ...(canDelete ? [{ key: "3", icon: <X size={16} />, label: "Hủy vé mời" }] : [])
-  ];
+  const getActionItems = (record: OrderDetailProps) => {
+    const isPrinted = !!record.order?.invitationTickets?.urlTicket;
+
+    return [
+      ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
+      ...(!isPrinted && canPrint
+        ? [{ key: "2", icon: <Printer size={16} />, label: "Xuất vé mời" }]
+        : []),
+      ...(canDelete ? [{ key: "3", icon: <X size={16} />, label: "Hủy vé mời" }] : [])
+    ];
+  };
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
@@ -261,30 +267,25 @@ const InvitationTicketsPage = () => {
       title: "Vị trí ghế",
       key: "cancelChairValue",
       dataIndex: "cancelChairValue",
+      width: 220,
       sorter: (a, b) => {
-        const aChairs = [
-          ...(a.order?.items?.map((item) => item.listChairValueF1) || []),
-          ...(a.order?.items?.map((item) => item.listChairValueF2) || []),
-          ...(a.order?.items?.map((item) => item.listChairValueF3) || [])
-        ]
-          .filter(Boolean)
-          .join(", ");
-        const bChairs = [
-          ...(b.order?.items?.map((item) => item.listChairValueF1) || []),
-          ...(b.order?.items?.map((item) => item.listChairValueF2) || []),
-          ...(b.order?.items?.map((item) => item.listChairValueF3) || [])
-        ]
-          .filter(Boolean)
-          .join(", ");
+        const aChairs = extractSeatValues(a.order?.items).join(", ");
+        const bChairs = extractSeatValues(b.order?.items).join(", ");
 
         return compareText(aChairs, bChairs);
       },
       render: (_, record) => {
-        const chairsF1 = record.order?.items?.map((item) => item.listChairValueF1);
-        const chairsF2 = record.order?.items?.map((item) => item.listChairValueF2);
-        const chairsF3 = record.order?.items?.map((item) => item.listChairValueF3);
-        const allChairs = [...chairsF1, ...chairsF2, ...chairsF3].filter(Boolean);
-        return allChairs.join(", ");
+        const chairs = extractSeatValues(record.order?.items).join(", ");
+
+        if (!chairs) {
+          return "";
+        }
+
+        return (
+          <Tooltip title={chairs}>
+            <div className="max-w-50 truncate">{chairs}</div>
+          </Tooltip>
+        );
       }
     },
     {
@@ -352,34 +353,42 @@ const InvitationTicketsPage = () => {
       align: "center",
       fixed: "right"
     },
-    ...(actionItems.length
+    ...(canView || canPrint || canDelete
       ? [
           {
             title: "",
             key: "operation",
             width: 50,
-            render: (_: unknown, record: OrderDetailProps) => (
-              <Dropdown
-                menu={{
-                  items: actionItems,
-                  onClick: (e) => {
-                    if (e.key === "1") {
-                      handeViewDetail(record);
+            render: (_: unknown, record: OrderDetailProps) => {
+              const items = getActionItems(record);
+
+              if (!items.length) {
+                return null;
+              }
+
+              return (
+                <Dropdown
+                  menu={{
+                    items,
+                    onClick: (e) => {
+                      if (e.key === "1") {
+                        handeViewDetail(record);
+                      }
+                      if (e.key === "2") {
+                        handlePrint(record);
+                      }
+                      if (e.key === "3") {
+                        handleOpenCancelDialog(record);
+                      }
                     }
-                    if (e.key === "2") {
-                      handlePrint(record);
-                    }
-                    if (e.key === "3") {
-                      handleOpenCancelDialog(record);
-                    }
-                  }
-                }}
-                arrow
-                trigger={["click"]}
-              >
-                <MoreOutlined />
-              </Dropdown>
-            ),
+                  }}
+                  arrow
+                  trigger={["click"]}
+                >
+                  <MoreOutlined />
+                </Dropdown>
+              );
+            },
             align: "center" as const,
             fixed: "right" as const
           }

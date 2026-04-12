@@ -84,6 +84,7 @@ const Seat = ({
   isBlockedOnline,
   isSelectingByOther,
   seatColor,
+  seatUniqueKey,
   onHover,
   onLeave
 }: {
@@ -95,6 +96,7 @@ const Seat = ({
   isBlockedOnline?: boolean;
   isSelectingByOther?: boolean;
   seatColor?: string;
+  seatUniqueKey?: string;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
 }) => {
@@ -121,10 +123,10 @@ const Seat = ({
         canSelect && !isSelectingByOther && "selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
+        isBlockedOnline && "bg-trunks/50",
         seat.status === 1 && "bg-trunks text-white",
         seat.isContract && "bg-raditz text-white",
         seat.isHold && "bg-roshi text-white",
-        isBlockedOnline && "bg-trunks/50",
         seat.isInvitation && "bg-teal-500 text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white",
@@ -139,7 +141,7 @@ const Seat = ({
       onClick={handleClick}
       data-seat-code={seat.code}
       data-seat-floor={seat.floor}
-      data-seat-unique-key={`${seat.floor}-${seat.seat}`}
+      data-seat-unique-key={seatUniqueKey ?? `${seat.floor}-${seat.seat}`}
       onMouseEnter={(e) => onHover?.(seat, e)}
       onMouseLeave={onLeave}
     >

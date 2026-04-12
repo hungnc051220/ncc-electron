@@ -8,7 +8,12 @@ import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getPrintErrorMessage } from "@renderer/lib/print";
-import { buildTicketsFromOrder, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import {
+  buildTicketsFromOrder,
+  filterEmptyValues,
+  formatNumber,
+  formatSeatValues
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
@@ -213,7 +218,7 @@ const PrintOnlineTicketsPage = () => {
       title: "Vị trí ghế",
       key: "positions",
       dataIndex: "order",
-      render: (_, record) => record.order.items?.map((item) => item.listChairValueF1).join(", ")
+      render: (_, record) => formatSeatValues(record.order.items)
     },
     {
       title: "Đã in",

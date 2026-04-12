@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import Selecto from "react-selecto";
-import SeatOnline from "./SeatOnline";
+import Seat from "./Seat";
 import TooltipFloating from "./TooltipFloating";
 
 type TooltipPosition = {
@@ -307,7 +307,7 @@ const SeatsOnline = ({
           {item[4]?.code?.charAt(0) || ""}
         </div>
         {item.map((seat) => (
-          <SeatOnline
+          <Seat
             key={seat.seat}
             seat={seat}
             isSelected={selectedSeats.some((s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat))}
@@ -315,6 +315,7 @@ const SeatsOnline = ({
             size={seatSize}
             canSelect={canSelectSeat(seat)}
             isBlockedOnline={isSeatBlockedOnline(seat)}
+            seatUniqueKey={getSeatUniqueKey(seat)}
             onHover={handleHover}
             onLeave={handleLeave}
           />

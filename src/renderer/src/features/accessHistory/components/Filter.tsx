@@ -1,21 +1,14 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { usersApi } from "@renderer/api/users.api";
 import { useDebounce } from "@renderer/hooks/useDebounce";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { dataTypes } from "./accessHistory.constants";
 
 const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
 
 export interface AccessHistoryFilterValues {
   userId?: number;

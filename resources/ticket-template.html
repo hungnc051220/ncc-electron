@@ -159,8 +159,8 @@
       <img class="bg-img" src="{{imageSource}}" />
       <div class="content">
         <div class="relative content-left">
-          <h1 class="film-name">{{filmName}}</h1>
-          <h1 class="film-name">{{filmNameEn}}</h1>
+          <h1 class="film-name" style="word-break: break-all">{{filmName}}</h1>
+          <h1 class="film-name" style="word-break: break-all">{{filmNameEn}}</h1>
           <br />
           <h2 style="margin-top: 190px">Thể loại: {{categories}}</h2>
         </div>
@@ -176,7 +176,12 @@
           <br />
           <div class="film-cotainer">
             <h2 class="film-room">PHÒNG /HALL: {{room}}</h2>
-            <h2 class="film-seat">GHẾ /SEAT: {{seat}}</h2>
+            <h2 class="film-seat" style="word-break: break-all">GHẾ /SEAT: {{seat}}</h2>
+          </div>
+
+          <br />
+          <div class="film-cotainer">
+            <h2 class="film-room">Tầng {{floor}}</h2>
           </div>
         </div>
       </div>

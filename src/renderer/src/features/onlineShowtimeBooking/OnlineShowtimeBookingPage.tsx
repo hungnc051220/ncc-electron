@@ -3,24 +3,18 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
-import type { PaginationProps, TableProps, TimeRangePickerProps } from "antd";
+import type { PaginationProps, TableProps } from "antd";
 import { DatePicker, message, Switch } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 
 const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
 
 const OnlineShowtimeBookingPage = () => {
   const [current, setCurrent] = useState(1);

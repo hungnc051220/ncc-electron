@@ -1,6 +1,6 @@
 import { FilterOutlined } from "@ant-design/icons";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useQueryClient } from "@tanstack/react-query";
-import type { TimeRangePickerProps } from "antd";
 import { Button, DatePicker, Form, Modal } from "antd";
 import dayjs from "dayjs";
 import { type Dayjs } from "dayjs";
@@ -8,13 +8,6 @@ import { startTransition, useEffect, useState } from "react";
 import { ValuesProps } from ".";
 
 const { RangePicker } = DatePicker;
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  { label: "7 ngày trước", value: [dayjs().add(-7, "d"), dayjs()] },
-  { label: "14 ngày trước", value: [dayjs().add(-14, "d"), dayjs()] },
-  { label: "30 ngày trước", value: [dayjs().add(-30, "d"), dayjs()] },
-  { label: "90 ngày trước", value: [dayjs().add(-90, "d"), dayjs()] }
-];
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;

@@ -3,6 +3,7 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
+import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
@@ -86,7 +87,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     hasNextPage: hasNextScreeningsPage,
     isFetchingNextPage: isFetchingNextScreeningsPage
   } = useInfiniteQuery({
-    queryKey: ["plan-screenings-all", params],
+    queryKey: [...planScreeningsKeys.all, "all-pages", params],
     queryFn: ({ pageParam = 1 }) =>
       planScreeningsApi.getAll({
         ...params,
@@ -96,7 +97,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.current < lastPage.pageCount ? lastPage.current + 1 : undefined,
-    enabled: !!planCinemaId
+    enabled: !!planCinemaId,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always"
   });
 
   useEffect(() => {
@@ -105,34 +109,42 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     }
   }, [fetchNextScreeningsPage, hasNextScreeningsPage, isFetchingNextScreeningsPage]);
 
+  useEffect(() => {
+    setSelectedRowKeys([]);
+    setRoomId(undefined);
+    setDate(null);
+    setConfirmDeleteOpen(false);
+  }, [planCinemaId]);
+
   const screenings = useMemo(
     () => screeningsPages?.pages.flatMap((page) => page.data) ?? [],
     [screeningsPages]
   );
   const selectedScreenings = useMemo(
     () =>
-      screenings.filter((screening) => selectedRowKeys.includes(screening.id)).sort((a, b) => {
-        const left = `${a.projectDate} ${a.projectTime}`;
-        const right = `${b.projectDate} ${b.projectTime}`;
-        return dayjs(left).valueOf() - dayjs(right).valueOf();
-      }),
+      screenings
+        .filter((screening) => selectedRowKeys.includes(screening.id))
+        .sort((a, b) => {
+          const left = `${a.projectDate} ${a.projectTime}`;
+          const right = `${b.projectDate} ${b.projectTime}`;
+          return dayjs(left).valueOf() - dayjs(right).valueOf();
+        }),
     [screenings, selectedRowKeys]
   );
   const renderScreeningSummary = (screening: PlanScreeningDetailProps) => (
-    <div className="mt-3 rounded-md border border-[var(--ant-color-border)] bg-[var(--ant-color-fill-tertiary)] px-3 py-2">
-      <div className="font-medium text-[var(--ant-color-text)]">{screening.filmInfo?.filmName}</div>
-      <div className="mt-1 grid gap-1 text-sm text-[var(--ant-color-text-secondary)]">
+    <div className="mt-3 rounded-md border border-(--ant-color-border) bg-(--ant-color-fill-tertiary) px-3 py-2">
+      <div className="font-medium text-(--ant-color-text)">{screening.filmInfo?.filmName}</div>
+      <div className="mt-1 grid gap-1 text-sm text-(--ant-color-text-secondary)">
         <div>
-          <strong className="text-[var(--ant-color-text)]">Ngày chiếu:</strong>{" "}
+          <strong className="text-(--ant-color-text)">Ngày chiếu:</strong>{" "}
           {formatScreeningDate(screening.projectDate)}
         </div>
         <div>
-          <strong className="text-[var(--ant-color-text)]">Giờ chiếu:</strong>{" "}
+          <strong className="text-(--ant-color-text)">Giờ chiếu:</strong>{" "}
           {formatScreeningTime(screening.projectTime)}
         </div>
         <div>
-          <strong className="text-[var(--ant-color-text)]">Phòng:</strong>{" "}
-          {screening.roomInfo?.name}
+          <strong className="text-(--ant-color-text)">Phòng:</strong> {screening.roomInfo?.name}
         </div>
       </div>
     </div>
@@ -344,7 +356,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           <div className="space-y-3">
             Bạn có chắc chắn muốn xóa <strong>{selectedScreenings.length}</strong> suất chiếu sau
             không?
-            <div className="max-h-60 space-y-2 overflow-y-auto rounded-md border border-[var(--ant-color-border-secondary)] p-2">
+            <div className="max-h-60 space-y-2 overflow-y-auto rounded-md border border-(--ant-color-border-secondary) p-2">
               {selectedScreenings.map((screening) => (
                 <div key={screening.id}>{renderScreeningSummary(screening)}</div>
               ))}

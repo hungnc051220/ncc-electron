@@ -6,7 +6,7 @@ import { Button, message } from "antd";
 import ExcelJS from "exceljs";
 import { DownloadIcon } from "lucide-react";
 import dayjs from "dayjs";
-import { RevenueColumnMode, getActualRemittance } from ".";
+import { RevenueColumnMode, getActualRemittance, getTotalTicketAndContract } from ".";
 
 type Row = {
   filmName: string;
@@ -244,6 +244,7 @@ const ExportRevenueExcelButton = ({
         "Tổng",
         "Giấy mời",
         "Hợp đồng",
+        "Vé bán + HĐ",
         "Tổng doanh thu",
         ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", ...userRevenueHeaders] : [])
       ];
@@ -287,11 +288,11 @@ const ExportRevenueExcelButton = ({
       ws.getCell(headerGroupRowIndex, priceStartCol).value = "Loại giá vé (Đơn vị tính: 1000 đồng)";
 
       const totalStartCol = priceEndCol + 1;
-      const amountCol = totalStartCol + 3;
+      const amountCol = totalStartCol + 4;
 
       let totalCol = totalStartCol;
 
-      const totalHeaders = ["Tổng vé", "Giấy mời", "Hợp đồng", "Tổng doanh thu"];
+      const totalHeaders = ["Tổng vé", "Giấy mời", "Hợp đồng", "Vé bán + HĐ", "Tổng doanh thu"];
 
       totalHeaders.forEach((title) => {
         ws.mergeCells(headerGroupRowIndex, totalCol, headerGroupRowIndex + 1, totalCol);
@@ -402,6 +403,7 @@ const ExportRevenueExcelButton = ({
           sum.totalQuantity,
           sum.totalInvitationQuantity,
           sum.totalContractQuantity,
+          getTotalTicketAndContract(sum),
           sum.actualSale,
           ...(showDiscountColumns
             ? [
@@ -436,6 +438,7 @@ const ExportRevenueExcelButton = ({
           film.totalQuantity,
           film.totalInvitationQuantity,
           film.totalContractQuantity,
+          getTotalTicketAndContract(film),
           film.actualSale,
           ...(showDiscountColumns
             ? [
@@ -469,6 +472,7 @@ const ExportRevenueExcelButton = ({
             r.totalQuantity,
             r.totalInvitationQuantity,
             r.totalContractQuantity,
+            getTotalTicketAndContract(r),
             r.actualSale,
             ...(showDiscountColumns
               ? [
@@ -491,6 +495,7 @@ const ExportRevenueExcelButton = ({
         "Tổng vé",
         "Giấy mời",
         "Hợp đồng",
+        "Vé bán + HĐ",
         "Tổng doanh thu",
         ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", ...userRevenueHeaders] : [])
       ];
@@ -513,7 +518,7 @@ const ExportRevenueExcelButton = ({
       const summaryPriceStartCol = 4;
       const summaryPriceEndCol = summaryPriceStartCol + allPrices.length - 1;
       const summaryTotalStartCol = summaryPriceStartCol + allPrices.length;
-      const summaryDiscountStartCol = showDiscountColumns ? summaryTotalStartCol + 4 : undefined;
+      const summaryDiscountStartCol = showDiscountColumns ? summaryTotalStartCol + 5 : undefined;
       const summaryVnpayCol =
         showDiscountColumns && showActualRemittance && summaryDiscountStartCol
           ? summaryDiscountStartCol + 2
@@ -581,6 +586,7 @@ const ExportRevenueExcelButton = ({
           offSum.totalQuantity,
           offSum.totalInvitationQuantity,
           offSum.totalContractQuantity,
+          getTotalTicketAndContract(offSum),
           offSum.actualSale,
           ...(showDiscountColumns
             ? [
@@ -602,6 +608,7 @@ const ExportRevenueExcelButton = ({
           onSum.totalQuantity,
           onSum.totalInvitationQuantity,
           onSum.totalContractQuantity,
+          getTotalTicketAndContract(onSum),
           onSum.actualSale,
           ...(showDiscountColumns
             ? [
@@ -631,6 +638,7 @@ const ExportRevenueExcelButton = ({
           sum.totalQuantity,
           sum.totalInvitationQuantity,
           sum.totalContractQuantity,
+          getTotalTicketAndContract(sum),
           sum.actualSale,
           ...(showDiscountColumns
             ? [
@@ -654,10 +662,11 @@ const ExportRevenueExcelButton = ({
         ...allPrices.map((_, index) => summaryPriceStartCol + index),
         summaryTotalStartCol,
         summaryTotalStartCol + 1,
-        summaryTotalStartCol + 2
+        summaryTotalStartCol + 2,
+        summaryTotalStartCol + 3
       ];
       const summaryMoneyCols = [
-        summaryTotalStartCol + 3,
+        summaryTotalStartCol + 4,
         ...(showDiscountColumns && summaryDiscountStartCol
           ? [
               summaryDiscountStartCol,

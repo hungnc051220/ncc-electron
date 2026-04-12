@@ -6,7 +6,7 @@ import { Dropdown } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { OrderDetailProps } from "@shared/types";
-import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { filterEmptyValues, formatNumber, formatSeatValues } from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -168,7 +168,7 @@ const FindOnlineTicketsPage = () => {
       title: "Vị trí ghế",
       key: "positions",
       dataIndex: "order",
-      render: (_, record) => record.order.items?.map((item) => item.listChairValueF1).join(", ")
+      render: (_, record) => formatSeatValues(record.order.items)
     },
 
     {

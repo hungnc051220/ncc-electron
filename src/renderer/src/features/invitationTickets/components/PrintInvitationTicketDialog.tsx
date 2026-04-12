@@ -6,6 +6,7 @@ import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { formatSeatValues } from "@renderer/lib/utils";
 import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { OrderDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -111,7 +112,11 @@ const PrintInvitationTicketDialog = ({
     const qrBase64 = await QRCode.toDataURL(barCode, {
       errorCorrectionLevel: "H",
       margin: 0,
-      width: 160
+      width: 160,
+      color: {
+        dark: "#000000",
+        light: "#0000"
+      }
     });
 
     return qrBase64;
@@ -147,6 +152,8 @@ const PrintInvitationTicketDialog = ({
     let outputPath: string | null = null;
     const qrBase64 = await generateQrCode(selectedItem.order.barCode);
 
+    console.log(selectedItem);
+
     try {
       setLoading(true);
       outputPath = await window.api.exportTicket({
@@ -156,7 +163,7 @@ const PrintInvitationTicketDialog = ({
         date: dayjs(selectedItem?.planScreening?.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
         datetime: dayjs(selectedItem?.planScreening?.projectTime).format("HH:mm"),
         room: selectedItem.room?.name,
-        seat: selectedItem.order.items[0].listChairValueF1,
+        seat: formatSeatValues(selectedItem.order.items),
         imageSource: values.background,
         qrImage: qrBase64,
         barCode: selectedItem.order.barCode,

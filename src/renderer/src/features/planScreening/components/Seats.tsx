@@ -44,6 +44,7 @@ interface SeatsProps {
   onSelectionLimitReached?: () => void;
   syncedSelectedFloor?: number | null;
   onSelectedFloorChange?: (floor: number) => void;
+  selectionMode?: "default" | "emptyOnly";
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
@@ -63,7 +64,8 @@ const Seats = ({
   maxSelectableSeats,
   onSelectionLimitReached,
   syncedSelectedFloor,
-  onSelectedFloorChange
+  onSelectedFloorChange,
+  selectionMode = "default"
 }: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
@@ -93,6 +95,10 @@ const Seats = ({
   const canSelectSeat = useCallback(
     (seat: ListSeat) => {
       if (seat.type === 12) return false;
+
+      if (selectionMode === "emptyOnly") {
+        return seat.status !== 1 && seat.isHold !== 1;
+      }
 
       // --- Nếu đang ở chế độ hủy ---
       if (cancelMode) {
@@ -131,7 +137,7 @@ const Seats = ({
 
       return true;
     },
-    [cancelMode, screenMode]
+    [cancelMode, screenMode, selectionMode]
   );
 
   const isSeatBlockedOnline = useCallback(

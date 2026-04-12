@@ -1,12 +1,17 @@
+import { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { useCancelTickets } from "@renderer/hooks/useCancelTickets";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { usePermission } from "@renderer/permissions/usePermission";
 import { CancellationTicketProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { Dropdown } from "antd";
+import { Eye } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 import Filter from "./components/Filter";
 
 export interface ValuesProps {
@@ -24,6 +29,10 @@ const CancellationTicketsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const { can } = usePermission();
+  const canView = can("cancellation_tickets", "view");
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -43,6 +52,18 @@ const CancellationTicketsPage = () => {
 
   const { data: cancellationTickets, isFetching } = useCancelTickets(params);
 
+  const handleViewDetail = useCallback((record: CancellationTicketProps) => {
+    setSelectedOrderId(record.order.id);
+    setDialogOpen(true);
+  }, []);
+
+  const handleDialogClose = useCallback((open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setSelectedOrderId(null);
+    }
+  }, []);
+
   const columns: TableProps<CancellationTicketProps>["columns"] = [
     {
       title: "STT",
@@ -50,6 +71,14 @@ const CancellationTicketsPage = () => {
       align: "center",
       render: (_, __, index) => (current - 1) * pageSize + index + 1,
       width: 50,
+      fixed: "left"
+    },
+    {
+      title: "Mã đơn",
+      key: "id",
+      dataIndex: "id",
+      sorter: (a, b) => compareNumber(a.order.id, b.order.id),
+      render: (_, record) => record.order.id,
       fixed: "left"
     },
     {
@@ -139,8 +168,36 @@ const CancellationTicketsPage = () => {
       title: "Lý do hủy",
       key: "reason",
       dataIndex: "reason",
-      sorter: (a, b) => compareText(a.reason, b.reason)
-    }
+      sorter: (a, b) => compareText(a.reason, b.reason),
+      fixed: "right"
+    },
+    ...(canView
+      ? [
+          {
+            title: "",
+            key: "operation",
+            width: 50,
+            render: (_: unknown, record: CancellationTicketProps) => (
+              <Dropdown
+                menu={{
+                  items: [{ key: "view", icon: <Eye size={16} />, label: "Xem chi tiết" }],
+                  onClick: (e) => {
+                    if (e.key === "view") {
+                      handleViewDetail(record);
+                    }
+                  }
+                }}
+                arrow
+                trigger={["click"]}
+              >
+                <MoreOutlined />
+              </Dropdown>
+            ),
+            align: "center" as const,
+            fixed: "right" as const
+          }
+        ]
+      : [])
   ];
 
   const onSearch = (values: ValuesProps) => {
@@ -182,6 +239,14 @@ const CancellationTicketsPage = () => {
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
         }}
       />
+
+      {dialogOpen && (
+        <OrderDetailDialog
+          open={dialogOpen}
+          onOpenChange={handleDialogClose}
+          selectedOrderId={selectedOrderId}
+        />
+      )}
     </div>
   );
 };

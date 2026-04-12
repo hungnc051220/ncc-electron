@@ -1,17 +1,16 @@
-import { ordersApi } from "@renderer/api/orders.api";
+import { ReloadOutlined } from "@ant-design/icons";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { cn, formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
-import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
+import { cn, formatMoney, formatPaymentMethod, formatSeatValues } from "@renderer/lib/utils";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Checkbox, Modal, message } from "antd";
+import { Button, Checkbox, Modal, Tag, message } from "antd";
 import dayjs from "dayjs";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { ReloadOutlined } from "@ant-design/icons";
 
 interface OrderDialogProps {
   open: boolean;
@@ -29,7 +28,6 @@ const OrderDetailDialog = ({
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [isChangingToSuccess, setIsChangingToSuccess] = useState(false);
   const {
     data: orderDetail,
@@ -45,12 +43,14 @@ const OrderDetailDialog = ({
     .join(" ");
   const totalTickets = currentItems.reduce((sum, item) => sum + item.quantity, 0);
   const isRefundOrder = currentOrder?.refundStatusId != null;
+  const isInvitationOrder = !!currentOrder?.isInvitation;
   const canShowChangeToSuccessButton =
     !!currentOrder &&
     currentOrder.orderStatusId !== OrderStatus.CANCELLED &&
-    !currentOrder.isInvitation &&
+    !isInvitationOrder &&
     !currentOrder.isContract &&
     !isRefundOrder;
+  const invitationTicket = currentOrder?.invitationTickets;
 
   const ticketPromotions = useMemo(() => {
     const map = new Map<
@@ -109,11 +109,7 @@ const OrderDetailDialog = ({
         : "none";
 
   const getChairs = () => {
-    const chairsF1 = currentItems.map((item) => item.listChairValueF1);
-    const chairsF2 = currentItems.map((item) => item.listChairValueF2);
-    const chairsF3 = currentItems.map((item) => item.listChairValueF3);
-    const allChairs = [...chairsF1, ...chairsF2, ...chairsF3].filter(Boolean);
-    return allChairs.join(", ");
+    return formatSeatValues(currentItems);
   };
 
   const getPromotionValue = (type: string, rate: number, amount: number) => {
@@ -128,25 +124,127 @@ const OrderDetailDialog = ({
     return type || "Ưu đãi đặc biệt";
   };
 
+  const formatInvitationTicketLabel = (key: string) => {
+    const labelMap: Record<string, string> = {
+      receivedEmail: "Email nhận vé",
+      createdAt: "Thời gian xuất vé",
+      status: "Trạng thái",
+      urlTicket: "Ảnh vé mời",
+      createdBy: "Người tạo"
+    };
+
+    if (labelMap[key]) {
+      return labelMap[key];
+    }
+
+    return key
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/_/g, " ")
+      .replace(/^./, (char) => char.toUpperCase());
+  };
+
+  const formatInvitationTicketValue = (key: string, value: unknown) => {
+    if (value == null || value === "") {
+      return "-";
+    }
+
+    if (typeof value === "boolean") {
+      return value ? "Có" : "Không";
+    }
+
+    if (typeof value === "string") {
+      const trimmedValue = value.trim();
+
+      if (!trimmedValue) {
+        return "-";
+      }
+
+      if (["createdAt", "updatedAt", "sentAt"].includes(key) && dayjs(trimmedValue).isValid()) {
+        return dayjs(trimmedValue).format("HH:mm DD/MM/YYYY");
+      }
+
+      return trimmedValue;
+    }
+
+    if (typeof value === "number") {
+      return value;
+    }
+
+    return JSON.stringify(value);
+  };
+
+  const renderInvitationTicketStatus = (status?: string | null) => {
+    const normalizedStatus = status?.toLowerCase();
+    const configMap: Record<string, { label: string; color: string; className: string }> = {
+      new: {
+        label: "Mới",
+        color: "processing",
+        className:
+          "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300"
+      },
+      sent: {
+        label: "Đã gửi",
+        color: "success",
+        className:
+          "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+      },
+      failed: {
+        label: "Gửi lỗi",
+        color: "error",
+        className:
+          "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"
+      }
+    };
+
+    const config = normalizedStatus ? configMap[normalizedStatus] : undefined;
+
+    return (
+      <Tag
+        color={config?.color ?? "default"}
+        className={cn(
+          "mr-0 rounded-full border px-3 py-1 text-xs font-semibold",
+          config?.className
+        )}
+      >
+        {config?.label ?? status ?? "-"}
+      </Tag>
+    );
+  };
+
+  const invitationTicketFields = useMemo(
+    () =>
+      invitationTicket
+        ? (
+            [
+              ["receivedEmail", invitationTicket.receivedEmail],
+              ["createdAt", invitationTicket.createdAt],
+              ["status", invitationTicket.status],
+              ["createdBy", invitationTicket.createdBy]
+            ] as const
+          ).filter(([, value]) => value != null && value !== "")
+        : [],
+    [invitationTicket]
+  );
+
   const renderInfoRow = (
     label: string,
-    value?: string | number | null,
+    value?: ReactNode,
     options?: {
       borderClassName?: string;
       valueClassName?: string;
-      fallback?: string;
+      fallback?: ReactNode;
     }
   ) => (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 border-b border-slate-100 py-2 last:border-b-0 dark:border-app-border",
+        "grid grid-cols-[96px_minmax(0,1fr)] items-start gap-4 border-b border-slate-100 py-2 last:border-b-0 dark:border-app-border",
         options?.borderClassName
       )}
     >
-      <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{label}</span>
       <span
         className={cn(
-          "text-right text-sm font-medium text-slate-900 dark:text-slate-100",
+          "min-w-0 wrap-break-word text-right text-sm font-medium text-slate-900 dark:text-slate-100",
           options?.valueClassName
         )}
       >
@@ -188,29 +286,6 @@ const OrderDetailDialog = ({
     return refreshed.data;
   };
 
-  const onCheckPaymentTransaction = async () => {
-    if (!currentOrder) return;
-
-    try {
-      setIsCheckingPayment(true);
-      await ordersApi.checkTransaction({ orderId: currentOrder.id });
-      const refreshedOrderDetail = await refreshOrderDetail();
-
-      if (refreshedOrderDetail?.order.paymentStatusId === PaymentStatus.PAID) {
-        message.success("Đã cập nhật trạng thái thanh toán thành công");
-        return;
-      }
-
-      message.warning(
-        "Đơn chưa thanh toán. Nếu chắc chắn đơn đã thanh toán, vui lòng ấn Làm mới dữ liệu để cập nhật lại."
-      );
-    } catch (error) {
-      message.error(getApiErrorMessage(error, "Kiểm tra giao dịch thanh toán thất bại"));
-    } finally {
-      setIsCheckingPayment(false);
-    }
-  };
-
   const onChangeStatusOrder = async () => {
     if (!currentOrder) return;
 
@@ -238,11 +313,6 @@ const OrderDetailDialog = ({
       footer={(_, { CancelBtn }) => (
         <>
           <CancelBtn />
-          {currentOrder && (
-            <Button onClick={() => void onCheckPaymentTransaction()} loading={isCheckingPayment}>
-              Kiểm tra giao dịch thanh toán
-            </Button>
-          )}
           {canShowChangeToSuccessButton && (
             <Button
               variant="solid"
@@ -281,7 +351,7 @@ const OrderDetailDialog = ({
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() => void refreshOrderDetail()}
-                loading={isFetchingOrderDetail && !isCheckingPayment && !isChangingToSuccess}
+                loading={isFetchingOrderDetail && !isChangingToSuccess}
               >
                 Làm mới dữ liệu
               </Button>
@@ -291,68 +361,148 @@ const OrderDetailDialog = ({
 
         <div className="grid gap-5 lg:grid-cols-[1.1fr,0.9fr]">
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                  Khách hàng và thông tin vé
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Thông tin người mua và trạng thái gửi vé
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-x-6 md:grid-cols-2">
-              <div>
-                {renderInfoRow("Tên khách hàng", customerName)}
-                {renderInfoRow("Email", currentOrder?.customerEmail)}
-                {renderInfoRow("Số điện thoại", currentOrder?.customerPhone)}
-                {renderInfoRow(
-                  "Thời gian mua",
-                  currentOrder?.createdOnUtc
-                    ? dayjs(currentOrder.createdOnUtc).format("HH:mm DD/MM/YYYY")
-                    : "-"
-                )}
-                {renderInfoRow(
-                  "Kênh thanh toán",
-                  formatPaymentMethod(currentOrder?.paymentMethodSystemName)
-                )}
-              </div>
-              <div>
-                <div className="border-b border-slate-100 py-2 dark:border-app-border">
-                  <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                    Trạng thái gửi vé
-                  </p>
-                  <div className="flex flex-wrap gap-4">
-                    <Checkbox checked={!!currentOrder?.isEmailSent} disabled>
-                      Đã gửi email
-                    </Checkbox>
-                    <Checkbox checked={!!currentOrder?.isSmsSent} disabled>
-                      Đã gửi tin nhắn
-                    </Checkbox>
+            {isInvitationOrder ? (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                      Thông tin giấy mời
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Chi tiết phát hành và gửi vé mời cho khách
+                    </p>
                   </div>
                 </div>
-                <div className="py-2 grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                      Trạng thái đơn
-                    </p>
-                    {currentOrder?.orderStatusId && (
-                      <OrderStatusBadge status={currentOrder.orderStatusId} type="order" />
-                    )}
-                  </div>
 
+                {invitationTicket ? (
+                  <div className="space-y-5">
+                    <div className="grid gap-x-6 md:grid-cols-2">
+                      <div>
+                        {invitationTicketFields
+                          .filter((_, index) => index % 2 === 0)
+                          .map(([key, value]) =>
+                            renderInfoRow(
+                              formatInvitationTicketLabel(key),
+                              key === "status"
+                                ? renderInvitationTicketStatus(String(value))
+                                : formatInvitationTicketValue(key, value),
+                              {
+                                valueClassName: key === "status" ? "" : undefined
+                              }
+                            )
+                          )}
+                      </div>
+                      <div>
+                        {invitationTicketFields
+                          .filter((_, index) => index % 2 === 1)
+                          .map(([key, value]) =>
+                            renderInfoRow(
+                              formatInvitationTicketLabel(key),
+                              key === "status"
+                                ? renderInvitationTicketStatus(String(value))
+                                : formatInvitationTicketValue(key, value),
+                              {
+                                valueClassName: key === "status" ? "" : undefined
+                              }
+                            )
+                          )}
+                      </div>
+                    </div>
+
+                    {invitationTicket.urlTicket ? (
+                      <div className="border-t border-slate-200 dark:border-app-border border-dashed">
+                        <div className="my-3 flex items-center justify-between gap-3">
+                          <div>
+                            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                              Ảnh vé mời
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 lg:grid-cols-[280px,1fr]">
+                          <div className="overflow-hidden rounded-2xl">
+                            <img
+                              src={invitationTicket.urlTicket}
+                              alt="Ảnh vé mời"
+                              className="h-full w-full object-contain"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
+                    Chưa có dữ liệu
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                      Trạng thái thanh toán
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                      Khách hàng và thông tin vé
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Thông tin người mua và trạng thái gửi vé
                     </p>
-                    {currentOrder?.paymentStatusId && (
-                      <OrderStatusBadge status={currentOrder.paymentStatusId} type="payment" />
-                    )}
                   </div>
                 </div>
-              </div>
-            </div>
+
+                <div className="grid gap-x-6 md:grid-cols-2">
+                  <div>
+                    {renderInfoRow("Tên khách hàng", customerName)}
+                    {renderInfoRow("Email", currentOrder?.customerEmail)}
+                    {renderInfoRow("Số điện thoại", currentOrder?.customerPhone)}
+                    {renderInfoRow(
+                      "Thời gian mua",
+                      currentOrder?.createdOnUtc
+                        ? dayjs(currentOrder.createdOnUtc).format("HH:mm DD/MM/YYYY")
+                        : "-"
+                    )}
+                    {renderInfoRow(
+                      "Kênh thanh toán",
+                      formatPaymentMethod(currentOrder?.paymentMethodSystemName)
+                    )}
+                  </div>
+                  <div>
+                    <div className="border-b border-slate-100 py-2 dark:border-app-border">
+                      <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                        Trạng thái gửi vé
+                      </p>
+                      <div className="flex flex-wrap gap-4">
+                        <Checkbox checked={!!currentOrder?.isEmailSent} disabled>
+                          Đã gửi email
+                        </Checkbox>
+                        <Checkbox checked={!!currentOrder?.isSmsSent} disabled>
+                          Đã gửi tin nhắn
+                        </Checkbox>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 py-2">
+                      <div>
+                        <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                          Trạng thái đơn
+                        </p>
+                        {currentOrder?.orderStatusId && (
+                          <OrderStatusBadge status={currentOrder.orderStatusId} type="order" />
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                          Trạng thái thanh toán
+                        </p>
+                        {currentOrder?.paymentStatusId && (
+                          <OrderStatusBadge status={currentOrder.paymentStatusId} type="payment" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {(currentOrder?.cancelTicket || isRefundOrder) && (
               <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-500/20 dark:bg-rose-500/5">
