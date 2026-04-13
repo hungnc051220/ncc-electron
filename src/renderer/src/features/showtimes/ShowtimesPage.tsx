@@ -123,7 +123,10 @@ const ShowtimesPage = () => {
             const selectedDate = dayjs(date, "YYYY-MM-DD");
             const isPastDay = selectedDate.isBefore(now, "day");
             const isToday = selectedDate.isSame(now, "day");
-            const isPastShowtime = isPlanScreeningLocked(selectedDate.format("YYYY-MM-DD"), s.projectTime);
+            const isPastShowtime = isPlanScreeningLocked(
+              selectedDate.format("YYYY-MM-DD"),
+              s.projectTime
+            );
             const isFutureShowtime = !isPastShowtime;
             const isDisabledShowtime = isSwapSeatsFlow && (isPastDay || isPastShowtime);
 
@@ -157,7 +160,7 @@ const ShowtimesPage = () => {
                   });
                 }}
               >
-                {dayjs(s.projectTime).add(7, "hour").format("HH:mm")}
+                {dayjs(s.projectTime).format("HH:mm")}
               </Button>
             );
           })}
