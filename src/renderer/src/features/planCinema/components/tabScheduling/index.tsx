@@ -1,10 +1,10 @@
+import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -53,6 +53,17 @@ const compareTicketPriceValue = (left?: string, right?: string) => {
   return leftPrice.seatType.localeCompare(rightPrice.seatType);
 };
 
+const formatTicketPriceDisplay = (value?: string) => {
+  const { seatType, amount } = parseTicketPriceValue(value);
+
+  if (!seatType && !amount) {
+    return "";
+  }
+
+  const formattedAmount = amount.toLocaleString("en-US");
+  return seatType ? `${seatType}: ${formattedAmount}` : formattedAmount;
+};
+
 const compareNullableText = (left?: string | null, right?: string | null) => {
   return (left ?? "").localeCompare(right ?? "", undefined, {
     numeric: true,
@@ -70,15 +81,16 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const [date, setDate] = useState<Dayjs | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  const params = useMemo(() => {
-    return {
+  const params = useMemo(
+    () => ({
       planCinemaId,
       roomId,
       fromDate: date ? dayjs(date).startOf("day").format("YYYY-MM-DD") : undefined,
       toDate: date ? dayjs(date).endOf("day").format("YYYY-MM-DD") : undefined,
       sort: "projectDate.asc,projectTime.asc"
-    };
-  }, [planCinemaId, roomId, date]);
+    }),
+    [planCinemaId, roomId, date]
+  );
 
   const {
     data: screeningsPages,
@@ -120,6 +132,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     () => screeningsPages?.pages.flatMap((page) => page.data) ?? [],
     [screeningsPages]
   );
+
   const selectedScreenings = useMemo(
     () =>
       screenings
@@ -131,6 +144,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
         }),
     [screenings, selectedRowKeys]
   );
+
   const renderScreeningSummary = (screening: PlanScreeningDetailProps) => (
     <div className="mt-3 rounded-md border border-(--ant-color-border) bg-(--ant-color-fill-tertiary) px-3 py-2">
       <div className="font-medium text-(--ant-color-text)">{screening.filmInfo?.filmName}</div>
@@ -149,6 +163,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       </div>
     </div>
   );
+
   const { can } = usePermission();
   const canUpdate = can("plan_cinema", "update");
   const canDelete = can("plan_cinema", "delete");
@@ -169,9 +184,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     prefetchAll: true
   });
 
-  const roomOptions = useMemo(() => {
-    return [...roomSelect.options].sort((a, b) => compareNullableText(a.label, b.label));
-  }, [roomSelect.options]);
+  const roomOptions = useMemo(
+    () => [...roomSelect.options].sort((a, b) => compareNullableText(a.label, b.label)),
+    [roomSelect.options]
+  );
 
   const deletePlanScreening = useDeletePlanScreening();
 
@@ -183,7 +199,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
         message.success("Xóa ca chiếu trong kế hoạch thành công");
       },
       onError: (error: unknown) => {
-        message.error(getApiErrorMessage(error, "Xóa ca chiếu vào kế hoạch thất bại"));
+        message.error(getApiErrorMessage(error, "Xóa ca chiếu trong kế hoạch thất bại"));
       }
     });
   };
@@ -227,12 +243,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       title: "Kết thúc",
       key: "endTime",
       dataIndex: "endTime",
-      render: (_, record) => {
-        const time = dayjs(record.projectTime)
+      render: (_, record) =>
+        dayjs(record.projectTime)
           .add(record.filmInfo?.duration ?? 0, "minute")
-          .format("HH:mm");
-        return time;
-      },
+          .format("HH:mm"),
       sorter: {
         compare: (a, b) => dayjs(a.projectTime).unix() - dayjs(b.projectTime).unix(),
         multiple: 1
@@ -242,33 +256,30 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       title: "Giá vé 1",
       key: "priceOfPosition1",
       dataIndex: "priceOfPosition1",
+      render: (value) => formatTicketPriceDisplay(value),
       sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition1, b.priceOfPosition1)
     },
     {
       title: "Giá vé 2",
       key: "priceOfPosition2",
       dataIndex: "priceOfPosition2",
+      render: (value) => formatTicketPriceDisplay(value),
       sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition2, b.priceOfPosition2)
     },
     {
       title: "Giá vé 3",
       key: "priceOfPosition3",
       dataIndex: "priceOfPosition3",
+      render: (value) => formatTicketPriceDisplay(value),
       sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition3, b.priceOfPosition3)
-    },
-    {
-      title: "Giá vé 4",
-      key: "priceOfPosition4",
-      dataIndex: "priceOfPosition4",
-      sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition4, b.priceOfPosition4)
     }
   ];
 
   const rowSelection: TableProps<PlanScreeningDetailProps>["rowSelection"] = {
     hideSelectAll: true,
     selectedRowKeys,
-    onChange: (selectedRowKeys: React.Key[]) => {
-      setSelectedRowKeys(selectedRowKeys);
+    onChange: (keys: React.Key[]) => {
+      setSelectedRowKeys(keys);
     },
     getCheckboxProps: (record) => ({
       disabled: dayjs().isAfter(dayjs(record.projectDate, "YYYY-MM-DD"), "day")
@@ -296,7 +307,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
         <div className="flex items-center gap-3">
           <DatePicker
             value={date}
-            onChange={(date) => setDate(date)}
+            onChange={(nextDate) => setDate(nextDate)}
             className="w-40"
             placeholder="Chọn ngày chiếu"
             format="DD/MM/YYYY"
@@ -340,9 +351,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
         title="Xác nhận xóa ca chiếu"
         onOk={handleDeleteFilms}
         onCancel={() => setConfirmDeleteOpen(false)}
-        okButtonProps={{
-          danger: true
-        }}
+        okButtonProps={{ danger: true }}
         confirmLoading={deletePlanScreening.isPending}
         destroyOnHidden
       >

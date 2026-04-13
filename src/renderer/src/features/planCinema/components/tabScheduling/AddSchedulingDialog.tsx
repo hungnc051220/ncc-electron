@@ -1,10 +1,10 @@
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
-import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
+import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { getPlanScreeningDateTime } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import type { FormProps } from "antd";
@@ -32,13 +32,22 @@ type FieldType = {
   roomId: number;
   projectDate: Dayjs;
   projectTime: Dayjs;
-  priceOfPosition1: string;
-  priceOfPosition2: string;
-  priceOfPosition3: string;
-  priceOfPosition4: string;
+  priceOfPosition1?: number;
+  priceOfPosition2?: number;
+  priceOfPosition3?: number;
   isOnlineSelling?: boolean;
+  price?: number;
+};
+
+type PositionField = "priceOfPosition1" | "priceOfPosition2" | "priceOfPosition3";
+
+type PositionPricingValue = {
+  seatType: string;
   price: number;
 };
+
+type PositionPricingMap = Record<PositionField, PositionPricingValue | undefined>;
+type PositionPriceFormValues = Record<PositionField, number | undefined>;
 
 interface AddSchedulingDialogProps {
   planCinemaId: number;
@@ -53,6 +62,71 @@ const compareNullableText = (left?: string | null, right?: string | null) => {
   });
 };
 
+const getDynamicPricingKey = (
+  pricings?: Record<string, number>,
+  matcher?: (key: string) => boolean
+) => {
+  if (!pricings || !matcher) return undefined;
+  return Object.keys(pricings).find(matcher);
+};
+
+const getPlanPricingValues = (pricings?: Record<string, number>): PositionPricingMap => {
+  const position1Key = getDynamicPricingKey(pricings, (key) => key.startsWith("D"));
+  const position2Key = getDynamicPricingKey(pricings, (key) => key === "T");
+  const position3Key = getDynamicPricingKey(pricings, (key) => key === "V");
+
+  return {
+    priceOfPosition1:
+      position1Key && pricings?.[position1Key] !== undefined
+        ? { seatType: position1Key, price: pricings[position1Key] }
+        : undefined,
+    priceOfPosition2:
+      position2Key && pricings?.[position2Key] !== undefined
+        ? { seatType: position2Key, price: pricings[position2Key] }
+        : undefined,
+    priceOfPosition3:
+      position3Key && pricings?.[position3Key] !== undefined
+        ? { seatType: position3Key, price: pricings[position3Key] }
+        : undefined
+  };
+};
+
+const getPositionPriceFormValues = (pricingMap: PositionPricingMap): PositionPriceFormValues => ({
+  priceOfPosition1: pricingMap.priceOfPosition1?.price,
+  priceOfPosition2: pricingMap.priceOfPosition2?.price,
+  priceOfPosition3: pricingMap.priceOfPosition3?.price
+});
+
+const buildPricingPayloadValue = (seatType?: string, price?: number) => {
+  if (!seatType || !Number.isFinite(price)) {
+    return "";
+  }
+
+  return `${seatType}:${price}`;
+};
+
+const formatTicketPrice = (value?: string | number | null) => {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const numericValue = typeof value === "number" ? value : Number(`${value}`.replace(/,/g, ""));
+  if (!Number.isFinite(numericValue)) {
+    return "";
+  }
+
+  return numericValue.toLocaleString("en-US");
+};
+
+const parseTicketPrice = (value?: string): number => {
+  if (!value) {
+    return 0;
+  }
+
+  const parsedValue = Number(value.replace(/[^\d]/g, ""));
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
+};
+
 const AddSchedulingDialog = ({
   planCinemaId,
   selectedRoomId,
@@ -62,6 +136,11 @@ const AddSchedulingDialog = ({
   const [open, setOpen] = useState(false);
   const [isSamePrice, setIsSamePrice] = useState(false);
   const [confirmOfflineOpen, setConfirmOfflineOpen] = useState(false);
+  const [savedIndividualPrices, setSavedIndividualPrices] = useState<PositionPriceFormValues>({
+    priceOfPosition1: undefined,
+    priceOfPosition2: undefined,
+    priceOfPosition3: undefined
+  });
   const [pendingSubmitBody, setPendingSubmitBody] = useState<{
     planCinemaId: number;
     projectDate: string;
@@ -103,9 +182,44 @@ const AddSchedulingDialog = ({
     [filmId, films]
   );
 
+  const planPricingDateTime = useMemo(() => {
+    if (!projectDate || !projectTime) {
+      return undefined;
+    }
+
+    return getPlanScreeningDateTime(
+      dayjs(projectDate).format("YYYY-MM-DD"),
+      dayjs(projectTime).format()
+    );
+  }, [projectDate, projectTime]);
+
+  const { data: planPricing } = useTicketPricesByPlan({
+    roomId,
+    versionCode: selectedFilm?.film.versionCode ?? "",
+    date: planPricingDateTime?.format(),
+    filmId: selectedFilm?.filmId
+  });
+
+  const mappedPlanPricing = useMemo(
+    () => getPlanPricingValues(planPricing?.pricings),
+    [planPricing?.pricings]
+  );
+
+  const positionFields: PositionField[] = [
+    "priceOfPosition1",
+    "priceOfPosition2",
+    "priceOfPosition3"
+  ];
+
+  const activePositionFields = useMemo(
+    () => positionFields.filter((field) => !!mappedPlanPricing[field]?.seatType),
+    [mappedPlanPricing]
+  );
+
   const resetForm = () => {
     form.resetFields();
     form.setFieldsValue(defaultFormValues);
+    setSavedIndividualPrices(getPositionPriceFormValues(mappedPlanPricing));
     setIsSamePrice(false);
     setConfirmOfflineOpen(false);
     setPendingSubmitBody(null);
@@ -128,23 +242,6 @@ const AddSchedulingDialog = ({
       label: item.name
     }),
     prefetchAll: true
-  });
-
-  const planPricingDateTime = useMemo(() => {
-    if (!projectDate || !projectTime) {
-      return undefined;
-    }
-
-    return getPlanScreeningDateTime(
-      dayjs(projectDate).format("YYYY-MM-DD"),
-      dayjs(projectTime).format()
-    );
-  }, [projectDate, projectTime]);
-
-  const { data: planPricing } = useTicketPricesByPlan({
-    roomId,
-    versionCode: selectedFilm?.film.versionCode ?? "",
-    date: planPricingDateTime?.format()
   });
 
   const planScreeningParams = useMemo(
@@ -172,51 +269,35 @@ const AddSchedulingDialog = ({
     form.setFieldValue("duration", undefined);
   }, [form, selectedFilm]);
 
-  const filmOptions = useMemo(() => {
-    return (
+  const filmOptions = useMemo(
+    () =>
       films?.data.map((film) => ({
         value: film.filmId,
         label: film.film?.filmName
-      })) ?? []
-    );
-  }, [films]);
+      })) ?? [],
+    [films]
+  );
 
-  const roomOptions = useMemo(() => {
-    return [...roomSelect.options].sort((a, b) => compareNullableText(a.label, b.label));
-  }, [roomSelect.options]);
+  const roomOptions = useMemo(
+    () => [...roomSelect.options].sort((a, b) => compareNullableText(a.label, b.label)),
+    [roomSelect.options]
+  );
 
   useEffect(() => {
-    if (planPricing && open) {
-      form.setFieldValue("priceOfPosition1", planPricing?.[0] || "");
-      form.setFieldValue("priceOfPosition2", planPricing?.[1] || "");
-      form.setFieldValue("priceOfPosition3", planPricing?.[2] || "");
-      form.setFieldValue("priceOfPosition4", planPricing?.[3] || "");
+    const pricingFormValues = getPositionPriceFormValues(mappedPlanPricing);
+    if (open) {
+      form.setFieldsValue(pricingFormValues);
     }
-  }, [planPricing, form, open]);
-
-  const buildUniformPriceValue = (source: string | undefined, uniformPrice: number): string => {
-    if (!source) return `${uniformPrice}`;
-    const sourceValue = `${source}`;
-    if (!sourceValue.includes(":")) return `${uniformPrice}`;
-    const [seatType] = sourceValue.split(":");
-    return `${seatType}:${uniformPrice}`;
-  };
+    setSavedIndividualPrices(pricingFormValues);
+  }, [mappedPlanPricing, form, open]);
 
   const applyUniformPriceToPositions = (uniformPrice: number) => {
-    const positionFields: Array<
-      keyof Pick<
-        FieldType,
-        "priceOfPosition1" | "priceOfPosition2" | "priceOfPosition3" | "priceOfPosition4"
-      >
-    > = ["priceOfPosition1", "priceOfPosition2", "priceOfPosition3", "priceOfPosition4"];
-
     const uniformValues = positionFields.reduce(
-      (acc, field, index) => {
-        const sourceValue = planPricing?.[index];
-        acc[field] = sourceValue ? buildUniformPriceValue(sourceValue, uniformPrice) : "";
+      (acc, field) => {
+        acc[field] = mappedPlanPricing[field]?.seatType ? uniformPrice : undefined;
         return acc;
       },
-      {} as Record<(typeof positionFields)[number], string>
+      {} as Record<PositionField, number | undefined>
     );
 
     form.setFieldsValue(uniformValues);
@@ -275,6 +356,7 @@ const AddSchedulingDialog = ({
     projectTime: string;
     filmId: number;
     roomId: number;
+    daypartId?: number;
     priceOfPosition1: string;
     priceOfPosition2: string;
     priceOfPosition3: string;
@@ -303,28 +385,27 @@ const AddSchedulingDialog = ({
       dayjs(values.projectDate).format("YYYY-MM-DD"),
       dayjs(values.projectTime).format()
     );
-    const normalizedPriceOfPosition1 = hasUniformPrice
-      ? planPricing?.[0]
-        ? buildUniformPriceValue(planPricing[0], uniformPrice)
-        : ""
-      : values.priceOfPosition1;
-    const normalizedPriceOfPosition2 = hasUniformPrice
-      ? planPricing?.[1]
-        ? buildUniformPriceValue(planPricing[1], uniformPrice)
-        : ""
-      : values.priceOfPosition2;
-    const normalizedPriceOfPosition3 = hasUniformPrice
-      ? planPricing?.[2]
-        ? buildUniformPriceValue(planPricing[2], uniformPrice)
-        : ""
-      : values.priceOfPosition3;
-    const normalizedPriceOfPosition4 = hasUniformPrice
-      ? planPricing?.[3]
-        ? buildUniformPriceValue(planPricing[3], uniformPrice)
-        : ""
-      : values.priceOfPosition4;
-    const sameFilmBreakError = getScreeningBreakError(values);
 
+    const normalizedPriceOfPosition1 = hasUniformPrice
+      ? buildPricingPayloadValue(mappedPlanPricing.priceOfPosition1?.seatType, uniformPrice)
+      : buildPricingPayloadValue(
+          mappedPlanPricing.priceOfPosition1?.seatType,
+          values.priceOfPosition1
+        );
+    const normalizedPriceOfPosition2 = hasUniformPrice
+      ? buildPricingPayloadValue(mappedPlanPricing.priceOfPosition2?.seatType, uniformPrice)
+      : buildPricingPayloadValue(
+          mappedPlanPricing.priceOfPosition2?.seatType,
+          values.priceOfPosition2
+        );
+    const normalizedPriceOfPosition3 = hasUniformPrice
+      ? buildPricingPayloadValue(mappedPlanPricing.priceOfPosition3?.seatType, uniformPrice)
+      : buildPricingPayloadValue(
+          mappedPlanPricing.priceOfPosition3?.seatType,
+          values.priceOfPosition3
+        );
+
+    const sameFilmBreakError = getScreeningBreakError(values);
     if (sameFilmBreakError) {
       message.error(sameFilmBreakError);
       return;
@@ -336,10 +417,11 @@ const AddSchedulingDialog = ({
       projectTime: screeningDateTime?.format() ?? dayjs(values.projectTime).format(),
       filmId: values.filmId,
       roomId: values.roomId,
+      daypartId: planPricing?.dayPartId,
       priceOfPosition1: normalizedPriceOfPosition1,
       priceOfPosition2: normalizedPriceOfPosition2,
       priceOfPosition3: normalizedPriceOfPosition3,
-      priceOfPosition4: normalizedPriceOfPosition4,
+      priceOfPosition4: "",
       isOnlineSelling: values.isOnlineSelling
     };
 
@@ -381,18 +463,15 @@ const AddSchedulingDialog = ({
       >
         Thêm ca chiếu mới
       </Button>
+
       <Modal
         title="Thêm ca chiếu mới"
         open={open}
         onCancel={onCancel}
         onOk={() => form.submit()}
-        okButtonProps={{
-          loading: createPlanScreening.isPending
-        }}
-        cancelButtonProps={{
-          disabled: createPlanScreening.isPending
-        }}
-        width={800}
+        okButtonProps={{ loading: createPlanScreening.isPending }}
+        cancelButtonProps={{ disabled: createPlanScreening.isPending }}
+        width={900}
       >
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={defaultFormValues}>
           <div className="grid grid-cols-2 gap-3">
@@ -412,6 +491,7 @@ const AddSchedulingDialog = ({
                 }}
               />
             </Form.Item>
+
             <Form.Item<FieldType>
               name="roomId"
               label="Phòng chiếu"
@@ -424,6 +504,7 @@ const AddSchedulingDialog = ({
                 loading={roomSelect.loading}
               />
             </Form.Item>
+
             <Form.Item<FieldType>
               name="projectDate"
               label="Ngày chiếu"
@@ -431,6 +512,7 @@ const AddSchedulingDialog = ({
             >
               <DatePicker format="DD/MM/YYYY" className="w-full" />
             </Form.Item>
+
             <div className="grid grid-cols-2 gap-3">
               <Form.Item<FieldType>
                 name="projectTime"
@@ -443,6 +525,7 @@ const AddSchedulingDialog = ({
                 <TimePicker format="HH:mm" className="w-full" disabled />
               </Form.Item>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <Form.Item name="duration" label="Thời lượng (phút)">
                 <Input readOnly placeholder="Thời lượng (phút)" />
@@ -451,42 +534,112 @@ const AddSchedulingDialog = ({
                 <Input readOnly placeholder="Phiên bản" />
               </Form.Item>
             </div>
+
             <Form.Item name="isOnlineSelling" valuePropName="checked">
               <Checkbox className="mt-10.5">Bán online</Checkbox>
             </Form.Item>
 
             <Checkbox
               checked={isSamePrice}
+              disabled={activePositionFields.length === 0}
               onChange={(e) => {
                 const checked = e.target.checked;
                 setIsSamePrice(checked);
+
                 if (checked) {
+                  setSavedIndividualPrices({
+                    priceOfPosition1: form.getFieldValue("priceOfPosition1"),
+                    priceOfPosition2: form.getFieldValue("priceOfPosition2"),
+                    priceOfPosition3: form.getFieldValue("priceOfPosition3")
+                  });
+
                   const currentPrice = Number(form.getFieldValue("price"));
                   if (Number.isFinite(currentPrice)) {
                     applyUniformPriceToPositions(currentPrice);
                   }
+                } else {
+                  form.setFieldsValue(savedIndividualPrices);
                 }
               }}
             >
               Đồng giá
             </Checkbox>
+
             {!isSamePrice ? (
-              <div className="bg-primary/10 p-3 rounded-md border border-dashed col-span-2 grid grid-cols-2 gap-3 border-primary">
+              <div className="bg-primary/10 col-span-2 grid grid-cols-3 gap-3 rounded-md border border-dashed border-primary p-3">
                 <Form.Item<FieldType>
                   name="priceOfPosition1"
                   label="Giá vé 1"
-                  rules={[{ required: true, message: "Nhập giá vé 1" }]}
+                  rules={
+                    mappedPlanPricing.priceOfPosition1?.seatType
+                      ? [{ required: true, message: "Nhập giá vé 1" }]
+                      : []
+                  }
                 >
-                  <Input placeholder="Nhập giá vé 1" />
+                  <InputNumber<number>
+                    className="w-full"
+                    placeholder="Nhập giá vé 1"
+                    min={0}
+                    precision={0}
+                    disabled={!mappedPlanPricing.priceOfPosition1?.seatType}
+                    prefix={
+                      mappedPlanPricing.priceOfPosition1?.seatType
+                        ? `${mappedPlanPricing.priceOfPosition1.seatType}:`
+                        : undefined
+                    }
+                    formatter={formatTicketPrice}
+                    parser={parseTicketPrice}
+                  />
                 </Form.Item>
-                <Form.Item<FieldType> name="priceOfPosition2" label="Giá vé 2">
-                  <Input placeholder="Nhập giá vé 2" />
+
+                <Form.Item<FieldType>
+                  name="priceOfPosition2"
+                  label="Giá vé 2"
+                  rules={
+                    mappedPlanPricing.priceOfPosition2?.seatType
+                      ? [{ required: true, message: "Nhập giá vé 2" }]
+                      : []
+                  }
+                >
+                  <InputNumber<number>
+                    className="w-full"
+                    placeholder="Nhập giá vé 2"
+                    min={0}
+                    precision={0}
+                    disabled={!mappedPlanPricing.priceOfPosition2?.seatType}
+                    prefix={
+                      mappedPlanPricing.priceOfPosition2?.seatType
+                        ? `${mappedPlanPricing.priceOfPosition2.seatType}:`
+                        : undefined
+                    }
+                    formatter={formatTicketPrice}
+                    parser={parseTicketPrice}
+                  />
                 </Form.Item>
-                <Form.Item<FieldType> name="priceOfPosition3" label="Giá vé 3">
-                  <Input placeholder="Nhập giá vé 3" />
-                </Form.Item>
-                <Form.Item<FieldType> name="priceOfPosition4" label="Giá vé 4">
-                  <Input placeholder="Nhập giá vé 4" />
+
+                <Form.Item<FieldType>
+                  name="priceOfPosition3"
+                  label="Giá vé 3"
+                  rules={
+                    mappedPlanPricing.priceOfPosition3?.seatType
+                      ? [{ required: true, message: "Nhập giá vé 3" }]
+                      : []
+                  }
+                >
+                  <InputNumber<number>
+                    className="w-full"
+                    placeholder="Nhập giá vé 3"
+                    min={0}
+                    precision={0}
+                    disabled={!mappedPlanPricing.priceOfPosition3?.seatType}
+                    prefix={
+                      mappedPlanPricing.priceOfPosition3?.seatType
+                        ? `${mappedPlanPricing.priceOfPosition3.seatType}:`
+                        : undefined
+                    }
+                    formatter={formatTicketPrice}
+                    parser={parseTicketPrice}
+                  />
                 </Form.Item>
               </div>
             ) : (
@@ -494,11 +647,20 @@ const AddSchedulingDialog = ({
                 <Form.Item<FieldType>
                   name="price"
                   label="Giá vé"
-                  rules={[{ required: true, message: "Nhập giá vé" }]}
+                  rules={
+                    activePositionFields.length > 0
+                      ? [{ required: true, message: "Nhập giá vé" }]
+                      : []
+                  }
                 >
-                  <InputNumber
+                  <InputNumber<number>
                     placeholder="Nhập giá vé"
                     className="w-1/2"
+                    min={0}
+                    precision={0}
+                    disabled={activePositionFields.length === 0}
+                    formatter={formatTicketPrice}
+                    parser={parseTicketPrice}
                     onChange={(value) => {
                       if (typeof value === "number") {
                         applyUniformPriceToPositions(value);
@@ -538,14 +700,10 @@ const AddSchedulingDialog = ({
           setConfirmOfflineOpen(false);
           setPendingSubmitBody(null);
         }}
-        okButtonProps={{
-          loading: createPlanScreening.isPending
-        }}
-        cancelButtonProps={{
-          disabled: createPlanScreening.isPending
-        }}
+        okButtonProps={{ loading: createPlanScreening.isPending }}
+        cancelButtonProps={{ disabled: createPlanScreening.isPending }}
       >
-        <div className="rounded-2xl my-4 border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-(--ant-color-text) shadow-sm dark:border-amber-400/35 dark:bg-amber-400/10">
+        <div className="my-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-(--ant-color-text) shadow-sm dark:border-amber-400/35 dark:bg-amber-400/10">
           <div className="text-(--ant-color-text-secondary)">
             Bạn có muốn tiếp tục tạo ca chiếu với trạng thái <strong>không bán online</strong>?
           </div>

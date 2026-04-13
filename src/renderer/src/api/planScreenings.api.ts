@@ -17,6 +17,7 @@ export interface PlanScreeningDto {
   roomId: number;
   projectDate: string;
   projectTime: string;
+  daypartId?: number;
   priceOfPosition1: string;
   priceOfPosition2: string;
   priceOfPosition3: string;

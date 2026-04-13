@@ -221,4 +221,9 @@ export interface PlanFilmProps {
   film: FilmInfo;
 }
 
+export interface PlanPricingProps {
+  dayPartId: number;
+  pricings: Record<string, number>;
+}
+
 export type ScreenMode = "normal" | "contract" | "invitation";

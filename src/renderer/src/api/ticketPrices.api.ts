@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, TicketPriceProps } from "@shared/types";
+import { ApiResponse, PlanPricingProps, TicketPriceProps } from "@shared/types";
 import queryString from "query-string";
 
 export interface TicketPricesQuery {
@@ -18,6 +18,7 @@ export interface TicketPriceDto {
 export interface TicketPriceByPlanDto {
   roomId: number;
   versionCode: string;
+  filmId?: number;
   date?: string;
 }
 
@@ -45,7 +46,7 @@ export const ticketPricesApi = {
 
     return res.data;
   },
-  getByPlan: async (dto: TicketPriceByPlanDto) => {
+  getByPlan: async (dto: TicketPriceByPlanDto): Promise<PlanPricingProps> => {
     const res = await api.post(`/api/pos/pricing/plan-pricing`, dto);
     return res.data;
   },

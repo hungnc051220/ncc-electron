@@ -7,5 +7,5 @@ export const useTicketPricesByPlan = (dto: TicketPriceByPlanDto) =>
     queryKey: ticketPricesKeys.getByPlan(dto),
     queryFn: () => ticketPricesApi.getByPlan(dto),
     placeholderData: keepPreviousData,
-    enabled: !!dto.date && !!dto.roomId && !!dto.versionCode
+    enabled: !!dto.date && !!dto.roomId && !!dto.versionCode && !!dto.filmId
   });
