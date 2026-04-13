@@ -1,7 +1,8 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { Button, DatePicker, Form, Input, Modal } from "antd";
-import { useState } from "react";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
 import { ValuesProps } from "../OrderHistoryPage";
 import { filterEmptyValues } from "@renderer/lib/utils";
 
@@ -19,6 +20,13 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
 
   const isEmptyFilter =
     Object.keys(filterEmptyValues(filterValues as Record<string, unknown>)).length === 0;
+
+  useEffect(() => {
+    form.setFieldsValue({
+      ...filterValues,
+      dateRange: filterValues.dateRange?.map((value) => dayjs(value))
+    });
+  }, [filterValues, form]);
 
   return (
     <>

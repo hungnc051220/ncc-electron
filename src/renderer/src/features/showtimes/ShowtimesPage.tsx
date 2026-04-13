@@ -11,7 +11,7 @@ import type { Dayjs } from "dayjs";
 
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { usePlanScreeningsAvailableDates } from "@renderer/hooks/planScreenings/usePlanScreeningsAvailableDates";
-import { cn } from "@renderer/lib/utils";
+import { cn, isPlanScreeningLocked } from "@renderer/lib/utils";
 
 dayjs.extend(customParseFormat);
 
@@ -27,6 +27,7 @@ const ShowtimesPage = () => {
   const returnTo = searchParams.get("returnTo");
   const reopenOrderId = searchParams.get("reopenOrderId");
   const shouldResetDate = searchParams.get("resetDate") === "1";
+  const isSwapSeatsFlow = callbackUrl === "/order-history/swap-seats";
 
   const [date, setDate] = useQueryState("date", {
     defaultValue: dayjs().format("YYYY-MM-DD")
@@ -46,6 +47,18 @@ const ShowtimesPage = () => {
 
     setSearchParams(nextSearchParams, { replace: true });
   }, [date, searchParams, setDate, setSearchParams, shouldResetDate, today]);
+
+  useEffect(() => {
+    if (!isSwapSeatsFlow) {
+      return;
+    }
+
+    if (dayjs(date, "YYYY-MM-DD").isBefore(dayjs(), "day")) {
+      void setDate(today);
+    }
+
+    setShowPast(false);
+  }, [date, isSwapSeatsFlow, setDate, today]);
 
   const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
   const toDate = dayjs(date, "YYYY-MM-DD").endOf("month").format("DD-MM-YYYY");
@@ -110,16 +123,16 @@ const ShowtimesPage = () => {
             const selectedDate = dayjs(date, "YYYY-MM-DD");
             const isPastDay = selectedDate.isBefore(now, "day");
             const isToday = selectedDate.isSame(now, "day");
-            const isFutureShowtime = dayjs(s.projectTime)
-              .add(7, "hour")
-              .add(30, "minute")
-              .isAfter(now);
+            const isPastShowtime = isPlanScreeningLocked(selectedDate.format("YYYY-MM-DD"), s.projectTime);
+            const isFutureShowtime = !isPastShowtime;
+            const isDisabledShowtime = isSwapSeatsFlow && (isPastDay || isPastShowtime);
 
             return (
               <Button
                 key={s.projectTime}
                 type="default"
                 danger={isPastDay || (!isFutureShowtime && isToday)}
+                disabled={isDisabledShowtime}
                 className="min-w-15"
                 size="small"
                 onClick={() => {
@@ -171,6 +184,9 @@ const ShowtimesPage = () => {
     );
   };
 
+  const disabledDate: DatePickerProps<Dayjs>["disabledDate"] = (current) =>
+    isSwapSeatsFlow ? current.isBefore(dayjs().startOf("day"), "day") : false;
+
   return (
     <div className="space-y-3 p-4 flex-1 min-h-screen bg-app-bg text-black dark:text-white">
       <div className="flex items-center justify-between">
@@ -185,10 +201,15 @@ const ShowtimesPage = () => {
             onChange={(date) => setDate(dayjs(date).format("YYYY-MM-DD"))}
             allowClear={false}
             cellRender={cellRender}
+            disabledDate={disabledDate}
             style={{ width: 200 }}
           />
 
-          <Checkbox checked={showPast} onChange={(e) => setShowPast(e.target.checked)}>
+          <Checkbox
+            checked={showPast}
+            disabled={isSwapSeatsFlow}
+            onChange={(e) => setShowPast(e.target.checked)}
+          >
             Hiển thị lịch đã chiếu
           </Checkbox>
         </div>

@@ -44,12 +44,16 @@ const OrderDetailDialog = ({
   const totalTickets = currentItems.reduce((sum, item) => sum + item.quantity, 0);
   const isRefundOrder = currentOrder?.refundStatusId != null;
   const isInvitationOrder = !!currentOrder?.isInvitation;
+  const isPastProjectDate = currentDetail?.planScreening?.projectDate
+    ? dayjs().isAfter(dayjs(currentDetail.planScreening.projectDate).endOf("day"))
+    : false;
   const canShowChangeToSuccessButton =
     !!currentOrder &&
     currentOrder.orderStatusId !== OrderStatus.CANCELLED &&
     !isInvitationOrder &&
     !currentOrder.isContract &&
-    !isRefundOrder;
+    !isRefundOrder &&
+    !isPastProjectDate;
   const invitationTicket = currentOrder?.invitationTickets;
 
   const ticketPromotions = useMemo(() => {

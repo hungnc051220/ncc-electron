@@ -25,7 +25,7 @@ import dayjs from "dayjs";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-const MIN_SCREENING_BREAK_MINUTES = 10;
+const MIN_SCREENING_BREAK_MINUTES = 5;
 
 type FieldType = {
   filmId: number;
@@ -130,10 +130,21 @@ const AddSchedulingDialog = ({
     prefetchAll: true
   });
 
+  const planPricingDateTime = useMemo(() => {
+    if (!projectDate || !projectTime) {
+      return undefined;
+    }
+
+    return getPlanScreeningDateTime(
+      dayjs(projectDate).format("YYYY-MM-DD"),
+      dayjs(projectTime).format()
+    );
+  }, [projectDate, projectTime]);
+
   const { data: planPricing } = useTicketPricesByPlan({
     roomId,
     versionCode: selectedFilm?.film.versionCode ?? "",
-    date: projectDate ? dayjs(projectDate).format() : undefined
+    date: planPricingDateTime?.format()
   });
 
   const planScreeningParams = useMemo(

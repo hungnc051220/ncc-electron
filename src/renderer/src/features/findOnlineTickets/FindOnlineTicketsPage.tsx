@@ -23,6 +23,10 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+export const getDefaultFilterValues = (): ValuesProps => ({
+  dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+});
+
 const compareText = (left?: string | null, right?: string | null) =>
   (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
@@ -31,7 +35,7 @@ const compareNumber = (left?: number | null, right?: number | null) => (left || 
 const FindOnlineTicketsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [filterValues, setFilterValues] = useState<ValuesProps>(() => getDefaultFilterValues());
   const [dialogViewDetailOpen, setDialogViewDetailOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
 

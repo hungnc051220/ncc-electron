@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import dayjs from "dayjs";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -17,16 +17,19 @@ vi.mock("antd", () => ({
   Checkbox: ({
     children,
     checked,
+    disabled,
     onChange
   }: {
     children?: React.ReactNode;
     checked?: boolean;
+    disabled?: boolean;
     onChange?: (event: { target: { checked: boolean } }) => void;
   }) => (
     <label>
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange?.({ target: { checked: event.target.checked } })}
       />
       {children}
@@ -96,5 +99,19 @@ describe("ShowtimesPage", () => {
     await waitFor(() => {
       expect(mocks.setDate).not.toHaveBeenCalled();
     });
+  });
+
+  it("disables showing past schedules in swap seats flow", async () => {
+    mockedUseQueryState.mockReturnValue([dayjs().format("YYYY-MM-DD"), mocks.setDate]);
+
+    render(
+      <MemoryRouter initialEntries={["/showtimes?callbackUrl=/order-history/swap-seats&id=1"]}>
+        <Routes>
+          <Route path="/showtimes" element={<ShowtimesPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByLabelText("Hiển thị lịch đã chiếu")).toBeDisabled();
   });
 });

@@ -5,7 +5,7 @@ import {
   RevenueSharingDetailPlanScreen,
   RevenueSharingDetailPriceItem,
   RevenueSharingDetailSummaryItem,
-  RevenueSharingWeekItem
+  RevenueSharingPeriodItem
 } from "@shared/types";
 import { saveExcelFile } from "@renderer/lib/saveFile";
 import dayjs from "dayjs";
@@ -167,12 +167,12 @@ const addPlanScreenRows = (
   });
 };
 
-const addWeekRows = (ws: ExcelJS.Worksheet, weeks: RevenueSharingWeekItem[]) => {
-  weeks.forEach((item) => {
+const addPeriodRows = (ws: ExcelJS.Worksheet, periods: RevenueSharingPeriodItem[]) => {
+  periods.forEach((item) => {
     const sharingRate = toNumber(item.sharingRate);
 
     ws.addRow([
-      item.weekLabel ?? "",
+      item.periodLabel ?? "",
       safeDate(item.startDate),
       safeDate(item.endDate),
       toNumber(item.totalQuantity),
@@ -217,7 +217,7 @@ export const exportRevenueSharingExcel = async (
   const ws = wb.addWorksheet(worksheetName);
   const priceHeaders = getPriceHeaders(data);
   const planScreens = data.detail?.planScreens ?? [];
-  const revenueSharingWeeks = data.revenueSharingWeeks ?? [];
+  const revenueSharingPeriods = data.revenueSharingPeriods ?? data.revenueSharingWeeks ?? [];
   const previousMonthSummary = data.previousMonthSummary;
 
   const headerGroupRow = 3;
@@ -227,7 +227,7 @@ export const exportRevenueSharingExcel = async (
   const totalStartCol = priceEndCol + 1;
   const totalColumns = totalStartCol + 4;
   const monthSource =
-    revenueSharingWeeks[0]?.startDate ?? planScreens[0]?.projectDate ?? data.premieredDate;
+    revenueSharingPeriods[0]?.startDate ?? planScreens[0]?.projectDate ?? data.premieredDate;
   const monthTitle =
     monthSource && dayjs(monthSource).isValid()
       ? dayjs(monthSource).format("MM/YYYY")
@@ -331,9 +331,9 @@ export const exportRevenueSharingExcel = async (
   const weekHeaderRow = ws.lastRow!.number;
   const weekDataStartRow = weekHeaderRow + 1;
 
-  addWeekRows(ws, revenueSharingWeeks);
+  addPeriodRows(ws, revenueSharingPeriods);
 
-  if (!revenueSharingWeeks.length) {
+  if (!revenueSharingPeriods.length) {
     ws.addRow(["Chưa có dữ liệu", "", "", "", "", "", "", "", ""]);
   }
 

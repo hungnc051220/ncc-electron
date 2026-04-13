@@ -10,6 +10,10 @@ export interface FilterValues {
   dateRange?: [string, string];
 }
 
+export const getDefaultFilterValues = (): FilterValues => ({
+  dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+});
+
 type FormValues = {
   dateRange?: [Dayjs, Dayjs];
 };
@@ -33,10 +37,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   }, [filterValues, form]);
 
   const onClear = () => {
+    const defaultValues = getDefaultFilterValues();
     setOpen(false);
     startTransition(() => {
-      form.resetFields();
-      onSearch({});
+      form.setFieldsValue({
+        dateRange: defaultValues.dateRange?.map((value) => dayjs(value)) as [Dayjs, Dayjs]
+      });
+      onSearch(defaultValues);
     });
   };
 

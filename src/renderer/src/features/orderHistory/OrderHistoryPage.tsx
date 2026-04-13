@@ -60,11 +60,15 @@ const compareText = (left?: string | null, right?: string | null) =>
 
 const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
+const defaultFilterValues: ValuesProps = {
+  dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+};
+
 const OrderHistoryPage = () => {
   const [cancelForm] = Form.useForm<CancelOrderFormValues>();
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [filterValues, setFilterValues] = useState<ValuesProps>(defaultFilterValues);
   const [activeKey, setActiveKey] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -476,7 +480,10 @@ const OrderHistoryPage = () => {
         defaultActiveKey="1"
         items={items}
         activeKey={activeKey}
-        onChange={setActiveKey}
+        onChange={(key) => {
+          setActiveKey(key);
+          setCurrent(1);
+        }}
         type="card"
       />
 

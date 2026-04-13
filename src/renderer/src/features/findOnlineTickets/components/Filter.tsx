@@ -1,7 +1,8 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Form, Input, Modal } from "antd";
-import { useState } from "react";
-import { ValuesProps } from "../FindOnlineTicketsPage";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import { getDefaultFilterValues, ValuesProps } from "../FindOnlineTicketsPage";
 
 const { RangePicker } = DatePicker;
 
@@ -15,11 +16,22 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    form.setFieldsValue({
+      ...filterValues,
+      dateRange: filterValues.dateRange?.map((value) => dayjs(value))
+    });
+  }, [filterValues, form]);
+
   const onClear = () => {
+    const defaultValues = getDefaultFilterValues();
     setOpen(false);
     setCurrent(1);
-    form.resetFields();
-    onSearch({});
+    form.setFieldsValue({
+      ...defaultValues,
+      dateRange: defaultValues.dateRange?.map((value) => dayjs(value))
+    });
+    onSearch(defaultValues);
   };
 
   const isEmptyFilter = Object.keys(filterValues).length === 0;

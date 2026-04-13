@@ -7,10 +7,10 @@ import TabRevenueByStaff from "./components/TabRevenueByStaff";
 import dayjs from "dayjs";
 import { useState } from "react";
 import type { Dayjs } from "dayjs";
-import Filter, { type FilterValues } from "./components/Filter";
+import Filter, { getDefaultFilterValues, type FilterValues } from "./components/Filter";
 
 const TicketSalesRevenuePage = () => {
-  const [filterValues, setFilterValues] = useState<FilterValues>({});
+  const [filterValues, setFilterValues] = useState<FilterValues>(() => getDefaultFilterValues());
   const dateRange: [Dayjs, Dayjs] | undefined =
     filterValues.dateRange?.length === 2
       ? [dayjs(filterValues.dateRange[0]), dayjs(filterValues.dateRange[1])]

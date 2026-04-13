@@ -460,8 +460,8 @@ export interface RevenueSharingCancellationItem {
   totalValue: number;
 }
 
-export interface RevenueSharingWeekItem {
-  weekLabel?: string | null;
+export interface RevenueSharingPeriodItem {
+  periodLabel?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   totalQuantity?: number | null;
@@ -488,5 +488,6 @@ export interface ReportRevenueSharingDetailResponse {
     totalRevenue?: RevenueSharingDetailSummaryItem | null;
   } | null;
   previousMonthSummary?: RevenueSharingPreviousMonthSummary | null;
-  revenueSharingWeeks?: RevenueSharingWeekItem[] | null;
+  revenueSharingPeriods?: RevenueSharingPeriodItem[] | null;
+  revenueSharingWeeks?: RevenueSharingPeriodItem[] | null;
 }

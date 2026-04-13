@@ -143,35 +143,35 @@ const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
           formatData?.revenueByEmployee && formatData?.revenueByEmployee.length > 0 ? (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={2} className="font-bold text-center">
+                <Table.Summary.Cell index={0} colSpan={3} className="font-bold text-center">
                   Tổng
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={2} align="right">
+                <Table.Summary.Cell index={3} align="right">
                   <Text className="font-bold">
                     {formatNumber(formatData?.totalByEmployee?.onQuantity || 0)}
                   </Text>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={3} align="right">
+                <Table.Summary.Cell index={4} align="right">
                   <Text className="font-bold">
                     {formatNumber(formatData?.totalByEmployee?.offQuantity || 0)}
                   </Text>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={4} align="right">
+                <Table.Summary.Cell index={5} align="right">
                   <Text className="font-bold">
                     {formatNumber(formatData?.totalByEmployee?.totalQuantity || 0)}
                   </Text>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={5} align="right">
+                <Table.Summary.Cell index={6} align="right">
                   <Text className="font-bold">
                     {formatMoney(formatData?.totalByEmployee?.offSaleVnPayQr || 0)}
                   </Text>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={6} align="right">
+                <Table.Summary.Cell index={7} align="right">
                   <Text className="font-bold">
                     {formatMoney(formatData?.totalByEmployee?.offSaleVietQr || 0)}
                   </Text>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={7} align="right">
+                <Table.Summary.Cell index={8} align="right">
                   <Text className="font-bold">
                     {formatMoney(formatData?.totalByEmployee?.totalSale || 0)}
                   </Text>

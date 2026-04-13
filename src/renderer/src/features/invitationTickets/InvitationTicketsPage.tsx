@@ -8,14 +8,14 @@ import { MoreOutlined } from "@ant-design/icons";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { extractSeatValues, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { cn, extractSeatValues, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown, Form, Modal, Select, Tooltip, message } from "antd";
+import { Button, Dropdown, Form, Modal, Select, Tag, Tooltip, message } from "antd";
 import dayjs from "dayjs";
-import { Check, Eye, Printer, X } from "lucide-react";
+import { Eye, Printer, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
@@ -40,6 +40,41 @@ const compareNaturalText = (left?: string | null, right?: string | null) =>
 
 const compareDate = (left?: string | null, right?: string | null) =>
   dayjs(left).valueOf() - dayjs(right).valueOf();
+
+const renderInvitationTicketStatus = (status?: string | null) => {
+  const normalizedStatus = status?.toLowerCase();
+  const configMap: Record<string, { label: string; color: string; className: string }> = {
+    new: {
+      label: "Mới",
+      color: "processing",
+      className:
+        "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300"
+    },
+    sent: {
+      label: "Đã gửi",
+      color: "success",
+      className:
+        "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+    },
+    failed: {
+      label: "Gửi lỗi",
+      color: "error",
+      className:
+        "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"
+    }
+  };
+
+  const config = normalizedStatus ? configMap[normalizedStatus] : undefined;
+
+  return (
+    <Tag
+      color={config?.color ?? "default"}
+      className={cn("mr-0 rounded-full border px-3 py-1 text-xs font-semibold", config?.className)}
+    >
+      {config?.label ?? status ?? "Chưa gửi"}
+    </Tag>
+  );
+};
 
 const InvitationTicketsPage = () => {
   const navigate = useNavigate();
@@ -321,6 +356,19 @@ const InvitationTicketsPage = () => {
       render: (order) => order?.note
     },
     {
+      title: "Email người nhận",
+      key: "receivedEmail",
+      sorter: (a, b) =>
+        compareText(
+          a.order?.invitationTickets?.receivedEmail,
+          b.order?.invitationTickets?.receivedEmail
+        ),
+      render: (_, record) => {
+        return record.order?.invitationTickets?.receivedEmail || "";
+      },
+      align: "center"
+    },
+    {
       title: "Thời gian xuất vé",
       key: "createdAt",
       sorter: (a, b) =>
@@ -335,21 +383,15 @@ const InvitationTicketsPage = () => {
       width: 150
     },
     {
-      title: "Xuất vé mời qua email",
+      title: "Trạng thái xuất vé",
       key: "invitationTickets",
       sorter: (a, b) =>
         compareText(a.order?.invitationTickets?.status, b.order?.invitationTickets?.status),
-      render: (_, record) => {
-        return (
-          <div className="flex justify-center">
-            {record.order?.invitationTickets?.status === "sent" ? (
-              <Check className="size-4 text-green-500" />
-            ) : (
-              <X className="size-4 text-red-500" />
-            )}
-          </div>
-        );
-      },
+      render: (_, record) => (
+        <div className="flex justify-center">
+          {renderInvitationTicketStatus(record.order?.invitationTickets?.status)}
+        </div>
+      ),
       align: "center",
       fixed: "right"
     },
