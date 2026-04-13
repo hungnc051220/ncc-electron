@@ -191,7 +191,7 @@ export interface CancellationTicketProps {
   createdOnUtc: string;
   userName: string;
   reason: string;
-  order: OrderResponseProps;
+  order: OrderResponseProps | null;
 }
 
 export interface Item {

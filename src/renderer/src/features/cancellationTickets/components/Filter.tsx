@@ -2,8 +2,9 @@ import { FilterOutlined } from "@ant-design/icons";
 import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
-import { useMemo, useState } from "react";
-import { ValuesProps } from "../CancellationTicketsPage";
+import dayjs from "dayjs";
+import { useEffect, useMemo, useState } from "react";
+import { getDefaultFilterValues, ValuesProps } from "../CancellationTicketsPage";
 import { filterEmptyValues } from "@renderer/lib/utils";
 import { useDebounce } from "@renderer/hooks/useDebounce";
 import { usersApi } from "@renderer/api/users.api";
@@ -91,13 +92,24 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
     return filmOpts;
   }, [films]);
 
+  useEffect(() => {
+    form.setFieldsValue({
+      ...filterValues,
+      dateRange: filterValues.dateRange?.map((value) => dayjs(value))
+    });
+  }, [filterValues, form]);
+
   const onClear = () => {
+    const defaultValues = getDefaultFilterValues();
     setOpen(false);
     setCurrent(1);
     setSearchText(undefined);
     setSearchTextUser(undefined);
-    form.resetFields();
-    onSearch({});
+    form.setFieldsValue({
+      ...defaultValues,
+      dateRange: defaultValues.dateRange?.map((value) => dayjs(value))
+    });
+    onSearch(defaultValues);
   };
 
   const isEmptyFilter =

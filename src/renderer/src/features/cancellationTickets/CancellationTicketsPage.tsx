@@ -20,6 +20,10 @@ export interface ValuesProps {
   dateRange?: [string, string];
 }
 
+export const getDefaultFilterValues = (): ValuesProps => ({
+  dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+});
+
 const compareText = (left?: string | null, right?: string | null) =>
   (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
@@ -28,7 +32,7 @@ const compareNumber = (left?: number | null, right?: number | null) => (left || 
 const CancellationTicketsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [filterValues, setFilterValues] = useState<ValuesProps>(() => getDefaultFilterValues());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const { can } = usePermission();
@@ -53,6 +57,10 @@ const CancellationTicketsPage = () => {
   const { data: cancellationTickets, isFetching } = useCancelTickets(params);
 
   const handleViewDetail = useCallback((record: CancellationTicketProps) => {
+    if (!record.order?.id) {
+      return;
+    }
+
     setSelectedOrderId(record.order.id);
     setDialogOpen(true);
   }, []);
@@ -77,8 +85,8 @@ const CancellationTicketsPage = () => {
       title: "Mã đơn",
       key: "id",
       dataIndex: "id",
-      sorter: (a, b) => compareNumber(a.order.id, b.order.id),
-      render: (_, record) => record.order.id,
+      sorter: (a, b) => compareNumber(a.order?.id, b.order?.id),
+      render: (_, record) => record.order?.id ?? "-",
       fixed: "left"
     },
     {
@@ -182,7 +190,7 @@ const CancellationTicketsPage = () => {
                 menu={{
                   items: [{ key: "view", icon: <Eye size={16} />, label: "Xem chi tiết" }],
                   onClick: (e) => {
-                    if (e.key === "view") {
+                    if (e.key === "view" && record.order?.id) {
                       handleViewDetail(record);
                     }
                   }
