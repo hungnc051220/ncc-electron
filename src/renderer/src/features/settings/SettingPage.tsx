@@ -89,7 +89,7 @@ const SettingPage = () => {
     <div className="space-y-4 flex-1 h-full p-4 pb-0 flex flex-col">
       <PageHeader left={<AppBreadcrumb />} />
 
-      <div className="flex-1">
+      <div className="min-h-0 flex-1">
         <Layout hasSider className="flex-1 h-full">
           <Menu
             selectedKeys={[selectedKey]}
@@ -101,7 +101,7 @@ const SettingPage = () => {
             className="h-full bg-app-bg"
           />
           <Layout>
-            <Content className="bg-app-bg px-6">{activeSection?.content}</Content>
+            <Content className="min-w-0 bg-app-bg px-4 lg:px-6">{activeSection?.content}</Content>
           </Layout>
         </Layout>
       </div>

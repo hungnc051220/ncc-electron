@@ -73,7 +73,7 @@ const ChangePassword = () => {
         </Paragraph>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)] lg:items-stretch">
+      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)] 2xl:items-stretch">
         <Card className="h-full">
           <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-4">
@@ -106,7 +106,7 @@ const ChangePassword = () => {
           {isLoading ? (
             <Skeleton active paragraph={{ rows: 4 }} />
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-app-border dark:bg-app-bg/70">
                 <Text type="secondary" className="mb-2 block text-xs uppercase tracking-[0.16em]">
                   Họ và tên
@@ -149,7 +149,7 @@ const ChangePassword = () => {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-app-border dark:bg-app-bg/70 sm:col-span-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-app-border dark:bg-app-bg/70 xl:col-span-2">
                 <Text type="secondary" className="mb-2 block text-xs uppercase tracking-[0.16em]">
                   Địa chỉ
                 </Text>
@@ -158,7 +158,7 @@ const ChangePassword = () => {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-app-border dark:bg-app-bg/70 sm:col-span-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-app-border dark:bg-app-bg/70 xl:col-span-2">
                 <Text type="secondary" className="mb-2 block text-xs uppercase tracking-[0.16em]">
                   Nhóm người dùng
                 </Text>

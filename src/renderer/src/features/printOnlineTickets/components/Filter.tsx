@@ -81,8 +81,8 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
         <Form.Item name="id" label="Mã thanh toán">
           <Input placeholder="Nhập mã thanh toán" />
         </Form.Item>
-        <Form.Item name="barCode" label="Mã barcode">
-          <Input placeholder="Nhập mã barcode" />
+        <Form.Item name="barCode" label="Mã vé">
+          <Input placeholder="Nhập mã vé" />
         </Form.Item>
         <Form.Item name="phoneNumber" label="Số điện thoại">
           <Input placeholder="Nhập số điện thoại" />
