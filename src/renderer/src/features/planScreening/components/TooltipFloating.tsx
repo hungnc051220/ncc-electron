@@ -11,11 +11,18 @@ type TooltipPosition = {
 interface TooltipFloatingProps {
   seat: ListSeat;
   order?: OrderResponseProps;
+  currentPlanScreeningId?: number;
   position: TooltipPosition;
   visible: boolean;
 }
 
-const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProps) => {
+const TooltipFloating = ({
+  seat,
+  order,
+  currentPlanScreeningId,
+  position,
+  visible
+}: TooltipFloatingProps) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<{ left: number; top: number }>({
     left: position.x + 16,
@@ -87,18 +94,32 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
   };
 
   const itemMatchedSeat = order?.items?.find((item) => {
+    if (currentPlanScreeningId && item.planScreenId !== currentPlanScreeningId) {
+      return false;
+    }
+
     const floorKey =
       seat.floor === 1
         ? "listChairIndexF1"
         : seat.floor === 2
           ? "listChairIndexF2"
           : "listChairIndexF3";
+    const seatValueKey =
+      seat.floor === 1
+        ? "listChairValueF1"
+        : seat.floor === 2
+          ? "listChairValueF2"
+          : "listChairValueF3";
     const seatIndexes = (item[floorKey] ?? "")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean);
+    const seatValues = (item[seatValueKey] ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
 
-    return seatIndexes.includes(seat.seat);
+    return seatIndexes.includes(seat.seat) || seatValues.includes(seat.code);
   });
 
   const actorName =
@@ -148,6 +169,7 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
     isU22Voucher && !itemMatchedSeat?.discount?.id ? 0 : promotionAmount;
 
   const isInvitationTicket = seat.isInvitation === 1;
+  const isContractTicket = seat.isContract === 1;
   const isHoldSeat = seat.isHold === 1;
   const isSoldSeat = seat.status === 1;
 
@@ -164,7 +186,7 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
       `}
       style={style}
     >
-      {!order || (!isInvitationTicket && !isHoldSeat && !isSoldSeat) ? (
+      {!order || (!isInvitationTicket && !isContractTicket && !isHoldSeat && !isSoldSeat) ? (
         <>
           <p className="font-semibold">{seatInfo}</p>
           <p>Giá: {formatMoney(seat.price || 0)}</p>
@@ -177,7 +199,18 @@ const TooltipFloating = ({ seat, order, position, visible }: TooltipFloatingProp
           <p>Thời gian xuất vé: {formatDateTime(order.invitationTickets?.createdAt)}</p>
           <div className="my-2 border border-dashed" />
           <p>{seatInfo}</p>
-          <p>Giá ghế: {formatMoney(ticketPrice)}</p>
+          <p>Giá gốc: {formatMoney(0)}</p>
+        </>
+      ) : isContractTicket ? (
+        <>
+          <p className="font-semibold mb-1 text-sm">Vé hợp đồng</p>
+          <p>Người thực hiện: {actorName}</p>
+          <p>Thời gian tạo: {formatDateTime(order.createdOnUtc)}</p>
+          <p>Người xuất vé: {printedBy}</p>
+          <p>Thời gian xuất vé: {formatDateTime(order.printedOnUtc)}</p>
+          <div className="my-2 border border-dashed" />
+          <p>{seatInfo}</p>
+          <p>Giá gốc: {formatMoney(0)}</p>
         </>
       ) : (
         <>

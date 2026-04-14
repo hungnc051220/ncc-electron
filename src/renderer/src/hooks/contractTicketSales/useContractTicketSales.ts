@@ -1,9 +1,11 @@
-import { contractTicketSalesApi } from "@renderer/api/contractTicketSales.api";
-import { UsersQuery } from "@renderer/api/users.api";
+import {
+  contractTicketSalesApi,
+  ContractTicketSalesQuery
+} from "@renderer/api/contractTicketSales.api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { contractTicketSalesKeys } from "./keys";
 
-export const useContractTicketSales = (params: UsersQuery) =>
+export const useContractTicketSales = (params: ContractTicketSalesQuery) =>
   useQuery({
     queryKey: contractTicketSalesKeys.getAll(params),
     queryFn: () => contractTicketSalesApi.getAll(params),

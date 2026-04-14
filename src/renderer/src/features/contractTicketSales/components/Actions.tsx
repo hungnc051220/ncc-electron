@@ -1,11 +1,14 @@
-import { SetSeatsContractTicketSaleDto } from "@renderer/api/contractTicketSales.api";
+import {
+  CancelContactTicketSaleDto,
+  SetSeatsContractTicketSaleDto
+} from "@renderer/api/contractTicketSales.api";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
+import { OrderDto, ordersApi } from "@renderer/api/orders.api";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
+import { useCancelContractTicketSale } from "@renderer/hooks/contractTicketSales/useCancelContractTicketSale";
 import { useSetSeatsContractTicketSale } from "@renderer/hooks/contractTicketSales/useSetSeatsContractTicketSale";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
-import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getPrintErrorMessage } from "@renderer/lib/print";
@@ -17,7 +20,7 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Form, Modal, Select, message } from "antd";
+import { Button, Checkbox, Descriptions, Form, Modal, Select, message } from "antd";
 import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
@@ -62,6 +65,8 @@ interface ActionsProps {
   planScreeningId: number;
   selectedSeats: ListSeat[];
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
+  cancelMode: boolean;
+  setCancelMode: Dispatch<SetStateAction<boolean>>;
 }
 
 type FieldType = {
@@ -73,7 +78,9 @@ const Actions = ({
   contractOrderId,
   planScreeningId,
   selectedSeats,
-  setSelectedSeats
+  setSelectedSeats,
+  cancelMode,
+  setCancelMode
 }: ActionsProps) => {
   const printMessageKey = `contract-ticket-sales-print-${contractOrderId}`;
   const [form] = Form.useForm<FieldType>();
@@ -88,7 +95,7 @@ const Actions = ({
   const canPrint = can("contract_ticket_sales", "print");
 
   const setSeatsContractTicketSale = useSetSeatsContractTicketSale();
-  const cancelOrder = useCancelOrder();
+  const cancelContractTicketSale = useCancelContractTicketSale();
   const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
 
@@ -208,6 +215,9 @@ const Actions = ({
           queryClient.invalidateQueries({
             queryKey: planScreeningsKeys.getDetail(planScreeningId)
           });
+          queryClient.invalidateQueries({
+            queryKey: ordersKeys.getDetail(contractOrderId)
+          });
           queryClient.refetchQueries({
             queryKey: contractTicketSalesKeys.all
           });
@@ -231,17 +241,25 @@ const Actions = ({
       listChairIndexF3: selectedSeats.filter((seat) => seat.floor === 3).map((seat) => seat.seat)
     };
 
-    const body: CancelOrderDto = {
+    const cancelReasonMsg =
+      cancelReasonOptions.find((item) => item.value === values.cancelReasonId)?.label?.toString() ??
+      "";
+
+    const body: CancelContactTicketSaleDto = {
       planScreenId: planScreeningId,
+      orderId: contractOrderId,
       cancelReasonId: values.cancelReasonId,
+      cancelReasonMsg,
       ...selectedSeatIndicesByFloor
     };
 
-    cancelOrder.mutate(body, {
+    cancelContractTicketSale.mutate(body, {
       onSuccess: () => {
         setSelectedSeats([]);
         setOpenCancelSeats(false);
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
+        queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(contractOrderId) });
+        queryClient.invalidateQueries({ queryKey: contractTicketSalesKeys.all });
         message.success("Huỷ vé hợp đồng thành công");
       },
       onError: (error: unknown) => {
@@ -257,6 +275,37 @@ const Actions = ({
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="flex gap-3">
+          {canDelete && (
+            <div className="flex flex-col gap-2">
+              <Checkbox
+                checked={cancelMode}
+                onChange={(e) => setCancelMode(e.target.checked)}
+                disabled={
+                  setSeatsContractTicketSale.isPending ||
+                  cancelContractTicketSale.isPending ||
+                  isPlanScreeningPast
+                }
+              >
+                Hủy vé
+              </Checkbox>
+              <Button
+                variant="outlined"
+                color="danger"
+                className="font-bold"
+                disabled={
+                  !cancelMode ||
+                  selectedSeats.length === 0 ||
+                  setSeatsContractTicketSale.isPending ||
+                  cancelContractTicketSale.isPending ||
+                  isPlanScreeningPast
+                }
+                onClick={() => setOpenCancelSeats(true)}
+              >
+                Hủy vé hợp đồng
+              </Button>
+            </div>
+          )}
+
           {canUpdate && (
             <Button
               variant="outlined"
@@ -266,26 +315,12 @@ const Actions = ({
               disabled={
                 selectedSeats.length === 0 ||
                 setSeatsContractTicketSale.isPending ||
+                cancelContractTicketSale.isPending ||
+                cancelMode ||
                 isPlanScreeningPast
               }
             >
               Thêm vé hợp đồng
-            </Button>
-          )}
-
-          {canDelete && (
-            <Button
-              variant="outlined"
-              color="danger"
-              className="h-full! font-bold"
-              disabled={
-                selectedSeats.length === 0 ||
-                setSeatsContractTicketSale.isPending ||
-                isPlanScreeningPast
-              }
-              onClick={() => setOpenCancelSeats(true)}
-            >
-              Hủy vé hợp đồng
             </Button>
           )}
 
@@ -310,10 +345,10 @@ const Actions = ({
         }}
         onCancel={() => setOpenCancelSeats(false)}
         okButtonProps={{
-          loading: cancelOrder.isPending
+          loading: cancelContractTicketSale.isPending
         }}
         cancelButtonProps={{
-          disabled: cancelOrder.isPending
+          disabled: cancelContractTicketSale.isPending
         }}
         modalRender={(dom) => (
           <Form<FieldType>

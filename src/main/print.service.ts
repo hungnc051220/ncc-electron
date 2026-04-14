@@ -46,6 +46,13 @@ export const createPrintService = () => {
 
   // 🔹 Render HTML template inline để tránh phụ thuộc file ngoài khi build
   function renderTicketHTML(ticket: PrintTicketPayload) {
+    const printedAt = new Intl.DateTimeFormat("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    }).format(new Date());
     const floorText = ticket.floor
       ? String(ticket.floor).trim().toLowerCase().startsWith("tầng")
         ? String(ticket.floor).trim()
@@ -330,8 +337,8 @@ export const createPrintService = () => {
             <span class="label-footer">${staffName}</span>
           </div>
           <div class="row">
-            <span class="en-label">Hotline:</span>
-            <span class="label-footer">024.35141791</span>
+            <span class="en-label">In lúc:</span>
+            <span class="label-footer">${printedAt}</span>
           </div>
         </div>
       </div>

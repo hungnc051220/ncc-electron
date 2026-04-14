@@ -5,5 +5,8 @@ export const useCancelTickets = (params: CancelTicketsQuery) =>
   useQuery({
     queryKey: ["cancel-tickets", params],
     queryFn: () => cancelTicketsApi.getAll(params),
-    placeholderData: keepPreviousData
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always"
   });

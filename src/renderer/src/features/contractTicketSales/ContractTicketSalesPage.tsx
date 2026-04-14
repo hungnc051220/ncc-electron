@@ -1,8 +1,13 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
+import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
+import { CancelContactTicketSaleDto } from "@renderer/api/contractTicketSales.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import { useCancelContractTicketSale } from "@renderer/hooks/contractTicketSales/useCancelContractTicketSale";
 import { useContractTicketSales } from "@renderer/hooks/contractTicketSales/useContractTicketSales";
+import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { getPrintErrorMessage } from "@renderer/lib/print";
 import {
   buildTicketsFromOrder,
@@ -11,21 +16,21 @@ import {
   formatNumber
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
+import { useAuthStore } from "@renderer/store/auth.store";
+import { usePrinterStore } from "@renderer/store/printer.store";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown, Tooltip, message } from "antd";
+import { Button, Dropdown, Form, Modal, Select, Tooltip, message } from "antd";
 import dayjs from "dayjs";
-import { Armchair, FileText, PlusIcon, Printer, SquarePen } from "lucide-react";
+import { Armchair, FileText, PlusIcon, Printer, SquarePen, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import InvoiceDialog from "../invoices/components/InvoiceDialog";
 import ContractTicketSaleDialog from "./components/ContractTicketSaleDialog";
 import Filter from "./components/Filter";
-import InvoiceDialog from "../invoices/components/InvoiceDialog";
-import { useAuthStore } from "@renderer/store/auth.store";
-import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { usePrinterStore } from "@renderer/store/printer.store";
-import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 
 export interface ValuesProps {
   dateRange?: [string, string];
@@ -50,6 +55,10 @@ interface ContractTicketSaleRow {
   contractIndex: number;
 }
 
+type DeleteContractFormValues = {
+  cancelReasonId: number;
+};
+
 const ContractTicketSalesPage = () => {
   const navigate = useNavigate();
   const userId = useAuthStore((s) => s.userId);
@@ -61,15 +70,20 @@ const ContractTicketSalesPage = () => {
   const canUpdate = can("contract_ticket_sales", "update");
   const canView = can("contract_ticket_sales", "view");
   const canPrint = can("contract_ticket_sales", "print");
+  const canDelete = can("contract_ticket_sales", "delete");
 
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [deleteForm] = Form.useForm<DeleteContractFormValues>();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogInvoiceOpen, setDialogInvoiceOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderResponseProps | null>(null);
+  const [selectedDeleteItem, setSelectedDeleteItem] = useState<OrderDetailProps | null>(null);
   const [filterValues, setFilterValues] = useState<ValuesProps>({
     dateRange: [dayjs().format("YYYY-MM-DD"), dayjs().format("YYYY-MM-DD")]
   });
+  const cancelContractTicketSale = useCancelContractTicketSale();
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -88,6 +102,22 @@ const ContractTicketSalesPage = () => {
   }, [current, pageSize, filterValues]);
 
   const { data: tickets, isFetching } = useContractTicketSales(params);
+  const {
+    data: cancellationReasons,
+    fetchNextPage,
+    hasNextPage,
+    isFetching: isFetchingCancellationReasons,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["cancellation-reasons"],
+    queryFn: ({ pageParam = 1 }) =>
+      cancellationReasonsApi.getAll({ current: pageParam, pageSize: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const currentPage = pages.length;
+      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
+    }
+  });
 
   const handleAdd = useCallback(() => {
     setSelectedItem(null);
@@ -102,6 +132,11 @@ const ContractTicketSalesPage = () => {
   const handleDetailInvoice = useCallback((item: OrderResponseProps) => {
     setSelectedItem(item);
     setDialogInvoiceOpen(true);
+  }, []);
+
+  const handleOpenDelete = useCallback((item: OrderDetailProps) => {
+    setSelectedDeleteItem(item);
+    setDeleteDialogOpen(true);
   }, []);
 
   const handleUpdateSeat = (item: OrderResponseProps) => {
@@ -150,18 +185,16 @@ const ContractTicketSalesPage = () => {
     }
   }, []);
 
-  const actionItems = [
-    ...(canUpdate
-      ? [
-          { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
-          { key: "2", icon: <Armchair size={16} />, label: "Thiết lập ghế ngồi" }
-        ]
-      : []),
-    ...(canPrint ? [{ key: "3", icon: <Printer size={16} />, label: "In vé" }] : []),
-    ...(canView
-      ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }]
-      : [])
-  ];
+  const handleDeleteDialogClose = useCallback(
+    (open: boolean) => {
+      setDeleteDialogOpen(open);
+      if (!open) {
+        setSelectedDeleteItem(null);
+        deleteForm.resetFields();
+      }
+    },
+    [deleteForm]
+  );
 
   const getPlanDetails = useCallback(
     (record: OrderDetailProps): PlanDetail[] =>
@@ -207,6 +240,12 @@ const ContractTicketSalesPage = () => {
     []
   );
 
+  const getTotalTicketCount = useCallback(
+    (record: OrderDetailProps) =>
+      record.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0) || 0,
+    []
+  );
+
   const getSeatsByPlan = useCallback(
     (record: OrderDetailProps, planScreeningId?: number | null) => {
       if (!planScreeningId) {
@@ -247,6 +286,76 @@ const ContractTicketSalesPage = () => {
         }));
       }),
     [current, getDisplayPlans, pageSize, tickets?.data]
+  );
+
+  const isEmptyContract = useCallback(
+    (record: OrderDetailProps) => {
+      const hasPlanScreening = getDisplayPlans(record).some((item) =>
+        Boolean(item.planScreening?.id)
+      );
+      return !hasPlanScreening && getTotalTicketCount(record) === 0;
+    },
+    [getDisplayPlans, getTotalTicketCount]
+  );
+
+  const cancelReasonOptions = useMemo(
+    () =>
+      cancellationReasons?.pages.flatMap((page) =>
+        page.data.map((item) => ({
+          value: item.id,
+          label: item.reason
+        }))
+      ) ?? [],
+    [cancellationReasons]
+  );
+
+  const handleDeleteContract = useCallback(
+    (values: DeleteContractFormValues) => {
+      if (!selectedDeleteItem?.order?.id) {
+        return;
+      }
+
+      const cancelReasonMsg =
+        cancelReasonOptions
+          .find((item) => item.value === values.cancelReasonId)
+          ?.label?.toString() ?? "";
+
+      const payload: CancelContactTicketSaleDto = {
+        orderId: selectedDeleteItem.order.id,
+        cancelReasonId: values.cancelReasonId,
+        cancelReasonMsg
+      };
+
+      cancelContractTicketSale.mutate(payload, {
+        onSuccess: () => {
+          handleDeleteDialogClose(false);
+          message.success("Xóa hợp đồng thành công");
+        },
+        onError: (error: unknown) => {
+          message.error(getApiErrorMessage(error, "Xóa hợp đồng thất bại"));
+        }
+      });
+    },
+    [cancelContractTicketSale, cancelReasonOptions, handleDeleteDialogClose, selectedDeleteItem]
+  );
+
+  const getActionItems = useCallback(
+    (record: OrderDetailProps) => [
+      ...(canUpdate
+        ? [
+            { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
+            { key: "2", icon: <Armchair size={16} />, label: "Thiết lập ghế ngồi" }
+          ]
+        : []),
+      ...(canPrint ? [{ key: "3", icon: <Printer size={16} />, label: "In vé" }] : []),
+      ...(canView
+        ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }]
+        : []),
+      ...(canDelete && isEmptyContract(record)
+        ? [{ key: "5", icon: <Trash2 size={16} />, label: "Xóa", danger: true }]
+        : [])
+    ],
+    [canDelete, canPrint, canUpdate, canView, isEmptyContract]
   );
 
   const renderPlanSchedule = useCallback((item: PlanDetail) => {
@@ -366,15 +475,12 @@ const ContractTicketSalesPage = () => {
       key: "ticketCount",
       dataIndex: "ticketCount",
       sorter: (a, b) =>
-        compareNumber(
-          a.orderDetail.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0),
-          b.orderDetail.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0)
-        ),
+        compareNumber(getTotalTicketCount(a.orderDetail), getTotalTicketCount(b.orderDetail)),
       render: (_, record) =>
         renderMergedCell(
           record.isFirstRow,
           record.rowSpan,
-          record.orderDetail.order?.items?.reduce((acc, cur) => acc + cur.quantity, 0)
+          getTotalTicketCount(record.orderDetail)
         ),
       align: "right"
     },
@@ -415,40 +521,48 @@ const ContractTicketSalesPage = () => {
         ),
       width: 150
     },
-    ...(actionItems.length
+    ...(canUpdate || canPrint || canView || canDelete
       ? [
           {
             title: "",
             key: "operation",
             width: 50,
-            render: (_: unknown, record: ContractTicketSaleRow) =>
-              renderMergedCell(
+            render: (_: unknown, record: ContractTicketSaleRow) => {
+              const items = getActionItems(record.orderDetail);
+
+              return renderMergedCell(
                 record.isFirstRow,
                 record.rowSpan,
-                <Dropdown
-                  menu={{
-                    items: actionItems,
-                    onClick: (e) => {
-                      if (e.key === "1") {
-                        handleEdit(record.orderDetail.order);
+                items.length ? (
+                  <Dropdown
+                    menu={{
+                      items,
+                      onClick: (e) => {
+                        if (e.key === "1") {
+                          handleEdit(record.orderDetail.order);
+                        }
+                        if (e.key === "2") {
+                          handleUpdateSeat(record.orderDetail.order);
+                        }
+                        if (e.key === "3") {
+                          handlePrint(record.orderDetail);
+                        }
+                        if (e.key === "4") {
+                          handleDetailInvoice(record.orderDetail.order);
+                        }
+                        if (e.key === "5") {
+                          handleOpenDelete(record.orderDetail);
+                        }
                       }
-                      if (e.key === "2") {
-                        handleUpdateSeat(record.orderDetail.order);
-                      }
-                      if (e.key === "3") {
-                        handlePrint(record.orderDetail);
-                      }
-                      if (e.key === "4") {
-                        handleDetailInvoice(record.orderDetail.order);
-                      }
-                    }
-                  }}
-                  arrow
-                  trigger={["click"]}
-                >
-                  <MoreOutlined />
-                </Dropdown>
-              ),
+                    }}
+                    arrow
+                    trigger={["click"]}
+                  >
+                    <MoreOutlined />
+                  </Dropdown>
+                ) : null
+              );
+            },
             align: "center" as const,
             fixed: "right" as const
           }
@@ -520,6 +634,54 @@ const ContractTicketSalesPage = () => {
           orderId={selectedItem?.id}
         />
       )}
+
+      <Modal
+        title="Xác nhận xóa hợp đồng"
+        open={deleteDialogOpen}
+        onOk={() => deleteForm.submit()}
+        onCancel={() => handleDeleteDialogClose(false)}
+        okText="Xóa"
+        okButtonProps={{
+          danger: true,
+          loading: cancelContractTicketSale.isPending
+        }}
+        cancelButtonProps={{
+          disabled: cancelContractTicketSale.isPending
+        }}
+        modalRender={(dom) => (
+          <Form<DeleteContractFormValues>
+            form={deleteForm}
+            onFinish={handleDeleteContract}
+            autoComplete="off"
+            layout="vertical"
+          >
+            {dom}
+          </Form>
+        )}
+      >
+        <Form.Item<DeleteContractFormValues>
+          name="cancelReasonId"
+          label="Lý do xóa hợp đồng"
+          rules={[{ required: true, message: "Chọn lý do xóa hợp đồng" }]}
+        >
+          <Select
+            loading={isFetchingCancellationReasons || isFetchingNextPage}
+            options={cancelReasonOptions}
+            placeholder="Chọn lý do xóa hợp đồng"
+            onPopupScroll={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                hasNextPage &&
+                !isFetchingNextPage &&
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
+              ) {
+                fetchNextPage();
+              }
+            }}
+            allowClear
+          />
+        </Form.Item>
+      </Modal>
     </div>
   );
 };

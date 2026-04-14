@@ -1,5 +1,6 @@
 "use client";
 
+import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
 import { ListSeat } from "@shared/types";
 import { Spin } from "antd";
@@ -14,12 +15,14 @@ const OnlineSeatBookingDetailPage = () => {
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
 
   const { data, isFetching } = usePlanScreeningDetail(Number(planScreeningId));
+  const { data: orders } = useOrdersByScreening(Number(planScreeningId));
 
   return (
     <Spin spinning={isFetching}>
       <div className="relative flex flex-col h-screen overflow-hidden select-none">
         <Seats
           data={data}
+          orders={orders}
           selectedSeats={selectedSeats}
           setSelectedSeats={setSelectedSeats}
           selectionMode="emptyOnly"

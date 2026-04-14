@@ -85,6 +85,8 @@ const Seat = ({
   isSelectingByOther,
   seatColor,
   seatUniqueKey,
+  isDimmed,
+  isSpotlighted,
   onHover,
   onLeave
 }: {
@@ -97,6 +99,8 @@ const Seat = ({
   isSelectingByOther?: boolean;
   seatColor?: string;
   seatUniqueKey?: string;
+  isDimmed?: boolean;
+  isSpotlighted?: boolean;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
 }) => {
@@ -119,7 +123,7 @@ const Seat = ({
   return (
     <div
       className={cn(
-        "relative rounded-sm flex items-center justify-center",
+        "relative rounded-sm flex items-center justify-center transition-all duration-150",
         canSelect && !isSelectingByOther && "selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
@@ -130,7 +134,10 @@ const Seat = ({
         seat.isInvitation && "bg-teal-500 text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white",
-        isSelectingByOther && !isSelected && "ring-1 ring-primary/70"
+        isSelectingByOther && !isSelected && "ring-1 ring-primary/70",
+        isDimmed && "opacity-30 saturate-50",
+        isSpotlighted && "ring-2 ring-white/90 shadow-[0_0_0_2px_rgba(59,130,246,0.55)] z-10",
+        isSpotlighted && !isSelected && "opacity-100 saturate-100"
       )}
       style={{
         backgroundColor: shouldShowPositionColor ? seatColor : undefined,

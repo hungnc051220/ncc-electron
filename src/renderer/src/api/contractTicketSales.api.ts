@@ -1,5 +1,5 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, OrderDetailProps } from "@shared/types";
+import { ApiResponse, OrderDetailProps, OrderStatus } from "@shared/types";
 import queryString from "query-string";
 
 export interface ContractTicketSalesQuery {
@@ -28,11 +28,23 @@ export interface SetSeatsContractTicketSaleDto {
   operation?: number;
 }
 
+export interface CancelContactTicketSaleDto {
+  planScreenId?: number;
+  orderId: number;
+  listChairIndexF1?: string[];
+  listChairIndexF2?: string[];
+  listChairIndexF3?: string[];
+  cancelReasonId: number;
+  cancelReasonMsg: string;
+}
+
 export const contractTicketSalesApi = {
   getAll: async (params: ContractTicketSalesQuery): Promise<ApiResponse<OrderDetailProps>> => {
     const { current, pageSize, fromDate, toDate } = params;
 
     const filter: Record<string, unknown> = {};
+
+    filter.orderStatusId = { ne: OrderStatus.CANCELLED };
 
     const queryObject: Record<string, unknown> = {
       current,
@@ -67,6 +79,10 @@ export const contractTicketSalesApi = {
   },
   setSeats: async (id: number, dto: SetSeatsContractTicketSaleDto) => {
     const res = await api.post(`/api/pos/order-contract/${id}/set-seats`, dto);
+    return res.data;
+  },
+  cancel: async (dto: CancelContactTicketSaleDto) => {
+    const res = await api.post("/api/pos/order/cancel-contract", dto);
     return res.data;
   }
 };

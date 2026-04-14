@@ -35,10 +35,38 @@ export const decodeToken = (token: string) => {
 export const formatMoney = (price: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
 
+export const resolvePaymentType = (value?: string | null): PaymentType | undefined => {
+  if (!value) return undefined;
+
+  const normalizedValue = value.trim();
+  const strippedValue = normalizedValue.replace(/^Payments\./, "");
+
+  const paymentTypeAliases: Record<PaymentType, string[]> = {
+    [PaymentType.POS]: [PaymentType.POS, "POS"],
+    [PaymentType.VNPAY]: [
+      PaymentType.VNPAY,
+      PaymentType.VNPAY.replace(/^Payments\./, ""),
+      "VNPAY",
+      "VNPay"
+    ],
+    [PaymentType.VIETQR]: [
+      PaymentType.VIETQR,
+      PaymentType.VIETQR.replace(/^Payments\./, ""),
+      "VIETQR",
+      "VietQR"
+    ]
+  };
+
+  return (Object.entries(paymentTypeAliases) as Array<[PaymentType, string[]]>).find(
+    ([, aliases]) => aliases.includes(normalizedValue) || aliases.includes(strippedValue)
+  )?.[0];
+};
+
 export const formatPaymentMethod = (value?: string | null) => {
+  const paymentType = resolvePaymentType(value);
   const normalizedValue = value?.replace(/^Payments\./, "").trim();
 
-  switch (normalizedValue) {
+  switch (paymentType) {
     case PaymentType.POS:
       return "Tiền mặt";
     case PaymentType.VIETQR:
@@ -157,28 +185,38 @@ export const buildTicketsFromOrder = async (
   const branchCinemaName = cinemaName || DEFAULT_BRANCH_SETTINGS.cinemaName;
   const branchAddress = address || DEFAULT_BRANCH_SETTINGS.address;
 
-  data.order.items.forEach((item) => {
-    const seats = sortSeats(extractSeatValues([item]))
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const ticketGroups = data.planDetails?.length ? data.planDetails : [data];
 
-    seats.forEach((seat) => {
-      tickets.push({
-        cinemaName: branchCinemaName,
-        address: branchAddress,
-        movieName: data.film.filmName,
-        showTime: dayjs(data.planScreening.projectTime).format("HH:mm"),
-        date: dayjs(data.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
-        seat: seat,
-        room: data.room.name,
-        floor: data.room.floor,
-        price: formatMoney(item.unitPriceInclTax),
-        ticketCode: data.order.barCode,
-        qrData: qrBase64,
-        discountImage: item.discount?.image,
-        posName,
-        staffName,
-        paymentMethod: formatPaymentMethod(data.order.paymentMethodSystemName)
+  ticketGroups.forEach((detail) => {
+    const planScreeningId = detail.planScreening?.id;
+    const orderItems =
+      planScreeningId != null
+        ? data.order.items.filter((item) => item.planScreenId === planScreeningId)
+        : data.order.items;
+
+    orderItems.forEach((item) => {
+      const seats = sortSeats(extractSeatValues([item]))
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      seats.forEach((seat) => {
+        tickets.push({
+          cinemaName: branchCinemaName,
+          address: branchAddress,
+          movieName: detail.film.filmName,
+          showTime: dayjs(detail.planScreening.projectTime).format("HH:mm"),
+          date: dayjs(detail.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
+          seat: seat,
+          room: detail.room.name,
+          floor: detail.room.floor,
+          price: formatMoney(item.unitPriceInclTax),
+          ticketCode: data.order.barCode,
+          qrData: qrBase64,
+          discountImage: item.discount?.image,
+          posName,
+          staffName,
+          paymentMethod: formatPaymentMethod(data.order.paymentMethodSystemName)
+        });
       });
     });
   });

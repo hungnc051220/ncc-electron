@@ -2,7 +2,7 @@ import { createHashRouter, Navigate } from "react-router";
 import AccessHistoryPage from "./features/accessHistory/AccessHistoryPage";
 import CancellationReasonsPage from "./features/cancellationReasons/CancellationReasonsPage";
 import CancellationTicketsPage from "./features/cancellationTickets/CancellationTicketsPage";
-import ContractTicketSalesDetailPage from "./features/contractTicketSales/ContractTicketSalesDetailPage";
+import ContractTicketSaleDetailPage from "./features/contractTicketSales/ContractTicketSaleDetailPage";
 import ContractTicketSalesPage from "./features/contractTicketSales/ContractTicketSalesPage";
 import CustomerRolesPage from "./features/customerRoles/CustomerRolesPage";
 import Dashboard from "./features/Dashboard";
@@ -235,7 +235,7 @@ export const router = createHashRouter([
       },
       {
         path: "/contract-ticket-sales/:id",
-        element: withAccess("contract_ticket_sales", <ContractTicketSalesDetailPage />)
+        element: withAccess("contract_ticket_sales", <ContractTicketSaleDetailPage />)
       },
       {
         path: "/invitation-tickets/create",

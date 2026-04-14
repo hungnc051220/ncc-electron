@@ -4,6 +4,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ordersApi } from "@renderer/api/orders.api";
 import { invoicesApi } from "@renderer/api/invoice.api";
+import { PaymentType } from "@shared/types";
 import { invoicesKeys } from "@renderer/hooks/invoices/keys";
 import { ordersKeys } from "./keys";
 import { useCancelOrder } from "./useCancelOrder";
@@ -85,14 +86,14 @@ describe("order and invoice mutations", () => {
 
     await result.current.mutateAsync({
       orderId: 55,
-      paymentMethod: "VIETQR",
+      paymentMethod: PaymentType.VIETQR,
       shortName: "M11"
     });
 
     expect(createQrSpy).toHaveBeenCalledWith(
       {
         orderId: 55,
-        paymentMethod: "VIETQR",
+        paymentMethod: PaymentType.VIETQR,
         shortName: "M11"
       },
       expect.anything()

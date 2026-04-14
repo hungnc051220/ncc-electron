@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { PaymentType } from "@shared/types";
 import QrCodeDialog from "./QrCodeDialog";
 
 vi.mock("./Countdown", () => ({
@@ -21,7 +22,7 @@ vi.mock("./Countdown", () => ({
 const baseQrData = {
   orderId: 77,
   qrcode: "vietqr://payload",
-  paymentMethodSystemName: "VIETQR",
+  paymentMethodSystemName: PaymentType.VIETQR,
   referenceLabelCode: "REF",
   accountName: "TRUNG TAM CHIEU PHIM",
   accountNumber: "123456789",
@@ -53,7 +54,7 @@ describe("QrCodeDialog", () => {
     expect(screen.getByText("Conan")).toBeInTheDocument();
     expect(screen.getByText("A1, A2")).toBeInTheDocument();
     expect(screen.getAllByText((content) => content.replace(/\s/g, "") === "0₫")).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "Check lại giao dịch TT" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kiểm tra lại giao dịch TT" })).toBeInTheDocument();
   });
 
   it("shows options instead of auto-closing when the QR expires", () => {
@@ -63,14 +64,14 @@ describe("QrCodeDialog", () => {
     fireEvent.click(screen.getByTestId("countdown-expire"));
 
     expect(onCancel).not.toHaveBeenCalled();
-    expect(screen.getAllByText(/kết thúc hoặc check lại giao dịch TT/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/kết thúc hoặc check lại giao dịch thanh toán/i).length).toBeGreaterThan(0);
   });
 
   it("calls onCheckTransaction when clicking the retry button", () => {
     const onCheckTransaction = vi.fn();
 
     render(<QrCodeDialog open onCheckTransaction={onCheckTransaction} dataQr={baseQrData} />);
-    fireEvent.click(screen.getByRole("button", { name: "Check lại giao dịch TT" }));
+    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra lại giao dịch TT" }));
 
     expect(onCheckTransaction).toHaveBeenCalledTimes(1);
   });
@@ -80,7 +81,7 @@ describe("QrCodeDialog", () => {
 
     expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Check lại giao dịch TT" })
+      screen.queryByRole("button", { name: "Kiểm tra lại giao dịch TT" })
     ).not.toBeInTheDocument();
   });
 
@@ -97,7 +98,7 @@ describe("QrCodeDialog", () => {
         dataQr={{
           ...baseQrData,
           qrcode: "vnpay://payload",
-          paymentMethodSystemName: "VNPAY"
+          paymentMethodSystemName: PaymentType.VNPAY
         }}
       />
     );

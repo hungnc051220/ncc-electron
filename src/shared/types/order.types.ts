@@ -308,8 +308,8 @@ export interface QrCodeResponseProps {
 
 export enum PaymentType {
   POS = "POS",
-  VNPAY = "VNPAY",
-  VIETQR = "VIETQR"
+  VNPAY = "Payments.VNPay",
+  VIETQR = "Payments.VietQR"
 }
 
 export interface ContractTicketSaleProps {

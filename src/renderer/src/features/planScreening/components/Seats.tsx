@@ -33,6 +33,7 @@ type TooltipPosition = {
 interface SeatsProps {
   data?: PlanScreeningDetailProps;
   orders?: OrderResponseProps[];
+  currentPlanScreeningId?: number;
   seatTypes?: SeatTypeProps[];
   selectedSeats: ListSeat[];
   selectingSeatsByOther?: Record<string, string>;
@@ -45,6 +46,8 @@ interface SeatsProps {
   syncedSelectedFloor?: number | null;
   onSelectedFloorChange?: (floor: number) => void;
   selectionMode?: "default" | "emptyOnly";
+  restrictedSeatKeys?: string[];
+  spotlightSeatKeys?: string[];
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
@@ -54,6 +57,7 @@ const getSeatUniqueKey = (seat: ListSeat): string => {
 const Seats = ({
   data,
   orders,
+  currentPlanScreeningId,
   seatTypes,
   selectedSeats,
   selectingSeatsByOther,
@@ -65,7 +69,9 @@ const Seats = ({
   onSelectionLimitReached,
   syncedSelectedFloor,
   onSelectedFloorChange,
-  selectionMode = "default"
+  selectionMode = "default",
+  restrictedSeatKeys,
+  spotlightSeatKeys
 }: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
@@ -87,6 +93,12 @@ const Seats = ({
     () => seatTypes || seatTypesResponse?.data || [],
     [seatTypes, seatTypesResponse]
   );
+  const restrictedSeatKeySet = useMemo(
+    () => new Set(restrictedSeatKeys || []),
+    [restrictedSeatKeys]
+  );
+  const spotlightSeatKeySet = useMemo(() => new Set(spotlightSeatKeys || []), [spotlightSeatKeys]);
+  const hasSeatSpotlight = spotlightSeatKeySet.size > 0;
 
   useEffect(() => {
     setSelectedSeats([]);
@@ -94,6 +106,8 @@ const Seats = ({
 
   const canSelectSeat = useCallback(
     (seat: ListSeat) => {
+      const seatUniqueKey = getSeatUniqueKey(seat);
+
       if (seat.type === 12) return false;
 
       if (selectionMode === "emptyOnly") {
@@ -112,7 +126,10 @@ const Seats = ({
 
         // 📄 Màn hợp đồng
         if (screenMode === "contract") {
-          return seat.isContract === 1;
+          return (
+            seat.isContract === 1 &&
+            (restrictedSeatKeySet.size === 0 || restrictedSeatKeySet.has(seatUniqueKey))
+          );
         }
 
         // 🎟 Màn bán vé thường
@@ -120,6 +137,11 @@ const Seats = ({
       }
 
       // --- Nếu đang bán vé ---
+      // Ghế hợp đồng chỉ được thao tác khi bật chế độ hủy vé
+      if (seat.isContract === 1) {
+        return false;
+      }
+
       // Ghế đã có đơn thì disable
       if (seat.status === 1 && seat.isHold !== 1) {
         // 🎫 Giấy mời: cho phép chọn ghế invitation
@@ -137,7 +159,7 @@ const Seats = ({
 
       return true;
     },
-    [cancelMode, screenMode, selectionMode]
+    [cancelMode, restrictedSeatKeySet, screenMode, selectionMode]
   );
 
   const isSeatBlockedOnline = useCallback(
@@ -201,15 +223,25 @@ const Seats = ({
 
     orders?.forEach((order) => {
       order.items?.forEach((item) => {
+        if (currentPlanScreeningId && item.planScreenId !== currentPlanScreeningId) {
+          return;
+        }
+
         [1, 2, 3].forEach((floor) => {
-          const key = `listChairIndexF${floor}` as
+          const indexKey = `listChairIndexF${floor}` as
             | "listChairIndexF1"
             | "listChairIndexF2"
             | "listChairIndexF3";
-          const seatIndexes = splitSeats(item[key]);
+          const valueKey = `listChairValueF${floor}` as
+            | "listChairValueF1"
+            | "listChairValueF2"
+            | "listChairValueF3";
+          const seatKeys = [
+            ...splitSeats(item[indexKey]).map((seatIndex) => `${floor}-${seatIndex}`),
+            ...splitSeats(item[valueKey]).map((seatValue) => `${floor}-code:${seatValue}`)
+          ];
 
-          seatIndexes.forEach((seatIndex) => {
-            const mapKey = `${floor}-${seatIndex}`;
+          seatKeys.forEach((mapKey) => {
             const existing = map[mapKey];
 
             if (!existing) {
@@ -229,12 +261,15 @@ const Seats = ({
     });
 
     return map;
-  }, [orders]);
+  }, [currentPlanScreeningId, orders]);
 
   const hoverSeatOrder = useMemo(() => {
     if (!hoverSeat) return undefined;
 
-    return seatOrderMap[`${hoverSeat.floor}-${hoverSeat.seat}`];
+    return (
+      seatOrderMap[`${hoverSeat.floor}-${hoverSeat.seat}`] ||
+      seatOrderMap[`${hoverSeat.floor}-code:${hoverSeat.code}`]
+    );
   }, [hoverSeat, seatOrderMap]);
 
   const seatTypeColorMap = useMemo(
@@ -503,21 +538,31 @@ const Seats = ({
         >
           {item[4]?.code?.charAt(0) || ""}
         </div>
-        {item.map((seat) => (
-          <Seat
-            key={seat.seat}
-            seat={seat}
-            isSelected={selectedSeats.some((s) => getSeatUniqueKey(s) === getSeatUniqueKey(seat))}
-            isSelectingByOther={selectingSeatKeysByOther.has(getSeatUniqueKey(seat))}
-            onSelect={handleSelectSeat}
-            size={seatSize}
-            canSelect={canSelectSeat(seat)}
-            isBlockedOnline={isSeatBlockedOnline(seat)}
-            seatColor={seat.positionId ? seatTypeColorMap.get(seat.positionId) : undefined}
-            onHover={handleHover}
-            onLeave={handleLeave}
-          />
-        ))}
+        {item.map((seat) => {
+          const seatUniqueKey = getSeatUniqueKey(seat);
+          const isSpotlighted = hasSeatSpotlight && spotlightSeatKeySet.has(seatUniqueKey);
+          const isDimmed = hasSeatSpotlight && cancelMode && !isSpotlighted;
+          const isBlockedOnline = isSeatBlockedOnline(seat);
+
+          return (
+            <Seat
+              key={seat.seat}
+              seat={seat}
+              isSelected={selectedSeats.some((s) => getSeatUniqueKey(s) === seatUniqueKey)}
+              isSelectingByOther={selectingSeatKeysByOther.has(seatUniqueKey)}
+              onSelect={handleSelectSeat}
+              size={seatSize}
+              canSelect={canSelectSeat(seat)}
+              isBlockedOnline={isBlockedOnline}
+              seatColor={seat.positionId ? seatTypeColorMap.get(seat.positionId) : undefined}
+              seatUniqueKey={seatUniqueKey}
+              isDimmed={isDimmed}
+              isSpotlighted={isSpotlighted}
+              onHover={handleHover}
+              onLeave={handleLeave}
+            />
+          );
+        })}
         <div
           className="text-trunks dark:text-white font-medium flex items-center justify-center"
           style={{
@@ -536,9 +581,12 @@ const Seats = ({
     handleSelectSeat,
     seatSize,
     canSelectSeat,
+    cancelMode,
+    hasSeatSpotlight,
     isSeatBlockedOnline,
     seatTypeColorMap,
-    selectingSeatKeysByOther
+    selectingSeatKeysByOther,
+    spotlightSeatKeySet
   ]);
 
   if (!data) return null;
@@ -603,7 +651,10 @@ const Seats = ({
         </fieldset>
 
         <div
-          className="mt-2 flex-1 flex justify-center items-center min-h-0"
+          className={cn(
+            "mt-2 flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
+            hasSeatSpotlight && cancelMode && "relative"
+          )}
           ref={(node) => {
             seatContainerRef.current = node;
             setDragContainer(node);
@@ -663,6 +714,7 @@ const Seats = ({
         <TooltipFloating
           seat={hoverSeat}
           order={hoverSeatOrder}
+          currentPlanScreeningId={currentPlanScreeningId}
           position={tooltipPos}
           visible={visible}
         />

@@ -1,4 +1,4 @@
-import { formatMoney } from "@renderer/lib/utils";
+import { formatMoney, resolvePaymentType } from "@renderer/lib/utils";
 import vietQrImage from "@renderer/assets/images/vietqr.png";
 import vnPayImage from "@renderer/assets/images/vnpay2.png";
 import { PaymentType, QrDialogData } from "@shared/types";
@@ -18,16 +18,16 @@ interface QrCodeDialogProps {
 }
 
 const getQrBrandAsset = (paymentMethodSystemName?: string) => {
-  const normalizedValue = paymentMethodSystemName?.replace(/^Payments\./, "").trim();
+  const paymentType = resolvePaymentType(paymentMethodSystemName);
 
-  if (normalizedValue === PaymentType.VIETQR) {
+  if (paymentType === PaymentType.VIETQR) {
     return {
       src: vietQrImage,
       alt: "VietQR"
     };
   }
 
-  if (normalizedValue === PaymentType.VNPAY) {
+  if (paymentType === PaymentType.VNPAY) {
     return {
       src: vnPayImage,
       alt: "VNPayQR"
