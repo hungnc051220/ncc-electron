@@ -373,7 +373,7 @@ const Actions = ({
             const responseQr = await createQr.mutateAsync({
               orderId: order.id,
               paymentMethod: paymentMethod[0],
-              shortName: "M11"
+              shortName: posShortName
             });
 
             const body: QrDialogData = {

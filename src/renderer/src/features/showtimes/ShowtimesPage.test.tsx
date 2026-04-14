@@ -5,7 +5,17 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import ShowtimesPage from "./ShowtimesPage";
 
 const mocks = vi.hoisted(() => ({
-  setDate: vi.fn()
+  setDate: vi.fn(),
+  screeningsData: [] as Array<{
+    filmName: string;
+    details: Array<{
+      planCinemaId: number;
+      planScreeningsId: number;
+      projectTime: string;
+      roomId: string;
+      roomName: string;
+    }>;
+  }>
 }));
 
 vi.mock("antd", () => ({
@@ -36,7 +46,22 @@ vi.mock("antd", () => ({
     </label>
   ),
   DatePicker: () => <div data-testid="date-picker" />,
-  Table: () => <div data-testid="showtimes-table" />
+  Table: ({
+    dataSource
+  }: {
+    dataSource?: Array<{ filmName: string; details: Array<{ projectTime: string }> }>;
+  }) => (
+    <div data-testid="showtimes-table">
+      {dataSource?.map((film) => (
+        <div key={film.filmName}>
+          <span>{film.filmName}</span>
+          {film.details.map((detail) => (
+            <span key={detail.projectTime}>{dayjs(detail.projectTime).format("HH:mm")}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
 }));
 
 vi.mock("nuqs", () => ({
@@ -45,7 +70,7 @@ vi.mock("nuqs", () => ({
 
 vi.mock("@renderer/hooks/planScreenings/usePlanScreeningsByDate", () => ({
   usePlanScreeningsByDate: () => ({
-    data: [],
+    data: mocks.screeningsData,
     isFetching: false
   })
 }));
@@ -67,6 +92,7 @@ const mockedUseQueryState = vi.mocked(useQueryState);
 describe("ShowtimesPage", () => {
   beforeEach(() => {
     mocks.setDate.mockReset();
+    mocks.screeningsData = [];
   });
 
   it("resets the selected date to today when opening showtimes with the reset flag", async () => {
@@ -113,5 +139,49 @@ describe("ShowtimesPage", () => {
     );
 
     expect(screen.getByLabelText("Hiển thị lịch đã chiếu")).toBeDisabled();
+  });
+
+  it("hides screenings that have already passed on the selected day", async () => {
+    vi.setSystemTime(new Date("2026-04-14T11:46:00+07:00"));
+    mockedUseQueryState.mockReturnValue(["2026-04-14", mocks.setDate]);
+    mocks.screeningsData = [
+      {
+        filmName: "THỎ ƠI-T18",
+        details: [
+          {
+            planCinemaId: 12081,
+            planScreeningsId: 400561,
+            projectTime: "2026-04-14T05:00:00+07:00",
+            roomId: "86",
+            roomName: "1"
+          }
+        ]
+      },
+      {
+        filmName: "PHIM SUPER MARIO THIÊN HÀ - P (PHỤ ĐỀ)",
+        details: [
+          {
+            planCinemaId: 12082,
+            planScreeningsId: 400562,
+            projectTime: "2026-04-14T20:00:00+07:00",
+            roomId: "87",
+            roomName: "2"
+          }
+        ]
+      }
+    ];
+
+    render(
+      <MemoryRouter initialEntries={["/showtimes?date=2026-04-14"]}>
+        <Routes>
+          <Route path="/showtimes" element={<ShowtimesPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText("THỎ ƠI-T18")).not.toBeInTheDocument();
+    expect(screen.queryByText("05:00")).not.toBeInTheDocument();
+    expect(screen.getByText("PHIM SUPER MARIO THIÊN HÀ - P (PHỤ ĐỀ)")).toBeInTheDocument();
+    expect(screen.getByText("20:00")).toBeInTheDocument();
   });
 });

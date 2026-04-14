@@ -143,7 +143,8 @@ export const extractSeatValues = (items?: SeatValueSource[] | null): string[] =>
       .filter(Boolean)
   );
 
-export const formatSeatValues = (items?: SeatValueSource[] | null) => extractSeatValues(items).join(", ");
+export const formatSeatValues = (items?: SeatValueSource[] | null) =>
+  extractSeatValues(items).join(", ");
 
 export const buildTicketsFromOrder = async (
   data: OrderDetailProps,

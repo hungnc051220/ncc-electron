@@ -83,7 +83,6 @@ const ShowtimesPage = () => {
       return data.map((f) => ({ ...f, details: [...f.details] }));
     }
 
-    const now = today;
     void tick;
 
     return data
@@ -91,8 +90,8 @@ const ShowtimesPage = () => {
         ...film,
         details: showPast
           ? [...film.details]
-          : film.details.filter((detail) =>
-              dayjs(detail.projectTime).add(7, "hour").add(30, "minute").isAfter(now)
+          : film.details.filter(
+              (detail) => !isPlanScreeningLocked(selected.format("YYYY-MM-DD"), detail.projectTime)
             )
       }))
       .filter((film) => film.details.length > 0);
