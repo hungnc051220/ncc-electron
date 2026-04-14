@@ -301,6 +301,10 @@ const TabSummary = ({
                   const crmDiscount = value?.crmDiscount ?? {};
                   const internalDiscount = value?.internalDiscount ?? {};
                   const crmDiscountTotal = crmDiscount.discountTotal ?? value?.discountTotal ?? 0;
+                  const totalPlanCount =
+                    label === "Tổng cộng"
+                      ? formatNumber((value as TotalRevenueProps | undefined)?.totalPlanCount || 0)
+                      : "";
                   const totalRevenueAfterDiscount = (value?.actualSale || 0) - crmDiscountTotal;
                   const actualRemittance =
                     (value?.actualSale || 0) -
@@ -310,8 +314,11 @@ const TabSummary = ({
 
                   return (
                     <>
-                      <Table.Summary.Cell index={0} colSpan={3}>
+                      <Table.Summary.Cell index={0} colSpan={2}>
                         <strong>{label}</strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={2} align="right">
+                        <strong>{totalPlanCount}</strong>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={3} align="right">
                         <strong>{formatNumber(value?.totalQuantity || 0)}</strong>

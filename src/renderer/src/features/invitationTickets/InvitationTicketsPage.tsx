@@ -207,10 +207,10 @@ const InvitationTicketsPage = () => {
         {
           onSuccess: () => {
             handleCancelDialogClose(false);
-            message.success("Huỷ vé mời thành công");
+            message.success("Hủy vé mời thành công");
           },
           onError: (error: unknown) => {
-            message.error(getApiErrorMessage(error, "Huỷ vé mời thất bại"));
+            message.error(getApiErrorMessage(error, "Hủy vé mời thất bại"));
           }
         }
       );

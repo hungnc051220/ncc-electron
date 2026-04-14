@@ -10,7 +10,7 @@ const MonthlyReportPage = () => {
   const items: TabsProps["items"] = [
     {
       key: "1",
-      label: "Thông kê buổi chiếu phim",
+      label: "Thống kê buổi chiếu phim",
       forceRender: true,
       children: (
         <div className="flex h-full min-h-0 flex-col">

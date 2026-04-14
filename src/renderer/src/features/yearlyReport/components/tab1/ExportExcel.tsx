@@ -40,7 +40,7 @@ const ExportRevenueExcelButton = ({
     const headerBottomRow = 4;
 
     ws.mergeCells(headerTopRow, 1, headerBottomRow, 1);
-    ws.getCell(headerTopRow, 1).value = "Hang phim / Phim";
+    ws.getCell(headerTopRow, 1).value = "Hãng phim / Phim";
 
     QUARTERS.forEach((quarter, index) => {
       const startCol = 2 + index * 3;

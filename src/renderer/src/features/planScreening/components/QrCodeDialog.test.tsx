@@ -64,7 +64,9 @@ describe("QrCodeDialog", () => {
     fireEvent.click(screen.getByTestId("countdown-expire"));
 
     expect(onCancel).not.toHaveBeenCalled();
-    expect(screen.getAllByText(/kết thúc hoặc check lại giao dịch thanh toán/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/kết thúc hoặc check lại giao dịch thanh toán/i).length
+    ).toBeGreaterThan(0);
   });
 
   it("calls onCheckTransaction when clicking the retry button", () => {

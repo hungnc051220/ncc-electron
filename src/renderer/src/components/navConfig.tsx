@@ -208,7 +208,7 @@ export const navConfig: NavConfigItem[] = [
         matchPaths: ["/contract-ticket-sales", "/contract-ticket-sales/:id"]
       },
       {
-        label: "Thông kê doanh thu bán vé",
+        label: "Thống kê doanh thu bán vé",
         key: "ticket-sales-revenue",
         permissionKey: "ticket_sales_revenue",
         to: "/ticket-sales-revenue",

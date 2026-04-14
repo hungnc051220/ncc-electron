@@ -220,10 +220,10 @@ const OrderHistoryPage = () => {
         {
           onSuccess: () => {
             handleCancelDialogClose(false);
-            message.success("Huỷ vé thành công");
+            message.success("Hủy vé thành công");
           },
           onError: (error: unknown) => {
-            message.error(getApiErrorMessage(error, "Huỷ vé thất bại"));
+            message.error(getApiErrorMessage(error, "Hủy vé thất bại"));
           }
         }
       );
@@ -405,7 +405,7 @@ const OrderHistoryPage = () => {
         const menuItems = [
           ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
           ...(canPrintTicket ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : []),
-          ...(canCancel ? [{ key: "3", icon: <X size={16} />, label: "Huỷ vé" }] : [])
+          ...(canCancel ? [{ key: "3", icon: <X size={16} />, label: "Hủy vé" }] : [])
         ];
 
         if (menuItems.length === 0) {

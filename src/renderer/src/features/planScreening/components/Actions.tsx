@@ -529,9 +529,9 @@ const Actions = ({
         planScreenId,
         orderIds,
         cancelReasonId: 0,
-        notes: "Huỷ đơn",
+        notes: "Hủy đơn",
         isRefund: false,
-        cancelReasonMsg: "Huỷ đơn"
+        cancelReasonMsg: "Hủy đơn"
       },
       {
         onSuccess: () => {
@@ -539,10 +539,10 @@ const Actions = ({
           queryClient.invalidateQueries({
             queryKey: ordersKeys.getOrdersByScreening(planScreenId)
           });
-          message.success("Huỷ đơn thành công");
+          message.success("Hủy đơn thành công");
         },
         onError: (error: unknown) => {
-          message.error(getApiErrorMessage(error, "Huỷ đơn thất bại"));
+          message.error(getApiErrorMessage(error, "Hủy đơn thất bại"));
         }
       }
     );
@@ -607,10 +607,10 @@ const Actions = ({
         setOpenCancelSeats(false);
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
         queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
-        message.success("Huỷ vé thành công");
+        message.success("Hủy vé thành công");
       },
       onError: (error: unknown) => {
-        message.error(getApiErrorMessage(error, "Huỷ vé thất bại"));
+        message.error(getApiErrorMessage(error, "Hủy vé thất bại"));
       }
     });
   };
@@ -666,9 +666,9 @@ const Actions = ({
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) }),
         queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) })
       ]);
-      message.success("Huỷ giữ chỗ thành công");
+      message.success("Hủy giữ chỗ thành công");
     } catch (error) {
-      message.error(getApiErrorMessage(error, "Huỷ giữ chỗ thất bại"));
+      message.error(getApiErrorMessage(error, "Hủy giữ chỗ thất bại"));
     } finally {
       setIsCancelReservePending(false);
     }
@@ -687,7 +687,7 @@ const Actions = ({
       <div className="p-2 flex gap-2 items-center justify-center">
         <div className="flex flex-col gap-2">
           <Checkbox checked={cancelMode} onChange={(e) => setCancelMode(e.target.checked)}>
-            Huỷ vé
+            Hủy vé
           </Checkbox>
           <Button
             variant="outlined"
@@ -697,7 +697,7 @@ const Actions = ({
             }
             onClick={() => setOpenCancelSeats(true)}
           >
-            Huỷ vé
+            Hủy vé
           </Button>
           <Modal
             title="Xác nhận hủy vé"
@@ -751,7 +751,7 @@ const Actions = ({
             </Form.Item>
 
             <Form.Item<FieldType> name="isRefund" valuePropName="checked">
-              <Checkbox>Huỷ vé hoàn tiền</Checkbox>
+              <Checkbox>Hủy vé hoàn tiền</Checkbox>
             </Form.Item>
           </Modal>
         </div>
@@ -785,7 +785,7 @@ const Actions = ({
             disabled={disableActions || !canUpdate || selectedSeats.length === 0}
             onClick={() => void onCancelReserve()}
           >
-            Huỷ giữ
+            Hủy giữ
           </Button>
         </div>
 

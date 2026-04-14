@@ -11,7 +11,7 @@ const YearlyReportPage = () => {
   const items: TabsProps["items"] = [
     {
       key: "1",
-      label: "Thông kê, tổng hợp buổi chiếu, lượng khán giả",
+      label: "Thống kê, tổng hợp buổi chiếu, lượng khán giả",
       forceRender: true,
       children: (
         <div className="flex h-full min-h-0 flex-col">

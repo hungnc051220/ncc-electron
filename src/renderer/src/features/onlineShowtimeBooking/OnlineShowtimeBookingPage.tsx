@@ -1,45 +1,65 @@
+import { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
-import { formatNumber } from "@renderer/lib/utils";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { formatNumber, getPlanScreeningDateTime, isPlanScreeningLocked } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
-import type { PaginationProps, TableProps } from "antd";
-import { DatePicker, message, Switch } from "antd";
-import type { Dayjs } from "dayjs";
+import type { MenuProps, PaginationProps, TableProps } from "antd";
+import { Dropdown, message } from "antd";
 import dayjs from "dayjs";
+import { Check, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import Filter, { OnlineShowtimeBookingFilterValues } from "./Filter";
 
-const { RangePicker } = DatePicker;
+const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+const compareDate = (left?: number, right?: number) => (left || 0) - (right || 0);
 
 const OnlineShowtimeBookingPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [fromDate, setFromDate] = useState<Dayjs | null>(dayjs().startOf("day"));
-  const [toDate, setToDate] = useState<Dayjs | null>(dayjs().endOf("day"));
+  const [filterValues, setFilterValues] = useState<OnlineShowtimeBookingFilterValues>({
+    dateRange: [dayjs().startOf("day"), dayjs().endOf("day")]
+  });
 
   const params = useMemo(
     () => ({
       current,
       pageSize,
-      fromDate: fromDate?.startOf("day").format(),
-      toDate: toDate?.endOf("day").format()
+      fromDate: filterValues.dateRange?.[0]?.startOf("day").format(),
+      toDate: filterValues.dateRange?.[1]?.endOf("day").format()
     }),
-    [current, pageSize, fromDate, toDate]
+    [current, pageSize, filterValues]
   );
 
   const { data, isFetching } = usePlanScreenings(params);
   const { can } = usePermission();
   const canUpdate = can("online_showtime_booking", "update");
-
   const updatePlanScreening = useUpdatePlanScreening();
 
-  const onChangeSellOnline = useCallback(
+  const getScreeningDateTime = useCallback(
+    (item: PlanScreeningDetailProps) =>
+      getPlanScreeningDateTime(item.projectDate, item.projectTime)?.valueOf() ?? 0,
+    []
+  );
+
+  const isPastShowtime = useCallback(
+    (item: PlanScreeningDetailProps) => isPlanScreeningLocked(item.projectDate, item.projectTime),
+    []
+  );
+
+  const handleToggleOnlineSelling = useCallback(
     (item: PlanScreeningDetailProps) => {
+      if (isPastShowtime(item)) {
+        message.warning("Ca chiếu đã quá suất chiếu, không thể thao tác");
+        return;
+      }
+
       updatePlanScreening.mutate(
         {
           id: item.id,
@@ -50,7 +70,9 @@ const OnlineShowtimeBookingPage = () => {
         },
         {
           onSuccess: () => {
-            message.success("Cập nhật trạng thái bán online thành công");
+            message.success(
+              item.isOnlineSelling === 1 ? "Tắt bán online thành công" : "Bật bán online thành công"
+            );
           },
           onError: (error: unknown) => {
             message.error(getApiErrorMessage(error, "Cập nhật trạng thái bán online thất bại"));
@@ -58,7 +80,21 @@ const OnlineShowtimeBookingPage = () => {
         }
       );
     },
-    [updatePlanScreening]
+    [isPastShowtime, updatePlanScreening]
+  );
+
+  const getActionItems = useCallback(
+    (item: PlanScreeningDetailProps): MenuProps["items"] =>
+      canUpdate
+        ? [
+            {
+              key: "toggle-online",
+              label: item.isOnlineSelling === 1 ? "Tắt bán online" : "Bật bán online",
+              disabled: isPastShowtime(item) || updatePlanScreening.isPending
+            }
+          ]
+        : [],
+    [canUpdate, isPastShowtime, updatePlanScreening.isPending]
   );
 
   const columns: TableProps<PlanScreeningDetailProps>["columns"] = [
@@ -67,77 +103,99 @@ const OnlineShowtimeBookingPage = () => {
       key: "no",
       align: "center",
       render: (_, __, index) => (current - 1) * pageSize + index + 1,
-      width: 50,
-      fixed: "left"
+      width: 50
+    },
+    {
+      title: "Tên phim",
+      key: "filmName",
+      render: (_, record) => record.filmInfo?.filmName || "",
+      sorter: (a, b) => compareText(a.filmInfo?.filmName, b.filmInfo?.filmName)
     },
     {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "projectDate",
-      render: (value) => dayjs(value).format("DD/MM/YYYY"),
-      width: 120
+      sorter: (a, b) => compareDate(getScreeningDateTime(a), getScreeningDateTime(b)),
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY"),
+      width: 150
     },
     {
-      title: "Ngày chiếu",
+      title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
-      render: (value) => dayjs(value).format("HH:mm"),
+      sorter: (a, b) => compareDate(getScreeningDateTime(a), getScreeningDateTime(b)),
+      render: (value: string) => dayjs(value).format("HH:mm"),
+      width: 150
+    },
+    {
+      title: "Phòng",
+      key: "roomName",
+      render: (_, record) => record.roomInfo?.name || "",
+      sorter: (a, b) => compareText(a.roomInfo?.name, b.roomInfo?.name),
       width: 100
     },
-    {
-      title: "Tên phim",
-      key: "filmName",
-      dataIndex: "filmName",
-      render: (_, reccord) => reccord.filmInfo.filmName
-    },
+
     {
       title: "Bán online",
-      key: "isSellingOnline",
-      dataIndex: "isSellingOnline",
-      render: (_, record) => {
-        return (
-          <Switch
-            checked={record.isOnlineSelling === 1 ? true : false}
-            onChange={() => onChangeSellOnline(record)}
-            size="default"
-            disabled={!canUpdate || updatePlanScreening.isPending}
-          />
-        );
-      }
+      key: "isOnlineSelling",
+      dataIndex: "isOnlineSelling",
+      sorter: (a, b) => Number(a.isOnlineSelling) - Number(b.isOnlineSelling),
+      render: (_: unknown, record: PlanScreeningDetailProps) => (
+        <div className="flex items-center justify-center">
+          {record.isOnlineSelling === 1 ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <X className="size-4 text-red-500" />
+          )}
+        </div>
+      ),
+      align: "center",
+      width: 130
+    },
+    {
+      title: "",
+      key: "operation",
+      width: 50,
+      render: (_: unknown, record: PlanScreeningDetailProps) => (
+        <Dropdown
+          menu={{
+            items: getActionItems(record),
+            onClick: (e) => {
+              if (e.key === "toggle-online") {
+                handleToggleOnlineSelling(record);
+              }
+            }
+          }}
+          arrow
+          trigger={["click"]}
+        >
+          <MoreOutlined />
+        </Dropdown>
+      ),
+      align: "center",
+      fixed: "right"
     }
   ];
 
-  const onRangeChange = (dates: null | (Dayjs | null)[]) => {
-    if (dates) {
-      setFromDate(dates[0]);
-      setToDate(dates[1]);
-    }
+  const onSearch = (values: OnlineShowtimeBookingFilterValues) => {
+    setFilterValues(values);
   };
 
   const onChange = (page: number) => {
     setCurrent(page);
   };
 
-  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (current, pageSize) => {
-    setCurrent(current);
-    setPageSize(pageSize);
+  const onShowSizeChange: PaginationProps["onShowSizeChange"] = (page, size) => {
+    setCurrent(page);
+    setPageSize(size);
   };
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
-      <PageHeader left={<AppBreadcrumb />} />
-
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 z-20">
-          <RangePicker
-            defaultValue={[fromDate, toDate]}
-            format="DD/MM/YYYY"
-            onChange={onRangeChange}
-            presets={rangePresets}
-            allowClear={false}
-          />
-        </div>
-      </div>
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />}
+      />
 
       <AutoHeightTable
         rowKey={(record) => record.id}

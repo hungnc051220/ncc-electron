@@ -372,6 +372,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
                 tableData={detailRows}
                 allPrices={allPrices as number[]}
                 summaryByDate={summaryByDate}
+                totalPlanCount={reportData?.totalRevenue?.totalPlanCount}
                 fromDate={filterValues.dateRange[0]}
                 toDate={filterValues.dateRange[1]}
                 dateType={dateType}

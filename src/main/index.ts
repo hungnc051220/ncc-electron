@@ -659,7 +659,21 @@ app.whenReady().then(() => {
       return { canceled: true };
     }
 
-    await fs.promises.writeFile(result.filePath, Buffer.from(payload.content));
+    try {
+      await fs.promises.writeFile(result.filePath, Buffer.from(payload.content));
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error) {
+        const errorCode = String(error.code);
+
+        if (errorCode === "EBUSY" || errorCode === "EPERM" || errorCode === "EACCES") {
+          throw new Error(
+            "Không thể lưu file vì file đang được mở hoặc bị khóa bởi ứng dụng khác. Vui lòng đóng file rồi thử lại."
+          );
+        }
+      }
+
+      throw error;
+    }
 
     return {
       canceled: false,

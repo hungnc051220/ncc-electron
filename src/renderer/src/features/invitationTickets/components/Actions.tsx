@@ -286,10 +286,10 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
         queryClient.invalidateQueries({
           queryKey: ordersKeys.getOrdersByScreening(planScreeningId)
         });
-        message.success("Huỷ vé mời thành công");
+        message.success("Hủy vé mời thành công");
       },
       onError: (error: unknown) => {
-        message.error(getApiErrorMessage(error, "Huỷ vé mời thất bại"));
+        message.error(getApiErrorMessage(error, "Hủy vé mời thất bại"));
       }
     });
   };

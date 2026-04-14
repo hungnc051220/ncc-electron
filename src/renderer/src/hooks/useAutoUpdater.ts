@@ -240,7 +240,7 @@ export function useAutoUpdater() {
       hiddenProgressRef.current = false;
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
       closeProgressDock();
-      message.error("Update lỗi: " + msg);
+      message.error("Lỗi cập nhật: " + msg);
     };
 
     const unsubAvailable = window.api?.onAvailable(onAvailable);

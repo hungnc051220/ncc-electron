@@ -59,6 +59,7 @@ type Props = {
   tableData: Row[];
   allPrices: number[];
   summaryByDate: Record<string, SummaryGroup>;
+  totalPlanCount?: number;
   fromDate: string;
   toDate: string;
   dateType: number;
@@ -69,7 +70,9 @@ type Props = {
 };
 
 const getReportTitleByDateType = (dateType: number) =>
-  dateType === 2 ? "Báo cáo doanh thu phim theo ngày bán" : "Báo cáo doanh thu theo lịch chiếu";
+  dateType === 2
+    ? "Báo cáo doanh thu phim theo ngày bán"
+    : "Báo cáo doanh thu phim theo lịch chiếu";
 
 const sumRows = (rows: Row[]) => {
   const prices: Record<number, number> = {};
@@ -126,10 +129,85 @@ const sumRows = (rows: Row[]) => {
   };
 };
 
+const getCellTextLength = (cell: ExcelJS.Cell) => {
+  const value = cell.value;
+
+  if (value == null) return 0;
+  if (typeof value === "string") return value.length;
+  if (typeof value === "number") return value.toLocaleString("en-US").length;
+  if (typeof value === "boolean") return value ? 4 : 5;
+  if (value instanceof Date) return 10;
+
+  if (typeof value === "object") {
+    if ("richText" in value && Array.isArray(value.richText)) {
+      return value.richText.reduce((total, part) => total + (part.text?.length || 0), 0);
+    }
+
+    if ("text" in value && typeof value.text === "string") {
+      return value.text.length;
+    }
+
+    if (
+      "result" in value &&
+      (typeof value.result === "string" || typeof value.result === "number")
+    ) {
+      return String(value.result).length;
+    }
+  }
+
+  return String(value).length;
+};
+
+const autoFitWorksheetColumns = (
+  worksheet: ExcelJS.Worksheet,
+  options?: {
+    minWidth?: number;
+    maxWidth?: number;
+    extraWidth?: number;
+    fixedWidths?: Record<number, number>;
+    headerTexts?: Record<number, string>;
+    startRow?: number;
+    endRow?: number;
+  }
+) => {
+  const minWidth = options?.minWidth ?? 8;
+  const maxWidth = options?.maxWidth ?? 40;
+  const extraWidth = options?.extraWidth ?? 2;
+  const fixedWidths = options?.fixedWidths ?? {};
+  const headerTexts = options?.headerTexts ?? {};
+  const startRow = options?.startRow ?? 1;
+  const endRow = options?.endRow ?? worksheet.rowCount;
+
+  worksheet.columns.forEach((column, index) => {
+    const columnNumber = index + 1;
+
+    if (fixedWidths[columnNumber]) {
+      column.width = fixedWidths[columnNumber];
+      return;
+    }
+
+    let maxLength = headerTexts[columnNumber]?.length ?? 0;
+
+    for (let rowNumber = startRow; rowNumber <= endRow; rowNumber++) {
+      const cell = worksheet.getRow(rowNumber).getCell(columnNumber);
+
+      // Bo qua o merge de tranh group header/title lam cot bi nong qua muc
+      if (cell.isMerged) {
+        continue;
+      }
+
+      maxLength = Math.max(maxLength, getCellTextLength(cell));
+    }
+
+    column.width = Math.min(maxWidth, Math.max(minWidth, maxLength + extraWidth));
+  });
+};
+
 const ExportRevenueExcelButton = ({
   tableData,
   allPrices,
   summaryByDate,
+  totalPlanCount,
   fromDate,
   toDate,
   dateType,
@@ -311,8 +389,36 @@ const ExportRevenueExcelButton = ({
           : amountCol + 3
         : undefined;
       const totalEndCol = COL_LAST_REVENUE ?? COL_AMOUNT;
+      const detailHeaderTexts: Record<number, string> = {
+        1: "Phim",
+        2: "Ngày",
+        3: "Giờ",
+        4: "Phòng",
+        5: "Loại"
+      };
 
       const moneyFormat = "#,##0";
+      const countFormat = "#,##0";
+
+      const detailCountCols = [
+        ...allPrices.map((_, index) => priceStartCol + index),
+        totalStartCol,
+        totalStartCol + 1,
+        totalStartCol + 2,
+        totalStartCol + 3
+      ];
+
+      detailCountCols.forEach((detailCol) => {
+        ws.getColumn(detailCol).numFmt = countFormat;
+      });
+
+      allPrices.forEach((price, index) => {
+        detailHeaderTexts[priceStartCol + index] = (price / 1000).toString();
+      });
+
+      totalHeaders.forEach((title, index) => {
+        detailHeaderTexts[totalStartCol + index] = title;
+      });
 
       [
         COL_AMOUNT,
@@ -364,6 +470,16 @@ const ExportRevenueExcelButton = ({
           COL_LAST_REVENUE
         );
         ws.getCell(headerGroupRowIndex, COL_LAST_REVENUE).value = lastRevenueColumnTitle;
+
+        detailHeaderTexts[COL_DISCOUNT_OFFLINE] = "Khuyến mại";
+        detailHeaderTexts[COL_INTERNAL_DISCOUNT] = "Giảm giá";
+
+        if (showActualRemittance && COL_VNPAY_QR && COL_VIET_QR) {
+          detailHeaderTexts[COL_VNPAY_QR] = "VNPayQR";
+          detailHeaderTexts[COL_VIET_QR] = "VietQR";
+        }
+
+        detailHeaderTexts[COL_LAST_REVENUE] = lastRevenueColumnTitle;
       }
 
       const headerRowIndex = headerGroupRowIndex + 1;
@@ -509,6 +625,11 @@ const ExportRevenueExcelButton = ({
         "",
         ...(showDiscountColumns ? ["", "", ""] : [])
       ];
+      const summaryHeaderTexts: Record<number, string> = {
+        1: "Ngày",
+        2: "Loại",
+        3: "Tổng ca chiếu"
+      };
 
       wsSummary.addRow(summaryHeaderGroup);
       wsSummary.addRow(summaryHeaderDetail);
@@ -533,6 +654,29 @@ const ExportRevenueExcelButton = ({
             ? summaryDiscountStartCol + 4
             : summaryDiscountStartCol + 2
           : undefined;
+
+      allPrices.forEach((price, index) => {
+        summaryHeaderTexts[summaryPriceStartCol + index] = (price / 1000).toString();
+      });
+
+      summaryHeaderTexts[summaryTotalStartCol] = "Tổng vé";
+      summaryHeaderTexts[summaryTotalStartCol + 1] = "Giấy mời";
+      summaryHeaderTexts[summaryTotalStartCol + 2] = "Hợp đồng";
+      summaryHeaderTexts[summaryTotalStartCol + 3] = "Vé bán + HĐ";
+      summaryHeaderTexts[summaryTotalStartCol + 4] = "Tổng doanh thu";
+
+      if (showDiscountColumns && summaryDiscountStartCol) {
+        summaryHeaderTexts[summaryDiscountStartCol] = "Khuyến mại";
+        summaryHeaderTexts[summaryDiscountStartCol + 1] = "Giảm giá";
+
+        if (showActualRemittance && summaryVnpayCol && summaryVietqrCol && summaryLastRevenueCol) {
+          summaryHeaderTexts[summaryVnpayCol] = "VNPayQR";
+          summaryHeaderTexts[summaryVietqrCol] = "VietQR";
+          summaryHeaderTexts[summaryLastRevenueCol] = lastRevenueColumnTitle;
+        } else if (summaryLastRevenueCol) {
+          summaryHeaderTexts[summaryLastRevenueCol] = lastRevenueColumnTitle;
+        }
+      }
       const summaryStaticMergeCols = [
         1,
         2,
@@ -541,6 +685,7 @@ const ExportRevenueExcelButton = ({
         summaryTotalStartCol + 1,
         summaryTotalStartCol + 2,
         summaryTotalStartCol + 3,
+        summaryTotalStartCol + 4,
         ...(showDiscountColumns && summaryDiscountStartCol
           ? [
               summaryDiscountStartCol,
@@ -572,8 +717,6 @@ const ExportRevenueExcelButton = ({
           wrapText: true
         };
       });
-      wsSummary.columns.forEach((c) => (c.width = 14));
-
       Object.entries(summaryByDate).forEach(([date, group]) => {
         const offSum = sumRows(group.off);
         const onSum = sumRows(group.on);
@@ -633,7 +776,7 @@ const ExportRevenueExcelButton = ({
         const row = wsSummary.addRow([
           label,
           "",
-          "",
+          label === "Tổng cộng" ? (totalPlanCount ?? "") : "",
           ...allPrices.map((p) => sum.prices[p] ?? ""),
           sum.totalQuantity,
           sum.totalInvitationQuantity,
@@ -651,10 +794,6 @@ const ExportRevenueExcelButton = ({
         ]);
 
         row.font = { bold: true };
-      });
-
-      ws.columns.forEach((colItem) => {
-        colItem.width = 14;
       });
 
       const summaryCountCols = [
@@ -686,8 +825,26 @@ const ExportRevenueExcelButton = ({
         wsSummary.getColumn(summaryCol).numFmt = "#,##0";
       });
 
-      ws.getColumn(1).width = 40;
-      wsSummary.getColumn(1).width = 14;
+      autoFitWorksheetColumns(ws, {
+        minWidth: 4,
+        maxWidth: 14,
+        extraWidth: 1,
+        fixedWidths: {
+          1: 40
+        },
+        headerTexts: detailHeaderTexts,
+        startRow: headerRowIndex,
+        endRow: ws.lastRow!.number
+      });
+
+      autoFitWorksheetColumns(wsSummary, {
+        minWidth: 4,
+        maxWidth: 14,
+        extraWidth: 1,
+        headerTexts: summaryHeaderTexts,
+        startRow: summaryHeaderRow,
+        endRow: wsSummary.lastRow!.number
+      });
 
       ws.views = [
         {

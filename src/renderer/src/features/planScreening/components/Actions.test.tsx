@@ -660,7 +660,7 @@ describe("Actions", () => {
         listChairIndexF3: [],
         orderIds: [201, 202]
       });
-      expect(mocks.messageSuccess).toHaveBeenCalledWith("Huỷ giữ chỗ thành công");
+      expect(mocks.messageSuccess).toHaveBeenCalledWith("Hủy giữ chỗ thành công");
     });
   });
 });

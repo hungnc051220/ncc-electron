@@ -12,7 +12,7 @@ const NavActions = () => {
   const items: MenuProps["items"] = [
     {
       key: "1",
-      label: <Link to="settings">Cài dặt chung</Link>
+      label: <Link to="settings">Cài đặt chung</Link>
     },
     {
       key: "2",

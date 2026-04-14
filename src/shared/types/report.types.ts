@@ -47,6 +47,7 @@ export interface TotalRevenueProps {
   offSaleVnPayQr: number;
   actualOffSale: number;
   totalSale: number;
+  totalPlanCount: number;
   onSaleTotal: number | null;
   crmDiscount: TotalRevenueDiscountProps;
   internalDiscount: TotalRevenueDiscountProps;

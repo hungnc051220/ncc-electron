@@ -116,18 +116,18 @@ export const createPrintService = () => {
       }
 
       .bold {
-        font-weight: 700;
+        font-weight: 600;
       }
 
       .title {
         font-size: 13px;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
       }
 
       .ticket-title {
         font-size: 15px;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
         margin-top: 8px;
         text-align: center;

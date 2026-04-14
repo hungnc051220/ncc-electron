@@ -260,10 +260,10 @@ const Actions = ({
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
         queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(contractOrderId) });
         queryClient.invalidateQueries({ queryKey: contractTicketSalesKeys.all });
-        message.success("Huỷ vé hợp đồng thành công");
+        message.success("Hủy vé hợp đồng thành công");
       },
       onError: (error: unknown) => {
-        message.error(getApiErrorMessage(error, "Huỷ vé hợp đồng thất bại"));
+        message.error(getApiErrorMessage(error, "Hủy vé hợp đồng thất bại"));
       }
     });
   };
