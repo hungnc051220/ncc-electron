@@ -1,4 +1,4 @@
-import { OrderDetailProps, PaymentType, PrintTicketPayload } from "@shared/types";
+import { ListSeat, OrderDetailProps, PaymentType, PrintTicketPayload } from "@shared/types";
 import {
   DEFAULT_BRANCH_SETTINGS,
   useSettingBranchStore
@@ -163,16 +163,55 @@ type SeatValueSource = {
   listChairValueF3?: string | null;
 };
 
-export const extractSeatValues = (items?: SeatValueSource[] | null): string[] =>
-  (items ?? []).flatMap((item) =>
-    [item.listChairValueF1, item.listChairValueF2, item.listChairValueF3]
-      .flatMap((value) => value?.split(",") ?? [])
-      .map((seat) => seat.trim())
-      .filter(Boolean)
-  );
+type SeatIndexSource = {
+  listChairIndexF1?: string | null;
+  listChairIndexF2?: string | null;
+  listChairIndexF3?: string | null;
+};
 
-export const formatSeatValues = (items?: SeatValueSource[] | null) =>
-  extractSeatValues(items).join(", ");
+type SeatSource = SeatValueSource & SeatIndexSource;
+
+const buildSeatCodeByFloorMap = (listSeats?: ListSeat[][] | null) =>
+  (listSeats ?? [])
+    .flatMap((row) => row)
+    .reduce<Record<string, string>>((acc, seat) => {
+      acc[`${seat.floor}-${seat.seat}`] = seat.code;
+      return acc;
+    }, {});
+
+const splitSeatList = (value?: string | null) =>
+  (value ?? "")
+    .split(",")
+    .map((seat) => seat.trim())
+    .filter(Boolean);
+
+export const extractSeatValues = (
+  items?: SeatSource[] | null,
+  listSeats?: ListSeat[][] | null
+): string[] => {
+  const seatCodeByFloorMap = buildSeatCodeByFloorMap(listSeats);
+
+  return (items ?? []).flatMap((item) => {
+    const seatValues = [item.listChairValueF1, item.listChairValueF2, item.listChairValueF3]
+      .flatMap((value) => splitSeatList(value))
+      .filter(Boolean);
+
+    if (seatValues.length > 0) {
+      return seatValues;
+    }
+
+    return ([1, 2, 3] as const).flatMap((floor) => {
+      const key = `listChairIndexF${floor}` as const;
+
+      return splitSeatList(item[key]).map(
+        (seatIndex) => seatCodeByFloorMap[`${floor}-${seatIndex}`] ?? seatIndex
+      );
+    });
+  });
+};
+
+export const formatSeatValues = (items?: SeatSource[] | null, listSeats?: ListSeat[][] | null) =>
+  extractSeatValues(items, listSeats).join(", ");
 
 export const buildTicketsFromOrder = async (
   data: OrderDetailProps,
@@ -184,6 +223,7 @@ export const buildTicketsFromOrder = async (
   const { cinemaName, address } = useSettingBranchStore.getState();
   const branchCinemaName = cinemaName || DEFAULT_BRANCH_SETTINGS.cinemaName;
   const branchAddress = address || DEFAULT_BRANCH_SETTINGS.address;
+  const printedTicketPrice = data.order.isContract ? formatMoney(0) : undefined;
 
   const ticketGroups = data.planDetails?.length ? data.planDetails : [data];
 
@@ -194,29 +234,44 @@ export const buildTicketsFromOrder = async (
         ? data.order.items.filter((item) => item.planScreenId === planScreeningId)
         : data.order.items;
 
-    orderItems.forEach((item) => {
-      const seats = sortSeats(extractSeatValues([item]))
-        .map((s) => s.trim())
-        .filter(Boolean);
+    const planSeats = orderItems.flatMap((item) =>
+      extractSeatValues([item], detail.planScreening?.listSeats).map((seat) => ({
+        seat,
+        item
+      }))
+    );
 
-      seats.forEach((seat) => {
-        tickets.push({
-          cinemaName: branchCinemaName,
-          address: branchAddress,
-          movieName: detail.film.filmName,
-          showTime: dayjs(detail.planScreening.projectTime).format("HH:mm"),
-          date: dayjs(detail.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
-          seat: seat,
-          room: detail.room.name,
-          floor: detail.room.floor,
-          price: formatMoney(item.unitPriceInclTax),
-          ticketCode: data.order.barCode,
-          qrData: qrBase64,
-          discountImage: item.discount?.image,
-          posName,
-          staffName,
-          paymentMethod: formatPaymentMethod(data.order.paymentMethodSystemName)
-        });
+    const remainingPlanSeats = [...planSeats];
+    const sortedPlanSeats = sortSeats(planSeats.map(({ seat }) => seat))
+      .map((seat) => {
+        const matchedIndex = remainingPlanSeats.findIndex((planSeat) => planSeat.seat === seat);
+
+        if (matchedIndex === -1) {
+          return null;
+        }
+
+        const [matchedPlanSeat] = remainingPlanSeats.splice(matchedIndex, 1);
+        return matchedPlanSeat;
+      })
+      .filter((planSeat): planSeat is (typeof planSeats)[number] => Boolean(planSeat));
+
+    sortedPlanSeats.forEach(({ seat, item }) => {
+      tickets.push({
+        cinemaName: branchCinemaName,
+        address: branchAddress,
+        movieName: detail.film.filmName,
+        showTime: dayjs(detail.planScreening.projectTime).format("HH:mm"),
+        date: dayjs(detail.planScreening.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY"),
+        seat,
+        room: detail.room.name,
+        floor: detail.room.floor,
+        price: printedTicketPrice ?? formatMoney(item.unitPriceInclTax),
+        ticketCode: data.order.barCode,
+        qrData: qrBase64,
+        discountImage: item.discount?.image,
+        posName,
+        staffName,
+        paymentMethod: formatPaymentMethod(data.order.paymentMethodSystemName)
       });
     });
   });

@@ -3,7 +3,7 @@ import {
   SetSeatsContractTicketSaleDto
 } from "@renderer/api/contractTicketSales.api";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { OrderDto, ordersApi } from "@renderer/api/orders.api";
+import { OrderDto } from "@renderer/api/orders.api";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
 import { useCancelContractTicketSale } from "@renderer/hooks/contractTicketSales/useCancelContractTicketSale";
@@ -12,12 +12,12 @@ import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getPrintErrorMessage } from "@renderer/lib/print";
-import { buildTicketsFromOrder, formatMoney } from "@renderer/lib/utils";
+import { buildTicketsFromOrder, extractSeatValues, formatMoney } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
+import { ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Checkbox, Descriptions, Form, Modal, Select, message } from "antd";
@@ -62,6 +62,8 @@ const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
 
 interface ActionsProps {
   data: PlanScreeningDetailProps;
+  orderDetail?: OrderDetailProps;
+  contractSeatKeys: string[];
   contractOrderId: number;
   planScreeningId: number;
   selectedSeats: ListSeat[];
@@ -76,6 +78,8 @@ type FieldType = {
 
 const Actions = ({
   data,
+  orderDetail,
+  contractSeatKeys,
   contractOrderId,
   planScreeningId,
   selectedSeats,
@@ -141,38 +145,72 @@ const Actions = ({
     [selectedSeats]
   );
 
-  const handlePrint = useCallback(
-    async (orderId: number) => {
-      try {
-        message.loading({
-          key: printMessageKey,
-          content: "Đang in vé..."
-        });
+  const printableOrderDetail = useMemo<OrderDetailProps | undefined>(() => {
+    if (!orderDetail?.order) {
+      return undefined;
+    }
 
-        const orderDetail = await queryClient.fetchQuery({
-          queryKey: ordersKeys.getDetail(orderId),
-          queryFn: () => ordersApi.getDetail(orderId)
-        });
+    const filteredItems = orderDetail.order.items.filter(
+      (item) => item.planScreenId === planScreeningId
+    );
 
-        const tickets = await buildTicketsFromOrder(orderDetail, user?.fullname, posName);
+    if (filteredItems.length === 0) {
+      return undefined;
+    }
 
-        await window.api?.printTickets(tickets, selectedPrinter);
+    const printablePlanDetail: OrderDetailProps = {
+      order: {
+        ...orderDetail.order,
+        items: filteredItems
+      },
+      planScreening: data as OrderDetailProps["planScreening"],
+      film: data.filmInfo as OrderDetailProps["film"],
+      room: data.roomInfo as OrderDetailProps["room"],
+      planDetails: []
+    };
 
-        message.success({
-          key: printMessageKey,
-          content: "In vé thành công"
-        });
-      } catch (error) {
-        console.error(error);
-        message.error({
-          key: printMessageKey,
-          content: getPrintErrorMessage(error),
-          duration: 4
-        });
-      }
-    },
-    [posName, printMessageKey, queryClient, selectedPrinter, user]
+    return {
+      ...printablePlanDetail,
+      planDetails: [printablePlanDetail]
+    };
+  }, [data, orderDetail, planScreeningId]);
+
+  const hasPrintableTickets = useMemo(
+    () =>
+      contractSeatKeys.length > 0 ||
+      extractSeatValues(printableOrderDetail?.order?.items, data.listSeats).length > 0,
+    [contractSeatKeys.length, data.listSeats, printableOrderDetail]
   );
+
+  const handlePrint = useCallback(async () => {
+    if (!printableOrderDetail || !hasPrintableTickets) {
+      message.warning("Suất chiếu này chưa có vé để in");
+      return;
+    }
+
+    try {
+      message.loading({
+        key: printMessageKey,
+        content: "Đang in vé..."
+      });
+
+      const tickets = await buildTicketsFromOrder(printableOrderDetail, user?.fullname, posName);
+
+      await window.api?.printTickets(tickets, selectedPrinter);
+
+      message.success({
+        key: printMessageKey,
+        content: "In vé thành công"
+      });
+    } catch (error) {
+      console.error(error);
+      message.error({
+        key: printMessageKey,
+        content: getPrintErrorMessage(error),
+        duration: 4
+      });
+    }
+  }, [hasPrintableTickets, posName, printMessageKey, printableOrderDetail, selectedPrinter, user]);
 
   const items: DescriptionsProps["items"] = [
     {
@@ -338,7 +376,8 @@ const Actions = ({
               variant="outlined"
               color="orange"
               className="h-full! font-bold"
-              onClick={() => handlePrint(contractOrderId)}
+              onClick={() => handlePrint()}
+              disabled={!hasPrintableTickets}
             >
               In vé
             </Button>

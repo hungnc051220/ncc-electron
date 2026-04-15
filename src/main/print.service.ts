@@ -205,8 +205,9 @@ export const createPrintService = () => {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: center;
         min-width: 96px;
+        height: 100%;
       }
 
       .qr-side-image {
@@ -337,7 +338,7 @@ export const createPrintService = () => {
             <span class="label-footer">${staffName}</span>
           </div>
           <div class="row">
-            <span class="en-label">In lúc:</span>
+            <span class="en-label"></span>
             <span class="label-footer">${printedAt}</span>
           </div>
         </div>

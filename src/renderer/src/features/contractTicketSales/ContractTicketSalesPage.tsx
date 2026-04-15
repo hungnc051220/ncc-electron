@@ -340,21 +340,27 @@ const ContractTicketSalesPage = () => {
   );
 
   const getActionItems = useCallback(
-    (record: OrderDetailProps) => [
-      ...(canUpdate
-        ? [
-            { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
-            { key: "2", icon: <Armchair size={16} />, label: "Thiết lập ghế ngồi" }
-          ]
-        : []),
-      ...(canPrint ? [{ key: "3", icon: <Printer size={16} />, label: "In vé" }] : []),
-      ...(canView
-        ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }]
-        : []),
-      ...(canDelete && isEmptyContract(record)
-        ? [{ key: "5", icon: <Trash2 size={16} />, label: "Xóa", danger: true }]
-        : [])
-    ],
+    (record: OrderDetailProps) => {
+      const emptyContract = isEmptyContract(record);
+
+      return [
+        ...(canUpdate
+          ? [
+              { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
+              { key: "2", icon: <Armchair size={16} />, label: "Thiết lập ghế ngồi" }
+            ]
+          : []),
+        ...(canPrint && !emptyContract
+          ? [{ key: "3", icon: <Printer size={16} />, label: "In vé" }]
+          : []),
+        ...(canView && !emptyContract
+          ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }]
+          : []),
+        ...(canDelete && emptyContract
+          ? [{ key: "5", icon: <Trash2 size={16} />, label: "Xóa", danger: true }]
+          : [])
+      ];
+    },
     [canDelete, canPrint, canUpdate, canView, isEmptyContract]
   );
 
