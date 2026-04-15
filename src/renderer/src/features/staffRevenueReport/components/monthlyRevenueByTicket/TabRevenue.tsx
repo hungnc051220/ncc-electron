@@ -13,6 +13,26 @@ interface TabRevenueProps {
 }
 
 const TabRevenue = ({ tableData, columns, isFetching, data }: TabRevenueProps) => {
+  const summaryRows = data
+    ? [
+        {
+          label: "Offline",
+          totalQuantity: data.totalRevenueOffline.totalQuantity,
+          totalSale: data.totalRevenueOffline.totalSale
+        },
+        {
+          label: "Online",
+          totalQuantity: data.totalRevenueOnline.totalQuantity,
+          totalSale: data.totalRevenueOnline.totalSale
+        },
+        {
+          label: "Tổng cộng",
+          totalQuantity: data.totalRevenue.totalQuantity,
+          totalSale: data.totalRevenue.totalSale
+        }
+      ]
+    : [];
+
   return (
     <AutoHeightTable
       dataSource={tableData}
@@ -24,29 +44,22 @@ const TabRevenue = ({ tableData, columns, isFetching, data }: TabRevenueProps) =
       summary={() =>
         data ? (
           <Table.Summary fixed>
-            <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={2}>
-                <b>Tổng cộng</b>
-              </Table.Summary.Cell>
-
-              {data?.priceHeaders.map((price, i) => {
-                const total =
-                  data?.totalRevenue.prices.find((p) => p.price === price)?.totalQuantity || 0;
-
-                return (
-                  <Table.Summary.Cell key={price} index={i + 2} align="right">
-                    <b>{formatNumber(total)}</b>
+            {summaryRows.map(({ label, totalQuantity, totalSale }) => {
+              return (
+                <Table.Summary.Row key={label}>
+                  <Table.Summary.Cell index={0} colSpan={2}>
+                    <b>{label}</b>
                   </Table.Summary.Cell>
-                );
-              })}
 
-              <Table.Summary.Cell index={999} align="right">
-                <b>{formatNumber(data?.totalRevenue.totalQuantity)}</b>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={1000} align="right">
-                <b>{formatMoney(data?.totalRevenue.totalSale)}</b>
-              </Table.Summary.Cell>
-            </Table.Summary.Row>
+                  <Table.Summary.Cell index={2} align="right">
+                    <b>{formatNumber(totalQuantity)}</b>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} align="right">
+                    <b>{formatMoney(totalSale)}</b>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              );
+            })}
           </Table.Summary>
         ) : null
       }

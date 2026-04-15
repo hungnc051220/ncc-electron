@@ -5,6 +5,7 @@ import { useMachineSerials } from "@renderer/hooks/useMachineSerials";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { MachineSerialProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
+import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import Filter from "./components/Filter";
 
@@ -13,9 +14,10 @@ export interface ValuesProps {
 }
 
 const MachineSerialsPage = () => {
+  const currentYear = dayjs().year();
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [filterValues, setFilterValues] = useState<ValuesProps>({ year: currentYear });
 
   const columns: TableProps<MachineSerialProps>["columns"] = [
     {
@@ -78,7 +80,14 @@ const MachineSerialsPage = () => {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
       <PageHeader
         left={<AppBreadcrumb />}
-        right={<Filter isFetching={isFetching} onSearch={onSearch} setCurrent={setCurrent} />}
+        right={
+          <Filter
+            isFetching={isFetching}
+            onSearch={onSearch}
+            setCurrent={setCurrent}
+            year={filterValues.year}
+          />
+        }
       />
 
       <AutoHeightTable

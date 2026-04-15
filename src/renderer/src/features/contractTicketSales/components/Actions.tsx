@@ -12,7 +12,7 @@ import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getPrintErrorMessage } from "@renderer/lib/print";
-import { buildTicketsFromOrder, formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
+import { buildTicketsFromOrder, formatMoney } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
@@ -21,6 +21,7 @@ import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Checkbox, Descriptions, Form, Modal, Select, message } from "antd";
+import dayjs from "dayjs";
 import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
@@ -96,8 +97,16 @@ const Actions = ({
 
   const setSeatsContractTicketSale = useSetSeatsContractTicketSale();
   const cancelContractTicketSale = useCancelContractTicketSale();
-  const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
+
+  const isPlanScreeningPast = useMemo(() => {
+    if (!data.projectDate) {
+      return false;
+    }
+
+    const lockAt = dayjs(data.projectDate, "YYYY-MM-DD").add(1, "day").startOf("day");
+    return lockAt.isValid() ? !dayjs().isBefore(lockAt) : false;
+  }, [data.projectDate]);
 
   const {
     data: cancellationReasons,
