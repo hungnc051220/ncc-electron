@@ -61,7 +61,7 @@ const compareText = (left?: string | null, right?: string | null) =>
 const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const defaultFilterValues: ValuesProps = {
-  dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+  dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
 };
 
 const OrderHistoryPage = () => {
@@ -91,8 +91,8 @@ const OrderHistoryPage = () => {
     const filtered = filterEmptyValues(rest as Record<string, unknown>);
 
     if (dateRange && dateRange.length === 2) {
-      filtered.fromDate = dayjs(dateRange[0]).startOf("day").toISOString();
-      filtered.toDate = dayjs(dateRange[1]).endOf("day").toISOString();
+      filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
+      filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
     }
 
     return {

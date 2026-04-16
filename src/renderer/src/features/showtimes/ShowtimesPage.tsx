@@ -110,13 +110,13 @@ const ShowtimesPage = () => {
       dataIndex: "filmName",
       fixed: "left",
       width: 350,
-      render: (value: string) => <span className="font-bold">{value}</span>
+      render: (value: string) => <span className="font-medium text-sm">{value}</span>
     },
     {
       title: "Suất chiếu",
       dataIndex: "details",
       render: (showtimes: DetailPlanScreeningProps[]) => (
-        <div className="flex flex-nowrap gap-3">
+        <div className="flex flex-wrap gap-1.5">
           {showtimes.map((s) => {
             const now = dayjs();
             const selectedDate = dayjs(date, "YYYY-MM-DD");
@@ -135,8 +135,7 @@ const ShowtimesPage = () => {
                 type="default"
                 danger={isPastDay || (!isFutureShowtime && isToday)}
                 disabled={isDisabledShowtime}
-                className="min-w-15"
-                size="small"
+                className="w-14!"
                 onClick={() => {
                   startTransition(() => {
                     if (callbackUrl && id) {
@@ -224,7 +223,7 @@ const ShowtimesPage = () => {
         size="small"
         dataSource={filteredList || []}
         columns={columns}
-        scroll={{ x: "max-content", y: "calc(100vh - 80px)" }}
+        scroll={{ y: "calc(100vh - 80px)" }}
         loading={isFetching}
         pagination={false}
         tableLayout="auto"

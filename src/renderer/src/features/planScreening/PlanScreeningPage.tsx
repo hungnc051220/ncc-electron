@@ -364,7 +364,7 @@ const PlanScreeningPage = () => {
   }
 
   return (
-    <Spin spinning={isFetching}>
+    <Spin spinning={!renderData && isFetching}>
       <div className="relative flex flex-col h-screen overflow-hidden select-none">
         <Seats
           data={renderData}

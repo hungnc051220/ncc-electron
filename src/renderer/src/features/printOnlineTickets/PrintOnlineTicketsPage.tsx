@@ -183,6 +183,13 @@ const PrintOnlineTicketsPage = () => {
         [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" ")
     },
     {
+      title: "Tên phim",
+      key: "filmName",
+      dataIndex: "film",
+      sorter: (a, b) => dayjs(a.film?.filmName).valueOf() - dayjs(b.film?.filmName).valueOf(),
+      render: (film) => film?.filmName
+    },
+    {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "planScreening",
