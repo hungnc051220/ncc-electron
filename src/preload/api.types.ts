@@ -24,6 +24,7 @@ export interface SaveFileParams {
   defaultFileName: string;
   content: Uint8Array;
   filters?: SaveFileFilter[];
+  openAfterSave?: boolean;
 }
 
 export interface SaveFileResult {

@@ -5,13 +5,17 @@ export type SaveFileResult = {
 
 export const saveExcelFile = async (
   content: Uint8Array,
-  defaultFileName: string
+  defaultFileName: string,
+  options?: {
+    openAfterSave?: boolean;
+  }
 ): Promise<SaveFileResult> => {
   try {
     return await window.api.saveFile({
       defaultFileName,
       content,
-      filters: [{ name: "Excel", extensions: ["xlsx"] }]
+      filters: [{ name: "Excel", extensions: ["xlsx"] }],
+      openAfterSave: options?.openAfterSave ?? true
     });
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : String(error);

@@ -661,6 +661,14 @@ app.whenReady().then(() => {
 
     try {
       await fs.promises.writeFile(result.filePath, Buffer.from(payload.content));
+
+      if (payload.openAfterSave) {
+        const openError = await shell.openPath(result.filePath);
+
+        if (openError) {
+          throw new Error(`Đã lưu file nhưng không thể mở tự động: ${openError}`);
+        }
+      }
     } catch (error) {
       if (error && typeof error === "object" && "code" in error) {
         const errorCode = String(error.code);

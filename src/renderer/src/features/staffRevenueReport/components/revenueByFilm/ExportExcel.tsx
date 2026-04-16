@@ -163,6 +163,7 @@ const autoFitWorksheetColumns = (
   options?: {
     minWidth?: number;
     maxWidth?: number;
+    maxWidths?: Record<number, number>;
     extraWidth?: number;
     fixedWidths?: Record<number, number>;
     headerTexts?: Record<number, string>;
@@ -172,6 +173,7 @@ const autoFitWorksheetColumns = (
 ) => {
   const minWidth = options?.minWidth ?? 8;
   const maxWidth = options?.maxWidth ?? 40;
+  const maxWidths = options?.maxWidths ?? {};
   const extraWidth = options?.extraWidth ?? 2;
   const fixedWidths = options?.fixedWidths ?? {};
   const headerTexts = options?.headerTexts ?? {};
@@ -199,7 +201,9 @@ const autoFitWorksheetColumns = (
       maxLength = Math.max(maxLength, getCellTextLength(cell));
     }
 
-    column.width = Math.min(maxWidth, Math.max(minWidth, maxLength + extraWidth));
+    const effectiveMaxWidth = maxWidths[columnNumber] ?? maxWidth;
+
+    column.width = Math.min(effectiveMaxWidth, Math.max(minWidth, maxLength + extraWidth));
   });
 };
 
@@ -316,15 +320,15 @@ const ExportRevenueExcelButton = ({
         "Phim",
         "Ngày",
         "Giờ",
-        "Phòng",
+        "Ph",
         "Loại",
         ...allPrices.map((p) => (p / 1000).toString()),
-        "Tổng",
-        "Giấy mời",
-        "Hợp đồng",
+        "+",
+        "GM",
+        "HĐ",
         "Vé bán + HĐ",
         "Tổng doanh thu",
-        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", ...userRevenueHeaders] : [])
+        ...(showDiscountColumns ? ["KM", "Giảm giá", ...userRevenueHeaders] : [])
       ];
 
       const totalColumns = header.length;
@@ -370,7 +374,7 @@ const ExportRevenueExcelButton = ({
 
       let totalCol = totalStartCol;
 
-      const totalHeaders = ["Tổng vé", "Giấy mời", "Hợp đồng", "Vé bán + HĐ", "Tổng doanh thu"];
+      const totalHeaders = ["+", "GM", "HĐ", "Vé bán + HĐ", "Tổng doanh thu"];
 
       totalHeaders.forEach((title) => {
         ws.mergeCells(headerGroupRowIndex, totalCol, headerGroupRowIndex + 1, totalCol);
@@ -393,7 +397,7 @@ const ExportRevenueExcelButton = ({
         1: "Phim",
         2: "Ngày",
         3: "Giờ",
-        4: "Phòng",
+        4: "Ph",
         5: "Loại"
       };
 
@@ -445,7 +449,7 @@ const ExportRevenueExcelButton = ({
           headerGroupRowIndex + 1,
           COL_DISCOUNT_OFFLINE
         );
-        ws.getCell(headerGroupRowIndex, COL_DISCOUNT_OFFLINE).value = "Khuyến mại";
+        ws.getCell(headerGroupRowIndex, COL_DISCOUNT_OFFLINE).value = "KM";
 
         ws.mergeCells(
           headerGroupRowIndex,
@@ -471,7 +475,7 @@ const ExportRevenueExcelButton = ({
         );
         ws.getCell(headerGroupRowIndex, COL_LAST_REVENUE).value = lastRevenueColumnTitle;
 
-        detailHeaderTexts[COL_DISCOUNT_OFFLINE] = "Khuyến mại";
+        detailHeaderTexts[COL_DISCOUNT_OFFLINE] = "KM";
         detailHeaderTexts[COL_INTERNAL_DISCOUNT] = "Giảm giá";
 
         if (showActualRemittance && COL_VNPAY_QR && COL_VIET_QR) {
@@ -489,7 +493,7 @@ const ExportRevenueExcelButton = ({
 
       headerRow.getCell(col++).value = "Ngày";
       headerRow.getCell(col++).value = "Giờ";
-      headerRow.getCell(col++).value = "Phòng";
+      headerRow.getCell(col++).value = "Ph";
       headerRow.getCell(col++).value = "Loại";
 
       allPrices.forEach((p) => {
@@ -546,10 +550,10 @@ const ExportRevenueExcelButton = ({
       filmGroups.forEach((film) => {
         const summaryRow = ws.addRow([
           film.filmName,
-          "",
-          "",
-          "",
-          "",
+          null,
+          null,
+          null,
+          null,
           ...allPrices.map((p) => film.pricesMap[p] ?? ""),
           film.totalQuantity,
           film.totalInvitationQuantity,
@@ -568,19 +572,25 @@ const ExportRevenueExcelButton = ({
             : [])
         ]);
 
+        ws.mergeCells(summaryRow.number, 1, summaryRow.number, 5);
         summaryRow.font = { bold: true };
-        summaryRow.eachCell((cell) => {
-          cell.fill = {
+        summaryRow.getCell(1).alignment = {
+          horizontal: "left",
+          vertical: "middle",
+          wrapText: false
+        };
+        for (let c = 1; c <= totalEndCol; c++) {
+          ws.getCell(summaryRow.number, c).fill = {
             type: "pattern",
             pattern: "solid",
             fgColor: { argb: "FFF3F4F6" }
           };
-        });
+        }
 
         film.rows.forEach((r) => {
           ws.addRow([
             "",
-            dayjs(r.projectDate).format("DD/MM/YYYY"),
+            dayjs(r.projectDate).format("DD/MM"),
             r.projectTime,
             r.roomName,
             r.isOnline ? "On" : "Off",
@@ -608,12 +618,12 @@ const ExportRevenueExcelButton = ({
         "Loại",
         "Tổng ca chiếu",
         ...allPrices.map((_, index) => (index === 0 ? "Loại giá vé (Đơn vị tính: 1000 đồng)" : "")),
-        "Tổng vé",
-        "Giấy mời",
-        "Hợp đồng",
+        "Tổng",
+        "GM",
+        "HĐ",
         "Vé bán + HĐ",
         "Tổng doanh thu",
-        ...(showDiscountColumns ? ["Khuyến mại", "Giảm giá", ...userRevenueHeaders] : [])
+        ...(showDiscountColumns ? ["KM", "Giảm giá", ...userRevenueHeaders] : [])
       ];
       const summaryHeaderDetail = [
         "",
@@ -666,7 +676,7 @@ const ExportRevenueExcelButton = ({
       summaryHeaderTexts[summaryTotalStartCol + 4] = "Tổng doanh thu";
 
       if (showDiscountColumns && summaryDiscountStartCol) {
-        summaryHeaderTexts[summaryDiscountStartCol] = "Khuyến mại";
+        summaryHeaderTexts[summaryDiscountStartCol] = "KM";
         summaryHeaderTexts[summaryDiscountStartCol + 1] = "Giảm giá";
 
         if (showActualRemittance && summaryVnpayCol && summaryVietqrCol && summaryLastRevenueCol) {
@@ -829,8 +839,8 @@ const ExportRevenueExcelButton = ({
         minWidth: 4,
         maxWidth: 14,
         extraWidth: 1,
-        fixedWidths: {
-          1: 40
+        maxWidths: {
+          1: 60
         },
         headerTexts: detailHeaderTexts,
         startRow: headerRowIndex,
@@ -846,21 +856,9 @@ const ExportRevenueExcelButton = ({
         endRow: wsSummary.lastRow!.number
       });
 
-      ws.views = [
-        {
-          state: "frozen",
-          ySplit: detailSummaryStartRowIndex + detailSummaryRows.length - 1,
-          xSplit: 1
-        }
-      ];
+      ws.views = [];
 
-      wsSummary.views = [
-        {
-          state: "frozen",
-          ySplit: 2,
-          xSplit: 1
-        }
-      ];
+      wsSummary.views = [];
 
       const startRow = headerGroupRowIndex;
       const endRow = ws.lastRow!.number;
@@ -878,7 +876,7 @@ const ExportRevenueExcelButton = ({
       }
 
       const row = ws.lastRow!;
-      row.getCell(1).alignment = { wrapText: true, vertical: "middle" };
+      row.getCell(1).alignment = { wrapText: false, vertical: "middle" };
 
       const summaryStartRow = 1;
       const summaryEndRow = wsSummary.lastRow!.number;
@@ -899,7 +897,7 @@ const ExportRevenueExcelButton = ({
         ws.getCell(r, 1).alignment = {
           horizontal: "left",
           vertical: "middle",
-          wrapText: true
+          wrapText: false
         };
       }
 
@@ -911,12 +909,14 @@ const ExportRevenueExcelButton = ({
         ws.getCell(r, 1).alignment = {
           horizontal: "left",
           vertical: "middle",
-          wrapText: true
+          wrapText: false
         };
       }
 
       const buf = await wb.xlsx.writeBuffer();
-      const result = await saveExcelFile(new Uint8Array(buf), resolvedFileName);
+      const result = await saveExcelFile(new Uint8Array(buf), resolvedFileName, {
+        openAfterSave: true
+      });
 
       if (result.canceled) {
         message.open({

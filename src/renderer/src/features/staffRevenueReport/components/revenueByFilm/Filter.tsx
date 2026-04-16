@@ -50,8 +50,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
 
   const userSelect = useInfiniteSelectOptions({
     queryKey: ["users"],
-    queryFn: ({ pageParam, searchText }) =>
-      usersApi.getAll({ current: pageParam, pageSize: 20, keyword: searchText }),
+    queryFn: ({ pageParam }) => usersApi.getAll({ current: pageParam, pageSize: 100 }),
     mapOption: (user) => {
       const fullName = [user.customerFirstName, user.customerLastName]
         .filter((value): value is string => !!value?.trim())
@@ -61,16 +60,16 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         value: user.id,
         label: fullName || user.username
       };
-    }
+    },
+    prefetchAll: true
   });
 
   const manufacturerSelect = useInfiniteSelectOptions({
     queryKey: ["manufacturers"],
-    queryFn: ({ pageParam, searchText }) =>
+    queryFn: ({ pageParam }) =>
       manufacturersApi.getAll({
         current: pageParam,
-        pageSize: 20,
-        name: searchText,
+        pageSize: 100,
         isHidden: false
       }),
     mapOption: (item) => ({
@@ -148,7 +147,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
 
   const handleManufacturerChange = (value: number | undefined) => {
     setSelectedManufacturerId(value);
-    manufacturerSelect.onClear();
     filmSelect.resetSearch();
 
     if (!value) {
@@ -173,8 +171,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   };
 
   const handleUserChange = (value: number | undefined) => {
-    userSelect.onClear();
-
     if (!value) {
       form.setFieldValue("userId", undefined);
       return;
@@ -182,7 +178,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
 
     setSelectedManufacturerId(undefined);
     setSelectedFilmId(undefined);
-    manufacturerSelect.resetSearch();
     filmSelect.resetSearch();
     form.setFieldsValue({
       userId: value,
@@ -201,7 +196,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
     }
 
     setSelectedFilmId(value);
-    userSelect.resetSearch();
     form.setFieldsValue({
       userId: undefined,
       filmId: value
@@ -214,8 +208,6 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       form.resetFields();
       setSelectedManufacturerId(undefined);
       setSelectedFilmId(undefined);
-      userSelect.resetSearch();
-      manufacturerSelect.resetSearch();
       filmSelect.resetSearch();
       onSearch({});
     });
@@ -284,14 +276,13 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         <Form.Item name="userId" label="Nhân viên">
           <Select
             showSearch={{
-              filterOption: false,
-              onSearch: userSelect.onSearch
+              filterOption: (input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }}
             loading={userSelect.loading}
             options={userSelect.options}
             placeholder="Chọn nhân viên"
             onPopupScroll={userSelect.onPopupScroll}
-            onClear={userSelect.onClear}
             onChange={handleUserChange}
             disabled={!!watchedManufacturerId || !!watchedFilmId}
             allowClear
@@ -301,8 +292,8 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         <Form.Item name="manufacturerId" label="Hãng phim">
           <Select
             showSearch={{
-              filterOption: false,
-              onSearch: manufacturerSelect.onSearch
+              filterOption: (input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }}
             loading={manufacturerSelect.loading}
             options={manufacturerOptions}

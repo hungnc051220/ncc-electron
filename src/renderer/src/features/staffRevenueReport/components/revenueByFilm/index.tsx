@@ -77,14 +77,17 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
   const params = useMemo(() => {
-    const { dateRange, ...rest } = filterValues;
-    const filtered = filterEmptyValues(rest as Record<string, unknown>);
+    const filtered = filterEmptyValues({
+      userId: filterValues.userId,
+      manufacturerId: filterValues.manufacturerId,
+      filmId: filterValues.filmId
+    } as Record<string, unknown>);
 
     filtered.dateType = dateType;
 
-    if (dateRange && dateRange.length === 2) {
-      filtered.fromDate = dayjs(dateRange[0]).startOf("day").format();
-      filtered.toDate = dayjs(dateRange[1]).endOf("day").format();
+    if (filterValues.dateRange && filterValues.dateRange.length === 2) {
+      filtered.fromDate = dayjs(filterValues.dateRange[0]).startOf("day").format();
+      filtered.toDate = dayjs(filterValues.dateRange[1]).endOf("day").format();
     }
 
     return filtered;
