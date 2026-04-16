@@ -78,7 +78,6 @@ const Seats = ({
   const selectoRef = useRef<Selecto>(null);
   const isSelectingRef = useRef(false);
   const mainContainerRef = useRef<HTMLDivElement>(null);
-  const [dragContainer, setDragContainer] = useState<HTMLDivElement | null>(null);
   const [seatSize, setSeatSize] = useState<number | null>(null);
   const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(null);
   const [hoverSeat, setHoverSeat] = useState<ListSeat | null>(null);
@@ -99,6 +98,10 @@ const Seats = ({
   );
   const spotlightSeatKeySet = useMemo(() => new Set(spotlightSeatKeys || []), [spotlightSeatKeys]);
   const hasSeatSpotlight = spotlightSeatKeySet.size > 0;
+  const selectedSeatKeySet = useMemo(
+    () => new Set(selectedSeats.map((seat) => getSeatUniqueKey(seat))),
+    [selectedSeats]
+  );
 
   useEffect(() => {
     setSelectedSeats([]);
@@ -162,19 +165,24 @@ const Seats = ({
     [cancelMode, restrictedSeatKeySet, screenMode, selectionMode]
   );
 
+  const blockedOnlineSeatKeySet = useMemo(() => {
+    const parseSeatIndexes = (value: string | undefined, floor: number) =>
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((seatIndex) => `${floor}-${seatIndex}`);
+
+    return new Set([
+      ...parseSeatIndexes(data?.noOnlineChairF1, 1),
+      ...parseSeatIndexes(data?.noOnlineChairF2, 2),
+      ...parseSeatIndexes(data?.noOnlineChairF3, 3)
+    ]);
+  }, [data?.noOnlineChairF1, data?.noOnlineChairF2, data?.noOnlineChairF3]);
+
   const isSeatBlockedOnline = useCallback(
-    (seat: ListSeat) => {
-      const key = `noOnlineChairF${seat.floor}` as
-        | "noOnlineChairF1"
-        | "noOnlineChairF2"
-        | "noOnlineChairF3";
-
-      const seatString = data?.[key];
-      if (!seatString) return false;
-
-      return seatString.split(",").includes(seat.seat);
-    },
-    [data]
+    (seat: ListSeat) => blockedOnlineSeatKeySet.has(getSeatUniqueKey(seat)),
+    [blockedOnlineSeatKeySet]
   );
 
   // Tính toán số tầng có sẵn
@@ -492,7 +500,7 @@ const Seats = ({
     };
   }, [calculateSeatSize]);
 
-  const handleHover = (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => {
+  const handleHover = useCallback((seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => {
     if (seat.type === 12) return;
 
     if (hoverTimeoutRef.current) {
@@ -507,16 +515,16 @@ const Seats = ({
       setHoverSeat(seat);
       setTooltipPos({ x: anchorX, y: anchorY });
       setVisible(true);
-    }, 500); // 1 giây
-  };
+    }, 500);
+  }, []);
 
-  const handleLeave = () => {
+  const handleLeave = useCallback(() => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
     setVisible(false);
     setHoverSeat(null);
-  };
+  }, []);
 
   // Render seats với useMemo để tránh re-render không cần thiết
   const renderedSeats = useMemo(() => {
@@ -548,7 +556,7 @@ const Seats = ({
             <Seat
               key={seat.seat}
               seat={seat}
-              isSelected={selectedSeats.some((s) => getSeatUniqueKey(s) === seatUniqueKey)}
+              isSelected={selectedSeatKeySet.has(seatUniqueKey)}
               isSelectingByOther={selectingSeatKeysByOther.has(seatUniqueKey)}
               onSelect={handleSelectSeat}
               size={seatSize}
@@ -577,7 +585,7 @@ const Seats = ({
     ));
   }, [
     filteredSeats,
-    selectedSeats,
+    selectedSeatKeySet,
     handleSelectSeat,
     seatSize,
     canSelectSeat,
@@ -655,10 +663,7 @@ const Seats = ({
             "mt-2 flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
             hasSeatSpotlight && cancelMode && "relative"
           )}
-          ref={(node) => {
-            seatContainerRef.current = node;
-            setDragContainer(node);
-          }}
+          ref={seatContainerRef}
         >
           <div
             className="space-y-1 flex flex-col items-center px-2"
@@ -690,7 +695,7 @@ const Seats = ({
           <Selecto
             key={`selecto-${selectedFloor}`}
             ref={selectoRef}
-            dragContainer={dragContainer ?? undefined}
+            dragContainer={seatContainerRef.current ?? undefined}
             selectableTargets={[".selectable-seat"]}
             hitRate={0}
             selectByClick={false}

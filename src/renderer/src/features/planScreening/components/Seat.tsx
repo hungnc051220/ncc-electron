@@ -1,6 +1,6 @@
 import { cn } from "@renderer/lib/utils";
 import { ListSeat } from "@shared/types";
-import { useCallback } from "react";
+import { memo, useCallback } from "react";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -162,4 +162,8 @@ const Seat = ({
   );
 };
 
-export default Seat;
+const MemoizedSeat = memo(Seat);
+
+MemoizedSeat.displayName = "Seat";
+
+export default MemoizedSeat;
