@@ -116,6 +116,17 @@ const calculateVoucherDiscount = (totalPrice: number, voucher?: BatchProps) => {
   return Math.min(voucher.discountValue || 0, totalPrice);
 };
 
+const normalizeMemberCardCode = (value?: string) => {
+  if (!value) return "";
+
+  return value
+    .trim()
+    .replace(/%(?:20|09|0A|0D)/gi, "")
+    .replace(/\+/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^\d]/g, "");
+};
+
 const VipCardDialog = ({
   open,
   onCancel,
@@ -394,7 +405,9 @@ const VipCardDialog = ({
   ];
 
   const onConfirm = () => {
-    if (!searchText) {
+    const normalizedSearchText = normalizeMemberCardCode(searchText);
+
+    if (!normalizedSearchText) {
       message.error("Bạn chưa nhập số thẻ");
       setStatus("error");
       return;
@@ -407,7 +420,7 @@ const VipCardDialog = ({
 
     onBooking({
       customerId: customer?.id,
-      memberCardCode: searchText,
+      memberCardCode: normalizedSearchText,
       voucherCode: hasSeatTypeDiscount
         ? undefined
         : voucherType === "none"
@@ -420,17 +433,19 @@ const VipCardDialog = ({
   };
 
   const onSearch = async () => {
-    if (!searchText) {
+    const normalizedSearchText = normalizeMemberCardCode(searchText);
+
+    if (!normalizedSearchText) {
       message.error("Bạn chưa nhập số thẻ");
       setStatus("error");
       return;
     }
 
-    if (searchText === lastSearched) {
+    if (normalizedSearchText === lastSearched) {
       return;
     }
 
-    setLastSearched(searchText);
+    setLastSearched(normalizedSearchText);
 
     try {
       const res = await refetch();
@@ -469,7 +484,7 @@ const VipCardDialog = ({
               placeholder="Nhập số thẻ"
               value={searchText}
               onChange={(e) => {
-                setSearchText(e.target.value);
+                setSearchText(normalizeMemberCardCode(e.target.value));
                 setStatus("");
                 setLastSearched(null);
                 setIsValidatingU22(false);

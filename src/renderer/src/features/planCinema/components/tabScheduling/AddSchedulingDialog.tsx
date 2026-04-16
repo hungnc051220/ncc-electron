@@ -1,9 +1,7 @@
-import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
 import { useCreatePlanScreening } from "@renderer/hooks/planScreenings/useCreatePlanScreening";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPricesByPlan";
-import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { getPlanScreeningDateTime } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -48,19 +46,19 @@ type PositionPricingValue = {
 
 type PositionPricingMap = Record<PositionField, PositionPricingValue | undefined>;
 type PositionPriceFormValues = Record<PositionField, number | undefined>;
+const positionFields: PositionField[] = [
+  "priceOfPosition1",
+  "priceOfPosition2",
+  "priceOfPosition3"
+];
 
 interface AddSchedulingDialogProps {
   planCinemaId: number;
   selectedRoomId?: number;
   selectedDate: Dayjs | null;
+  roomOptions: Array<{ value: number | string; label: string }>;
+  roomOptionsLoading?: boolean;
 }
-
-const compareNullableText = (left?: string | null, right?: string | null) => {
-  return (left ?? "").localeCompare(right ?? "", undefined, {
-    numeric: true,
-    sensitivity: "base"
-  });
-};
 
 const getDynamicPricingKey = (
   pricings?: Record<string, number>,
@@ -130,7 +128,9 @@ const parseTicketPrice = (value?: string): number => {
 const AddSchedulingDialog = ({
   planCinemaId,
   selectedRoomId,
-  selectedDate
+  selectedDate,
+  roomOptions,
+  roomOptionsLoading
 }: AddSchedulingDialogProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
@@ -205,12 +205,6 @@ const AddSchedulingDialog = ({
     [planPricing?.pricings]
   );
 
-  const positionFields: PositionField[] = [
-    "priceOfPosition1",
-    "priceOfPosition2",
-    "priceOfPosition3"
-  ];
-
   const activePositionFields = useMemo(
     () => positionFields.filter((field) => !!mappedPlanPricing[field]?.seatType),
     [mappedPlanPricing]
@@ -232,17 +226,6 @@ const AddSchedulingDialog = ({
       projectDate: selectedDate
     });
   }, [selectedRoomId, selectedDate, form, open]);
-
-  const roomSelect = useInfiniteSelectOptions({
-    queryKey: ["screening-rooms"],
-    queryFn: ({ pageParam }) =>
-      screeningRoomsApi.getAll({ current: pageParam, pageSize: 20, hidden: false }),
-    mapOption: (item) => ({
-      value: item.id,
-      label: item.name
-    }),
-    prefetchAll: true
-  });
 
   const planScreeningParams = useMemo(
     () => ({
@@ -276,11 +259,6 @@ const AddSchedulingDialog = ({
         label: film.film?.filmName
       })) ?? [],
     [films]
-  );
-
-  const roomOptions = useMemo(
-    () => [...roomSelect.options].sort((a, b) => compareNullableText(a.label, b.label)),
-    [roomSelect.options]
   );
 
   useEffect(() => {
@@ -501,7 +479,7 @@ const AddSchedulingDialog = ({
                 options={roomOptions}
                 placeholder="Chọn phòng chiếu"
                 virtual={false}
-                loading={roomSelect.loading}
+                loading={roomOptionsLoading}
               />
             </Form.Item>
 

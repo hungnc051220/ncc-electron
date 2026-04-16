@@ -174,8 +174,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       screeningRoomsApi.getAll({
         current: pageParam,
         pageSize: 20,
-        hidden: false,
-        sort: "name.asc"
+        hidden: false
       }),
     mapOption: (item) => ({
       value: item.id,
@@ -327,6 +326,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
               planCinemaId={planCinemaId!}
               selectedRoomId={roomId}
               selectedDate={date}
+              roomOptions={roomOptions}
+              roomOptionsLoading={roomSelect.loading}
             />
           )}
         </div>

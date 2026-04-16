@@ -6,5 +6,9 @@ export const useOrdersByScreening = (screeningId: number) =>
   useQuery({
     queryKey: ordersKeys.getOrdersByScreening(screeningId),
     queryFn: () => ordersApi.getByScreens(screeningId),
-    placeholderData: keepPreviousData
+    enabled: !!screeningId,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always"
   });

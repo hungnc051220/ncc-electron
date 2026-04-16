@@ -1,4 +1,8 @@
-import { OrderPaymentUpdatedPayload, SelectingChairPayload } from "@shared/types";
+import {
+  OrderCreatedPayload,
+  OrderPaymentUpdatedPayload,
+  SelectingChairPayload
+} from "@shared/types";
 import { io, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
@@ -67,6 +71,17 @@ export function onOrderPaymentUpdated(callback: (data: OrderPaymentUpdatedPayloa
 
   return () => {
     socket.off("orderPaymentUpdated", callback);
+  };
+}
+
+export function onOrderCreated(callback: (data: OrderCreatedPayload) => void) {
+  const socket = getSocket();
+  if (!socket) return;
+
+  socket.on("orderCreated", callback);
+
+  return () => {
+    socket.off("orderCreated", callback);
   };
 }
 

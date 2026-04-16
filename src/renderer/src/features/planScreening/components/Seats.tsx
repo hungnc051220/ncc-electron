@@ -593,6 +593,8 @@ const Seats = ({
     hasSeatSpotlight,
     isSeatBlockedOnline,
     seatTypeColorMap,
+    handleHover,
+    handleLeave,
     selectingSeatKeysByOther,
     spotlightSeatKeySet
   ]);
@@ -660,7 +662,7 @@ const Seats = ({
 
         <div
           className={cn(
-            "mt-2 flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
+            "seat-selecto-drag-area mt-2 flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
             hasSeatSpotlight && cancelMode && "relative"
           )}
           ref={seatContainerRef}
@@ -695,7 +697,7 @@ const Seats = ({
           <Selecto
             key={`selecto-${selectedFloor}`}
             ref={selectoRef}
-            dragContainer={seatContainerRef.current ?? undefined}
+            dragContainer=".seat-selecto-drag-area"
             selectableTargets={[".selectable-seat"]}
             hitRate={0}
             selectByClick={false}

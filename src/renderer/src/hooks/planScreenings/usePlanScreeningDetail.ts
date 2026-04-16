@@ -6,5 +6,8 @@ export const usePlanScreeningDetail = (id: number, isCustomerMode?: boolean) =>
   useQuery({
     queryKey: planScreeningsKeys.getDetail(id),
     queryFn: () => planScreeningsApi.getDetail(id),
-    enabled: !!id && !isCustomerMode
+    enabled: !!id && !isCustomerMode,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always"
   });

@@ -5,6 +5,12 @@ export interface OrderPaymentUpdatedPayload {
   shippingStatus: number;
   transactionId: string;
   amount: number;
+  planScreenId: number;
+}
+
+export interface OrderCreatedPayload {
+  id: string;
+  planScreenId: number;
 }
 
 export interface SelectingChairPayload {

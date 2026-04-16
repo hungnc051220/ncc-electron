@@ -7,7 +7,6 @@ export interface ScreeningRoomsQuery {
   pageSize: number;
   id?: number;
   hidden?: boolean;
-  sort?: string;
 }
 
 export interface ScreeningRoomChairsQuery {
@@ -38,7 +37,7 @@ export interface CreateChairsDto {
 
 export const screeningRoomsApi = {
   getAll: async (params: ScreeningRoomsQuery): Promise<ApiResponse<RoomProps>> => {
-    const { current, pageSize, id, hidden, sort } = params;
+    const { current, pageSize, id, hidden } = params;
 
     const filter: Record<string, unknown> = {};
 
@@ -56,8 +55,7 @@ export const screeningRoomsApi = {
 
     const queryObject: Record<string, unknown> = {
       current,
-      pageSize,
-      sort
+      pageSize
     };
 
     if (Object.keys(filter).length > 0) {

@@ -123,7 +123,7 @@ const Seat = ({
   return (
     <div
       className={cn(
-        "relative rounded-sm flex items-center justify-center transition-all duration-150",
+        "relative rounded-sm flex items-center justify-center",
         canSelect && !isSelectingByOther && "selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",

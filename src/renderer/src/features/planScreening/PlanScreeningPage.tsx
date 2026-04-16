@@ -9,9 +9,16 @@ import Actions from "./components/Actions";
 import QrCodeDialog from "./components/QrCodeDialog";
 import Seats from "./components/Seats";
 import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
-import { onSelectingChairsUpdate } from "@renderer/socket/socket";
+import { ordersKeys } from "@renderer/hooks/orders/keys";
+import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
+import {
+  onOrderCreated,
+  onOrderPaymentUpdated,
+  onSelectingChairsUpdate
+} from "@renderer/socket/socket";
 import { useSelectingChairs } from "@renderer/hooks/orders/useSelectingChairs";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
+import { useQueryClient } from "@tanstack/react-query";
 
 const PlanScreeningPage = () => {
   const { id } = useParams();
@@ -24,6 +31,7 @@ const PlanScreeningPage = () => {
   const isCustomerMode = window.location.hash.includes("view=customer");
   const [qrState, setQrState] = useState<QrState>({ isOpen: false });
   const { posName } = useSettingPosStore();
+  const queryClient = useQueryClient();
   const syncedSelectedSeatsRef = useRef<ListSeat[]>([]);
   const syncedSelectedSeatKeysRef = useRef<Set<string>>(new Set());
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -184,6 +192,37 @@ const PlanScreeningPage = () => {
     });
     return cleanup;
   }, [id, isCustomerMode, posName]);
+
+  useEffect(() => {
+    if (!id || isCustomerMode) return;
+
+    const currentPlanScreenId = Number(id);
+    const invalidateCurrentScreeningData = () => {
+      void queryClient.invalidateQueries({
+        queryKey: planScreeningsKeys.getDetail(currentPlanScreenId)
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ordersKeys.getOrdersByScreening(currentPlanScreenId)
+      });
+    };
+
+    const cleanupOrderCreated = onOrderCreated((payload) => {
+      if (payload.planScreenId !== currentPlanScreenId) return;
+      invalidateCurrentScreeningData();
+    });
+
+    const cleanupOrderPaymentUpdated = onOrderPaymentUpdated((payload) => {
+      if (payload.paymentStatus !== 30) return;
+      if (payload.planScreenId !== currentPlanScreenId) return;
+
+      invalidateCurrentScreeningData();
+    });
+
+    return () => {
+      cleanupOrderCreated?.();
+      cleanupOrderPaymentUpdated?.();
+    };
+  }, [id, isCustomerMode, queryClient]);
 
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;
