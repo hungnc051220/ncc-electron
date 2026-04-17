@@ -24,11 +24,20 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
 import { Button, Dropdown, Form, Modal, Select, Table, Tooltip, message } from "antd";
 import dayjs from "dayjs";
-import { Armchair, FileText, PlusIcon, Printer, SquarePen, Trash2 } from "lucide-react";
+import {
+  Armchair,
+  FileSpreadsheet,
+  FileText,
+  PlusIcon,
+  Printer,
+  SquarePen,
+  Trash2
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import InvoiceDialog from "../invoices/components/InvoiceDialog";
+import { exportContractTicketSaleExcel } from "./components/exportContractTicketSaleExcel";
 import ContractTicketSaleDialog from "./components/ContractTicketSaleDialog";
 import Filter from "./components/Filter";
 import { useSummaryContractTicketSales } from "@renderer/hooks/contractTicketSales/useSummaryContractTicketSales";
@@ -172,6 +181,42 @@ const ContractTicketSalesPage = () => {
     },
     [posShortName, selectedPrinter, user]
   );
+
+  const handleExportExcel = useCallback(async (item: OrderDetailProps) => {
+    const messageKey = `export-contract-ticket-sale-${item.order.id}`;
+
+    message.open({
+      key: messageKey,
+      type: "loading",
+      content: "Đang xuất file excel...",
+      duration: 0
+    });
+
+    try {
+      const result = await exportContractTicketSaleExcel(item);
+
+      if (result.canceled) {
+        message.open({
+          key: messageKey,
+          type: "warning",
+          content: "Bạn đã hủy lưu file excel"
+        });
+        return;
+      }
+
+      message.open({
+        key: messageKey,
+        type: "success",
+        content: "Xuất file excel thành công"
+      });
+    } catch (error) {
+      message.open({
+        key: messageKey,
+        type: "error",
+        content: getApiErrorMessage(error, "Xuất excel thất bại")
+      });
+    }
+  }, []);
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
@@ -357,6 +402,9 @@ const ContractTicketSalesPage = () => {
           : []),
         ...(canView && !emptyContract
           ? [{ key: "4", icon: <FileText size={16} />, label: "Thông tin xuất hóa đơn" }]
+          : []),
+        ...(!emptyContract
+          ? [{ key: "6", icon: <FileSpreadsheet size={16} />, label: "Xuất Excel" }]
           : []),
         ...(canDelete && emptyContract
           ? [{ key: "5", icon: <Trash2 size={16} />, label: "Xóa", danger: true }]
@@ -561,6 +609,9 @@ const ContractTicketSalesPage = () => {
                         if (e.key === "5") {
                           handleOpenDelete(record.orderDetail);
                         }
+                        if (e.key === "6") {
+                          void handleExportExcel(record.orderDetail);
+                        }
                       }
                     }}
                     arrow
@@ -626,7 +677,7 @@ const ContractTicketSalesPage = () => {
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
         }}
         summary={() => {
-          return (
+          return summary && summary.ordersCount ? (
             <Table.Summary fixed>
               <Table.Summary.Row>
                 <Table.Summary.Cell index={0} align="center" className="font-bold">
@@ -646,9 +697,12 @@ const ContractTicketSalesPage = () => {
                 <Table.Summary.Cell align="right" index={6} className="font-bold">
                   {formatMoney(summary?.ordersTotal ?? 0)}
                 </Table.Summary.Cell>
+                <Table.Summary.Cell index={7}></Table.Summary.Cell>
+                <Table.Summary.Cell index={8}></Table.Summary.Cell>
+                <Table.Summary.Cell index={9}></Table.Summary.Cell>
               </Table.Summary.Row>
             </Table.Summary>
-          );
+          ) : null;
         }}
       />
 

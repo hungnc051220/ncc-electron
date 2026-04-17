@@ -6,6 +6,7 @@ import PageHeader from "@renderer/components/PageHeader";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
+import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { getPrintErrorMessage } from "@renderer/lib/print";
 import {
@@ -21,7 +22,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Checkbox, Dropdown, Form, Modal, Select, message, Tabs } from "antd";
 import dayjs from "dayjs";
-import { Eye, Printer, X } from "lucide-react";
+import { CircleStop, Eye, Printer, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import OrderDetailDialog from "./components/OrderDetailDialog";
@@ -72,8 +73,10 @@ const OrderHistoryPage = () => {
   const [activeKey, setActiveKey] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [endOrderDialogOpen, setEndOrderDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
   const [selectedCancelOrder, setSelectedCancelOrder] = useState<OrderDetailProps | null>(null);
+  const [selectedEndOrder, setSelectedEndOrder] = useState<OrderDetailProps | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -85,6 +88,7 @@ const OrderHistoryPage = () => {
   const canView = can("order_history", "view");
   const canPrint = can("order_history", "print");
   const cancelOrder = useCancelOrder();
+  const updateOrder = useUpdateOrder();
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -230,6 +234,45 @@ const OrderHistoryPage = () => {
     },
     [cancelOrder, handleCancelDialogClose, selectedCancelOrder]
   );
+
+  const handleOpenEndOrderDialog = useCallback((orderDetail: OrderDetailProps) => {
+    setSelectedEndOrder(orderDetail);
+    setEndOrderDialogOpen(true);
+  }, []);
+
+  const handleEndOrderDialogClose = useCallback((open: boolean) => {
+    setEndOrderDialogOpen(open);
+
+    if (!open) {
+      setSelectedEndOrder(null);
+    }
+  }, []);
+
+  const handleEndOrder = useCallback(() => {
+    if (!selectedEndOrder) {
+      return;
+    }
+
+    updateOrder.mutate(
+      {
+        id: selectedEndOrder.order.id,
+        dto: {
+          orderStatusId: OrderStatus.FAIL,
+          shippingStatusId: selectedEndOrder.order.shippingStatusId,
+          paymentStatusId: selectedEndOrder.order.paymentStatusId
+        }
+      },
+      {
+        onSuccess: () => {
+          handleEndOrderDialogClose(false);
+          message.success("Kết thúc đơn thành công");
+        },
+        onError: (error: unknown) => {
+          message.error(getApiErrorMessage(error, "Kết thúc đơn thất bại"));
+        }
+      }
+    );
+  }, [handleEndOrderDialogClose, selectedEndOrder, updateOrder]);
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
@@ -395,7 +438,11 @@ const OrderHistoryPage = () => {
       key: "operation",
       width: 50,
       render: (_: unknown, record: OrderDetailProps) => {
+        const canEndOrder =
+          record.order.orderStatusId === OrderStatus.PENDING &&
+          record.order.paymentStatusId === PaymentStatus.PENDING;
         const canCancel =
+          !canEndOrder &&
           record.order.orderStatusId !== OrderStatus.CANCELLED &&
           record.order.orderStatusId !== OrderStatus.FAIL;
         const canPrintTicket =
@@ -405,7 +452,10 @@ const OrderHistoryPage = () => {
         const menuItems = [
           ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
           ...(canPrintTicket ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : []),
-          ...(canCancel ? [{ key: "3", icon: <X size={16} />, label: "Hủy vé" }] : [])
+          ...(canCancel ? [{ key: "3", icon: <X size={16} />, label: "Hủy vé" }] : []),
+          ...(canEndOrder
+            ? [{ key: "4", icon: <CircleStop size={16} />, label: "Kết thúc đơn" }]
+            : [])
         ];
 
         if (menuItems.length === 0) {
@@ -427,6 +477,10 @@ const OrderHistoryPage = () => {
 
                 if (e.key === "3") {
                   handleOpenCancelDialog(record);
+                }
+
+                if (e.key === "4") {
+                  handleOpenEndOrderDialog(record);
                 }
               }
             }}
@@ -570,6 +624,27 @@ const OrderHistoryPage = () => {
         <Form.Item<CancelOrderFormValues> name="isRefund" valuePropName="checked">
           <Checkbox>Hoàn tiền</Checkbox>
         </Form.Item>
+      </Modal>
+
+      <Modal
+        open={endOrderDialogOpen}
+        title="Xác nhận kết thúc đơn"
+        onOk={handleEndOrder}
+        onCancel={() => handleEndOrderDialogClose(false)}
+        okText="Xác nhận"
+        cancelText="Đóng"
+        okButtonProps={{
+          danger: true
+        }}
+        cancelButtonProps={{
+          disabled: updateOrder.isPending
+        }}
+        confirmLoading={updateOrder.isPending}
+        destroyOnHidden
+      >
+        Bạn có chắc chắn muốn kết thúc đơn
+        {selectedEndOrder ? <strong>{` #${selectedEndOrder.order.id}`}</strong> : null}? Thao tác
+        không thể thu hồi.
       </Modal>
     </div>
   );

@@ -401,8 +401,7 @@ const Actions = ({
             setOpenQrDialog(true);
             window.api.sendQrOpen(body);
           } catch {
-            onUpdateOrder();
-            message.error("Tạo QR thất bại");
+            onUpdateOrder(order.id, order.shippingStatusId, order.paymentStatusId, "QR_FAILED");
           }
           return;
         }
@@ -524,16 +523,19 @@ const Actions = ({
     setPaymentMethod(last);
   };
 
-  const onUpdateOrder = () => {
-    if (!qrData) return;
-
+  const onUpdateOrder = (
+    orderId: number,
+    shippingStatusId: number,
+    paymentStatusId: number,
+    error: "PAYMENT_FAILED" | "QR_FAILED"
+  ) => {
     updateOrder.mutate(
       {
-        id: qrData.orderId,
+        id: orderId,
         dto: {
           orderStatusId: OrderStatus.FAIL,
-          shippingStatusId: qrData.shippingStatusId,
-          paymentStatusId: qrData.paymentStatusId
+          shippingStatusId: shippingStatusId,
+          paymentStatusId: paymentStatusId
         }
       },
       {
@@ -542,7 +544,11 @@ const Actions = ({
           queryClient.invalidateQueries({
             queryKey: ordersKeys.getOrdersByScreening(planScreenId)
           });
-          message.success("Đơn đã được kết thúc do thanh toán không thành công");
+          const errorMessage =
+            error === "PAYMENT_FAILED"
+              ? "Đơn đã được kết thúc do thanh toán không thành công"
+              : "Đơn đã được kết thúc do tạo QR thất bại";
+          message.error(errorMessage);
         },
         onError: (error: unknown) => {
           message.error(getApiErrorMessage(error, "Chuyển trạng thái đơn thất bại"));
@@ -856,7 +862,12 @@ const Actions = ({
         <QrCodeDialog
           open={openQrDialog}
           onCancel={() => {
-            onUpdateOrder();
+            onUpdateOrder(
+              qrData.orderId,
+              qrData.shippingStatusId,
+              qrData.paymentStatusId,
+              "PAYMENT_FAILED"
+            );
             setOpenQrDialog(false);
             window.api?.sendQrClose();
           }}
