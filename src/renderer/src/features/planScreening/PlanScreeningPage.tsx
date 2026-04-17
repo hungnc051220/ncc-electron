@@ -64,19 +64,12 @@ const PlanScreeningPage = () => {
     const normalizedValue = (value ?? "").trim();
     if (!normalizedValue) return [];
 
-    const rangeMatches = Array.from(normalizedValue.matchAll(/\[(\d+):(\d+)\]/g));
-    if (rangeMatches.length > 0) {
-      return rangeMatches.flatMap((match) => {
-        const start = Number(match[1]);
-        const end = Number(match[2]);
-
-        if (Number.isNaN(start) || Number.isNaN(end)) return [];
-
-        const from = Math.min(start, end);
-        const to = Math.max(start, end);
-
-        return Array.from({ length: to - from + 1 }, (_, index) => `${floor}-${from + index}`);
-      });
+    const bracketMatches = Array.from(normalizedValue.matchAll(/\[([^\]]+)\]/g));
+    if (bracketMatches.length > 0) {
+      return bracketMatches
+        .map((match) => match[1]?.trim())
+        .filter(Boolean)
+        .map((seatIndex) => `${floor}-${seatIndex}`);
     }
 
     return normalizedValue
