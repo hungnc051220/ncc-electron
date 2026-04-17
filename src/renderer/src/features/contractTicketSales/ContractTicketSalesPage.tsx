@@ -22,7 +22,7 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown, Form, Modal, Select, Tooltip, message } from "antd";
+import { Button, Dropdown, Form, Modal, Select, Table, Tooltip, message } from "antd";
 import dayjs from "dayjs";
 import { Armchair, FileText, PlusIcon, Printer, SquarePen, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -31,6 +31,7 @@ import { useNavigate } from "react-router";
 import InvoiceDialog from "../invoices/components/InvoiceDialog";
 import ContractTicketSaleDialog from "./components/ContractTicketSaleDialog";
 import Filter from "./components/Filter";
+import { useSummaryContractTicketSales } from "@renderer/hooks/contractTicketSales/useSummaryContractTicketSales";
 
 export interface ValuesProps {
   dateRange?: [string, string];
@@ -102,6 +103,7 @@ const ContractTicketSalesPage = () => {
   }, [current, pageSize, filterValues]);
 
   const { data: tickets, isFetching } = useContractTicketSales(params);
+  const { data: summary } = useSummaryContractTicketSales(params);
   const {
     data: cancellationReasons,
     fetchNextPage,
@@ -622,6 +624,31 @@ const ContractTicketSalesPage = () => {
           showSizeChanger: true,
           onShowSizeChange,
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
+        }}
+        summary={() => {
+          return (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={0} align="center" className="font-bold">
+                  Tổng
+                </Table.Summary.Cell>
+                <Table.Summary.Cell align="right" index={1} className="font-bold">
+                  {formatNumber(summary?.ordersCount ?? 0)}
+                </Table.Summary.Cell>
+                <Table.Summary.Cell align="right" index={2} className="font-bold">
+                  {formatNumber(summary?.plansCount ?? 0)}
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3}></Table.Summary.Cell>
+                <Table.Summary.Cell index={4}></Table.Summary.Cell>
+                <Table.Summary.Cell align="right" index={5} className="font-bold">
+                  {formatNumber(summary?.itemsCount ?? 0)}
+                </Table.Summary.Cell>
+                <Table.Summary.Cell align="right" index={6} className="font-bold">
+                  {formatMoney(summary?.ordersTotal ?? 0)}
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            </Table.Summary>
+          );
         }}
       />
 

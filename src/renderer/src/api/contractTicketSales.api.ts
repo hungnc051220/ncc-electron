@@ -1,5 +1,10 @@
 import { api } from "@renderer/api/client";
-import { ApiResponse, OrderDetailProps, OrderStatus } from "@shared/types";
+import {
+  ApiResponse,
+  ContractTicketSaleSummaryProps,
+  OrderDetailProps,
+  OrderStatus
+} from "@shared/types";
 import queryString from "query-string";
 
 export interface ContractTicketSalesQuery {
@@ -66,6 +71,36 @@ export const contractTicketSalesApi = {
     });
 
     const res = await api.get(`/api/pos/order-contract?${query}`);
+
+    return res.data;
+  },
+  getSummary: async (params: ContractTicketSalesQuery): Promise<ContractTicketSaleSummaryProps> => {
+    const { current, pageSize, fromDate, toDate } = params;
+
+    const filter: Record<string, unknown> = {};
+
+    filter.orderStatusId = { ne: OrderStatus.CANCELLED };
+
+    const queryObject: Record<string, unknown> = {
+      current,
+      pageSize
+    };
+
+    if (fromDate && toDate) {
+      queryObject.fromDate = fromDate;
+      queryObject.toDate = toDate;
+    }
+
+    if (Object.keys(filter).length > 0) {
+      queryObject.filter = JSON.stringify(filter);
+    }
+
+    const query = queryString.stringify(queryObject, {
+      skipEmptyString: true,
+      skipNull: true
+    });
+
+    const res = await api.get(`/api/pos/order-contract/summary?${query}`);
 
     return res.data;
   },

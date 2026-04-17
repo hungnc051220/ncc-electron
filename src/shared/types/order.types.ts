@@ -419,3 +419,10 @@ export interface QrDialogData extends QrCodeResponseProps {
   shippingStatusId: number;
   paymentStatusId: number;
 }
+
+export interface ContractTicketSaleSummaryProps {
+  ordersCount: number;
+  plansCount: number;
+  itemsCount: number;
+  ordersTotal: number;
+}

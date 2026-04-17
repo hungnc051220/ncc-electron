@@ -9,7 +9,7 @@ import {
   SeatTypeProps
 } from "@shared/types";
 import { Button, Result, Spin } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import Actions from "./components/Actions";
 import QrCodeDialog from "./components/QrCodeDialog";
@@ -54,30 +54,46 @@ const PlanScreeningPage = () => {
   const { mutate: mutateSelectingChairs } = useSelectingChairs();
   const mutateSelectingChairsRef = useRef(mutateSelectingChairs);
   const seatTypes = useMemo(() => seatTypesRes?.data || [], [seatTypesRes]);
+  const seatKeyLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+
+    (data?.listSeats || []).forEach((seatRow) => {
+      seatRow.forEach((seat) => {
+        lookup.set(`${seat.floor}-${seat.rows}:${seat.column}`, `${seat.floor}-${seat.seat}`);
+      });
+    });
+
+    return lookup;
+  }, [data?.listSeats]);
 
   const selectedSeatKeys = useMemo(
     () => new Set(selectedSeats.map((seat) => `${seat.floor}-${seat.seat}`)),
     [selectedSeats]
   );
 
-  const parseSelectingSeatIndexes = (value: string | undefined, floor: number) => {
-    const normalizedValue = (value ?? "").trim();
-    if (!normalizedValue) return [];
+  const parseSelectingSeatIndexes = useCallback(
+    (value: string | undefined, floor: number) => {
+      const normalizedValue = (value ?? "").trim();
+      if (!normalizedValue) return [];
 
-    const bracketMatches = Array.from(normalizedValue.matchAll(/\[([^\]]+)\]/g));
-    if (bracketMatches.length > 0) {
-      return bracketMatches
+      const rawSeatIndexes = Array.from(normalizedValue.matchAll(/\[([^\]]+)\]/g))
         .map((match) => match[1]?.trim())
-        .filter(Boolean)
-        .map((seatIndex) => `${floor}-${seatIndex}`);
-    }
+        .filter(Boolean);
 
-    return normalizedValue
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((seatIndex) => `${floor}-${seatIndex}`);
-  };
+      const seatIndexes =
+        rawSeatIndexes.length > 0
+          ? rawSeatIndexes
+          : normalizedValue
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean);
+
+      return seatIndexes.map(
+        (seatIndex) => seatKeyLookup.get(`${floor}-${seatIndex}`) || `${floor}-${seatIndex}`
+      );
+    },
+    [seatKeyLookup]
+  );
 
   const buildSelectingDto = (planScreenId: number, currentPosName: string, seats: ListSeat[]) => ({
     planScreenId,
@@ -194,6 +210,8 @@ const PlanScreeningPage = () => {
     void ordersApi.getSelectingChairs(Number(id)).then((snapshots) => {
       if (isDisposed) return;
 
+      console.log("snapshots", snapshots);
+
       const initialState: Record<string, string> = {};
 
       snapshots.forEach((snapshot) => {
@@ -244,7 +262,7 @@ const PlanScreeningPage = () => {
       isDisposed = true;
       cleanup?.();
     };
-  }, [id, isCustomerMode, posName]);
+  }, [id, isCustomerMode, parseSelectingSeatIndexes, posName]);
 
   useEffect(() => {
     if (!id || isCustomerMode) return;
