@@ -82,4 +82,14 @@ describe("Seat", () => {
 
     expect(seatElement).toHaveClass("bg-roshi", "text-white");
   });
+
+  it("renders pending payment seats as hold seats", () => {
+    const { seatElement } = renderSeat({
+      seat: createSeat({ status: 1 }),
+      isPendingPayment: true
+    });
+
+    expect(seatElement).toHaveClass("bg-roshi", "text-white");
+    expect(seatElement).not.toHaveClass("bg-trunks");
+  });
 });

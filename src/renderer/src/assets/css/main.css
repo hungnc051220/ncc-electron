@@ -407,6 +407,16 @@ body,
     animation: versionAuthorShine 6s ease-in-out infinite;
   }
 
+  .bg-gradient {
+    background: #3f5efb;
+    background: radial-gradient(circle, rgba(63, 94, 251, 0.35) 0%, rgba(252, 70, 107, 0.2) 100%);
+  }
+
+  .bg-gradient-fade {
+    background: #3f5efb;
+    background: radial-gradient(circle, rgba(63, 94, 251, 0.2) 0%, rgba(252, 70, 107, 0.1) 100%);
+  }
+
   .update-progress-notice,
   .update-progress-dock-notice,
   .update-progress-notice.ant-notification-notice,
@@ -565,6 +575,47 @@ body,
 
   .selecto-selection {
     display: none !important;
+  }
+
+  .showtimes-transparent-table.ant-table-wrapper,
+  .showtimes-transparent-table .ant-spin-nested-loading,
+  .showtimes-transparent-table .ant-spin-container,
+  .showtimes-transparent-table .ant-table,
+  .showtimes-transparent-table .ant-table-container,
+  .showtimes-transparent-table .ant-table-content,
+  .showtimes-transparent-table .ant-table-header,
+  .showtimes-transparent-table .ant-table-body {
+    background: transparent !important;
+  }
+
+  .showtimes-transparent-table .ant-table-bordered > .ant-table-container,
+  .showtimes-transparent-table .ant-table-bordered > .ant-table-container > .ant-table-header,
+  .showtimes-transparent-table .ant-table-bordered > .ant-table-container > .ant-table-body,
+  .showtimes-transparent-table .ant-table-cell,
+  .showtimes-transparent-table .ant-table-tbody > tr > td,
+  .showtimes-transparent-table .ant-table-thead > tr > th {
+    background: transparent !important;
+  }
+
+  .showtimes-transparent-table .ant-table-cell,
+  .showtimes-transparent-table .ant-table-tbody > tr > td,
+  .showtimes-transparent-table .ant-table-thead > tr > th {
+    border-color: rgb(148 163 184 / 0.28) !important;
+  }
+
+  .showtimes-transparent-table .ant-table-tbody > tr:hover > td {
+    background: rgb(255 255 255 / 0.22) !important;
+    backdrop-filter: blur(2px);
+  }
+
+  .dark .showtimes-transparent-table .ant-table-cell,
+  .dark .showtimes-transparent-table .ant-table-tbody > tr > td,
+  .dark .showtimes-transparent-table .ant-table-thead > tr > th {
+    border-color: rgb(148 163 184 / 0.18) !important;
+  }
+
+  .dark .showtimes-transparent-table .ant-table-tbody > tr:hover > td {
+    background: rgb(15 23 42 / 0.34) !important;
   }
 
   @media (max-width: 1024px) {

@@ -18,7 +18,8 @@ import {
   OrderResponseProps,
   PaymentType,
   PlanScreeningDetailProps,
-  QrDialogData
+  QrDialogData,
+  OrderStatus
 } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
@@ -35,6 +36,7 @@ import DiscountPopup from "./DiscountPopup";
 import InvoiceDialog from "../../invoices/components/InvoiceDialog";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
+import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 
 export const paymentTypes = [
   {
@@ -187,6 +189,7 @@ const Actions = ({
   const createOrder = useCreateOrder();
   const createQr = useCreateQrOrder();
   const cancelOrder = useCancelOrder();
+  const updateOrder = useUpdateOrder();
   const { data: screeningOrders } = useOrdersByScreening(planScreenId);
   const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
   const [isCancelReservePending, setIsCancelReservePending] = useState(false);
@@ -388,6 +391,9 @@ const Actions = ({
               roomName: data.roomInfo.name,
               projectDate: data.projectDate,
               projectTime: data.projectTime,
+              orderStatusId: order.orderStatusId,
+              paymentStatusId: order.paymentStatusId,
+              shippingStatusId: order.shippingStatusId,
               seats: selectedSeats.map((seat) => seat.code).join(", ")
             };
 
@@ -395,7 +401,7 @@ const Actions = ({
             setOpenQrDialog(true);
             window.api.sendQrOpen(body);
           } catch {
-            onCancelOrder([order.id]);
+            onUpdateOrder();
             message.error("Tạo QR thất bại");
           }
           return;
@@ -518,20 +524,17 @@ const Actions = ({
     setPaymentMethod(last);
   };
 
-  const onCancelOrder = (orderIds: number[]) => {
-    if (isPlanScreeningPast) {
-      message.error("Ca chiếu đã qua, không thể thao tác");
-      return;
-    }
+  const onUpdateOrder = () => {
+    if (!qrData) return;
 
-    cancelOrder.mutate(
+    updateOrder.mutate(
       {
-        planScreenId,
-        orderIds,
-        cancelReasonId: 0,
-        notes: "Hủy đơn",
-        isRefund: false,
-        cancelReasonMsg: "Hủy đơn"
+        id: qrData.orderId,
+        dto: {
+          orderStatusId: OrderStatus.FAIL,
+          shippingStatusId: qrData.shippingStatusId,
+          paymentStatusId: qrData.paymentStatusId
+        }
       },
       {
         onSuccess: () => {
@@ -539,10 +542,10 @@ const Actions = ({
           queryClient.invalidateQueries({
             queryKey: ordersKeys.getOrdersByScreening(planScreenId)
           });
-          message.success("Hủy đơn thành công");
+          message.success("Đơn đã được kết thúc do thanh toán không thành công");
         },
         onError: (error: unknown) => {
-          message.error(getApiErrorMessage(error, "Hủy đơn thất bại"));
+          message.error(getApiErrorMessage(error, "Chuyển trạng thái đơn thất bại"));
         }
       }
     );
@@ -675,7 +678,11 @@ const Actions = ({
   };
 
   const disableActions =
-    createOrder.isPending || cancelOrder.isPending || isCancelReservePending || isPlanScreeningPast;
+    createOrder.isPending ||
+    cancelOrder.isPending ||
+    isCancelReservePending ||
+    isPlanScreeningPast ||
+    updateOrder.isPending;
 
   return (
     <div
@@ -847,7 +854,7 @@ const Actions = ({
         <QrCodeDialog
           open={openQrDialog}
           onCancel={() => {
-            onCancelOrder([qrData.orderId]);
+            onUpdateOrder();
             setOpenQrDialog(false);
             window.api?.sendQrClose();
           }}

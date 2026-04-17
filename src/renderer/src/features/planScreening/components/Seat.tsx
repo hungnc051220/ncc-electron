@@ -81,6 +81,7 @@ const Seat = ({
   onSelect,
   size,
   canSelect,
+  isPendingPayment,
   isBlockedOnline,
   isSelectingByOther,
   seatColor,
@@ -95,6 +96,7 @@ const Seat = ({
   onSelect: (seat: ListSeat) => void;
   size: number;
   canSelect: boolean;
+  isPendingPayment?: boolean;
   isBlockedOnline?: boolean;
   isSelectingByOther?: boolean;
   seatColor?: string;
@@ -114,6 +116,7 @@ const Seat = ({
     !!seatColor &&
     !isSelected &&
     !seat.isHold &&
+    !isPendingPayment &&
     !seat.isContract &&
     !seat.isInvitation &&
     !isBlockedOnline &&
@@ -128,9 +131,9 @@ const Seat = ({
         colorMap[seat.type],
         canSelect && "cursor-pointer",
         isBlockedOnline && "bg-trunks/50",
-        seat.status === 1 && "bg-trunks text-white",
+        seat.status === 1 && !isPendingPayment && "bg-trunks text-white",
         seat.isContract && "bg-raditz text-white",
-        seat.isHold && "bg-roshi text-white",
+        (seat.isHold || isPendingPayment) && "bg-roshi text-white",
         seat.isInvitation && "bg-teal-500 text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white",

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import Seats from "./Seats";
 
@@ -23,6 +23,35 @@ vi.mock("./TooltipFloating", () => ({
 vi.mock("@renderer/components/Legend", () => ({
   default: () => <div>legend</div>
 }));
+
+beforeAll(() => {
+  class ResizeObserverMock {
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  }
+
+  vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    callback(0);
+    return 1;
+  });
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get() {
+      return 600;
+    }
+  });
+
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get() {
+      return 400;
+    }
+  });
+});
 
 const createSeat = (overrides: Partial<ListSeat> = {}): ListSeat => ({
   seat: "1",

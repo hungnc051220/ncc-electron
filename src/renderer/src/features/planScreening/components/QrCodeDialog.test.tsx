@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { PaymentType } from "@shared/types";
+import { OrderStatus, PaymentStatus, PaymentType } from "@shared/types";
 import QrCodeDialog from "./QrCodeDialog";
 
 vi.mock("./Countdown", () => ({
@@ -29,6 +29,9 @@ const baseQrData = {
   accountBankName: "VietinBank",
   orderTotal: 120000,
   orderDiscount: 20000,
+  orderStatusId: OrderStatus.PENDING,
+  shippingStatusId: 0,
+  paymentStatusId: PaymentStatus.PENDING,
   createdOnUtc: "2026-03-13T10:00:00.000Z",
   filmName: "Conan",
   roomName: "Phong 1",

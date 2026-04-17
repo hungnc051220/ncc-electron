@@ -3,7 +3,9 @@ import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { cn } from "@renderer/lib/utils";
 import {
   ListSeat,
+  OrderStatus,
   OrderResponseProps,
+  PaymentStatus,
   PlanScreeningDetailProps,
   ScreenMode,
   SeatTypeProps
@@ -280,6 +282,51 @@ const Seats = ({
     );
   }, [hoverSeat, seatOrderMap]);
 
+  const pendingPaymentSeatKeySet = useMemo(() => {
+    const pendingSeatKeys = new Set<string>();
+
+    const splitSeats = (value?: string) =>
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    orders?.forEach((order) => {
+      const isPendingPaymentOrder =
+        order.orderStatusId === OrderStatus.PENDING &&
+        order.paymentStatusId === PaymentStatus.PENDING;
+
+      if (!isPendingPaymentOrder) return;
+
+      order.items?.forEach((item) => {
+        if (currentPlanScreeningId && item.planScreenId !== currentPlanScreeningId) {
+          return;
+        }
+
+        [1, 2, 3].forEach((floor) => {
+          const indexKey = `listChairIndexF${floor}` as
+            | "listChairIndexF1"
+            | "listChairIndexF2"
+            | "listChairIndexF3";
+          const valueKey = `listChairValueF${floor}` as
+            | "listChairValueF1"
+            | "listChairValueF2"
+            | "listChairValueF3";
+
+          splitSeats(item[indexKey]).forEach((seatIndex) => {
+            pendingSeatKeys.add(`${floor}-${seatIndex}`);
+          });
+
+          splitSeats(item[valueKey]).forEach((seatValue) => {
+            pendingSeatKeys.add(`${floor}-code:${seatValue}`);
+          });
+        });
+      });
+    });
+
+    return pendingSeatKeys;
+  }, [currentPlanScreeningId, orders]);
+
   const seatTypeColorMap = useMemo(
     () => new Map(resolvedSeatTypes.map((item) => [item.id, item.color || "#8f8f8f"] as const)),
     [resolvedSeatTypes]
@@ -551,12 +598,16 @@ const Seats = ({
           const isSpotlighted = hasSeatSpotlight && spotlightSeatKeySet.has(seatUniqueKey);
           const isDimmed = hasSeatSpotlight && cancelMode && !isSpotlighted;
           const isBlockedOnline = isSeatBlockedOnline(seat);
+          const isPendingPayment =
+            pendingPaymentSeatKeySet.has(seatUniqueKey) ||
+            pendingPaymentSeatKeySet.has(`${seat.floor}-code:${seat.code}`);
 
           return (
             <Seat
               key={seat.seat}
               seat={seat}
               isSelected={selectedSeatKeySet.has(seatUniqueKey)}
+              isPendingPayment={isPendingPayment}
               isSelectingByOther={selectingSeatKeysByOther.has(seatUniqueKey)}
               onSelect={handleSelectSeat}
               size={seatSize}
@@ -595,6 +646,7 @@ const Seats = ({
     seatTypeColorMap,
     handleHover,
     handleLeave,
+    pendingPaymentSeatKeySet,
     selectingSeatKeysByOther,
     spotlightSeatKeySet
   ]);
@@ -654,7 +706,7 @@ const Seats = ({
 
       <div
         ref={mainContainerRef}
-        className="bg-goku dark:bg-app-bg-container p-2 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
+        className="bg-gradient-fade dark:bg-app-bg-container p-2 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
           <legend className="mx-auto px-3 text-sm text-trunks font-bold">Màn hình</legend>
@@ -724,6 +776,10 @@ const Seats = ({
           currentPlanScreeningId={currentPlanScreeningId}
           position={tooltipPos}
           visible={visible}
+          isPendingPayment={
+            pendingPaymentSeatKeySet.has(`${hoverSeat.floor}-${hoverSeat.seat}`) ||
+            pendingPaymentSeatKeySet.has(`${hoverSeat.floor}-code:${hoverSeat.code}`)
+          }
         />
       )}
     </div>

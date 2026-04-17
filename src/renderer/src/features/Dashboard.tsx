@@ -39,7 +39,7 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="relative mx-auto flex h-full max-w-7xl px-4 py-8 lg:py-10">
+      <div className="relative mx-auto flex h-full max-w-7xl px-6 py-8 lg:py-10">
         <div className="w-full">
           <div className="flex items-center justify-between gap-4">
             <div>

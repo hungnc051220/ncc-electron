@@ -119,7 +119,7 @@ export const isPlanScreeningLocked = (projectDate?: string, projectTime?: string
 };
 
 export function formatNumber(x: number) {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (x || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 export function filterEmptyValues<T extends object>(obj: T): Partial<T> {

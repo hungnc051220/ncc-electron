@@ -415,4 +415,7 @@ export interface QrDialogData extends QrCodeResponseProps {
   projectDate: string;
   projectTime: string;
   seats: string;
+  orderStatusId: number;
+  shippingStatusId: number;
+  paymentStatusId: number;
 }

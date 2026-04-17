@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import dayjs from "dayjs";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -47,17 +47,29 @@ vi.mock("antd", () => ({
   ),
   DatePicker: () => <div data-testid="date-picker" />,
   Table: ({
-    dataSource
+    dataSource,
+    columns
   }: {
     dataSource?: Array<{ filmName: string; details: Array<{ projectTime: string }> }>;
+    columns?: Array<{
+      dataIndex?: string;
+      render?: (value: unknown, record: Record<string, unknown>, index: number) => React.ReactNode;
+    }>;
   }) => (
     <div data-testid="showtimes-table">
-      {dataSource?.map((film) => (
+      {dataSource?.map((film, index) => (
         <div key={film.filmName}>
-          <span>{film.filmName}</span>
-          {film.details.map((detail) => (
-            <span key={detail.projectTime}>{dayjs(detail.projectTime).format("HH:mm")}</span>
-          ))}
+          {columns?.map((column, columnIndex) => {
+            const value = column.dataIndex ? (film as Record<string, unknown>)[column.dataIndex] : undefined;
+
+            return (
+              <div key={`${film.filmName}-${columnIndex}`}>
+                {column.render
+                  ? column.render(value, film as Record<string, unknown>, index)
+                  : (value as React.ReactNode)}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
@@ -93,6 +105,7 @@ describe("ShowtimesPage", () => {
   beforeEach(() => {
     mocks.setDate.mockReset();
     mocks.screeningsData = [];
+    sessionStorage.clear();
   });
 
   it("resets the selected date to today when opening showtimes with the reset flag", async () => {
@@ -183,5 +196,39 @@ describe("ShowtimesPage", () => {
     expect(screen.queryByText("05:00")).not.toBeInTheDocument();
     expect(screen.getByText("PHIM SUPER MARIO THIÊN HÀ - P (PHỤ ĐỀ)")).toBeInTheDocument();
     expect(screen.getByText("20:00")).toBeInTheDocument();
+  });
+
+  it("keeps the last selected showtime button highlighted when returning to the page", async () => {
+    mockedUseQueryState.mockReturnValue(["2026-04-14", mocks.setDate]);
+    mocks.screeningsData = [
+      {
+        filmName: "Movie A",
+        details: [
+          {
+            planCinemaId: 1,
+            planScreeningsId: 400562,
+            projectTime: "2026-04-14T20:00:00+07:00",
+            roomId: "87",
+            roomName: "2"
+          }
+        ]
+      }
+    ];
+
+    render(
+      <MemoryRouter initialEntries={["/showtimes?date=2026-04-14"]}>
+        <Routes>
+          <Route path="/showtimes" element={<ShowtimesPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const showtimeButton = screen.getByRole("button", { name: "20:00" });
+    fireEvent.click(showtimeButton);
+
+    expect(sessionStorage.getItem("showtimes:last-selected-plan-screening-id")).toBe("400562");
+    expect(sessionStorage.getItem("showtimes:last-selected-date")).toBe("2026-04-14");
+    expect(showtimeButton).toHaveAttribute("aria-pressed", "true");
+    expect(showtimeButton.className).toContain("border-primary");
   });
 });

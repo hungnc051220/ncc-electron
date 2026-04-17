@@ -19,7 +19,7 @@ const MainCard = ({ title, description, color, href, icon }: MainCardProps) => {
   return (
     <Link to={href ?? "#"}>
       <div
-        className="size-full rounded-3xl p-10 shadow-sm flex flex-col items-start text-left justify-between cursor-pointer relative min-h-62.5 transform transition-all duration-300
+        className="size-full rounded-3xl p-8 xl:p-10 shadow-sm flex flex-col gap-3 items-start text-left justify-between cursor-pointer relative xl:min-h-62.5 transform transition-all duration-300
             hover:scale-[1.02] hover:shadow-xl overflow-hidden"
         style={{
           background:

@@ -1,5 +1,11 @@
 import { formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
-import { ListSeat, OrderResponseProps, SellerProps } from "@shared/types";
+import {
+  ListSeat,
+  OrderResponseProps,
+  OrderStatus,
+  PaymentStatus,
+  SellerProps
+} from "@shared/types";
 import dayjs from "dayjs";
 import { useLayoutEffect, useRef, useState } from "react";
 
@@ -14,6 +20,7 @@ interface TooltipFloatingProps {
   currentPlanScreeningId?: number;
   position: TooltipPosition;
   visible: boolean;
+  isPendingPayment?: boolean;
 }
 
 const TooltipFloating = ({
@@ -21,7 +28,8 @@ const TooltipFloating = ({
   order,
   currentPlanScreeningId,
   position,
-  visible
+  visible,
+  isPendingPayment
 }: TooltipFloatingProps) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<{ left: number; top: number }>({
@@ -170,7 +178,10 @@ const TooltipFloating = ({
 
   const isInvitationTicket = seat.isInvitation === 1;
   const isContractTicket = seat.isContract === 1;
-  const isHoldSeat = seat.isHold === 1;
+  const isPendingPaymentSeat =
+    isPendingPayment ||
+    (order?.orderStatusId === OrderStatus.PENDING && order?.paymentStatusId === PaymentStatus.PENDING);
+  const isHoldSeat = seat.isHold === 1 || isPendingPaymentSeat;
   const isSoldSeat = seat.status === 1;
 
   return (
@@ -214,7 +225,9 @@ const TooltipFloating = ({
         </>
       ) : (
         <>
-          <p className="font-semibold mb-1 text-sm">{isHoldSeat ? "Ghế giữ chỗ" : "Vé đã bán"}</p>
+          <p className="font-semibold mb-1 text-sm">
+            {isPendingPaymentSeat ? "Vé đang chờ thanh toán" : isHoldSeat ? "Ghế giữ chỗ" : "Vé đã bán"}
+          </p>
           <p>Người thực hiện: {actorName}</p>
           <p>Thời gian thực hiện: {formatDateTime(order.createdOnUtc)}</p>
           <p>Người xuất vé: {printedBy}</p>

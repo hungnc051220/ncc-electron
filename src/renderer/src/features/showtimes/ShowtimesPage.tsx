@@ -15,6 +15,9 @@ import { cn, isPlanScreeningLocked } from "@renderer/lib/utils";
 
 dayjs.extend(customParseFormat);
 
+const LAST_SELECTED_SHOWTIME_ID_KEY = "showtimes:last-selected-plan-screening-id";
+const LAST_SELECTED_SHOWTIME_DATE_KEY = "showtimes:last-selected-date";
+
 const capitalizeFirstLetter = (value: string) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
@@ -34,6 +37,31 @@ const ShowtimesPage = () => {
   });
   const [showPast, setShowPast] = useState(false);
   const today = dayjs().format("YYYY-MM-DD");
+  const [lastSelectedPlanScreeningId, setLastSelectedPlanScreeningId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const selectedFromQuery = searchParams.get("plan-screening");
+    const storedDate = sessionStorage.getItem(LAST_SELECTED_SHOWTIME_DATE_KEY);
+    const storedId = sessionStorage.getItem(LAST_SELECTED_SHOWTIME_ID_KEY);
+
+    if (selectedFromQuery) {
+      const parsedId = Number(selectedFromQuery);
+      if (!Number.isNaN(parsedId)) {
+        sessionStorage.setItem(LAST_SELECTED_SHOWTIME_ID_KEY, String(parsedId));
+        sessionStorage.setItem(LAST_SELECTED_SHOWTIME_DATE_KEY, date);
+        setLastSelectedPlanScreeningId(parsedId);
+        return;
+      }
+    }
+
+    if (storedDate === date && storedId) {
+      const parsedId = Number(storedId);
+      setLastSelectedPlanScreeningId(Number.isNaN(parsedId) ? null : parsedId);
+      return;
+    }
+
+    setLastSelectedPlanScreeningId(null);
+  }, [date, searchParams]);
 
   useEffect(() => {
     if (!shouldResetDate) return;
@@ -110,7 +138,7 @@ const ShowtimesPage = () => {
       dataIndex: "filmName",
       fixed: "left",
       width: 350,
-      render: (value: string) => <span className="font-medium text-sm">{value}</span>
+      render: (value: string) => <span className="font-semibold text-sm">{value}</span>
     },
     {
       title: "Suất chiếu",
@@ -128,6 +156,7 @@ const ShowtimesPage = () => {
             );
             const isFutureShowtime = !isPastShowtime;
             const isDisabledShowtime = isSwapSeatsFlow && (isPastDay || isPastShowtime);
+            const isLastSelectedShowtime = lastSelectedPlanScreeningId === s.planScreeningsId;
 
             return (
               <Button
@@ -135,8 +164,20 @@ const ShowtimesPage = () => {
                 type="default"
                 danger={isPastDay || (!isFutureShowtime && isToday)}
                 disabled={isDisabledShowtime}
-                className="w-14!"
+                className={cn(
+                  "w-14!",
+                  isLastSelectedShowtime &&
+                    "border-primary text-primary shadow-[0_0_0_1px_rgba(70,79,180,0.35)] dark:border-blue-300 dark:text-blue-200"
+                )}
+                aria-pressed={isLastSelectedShowtime}
                 onClick={() => {
+                  sessionStorage.setItem(
+                    LAST_SELECTED_SHOWTIME_ID_KEY,
+                    String(s.planScreeningsId)
+                  );
+                  sessionStorage.setItem(LAST_SELECTED_SHOWTIME_DATE_KEY, date);
+                  setLastSelectedPlanScreeningId(s.planScreeningsId);
+
                   startTransition(() => {
                     if (callbackUrl && id) {
                       const nextSearchParams = new URLSearchParams({
@@ -189,8 +230,15 @@ const ShowtimesPage = () => {
     isSwapSeatsFlow ? current.isBefore(dayjs().startOf("day"), "day") : false;
 
   return (
-    <div className="space-y-3 p-4 flex-1 min-h-screen bg-app-bg text-black dark:text-white">
-      <div className="flex items-center justify-between">
+    <div className="relative flex-1 min-h-screen text-black dark:text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-app-bg" />
+        <div className="absolute inset-0 bg-gradient dark:bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.1),transparent_30%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
+        <div className="absolute -top-16 left-8 h-40 w-40 rounded-full bg-red-200/35 blur-3xl dark:bg-rose-500/12" />
+        <div className="absolute top-24 right-0 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-500/10" />
+        <div className="absolute bottom-10 left-1/3 h-44 w-44 rounded-full bg-amber-100/30 blur-3xl dark:bg-indigo-500/10" />
+      </div>
+      <div className="sticky top-0 z-10 bg-white/20 p-4 shadow-sm backdrop-blur-lg flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-lg">Danh sách phim đang chiếu</h2>
         </div>
@@ -218,12 +266,11 @@ const ShowtimesPage = () => {
       </div>
 
       <Table
+        rootClassName="showtimes-transparent-table"
         rowKey="filmName"
-        bordered
         size="small"
         dataSource={filteredList || []}
         columns={columns}
-        scroll={{ y: "calc(100vh - 80px)" }}
         loading={isFetching}
         pagination={false}
         tableLayout="auto"
