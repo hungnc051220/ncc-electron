@@ -3,14 +3,14 @@ import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { cn } from "@renderer/lib/utils";
 import {
   ListSeat,
-  OrderStatus,
   OrderResponseProps,
+  OrderStatus,
   PaymentStatus,
   PlanScreeningDetailProps,
   ScreenMode,
   SeatTypeProps
 } from "@shared/types";
-import { Button, Tag } from "antd";
+import { Button } from "antd";
 import dayjs from "dayjs";
 import {
   Dispatch,
@@ -47,6 +47,7 @@ interface SeatsProps {
   onSelectionLimitReached?: () => void;
   syncedSelectedFloor?: number | null;
   onSelectedFloorChange?: (floor: number) => void;
+  onRefreshRequested?: () => Promise<void> | void;
   selectionMode?: "default" | "emptyOnly";
   restrictedSeatKeys?: string[];
   spotlightSeatKeys?: string[];
@@ -71,6 +72,7 @@ const Seats = ({
   onSelectionLimitReached,
   syncedSelectedFloor,
   onSelectedFloorChange,
+  onRefreshRequested,
   selectionMode = "default",
   restrictedSeatKeys,
   spotlightSeatKeys
@@ -654,8 +656,20 @@ const Seats = ({
   if (!data) return null;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-app-bg text-black dark:text-white">
-      <div className="flex items-center justify-between px-4 py-2 gap-3">
+    <div className="relative flex-1 flex flex-col h-full overflow-hidden text-black dark:text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-app-bg" />
+        <div className="absolute inset-0 bg-[linear-gradient(155deg,rgba(244,250,246,0.97),rgba(229,240,233,0.9)_34%,rgba(213,227,218,0.84)_100%)] dark:bg-[linear-gradient(160deg,rgba(6,13,10,0.98),rgba(10,24,17,0.95)_42%,rgba(14,31,22,0.93)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_20%,rgba(59,130,246,0.08),transparent_24%),radial-gradient(circle_at_84%_16%,rgba(16,185,129,0.12),transparent_24%),radial-gradient(circle_at_52%_78%,rgba(34,197,94,0.08),transparent_26%)] dark:bg-[radial-gradient(circle_at_16%_20%,rgba(56,189,248,0.08),transparent_24%),radial-gradient(circle_at_84%_16%,rgba(16,185,129,0.1),transparent_22%),radial-gradient(circle_at_52%_78%,rgba(34,197,94,0.08),transparent_24%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04)_34%,rgba(255,255,255,0)_100%)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01)_28%,rgba(255,255,255,0)_100%)]" />
+        <div className="absolute inset-0 opacity-18 bg-[linear-gradient(rgba(71,85,105,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(71,85,105,0.05)_1px,transparent_1px)] bg-size-[42px_42px] dark:opacity-10 dark:bg-[linear-gradient(rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.03)_1px,transparent_1px)]" />
+        <div className="absolute -top-10 left-4 h-56 w-56 rounded-full bg-sky-300/26 blur-3xl dark:bg-sky-500/10" />
+        <div className="absolute top-10 right-0 h-72 w-72 rounded-full bg-emerald-200/22 blur-3xl dark:bg-emerald-500/9" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-green-200/18 blur-3xl dark:bg-green-500/9" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_56%,rgba(6,18,12,0.1)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,transparent_50%,rgba(1,10,6,0.34)_100%)]" />
+      </div>
+
+      <div className="relative flex items-center justify-between px-4 py-2 gap-3">
         <div className="flex-1 flex items-center gap-3">
           <div className="flex items-center gap-4">
             <p className="text-chichi text-sm xl:text-lg font-medium">
@@ -685,9 +699,16 @@ const Seats = ({
               ))}
             </div>
           )}
-          <Tag color="#f50" variant="outlined" className="py-1 px-2 font-semibold">
+          <Button
+            color="orange"
+            variant="filled"
+            className="font-semibold"
+            onClick={() => {
+              void onRefreshRequested?.();
+            }}
+          >
             PHÒNG {data.roomInfo.name}
-          </Tag>
+          </Button>
 
           {!isCustomerView && (
             <Button
@@ -706,7 +727,7 @@ const Seats = ({
 
       <div
         ref={mainContainerRef}
-        className="bg-gradient-fade dark:bg-app-bg-container p-2 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden"
+        className="relative mx-2 mb-2 flex-1 flex flex-col min-h-0 overflow-hidden rounded-lg border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
           <legend className="mx-auto px-3 text-sm text-trunks font-bold">Màn hình</legend>

@@ -17,6 +17,7 @@ dayjs.extend(customParseFormat);
 
 const LAST_SELECTED_SHOWTIME_ID_KEY = "showtimes:last-selected-plan-screening-id";
 const LAST_SELECTED_SHOWTIME_DATE_KEY = "showtimes:last-selected-date";
+const SHOULD_RESTORE_SELECTED_SHOWTIME_KEY = "showtimes:restore-last-selected";
 
 const capitalizeFirstLetter = (value: string) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
@@ -37,31 +38,28 @@ const ShowtimesPage = () => {
   });
   const [showPast, setShowPast] = useState(false);
   const today = dayjs().format("YYYY-MM-DD");
-  const [lastSelectedPlanScreeningId, setLastSelectedPlanScreeningId] = useState<number | null>(null);
+  const [lastSelectedPlanScreeningId, setLastSelectedPlanScreeningId] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
-    const selectedFromQuery = searchParams.get("plan-screening");
+    const shouldRestoreSelectedShowtime =
+      sessionStorage.getItem(SHOULD_RESTORE_SELECTED_SHOWTIME_KEY) === "1";
     const storedDate = sessionStorage.getItem(LAST_SELECTED_SHOWTIME_DATE_KEY);
     const storedId = sessionStorage.getItem(LAST_SELECTED_SHOWTIME_ID_KEY);
 
-    if (selectedFromQuery) {
-      const parsedId = Number(selectedFromQuery);
-      if (!Number.isNaN(parsedId)) {
-        sessionStorage.setItem(LAST_SELECTED_SHOWTIME_ID_KEY, String(parsedId));
-        sessionStorage.setItem(LAST_SELECTED_SHOWTIME_DATE_KEY, date);
-        setLastSelectedPlanScreeningId(parsedId);
-        return;
-      }
-    }
-
-    if (storedDate === date && storedId) {
+    if (shouldRestoreSelectedShowtime && storedDate === date && storedId) {
       const parsedId = Number(storedId);
+      sessionStorage.removeItem(SHOULD_RESTORE_SELECTED_SHOWTIME_KEY);
       setLastSelectedPlanScreeningId(Number.isNaN(parsedId) ? null : parsedId);
       return;
     }
 
+    sessionStorage.removeItem(SHOULD_RESTORE_SELECTED_SHOWTIME_KEY);
+    sessionStorage.removeItem(LAST_SELECTED_SHOWTIME_ID_KEY);
+    sessionStorage.removeItem(LAST_SELECTED_SHOWTIME_DATE_KEY);
     setLastSelectedPlanScreeningId(null);
-  }, [date, searchParams]);
+  }, [date]);
 
   useEffect(() => {
     if (!shouldResetDate) return;
@@ -167,14 +165,12 @@ const ShowtimesPage = () => {
                 className={cn(
                   "w-14!",
                   isLastSelectedShowtime &&
-                    "border-primary text-primary shadow-[0_0_0_1px_rgba(70,79,180,0.35)] dark:border-blue-300 dark:text-blue-200"
+                    "border-primary bg-primary text-white shadow-[0_10px_24px_rgba(70,79,180,0.28)] hover:border-primary hover:bg-primary hover:text-white dark:border-primary dark:bg-primary dark:text-white"
                 )}
                 aria-pressed={isLastSelectedShowtime}
                 onClick={() => {
-                  sessionStorage.setItem(
-                    LAST_SELECTED_SHOWTIME_ID_KEY,
-                    String(s.planScreeningsId)
-                  );
+                  sessionStorage.setItem(SHOULD_RESTORE_SELECTED_SHOWTIME_KEY, "1");
+                  sessionStorage.setItem(LAST_SELECTED_SHOWTIME_ID_KEY, String(s.planScreeningsId));
                   sessionStorage.setItem(LAST_SELECTED_SHOWTIME_DATE_KEY, date);
                   setLastSelectedPlanScreeningId(s.planScreeningsId);
 
@@ -233,12 +229,16 @@ const ShowtimesPage = () => {
     <div className="relative flex-1 min-h-screen text-black dark:text-white">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-app-bg" />
-        <div className="absolute inset-0 bg-gradient dark:bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.1),transparent_30%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
-        <div className="absolute -top-16 left-8 h-40 w-40 rounded-full bg-red-200/35 blur-3xl dark:bg-rose-500/12" />
-        <div className="absolute top-24 right-0 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-500/10" />
-        <div className="absolute bottom-10 left-1/3 h-44 w-44 rounded-full bg-amber-100/30 blur-3xl dark:bg-indigo-500/10" />
+        <div className="absolute inset-0 bg-[linear-gradient(155deg,rgba(244,250,246,0.97),rgba(229,240,233,0.9)_34%,rgba(213,227,218,0.84)_100%)] dark:bg-[linear-gradient(160deg,rgba(6,13,10,0.98),rgba(10,24,17,0.95)_42%,rgba(14,31,22,0.93)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_20%,rgba(59,130,246,0.08),transparent_24%),radial-gradient(circle_at_84%_16%,rgba(16,185,129,0.12),transparent_24%),radial-gradient(circle_at_52%_78%,rgba(34,197,94,0.08),transparent_26%)] dark:bg-[radial-gradient(circle_at_16%_20%,rgba(56,189,248,0.08),transparent_24%),radial-gradient(circle_at_84%_16%,rgba(16,185,129,0.1),transparent_22%),radial-gradient(circle_at_52%_78%,rgba(34,197,94,0.08),transparent_24%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04)_34%,rgba(255,255,255,0)_100%)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01)_28%,rgba(255,255,255,0)_100%)]" />
+        <div className="absolute inset-0 opacity-18 bg-[linear-gradient(rgba(71,85,105,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(71,85,105,0.05)_1px,transparent_1px)] bg-size-[42px_42px] dark:opacity-10 dark:bg-[linear-gradient(rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.03)_1px,transparent_1px)]" />
+        <div className="absolute -top-10 left-4 h-56 w-56 rounded-full bg-sky-300/26 blur-3xl dark:bg-sky-500/10" />
+        <div className="absolute top-10 right-0 h-72 w-72 rounded-full bg-emerald-200/22 blur-3xl dark:bg-emerald-500/9" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-green-200/18 blur-3xl dark:bg-green-500/9" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_56%,rgba(6,18,12,0.1)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,transparent_50%,rgba(1,10,6,0.34)_100%)]" />
       </div>
-      <div className="sticky top-0 z-10 bg-white/20 p-4 shadow-sm backdrop-blur-lg flex items-center justify-between">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-900/10 bg-white/12 p-4 shadow-sm backdrop-blur-xl dark:border-slate-200/10 dark:bg-slate-950/14">
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-lg">Danh sách phim đang chiếu</h2>
         </div>

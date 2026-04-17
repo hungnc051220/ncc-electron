@@ -239,7 +239,15 @@ export const router = createHashRouter([
       },
       {
         path: "/invitation-tickets/create",
-        element: withAccess("invitation_tickets", <InvitationTicketsDetailPage />)
+        element: (
+          <PermissionGuard
+            permissionKey="invitation_tickets"
+            fallbackPath="/403"
+            allowInCustomerMode
+          >
+            <InvitationTicketsDetailPage />
+          </PermissionGuard>
+        )
       },
       {
         path: "/online-seat-booking/create",

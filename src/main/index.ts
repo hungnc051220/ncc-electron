@@ -3,6 +3,7 @@ import {
   AppConfig,
   AppTheme,
   CurrentSeatState,
+  OrderResponseProps,
   PlanScreeningDetailProps,
   PrintTicketPayload,
   QrState,
@@ -36,6 +37,7 @@ let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
 let currentScreeningData: PlanScreeningDetailProps | null = null;
 let currentSeatTypes: SeatTypeProps[] = [];
+let currentScreeningOrders: OrderResponseProps[] = [];
 let mockDownloadTimer: NodeJS.Timeout | null = null;
 let mockDownloadCursor = 0;
 let mockDownloadActive = false;
@@ -456,7 +458,7 @@ function getExternalDisplay() {
   return external;
 }
 
-function createCustomerWindow(planScreeningId: number) {
+function createCustomerWindow(route: string) {
   const externalDisplay = getExternalDisplay();
 
   if (!externalDisplay) {
@@ -464,6 +466,7 @@ function createCustomerWindow(planScreeningId: number) {
   }
 
   if (customerWindow && !customerWindow.isDestroyed()) {
+    loadRenderer(customerWindow, route);
     customerWindow.focus();
     return;
   }
@@ -484,7 +487,7 @@ function createCustomerWindow(planScreeningId: number) {
 
   configureDebugTools(customerWindow);
 
-  loadRenderer(customerWindow, `/plan-screening/${planScreeningId}?view=customer`);
+  loadRenderer(customerWindow, route);
 
   customerWindow.on("closed", () => {
     customerWindow = null;
@@ -522,7 +525,11 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("customer:open", async (_, id: number) => {
-    createCustomerWindow(id);
+    createCustomerWindow(`/plan-screening/${id}?view=customer`);
+  });
+
+  ipcMain.handle("customer:open-route", async (_, route: string) => {
+    createCustomerWindow(route);
   });
 
   ipcMain.handle("customer:close", async () => {
@@ -539,16 +546,25 @@ app.whenReady().then(() => {
   ipcMain.on("customer:request-init", (event) => {
     event.sender.send("customer:update-data", {
       data: currentScreeningData,
-      seatTypes: currentSeatTypes
+      seatTypes: currentSeatTypes,
+      orders: currentScreeningOrders
     });
     event.sender.send("customer:seat-sync", currentSeatState);
   });
 
   ipcMain.on(
     "customer:update-data",
-    (_, payload: { data: PlanScreeningDetailProps | null; seatTypes: SeatTypeProps[] }) => {
+    (
+      _,
+      payload: {
+        data: PlanScreeningDetailProps | null;
+        seatTypes: SeatTypeProps[];
+        orders: OrderResponseProps[];
+      }
+    ) => {
       currentScreeningData = payload?.data ?? null;
       currentSeatTypes = payload?.seatTypes ?? [];
+      currentScreeningOrders = payload?.orders ?? [];
 
       if (customerWindow && !customerWindow.isDestroyed()) {
         customerWindow.webContents.send("customer:update-data", payload);

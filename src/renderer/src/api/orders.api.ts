@@ -138,9 +138,17 @@ export interface OrderPrintedQuery {
 export interface SelectingChairsDto {
   planScreenId: number;
   posName: string;
-  selectingChairIndexF1: string;
-  selectingChairIndexF2: string;
-  selectingChairIndexF3: string;
+  selectingChairIndexF1?: string;
+  selectingChairIndexF2?: string;
+  selectingChairIndexF3?: string;
+}
+
+export interface SelectingChairSnapshot {
+  planScreenId: number;
+  posName: string;
+  selectingChairIndexF1?: string;
+  selectingChairIndexF2?: string;
+  selectingChairIndexF3?: string;
 }
 
 export interface SwapSeatsDto {
@@ -309,6 +317,10 @@ export const ordersApi = {
   },
   selectingChairs: async (operation: "add" | "remove", dto: SelectingChairsDto) => {
     const res = await api.post(`/api/pos/seat/selecting-chairs/${operation}`, dto);
+    return res.data;
+  },
+  getSelectingChairs: async (planScreenId: number): Promise<SelectingChairSnapshot[]> => {
+    const res = await api.get(`/api/pos/seat/selecting-chairs/${planScreenId}`);
     return res.data;
   }
 };

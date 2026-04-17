@@ -687,7 +687,7 @@ const Actions = ({
   return (
     <div
       className={cn(
-        "bg-jiren dark:bg-app-bg border-t border-gray-300 dark:border-app-border shrink-0 px-2",
+        "shrink-0 border-t border-emerald-900/20 bg-emerald-100/50 px-2 backdrop-blur-md dark:border-emerald-300/20 dark:bg-emerald-950/80",
         isCustomerView && "hidden"
       )}
     >
@@ -762,7 +762,7 @@ const Actions = ({
             </Form.Item>
           </Modal>
         </div>
-        <div className="flex-1 max-w-120 bg-app-bg-container py-2 px-4 rounded-md">
+        <div className="flex-1 max-w-120 rounded-md bg-white px-4 py-2 backdrop-blur-md dark:bg-emerald-950/28">
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="text-xs">
@@ -774,8 +774,10 @@ const Actions = ({
           >
             <span className="text-xs">Xuất hóa đơn</span>
           </Checkbox>
-          <p className="text-gray-500">Tiền vừa bán:</p>
-          <p className="font-bold text-red-500 text-sm">{formatMoney(lastSaleTotal)}</p>
+          <p className="text-slate-500 dark:text-slate-300">Tiền vừa bán:</p>
+          <p className="font-bold text-emerald-700 dark:text-emerald-300 text-sm">
+            {formatMoney(lastSaleTotal)}
+          </p>
         </div>
         <div className="grid grid-cols-1 gap-1.5">
           <Button

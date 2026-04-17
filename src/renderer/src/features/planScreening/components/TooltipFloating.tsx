@@ -180,7 +180,8 @@ const TooltipFloating = ({
   const isContractTicket = seat.isContract === 1;
   const isPendingPaymentSeat =
     isPendingPayment ||
-    (order?.orderStatusId === OrderStatus.PENDING && order?.paymentStatusId === PaymentStatus.PENDING);
+    (order?.orderStatusId === OrderStatus.PENDING &&
+      order?.paymentStatusId === PaymentStatus.PENDING);
   const isHoldSeat = seat.isHold === 1 || isPendingPaymentSeat;
   const isSoldSeat = seat.status === 1;
 
@@ -226,7 +227,11 @@ const TooltipFloating = ({
       ) : (
         <>
           <p className="font-semibold mb-1 text-sm">
-            {isPendingPaymentSeat ? "Vé đang chờ thanh toán" : isHoldSeat ? "Ghế giữ chỗ" : "Vé đã bán"}
+            {isPendingPaymentSeat
+              ? "Vé đang chờ thanh toán"
+              : isHoldSeat
+                ? "Ghế giữ chỗ"
+                : "Vé đã bán"}
           </p>
           <p>Người thực hiện: {actorName}</p>
           <p>Thời gian thực hiện: {formatDateTime(order.createdOnUtc)}</p>

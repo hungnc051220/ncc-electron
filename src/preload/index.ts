@@ -4,6 +4,7 @@ import { PreloadAPI } from "./api.types";
 import {
   AppTheme,
   CurrentSeatState,
+  OrderResponseProps,
   PlanScreeningDetailProps,
   QrState,
   SeatTypeProps,
@@ -16,13 +17,18 @@ const api: PreloadAPI = {
   getConfig: () => ipcRenderer.invoke("get-config"),
   setConfig: (config) => ipcRenderer.invoke("set-config", config),
   openCustomerScreen: (id) => ipcRenderer.invoke("customer:open", id),
+  openCustomerRoute: (route) => ipcRenderer.invoke("customer:open-route", route),
   closeCustomerScreen: () => ipcRenderer.invoke("customer:close"),
   requestCustomerInit: () => ipcRenderer.send("customer:request-init"),
   sendCustomerData: (payload) => ipcRenderer.send("customer:update-data", payload),
   onCustomerData: (cb) => {
     const handler = (
       _: unknown,
-      payload: { data: PlanScreeningDetailProps | null; seatTypes: SeatTypeProps[] }
+      payload: {
+        data: PlanScreeningDetailProps | null;
+        seatTypes: SeatTypeProps[];
+        orders: OrderResponseProps[];
+      }
     ) => cb(payload);
     ipcRenderer.on("customer:update-data", handler);
     return () => ipcRenderer.removeListener("customer:update-data", handler);

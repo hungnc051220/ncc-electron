@@ -214,14 +214,21 @@ const ExportRevenueExcelButton = ({
           "Loại giá vé (Đơn vị tính: 1000 đồng)";
       }
 
-      worksheet.mergeCells(headerGroupRowIndex, totalQuantityCol, headerDetailRowIndex, totalQuantityCol);
+      worksheet.mergeCells(
+        headerGroupRowIndex,
+        totalQuantityCol,
+        headerDetailRowIndex,
+        totalQuantityCol
+      );
       worksheet.getCell(headerGroupRowIndex, totalQuantityCol).value = "Tổng vé";
 
       worksheet.mergeCells(headerGroupRowIndex, totalSaleCol, headerDetailRowIndex, totalSaleCol);
       worksheet.getCell(headerGroupRowIndex, totalSaleCol).value = "Doanh thu";
 
       priceHeaders.forEach((price, index) => {
-        worksheet.getCell(headerDetailRowIndex, priceStartCol + index).value = (price / 1000).toString();
+        worksheet.getCell(headerDetailRowIndex, priceStartCol + index).value = (
+          price / 1000
+        ).toString();
       });
 
       [headerGroupRowIndex, headerDetailRowIndex].forEach((rowNumber) => {

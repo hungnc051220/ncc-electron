@@ -316,7 +316,7 @@ const Actions = ({
   };
 
   return (
-    <div className="bg-beerus dark:bg-app-bg border-t border-gray-300 dark:border-app-border shrink-0 px-4">
+    <div className="shrink-0 border-t border-emerald-900/20 bg-emerald-100/50 px-2 backdrop-blur-md dark:border-emerald-300/20 dark:bg-emerald-950/80">
       <div className="p-2 flex gap-6 max-w-5xl mx-auto">
         <div className="flex-1 bg-app-bg-container py-2 px-4 rounded-md">
           <Descriptions size="small" items={items} column={2} />

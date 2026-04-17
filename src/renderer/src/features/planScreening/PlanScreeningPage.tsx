@@ -1,7 +1,13 @@
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { useThemeStore } from "@renderer/store/theme.store";
-import { ListSeat, PlanScreeningDetailProps, QrState, SeatTypeProps } from "@shared/types";
+import {
+  ListSeat,
+  OrderResponseProps,
+  PlanScreeningDetailProps,
+  QrState,
+  SeatTypeProps
+} from "@shared/types";
 import { Button, Result, Spin } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
@@ -16,6 +22,7 @@ import {
   onOrderPaymentUpdated,
   onSelectingChairsUpdate
 } from "@renderer/socket/socket";
+import { ordersApi } from "@renderer/api/orders.api";
 import { useSelectingChairs } from "@renderer/hooks/orders/useSelectingChairs";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,6 +35,7 @@ const PlanScreeningPage = () => {
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [customerData, setCustomerData] = useState<PlanScreeningDetailProps | undefined>(undefined);
   const [customerSeatTypes, setCustomerSeatTypes] = useState<SeatTypeProps[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<OrderResponseProps[]>([]);
   const isCustomerMode = window.location.hash.includes("view=customer");
   const [qrState, setQrState] = useState<QrState>({ isOpen: false });
   const { posName } = useSettingPosStore();
@@ -36,8 +44,12 @@ const PlanScreeningPage = () => {
   const syncedSelectedSeatKeysRef = useRef<Set<string>>(new Set());
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data, isFetching } = usePlanScreeningDetail(Number(id), isCustomerMode);
-  const { data: orders } = useOrdersByScreening(Number(id));
+  const {
+    data,
+    isFetching,
+    refetch: refetchPlanScreeningDetail
+  } = usePlanScreeningDetail(Number(id), isCustomerMode);
+  const { data: orders, refetch: refetchOrdersByScreening } = useOrdersByScreening(Number(id));
   const { data: seatTypesRes } = useSeatTypes({ current: 1, pageSize: 1000 });
   const { mutate: mutateSelectingChairs } = useSelectingChairs();
   const mutateSelectingChairsRef = useRef(mutateSelectingChairs);
@@ -47,6 +59,32 @@ const PlanScreeningPage = () => {
     () => new Set(selectedSeats.map((seat) => `${seat.floor}-${seat.seat}`)),
     [selectedSeats]
   );
+
+  const parseSelectingSeatIndexes = (value: string | undefined, floor: number) => {
+    const normalizedValue = (value ?? "").trim();
+    if (!normalizedValue) return [];
+
+    const rangeMatches = Array.from(normalizedValue.matchAll(/\[(\d+):(\d+)\]/g));
+    if (rangeMatches.length > 0) {
+      return rangeMatches.flatMap((match) => {
+        const start = Number(match[1]);
+        const end = Number(match[2]);
+
+        if (Number.isNaN(start) || Number.isNaN(end)) return [];
+
+        const from = Math.min(start, end);
+        const to = Math.max(start, end);
+
+        return Array.from({ length: to - from + 1 }, (_, index) => `${floor}-${from + index}`);
+      });
+    }
+
+    return normalizedValue
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((seatIndex) => `${floor}-${seatIndex}`);
+  };
 
   const buildSelectingDto = (planScreenId: number, currentPosName: string, seats: ListSeat[]) => ({
     planScreenId,
@@ -75,10 +113,11 @@ const PlanScreeningPage = () => {
     if (data) {
       window.api?.sendCustomerData({
         data,
-        seatTypes
+        seatTypes,
+        orders: orders || []
       });
     }
-  }, [data, isCustomerMode, seatTypes]);
+  }, [data, isCustomerMode, orders, seatTypes]);
 
   useEffect(() => {
     if (id && !isCustomerMode) window.api?.openCustomerScreen(Number(id));
@@ -94,6 +133,7 @@ const PlanScreeningPage = () => {
     const unsubscribe = window.api?.onCustomerData((payload) => {
       setCustomerData(payload?.data || undefined);
       setCustomerSeatTypes(payload?.seatTypes || []);
+      setCustomerOrders(payload?.orders || []);
     });
 
     return () => unsubscribe?.();
@@ -105,6 +145,7 @@ const PlanScreeningPage = () => {
     const unsubData = window.api?.onCustomerData((payload) => {
       setCustomerData(payload?.data || undefined);
       setCustomerSeatTypes(payload?.seatTypes || []);
+      setCustomerOrders(payload?.orders || []);
     });
 
     const unsubSeat = window.api?.onSeatSync((seatState) => {
@@ -155,21 +196,37 @@ const PlanScreeningPage = () => {
     if (!id || isCustomerMode || !posName) return;
 
     setSelectingSeatsByOther({});
+    let isDisposed = false;
 
-    const parseSeatIndexes = (value: string, floor: number) =>
-      value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .map((seatIndex) => `${floor}-${seatIndex}`);
+    void ordersApi.getSelectingChairs(Number(id)).then((snapshots) => {
+      if (isDisposed) return;
+
+      const initialState: Record<string, string> = {};
+
+      snapshots.forEach((snapshot) => {
+        if (snapshot.planScreenId !== Number(id) || snapshot.posName === posName) return;
+
+        const seatKeys = [
+          ...parseSelectingSeatIndexes(snapshot.selectingChairIndexF1, 1),
+          ...parseSelectingSeatIndexes(snapshot.selectingChairIndexF2, 2),
+          ...parseSelectingSeatIndexes(snapshot.selectingChairIndexF3, 3)
+        ];
+
+        seatKeys.forEach((seatKey) => {
+          initialState[seatKey] = snapshot.posName;
+        });
+      });
+
+      setSelectingSeatsByOther(initialState);
+    });
 
     const cleanup = onSelectingChairsUpdate((payload) => {
       if (payload.planScreenId !== Number(id) || payload.posName === posName) return;
 
       const seatKeys = [
-        ...parseSeatIndexes(payload.selectingChairIndexF1, 1),
-        ...parseSeatIndexes(payload.selectingChairIndexF2, 2),
-        ...parseSeatIndexes(payload.selectingChairIndexF3, 3)
+        ...parseSelectingSeatIndexes(payload.selectingChairIndexF1, 1),
+        ...parseSelectingSeatIndexes(payload.selectingChairIndexF2, 2),
+        ...parseSelectingSeatIndexes(payload.selectingChairIndexF3, 3)
       ];
 
       setSelectingSeatsByOther((prev) => {
@@ -190,7 +247,10 @@ const PlanScreeningPage = () => {
         return nextState;
       });
     });
-    return cleanup;
+    return () => {
+      isDisposed = true;
+      cleanup?.();
+    };
   }, [id, isCustomerMode, posName]);
 
   useEffect(() => {
@@ -304,6 +364,7 @@ const PlanScreeningPage = () => {
 
   const renderData = isCustomerMode ? customerData : data;
   const renderSeatTypes = isCustomerMode ? customerSeatTypes : seatTypes;
+  const renderOrders = isCustomerMode ? customerOrders : orders;
 
   if (!id) {
     return (
@@ -368,7 +429,7 @@ const PlanScreeningPage = () => {
       <div className="relative flex flex-col h-screen overflow-hidden select-none">
         <Seats
           data={renderData}
-          orders={orders}
+          orders={renderOrders}
           seatTypes={renderSeatTypes}
           selectedSeats={selectedSeats}
           selectingSeatsByOther={isCustomerMode ? undefined : selectingSeatsByOther}
@@ -377,6 +438,16 @@ const PlanScreeningPage = () => {
           isCustomerView={isCustomerMode}
           syncedSelectedFloor={isCustomerMode ? selectedFloor : undefined}
           onSelectedFloorChange={!isCustomerMode ? setSelectedFloor : undefined}
+          onRefreshRequested={
+            isCustomerMode
+              ? undefined
+              : async () => {
+                  await Promise.allSettled([
+                    refetchPlanScreeningDetail(),
+                    refetchOrdersByScreening()
+                  ]);
+                }
+          }
         />
         {!isCustomerMode && data && (
           <Actions

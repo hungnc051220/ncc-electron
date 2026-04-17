@@ -470,27 +470,6 @@ const AddSchedulingDialog = ({
               />
             </Form.Item>
 
-            <Form.Item<FieldType>
-              name="roomId"
-              label="Phòng chiếu"
-              rules={[{ required: true, message: "Chọn phòng chiếu" }]}
-            >
-              <Select
-                options={roomOptions}
-                placeholder="Chọn phòng chiếu"
-                virtual={false}
-                loading={roomOptionsLoading}
-              />
-            </Form.Item>
-
-            <Form.Item<FieldType>
-              name="projectDate"
-              label="Ngày chiếu"
-              rules={[{ required: true, message: "Chọn ngày chiếu" }]}
-            >
-              <DatePicker format="DD/MM/YYYY" className="w-full" />
-            </Form.Item>
-
             <div className="grid grid-cols-2 gap-3">
               <Form.Item<FieldType>
                 name="projectTime"
@@ -503,6 +482,27 @@ const AddSchedulingDialog = ({
                 <TimePicker format="HH:mm" className="w-full" disabled />
               </Form.Item>
             </div>
+
+            <Form.Item<FieldType>
+              name="projectDate"
+              label="Ngày chiếu"
+              rules={[{ required: true, message: "Chọn ngày chiếu" }]}
+            >
+              <DatePicker format="DD/MM/YYYY" className="w-full" />
+            </Form.Item>
+
+            <Form.Item<FieldType>
+              name="roomId"
+              label="Phòng chiếu"
+              rules={[{ required: true, message: "Chọn phòng chiếu" }]}
+            >
+              <Select
+                options={roomOptions}
+                placeholder="Chọn phòng chiếu"
+                virtual={false}
+                loading={roomOptionsLoading}
+              />
+            </Form.Item>
 
             <div className="grid grid-cols-2 gap-3">
               <Form.Item name="duration" label="Thời lượng (phút)">

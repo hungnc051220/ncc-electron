@@ -2,6 +2,7 @@ import {
   AppConfig,
   AppTheme,
   CurrentSeatState,
+  OrderResponseProps,
   PlanScreeningDetailProps,
   PrintTicketPayload,
   QrState,
@@ -13,6 +14,7 @@ import {
 export interface CustomerScreenPayload {
   data: PlanScreeningDetailProps | null;
   seatTypes: SeatTypeProps[];
+  orders: OrderResponseProps[];
 }
 
 export interface SaveFileFilter {
@@ -36,6 +38,7 @@ export interface PreloadAPI {
   getConfig: () => Promise<AppConfig>;
   setConfig: (config: AppConfig) => Promise<void>;
   openCustomerScreen(id: number): Promise<void>;
+  openCustomerRoute(route: string): Promise<void>;
   closeCustomerScreen(): Promise<void>;
   requestCustomerInit(): void;
   sendCustomerData(payload: CustomerScreenPayload): void;
