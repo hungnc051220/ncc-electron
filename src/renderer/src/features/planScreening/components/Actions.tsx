@@ -484,34 +484,36 @@ const Actions = ({
     {
       key: "1",
       label: <span className="text-xs font-semibold">Số vé</span>,
-      children: <p className="text-right text-sm flex-1 font-bold">{selectedSeats.length}</p>
+      children: (
+        <p className="text-right flex-1 font-bold text-xs self-center">{selectedSeats.length}</p>
+      )
     },
     {
       key: "2",
       label: <span className="text-xs font-semibold">Tiền vé</span>,
-      children: <p className="text-right flex-1 font-bold">{formatMoney(totalPrice)}</p>
+      children: (
+        <p className="text-right flex-1 font-bold text-xs self-center">{formatMoney(totalPrice)}</p>
+      )
     },
     {
       key: "3",
       label: <span className="text-xs font-semibold">Giảm giá</span>,
       children: (
-        <div className="flex items-center justify-end flex-1 gap-2">
-          <p
-            onClick={() => setOpenDiscount(true)}
-            className="text-right flex-1 font-bold cursor-pointer"
-          >
-            {priceDiscount > 0 || Object.keys(selectedDiscountGroups).length > 0
-              ? formatMoney(priceDiscount)
-              : "Chọn giảm giá"}
-          </p>
-        </div>
+        <p
+          onClick={() => setOpenDiscount(true)}
+          className="text-right flex-1 font-bold cursor-pointer text-xs self-center"
+        >
+          {priceDiscount > 0 || Object.keys(selectedDiscountGroups).length > 0
+            ? formatMoney(priceDiscount)
+            : "Chọn giảm giá"}
+        </p>
       )
     },
     {
       key: "4",
       label: <span className="text-xs font-semibold">Thành tiền</span>,
       children: (
-        <p className="text-right flex-1 font-bold text-blue-600">
+        <p className="text-right flex-1 font-bold text-blue-600 self-center">
           {formatMoney(totalPrice - priceDiscount)}
         </p>
       )

@@ -18,6 +18,7 @@ import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreenin
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import {
+  onSocketConnect,
   onOrderCreated,
   onOrderPaymentUpdated,
   onSelectingChairsUpdate
@@ -49,7 +50,11 @@ const PlanScreeningPage = () => {
     isFetching,
     refetch: refetchPlanScreeningDetail
   } = usePlanScreeningDetail(Number(id), isCustomerMode);
-  const { data: orders, refetch: refetchOrdersByScreening } = useOrdersByScreening(Number(id));
+  const {
+    data: orders,
+    isFetching: isFetchingOrders,
+    refetch: refetchOrdersByScreening
+  } = useOrdersByScreening(Number(id));
   const { data: seatTypesRes } = useSeatTypes({ current: 1, pageSize: 1000 });
   const { mutate: mutateSelectingChairs } = useSelectingChairs();
   const mutateSelectingChairsRef = useRef(mutateSelectingChairs);
@@ -209,9 +214,6 @@ const PlanScreeningPage = () => {
 
     void ordersApi.getSelectingChairs(Number(id)).then((snapshots) => {
       if (isDisposed) return;
-
-      console.log("snapshots", snapshots);
-
       const initialState: Record<string, string> = {};
 
       snapshots.forEach((snapshot) => {
@@ -289,9 +291,14 @@ const PlanScreeningPage = () => {
       invalidateCurrentScreeningData();
     });
 
+    const cleanupSocketConnect = onSocketConnect(() => {
+      invalidateCurrentScreeningData();
+    });
+
     return () => {
       cleanupOrderCreated?.();
       cleanupOrderPaymentUpdated?.();
+      cleanupSocketConnect?.();
     };
   }, [id, isCustomerMode, queryClient]);
 
@@ -449,6 +456,7 @@ const PlanScreeningPage = () => {
           isCustomerView={isCustomerMode}
           syncedSelectedFloor={isCustomerMode ? selectedFloor : undefined}
           onSelectedFloorChange={!isCustomerMode ? setSelectedFloor : undefined}
+          isRefreshLoading={!isCustomerMode && (isFetching || isFetchingOrders)}
           onRefreshRequested={
             isCustomerMode
               ? undefined

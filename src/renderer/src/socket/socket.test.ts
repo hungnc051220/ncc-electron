@@ -80,4 +80,32 @@ describe("socket", () => {
 
     expect(fakeSocket.off).toHaveBeenCalledWith("orderPaymentUpdated", callback);
   });
+
+  it("rebinds managed listeners when the socket instance is recreated", async () => {
+    const firstSocket = {
+      on: vi.fn(),
+      off: vi.fn(),
+      disconnect: vi.fn()
+    };
+    const secondSocket = {
+      on: vi.fn(),
+      off: vi.fn(),
+      disconnect: vi.fn()
+    };
+    const callback = vi.fn();
+
+    ioMock.mockReturnValueOnce(firstSocket).mockReturnValueOnce(secondSocket);
+
+    const socketModule = await import("./socket");
+    socketModule.initSocket("https://ncc.local");
+    socketModule.connectSocket("token-1");
+
+    socketModule.onOrderCreated(callback);
+
+    expect(firstSocket.on).toHaveBeenCalledWith("orderCreated", callback);
+
+    socketModule.connectSocket("token-2");
+
+    expect(secondSocket.on).toHaveBeenCalledWith("orderCreated", callback);
+  });
 });

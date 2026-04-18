@@ -12,6 +12,7 @@ import {
 } from "@shared/types";
 import { Button } from "antd";
 import dayjs from "dayjs";
+import { SyncOutlined } from "@ant-design/icons";
 import {
   Dispatch,
   SetStateAction,
@@ -48,6 +49,7 @@ interface SeatsProps {
   syncedSelectedFloor?: number | null;
   onSelectedFloorChange?: (floor: number) => void;
   onRefreshRequested?: () => Promise<void> | void;
+  isRefreshLoading?: boolean;
   selectionMode?: "default" | "emptyOnly";
   restrictedSeatKeys?: string[];
   spotlightSeatKeys?: string[];
@@ -73,6 +75,7 @@ const Seats = ({
   syncedSelectedFloor,
   onSelectedFloorChange,
   onRefreshRequested,
+  isRefreshLoading,
   selectionMode = "default",
   restrictedSeatKeys,
   spotlightSeatKeys
@@ -354,6 +357,55 @@ const Seats = ({
     });
   }, [resolvedSeatTypes, seats]);
 
+  const seatSummary = useMemo(() => {
+    const allSeats =
+      seats?.flat().filter((seat) => {
+        return seat.type !== 12;
+      }) || [];
+
+    const totalSeats = allSeats.length;
+    const soldSeats = allSeats.filter((seat) => {
+      return (
+        seat.status === 1 && seat.isHold !== 1 && seat.isInvitation !== 1 && seat.isContract !== 1
+      );
+    }).length;
+    const contractSeats = allSeats.filter((seat) => seat.isContract === 1).length;
+    const invitationSeats = allSeats.filter((seat) => seat.isInvitation === 1).length;
+
+    return {
+      totalSeats,
+      soldSeats,
+      contractSeats,
+      invitationSeats
+    };
+  }, [seats]);
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        key: "sold",
+        label: "Ghế đã bán",
+        value: seatSummary.soldSeats,
+        className:
+          "border-rose-200/90 bg-rose-50/80 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200"
+      },
+      {
+        key: "contract",
+        label: "Ghế HĐ",
+        value: seatSummary.contractSeats,
+        className:
+          "border-amber-200/90 bg-amber-50/80 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200"
+      },
+      {
+        key: "invitation",
+        label: "Ghế mời",
+        value: seatSummary.invitationSeats,
+        className:
+          "border-teal-200/90 bg-teal-50/80 text-teal-700 dark:border-teal-400/20 dark:bg-teal-500/10 dark:text-teal-200"
+      }
+    ],
+    [seatSummary.contractSeats, seatSummary.invitationSeats, seatSummary.soldSeats]
+  );
   const seatMap = useMemo(() => {
     const map: Record<string, ListSeat> = {};
     seats?.forEach((row) => {
@@ -669,68 +721,102 @@ const Seats = ({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_56%,rgba(6,18,12,0.1)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,transparent_50%,rgba(1,10,6,0.34)_100%)]" />
       </div>
 
-      <div className="relative flex items-center justify-between px-4 py-2 gap-3">
-        <div className="flex-1 flex items-center gap-3">
-          <div className="flex items-center gap-4">
-            <p className="text-chichi text-sm xl:text-lg font-medium">
-              Buổi {dayjs(data.projectTime).format("HH:mm")} - Ngày{" "}
-              {dayjs(data.projectDate).format("DD/MM/YYYY")}
-            </p>
-            <p className="font-bold text-base xl:text-xl">{data.filmInfo.filmName}</p>
-          </div>
-        </div>
-        <div className="rounded-lg flex items-center gap-4">
-          {availableFloors.length > 1 && (
-            <div className="flex justify-center gap-2">
-              {availableFloors.map((floor) => (
-                <p
-                  key={floor}
-                  onClick={() => {
-                    setUserSelectedFloor(floor);
-                    onSelectedFloorChange?.(floor);
-                  }}
+      <div className="relative px-2 pt-2">
+        <div className="rounded-xl border border-green-200/70 bg-white/60 px-3 py-2 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.55)] backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/34">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5 justify-self-start">
+              {summaryCards.map((card) => (
+                <div
+                  key={card.key}
                   className={cn(
-                    "pr-1 border-b-2 border-transparent text-sm font-semibold cursor-pointer transition-all hover:opacity-80",
-                    selectedFloor === floor && "border-primary text-primary"
+                    "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 xl:py-1 xl:px-3 text-[10px] xl:text-xs font-semibold",
+                    card.className
                   )}
                 >
-                  Tầng {floor}
-                </p>
+                  <span className="whitespace-nowrap">{card.label}:</span>
+                  <span className="text-[10px] xl:text-xs font-semibold">
+                    {card.value}/{seatSummary.totalSeats}
+                  </span>
+                </div>
               ))}
             </div>
-          )}
-          <Button
-            color="orange"
-            variant="filled"
-            className="font-semibold"
-            onClick={() => {
-              void onRefreshRequested?.();
-            }}
-          >
-            PHÒNG {data.roomInfo.name}
-          </Button>
 
-          {!isCustomerView && (
-            <Button
-              variant="outlined"
-              className="ml-4"
-              onClick={() => {
-                sessionStorage.removeItem("lastTotal");
-                navigate(-1);
-              }}
-            >
-              Đóng
-            </Button>
-          )}
+            <div className="min-w-0 max-w-[42vw] text-center">
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-sm font-semibold uppercase tracking-[0.16em] text-slate-700 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300">
+                  {dayjs(data.projectTime).format("HH:mm")}
+                </span>
+                <span className="text-slate-500 dark:text-slate-600">•</span>
+                <span>{dayjs(data.projectDate).format("DD/MM/YYYY")}</span>
+              </div>
+              <p className="truncate text-lg font-bold text-slate-950 dark:text-white xl:text-xl">
+                {data.filmInfo.filmName}
+              </p>
+            </div>
+
+            <div className="flex min-w-0 items-center justify-self-end gap-1.5">
+              {availableFloors.length > 1 && (
+                <div className="flex shrink-0 items-center rounded-xl border border-slate-200/80 bg-slate-50/80 p-0.5 dark:border-white/10 dark:bg-white/5">
+                  {availableFloors.map((floor) => (
+                    <button
+                      key={floor}
+                      type="button"
+                      onClick={() => {
+                        setUserSelectedFloor(floor);
+                        onSelectedFloorChange?.(floor);
+                      }}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all",
+                        selectedFloor === floor
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                      )}
+                    >
+                      Tầng {floor}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <Button
+                onClick={() => {
+                  void onRefreshRequested?.();
+                }}
+                color="orange"
+                variant="filled"
+                icon={<SyncOutlined spin={isRefreshLoading} />}
+                loading={isRefreshLoading}
+                size="small"
+                className="px-2.5 text-xs font-semibold"
+                iconPlacement="end"
+              >
+                Phòng {data.roomInfo.name}
+              </Button>
+
+              {!isCustomerView && (
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    sessionStorage.removeItem("lastTotal");
+                    navigate(-1);
+                  }}
+                >
+                  Đóng
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       <div
         ref={mainContainerRef}
-        className="relative mx-2 mb-2 flex-1 flex flex-col min-h-0 overflow-hidden rounded-lg border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
+        className="relative pt-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
-          <legend className="mx-auto px-3 text-sm text-trunks font-bold">Màn hình</legend>
+          <legend className="mx-auto px-3 text-xs xl:text-sm text-trunks font-bold">
+            Màn hình
+          </legend>
         </fieldset>
 
         <div
@@ -748,17 +834,17 @@ const Seats = ({
           </div>
         </div>
 
-        <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs shrink-0">
+        <div className="mt-1 flex flex-wrap justify-center gap-3 shrink-0">
           <Legend color="bg-whis" label="Đang chọn" />
           <Legend color="bg-roshi" label="Đang giữ chỗ" />
           <Legend color="bg-trunks" label="Ghế đã bán" />
           {seatTypeLegends.map((item) => (
             <div key={item.id} className="flex items-center gap-2">
               <div
-                className="size-4 rounded-sm border border-app-border"
+                className="size-3 xl:size-4 rounded-sm border border-app-border"
                 style={{ backgroundColor: item.color || "#8f8f8f" }}
               />
-              <span className="font-bold text-zeno text-xs">{item.name}</span>
+              <span className="font-bold text-zeno text-[11px] xl:text-xs">{item.name}</span>
             </div>
           ))}
           <Legend color="bg-raditz" label="Ghế hợp đồng" />
