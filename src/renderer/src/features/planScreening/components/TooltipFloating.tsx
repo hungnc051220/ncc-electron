@@ -151,22 +151,10 @@ const TooltipFloating = ({
     ]) ??
     "--";
 
-  const ticketPrice = itemMatchedSeat?.unitPriceInclTax ?? seat.price ?? 0;
   const seatInfo = seat.positionName?.trim() || labelSeatByType[seat.type] || "Ghế";
-
-  const totalSoldTickets =
-    order?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || (itemMatchedSeat ? 1 : 0);
-  const matchedItemQuantity = itemMatchedSeat?.quantity || 1;
-  const perSeatItemDiscount = itemMatchedSeat
-    ? (itemMatchedSeat.discountAmountInclTax || 0) / matchedItemQuantity
-    : 0;
-  const perSeatOrderDiscountFallback =
-    !perSeatItemDiscount && totalSoldTickets > 0
-      ? (order?.orderDiscount || 0) / totalSoldTickets
-      : 0;
-  const promotionAmount = perSeatItemDiscount || perSeatOrderDiscountFallback;
-  const originalPrice = ticketPrice + promotionAmount;
-  const finalAmount = Math.max(ticketPrice, 0);
+  const promotionAmount = itemMatchedSeat ? itemMatchedSeat.discountAmountInclTax : 0;
+  const originalPrice = itemMatchedSeat ? itemMatchedSeat.originUnitPriceInclTax : 0;
+  const finalAmount = itemMatchedSeat ? itemMatchedSeat.unitPriceInclTax : 0;
   const isU22Voucher = order?.voucherCode === "U22Ticket";
   const promotionName =
     itemMatchedSeat?.discount?.discountName?.trim() ||

@@ -135,6 +135,7 @@ export interface OrderItem {
   planScreenId: number;
   positionId: number;
   quantity: number;
+  originUnitPriceInclTax: number;
   discountAmountInclTax: number;
   unitPriceInclTax: number;
   priceInclTax: number;

@@ -1,6 +1,6 @@
 import { cn } from "@renderer/lib/utils";
 import { ListSeat } from "@shared/types";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -78,7 +78,6 @@ const getContrastTextColor = (backgroundColor: string) => {
 const Seat = ({
   seat,
   isSelected,
-  onSelect,
   size,
   canSelect,
   isPendingPayment,
@@ -93,7 +92,6 @@ const Seat = ({
 }: {
   seat: ListSeat;
   isSelected: boolean;
-  onSelect: (seat: ListSeat) => void;
   size: number;
   canSelect: boolean;
   isPendingPayment?: boolean;
@@ -106,12 +104,6 @@ const Seat = ({
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
 }) => {
-  const handleClick = useCallback(() => {
-    if (canSelect && !isSelectingByOther) {
-      onSelect(seat);
-    }
-  }, [canSelect, isSelectingByOther, onSelect, seat]);
-
   const shouldShowPositionColor =
     !!seatColor &&
     !isSelected &&
@@ -148,7 +140,6 @@ const Seat = ({
         width: `${size}px`,
         height: `${size}px`
       }}
-      onClick={handleClick}
       data-seat-code={seat.code}
       data-seat-floor={seat.floor}
       data-seat-unique-key={seatUniqueKey ?? `${seat.floor}-${seat.seat}`}
