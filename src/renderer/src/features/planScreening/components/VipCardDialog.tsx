@@ -1,6 +1,8 @@
 import { ordersApi } from "@renderer/api/orders.api";
+import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { useCustomer } from "@renderer/hooks/useCustomer";
 import { useAvailableVouchersForPos } from "@renderer/hooks/vouchers/useAvailableVouchersForPos";
+import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { BatchProps, ListSeat } from "@shared/types";
 import type { DescriptionsProps } from "antd";
@@ -147,6 +149,11 @@ const VipCardDialog = ({
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [isValidatingU22, setIsValidatingU22] = useState(false);
   const [u22ValidationReason, setU22ValidationReason] = useState<string | null>(null);
+  const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const keyboardRef = useRef<{
+    setInput: (input: string, inputName?: string) => void;
+  } | null>(null);
   const cardInputRef = useRef<InputRef>(null);
 
   const { data, isFetching, refetch } = useCustomer({
@@ -274,6 +281,13 @@ const VipCardDialog = ({
     }, 100);
 
     return () => window.clearTimeout(focusTimer);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setIsKeyboardOpen(false);
+      setLayoutName("default");
+    }
   }, [open]);
 
   useEffect(() => {
@@ -469,150 +483,193 @@ const VipCardDialog = ({
     }
   };
 
+  const updateSearchText = (value: string) => {
+    const normalizedValue = normalizeMemberCardCode(value);
+
+    setSearchText(normalizedValue);
+    setStatus("");
+    setLastSearched(null);
+    setIsValidatingU22(false);
+    setU22ValidationReason(null);
+    keyboardRef.current?.setInput(normalizedValue, "memberCardCode");
+  };
+
+  const handleKeyboardKeyPress = (button: string) => {
+    if (button === "{shift}" || button === "{lock}") {
+      setLayoutName((current) => (current === "default" ? "shift" : "default"));
+      return;
+    }
+
+    if (button === "{tab}") {
+      cardInputRef.current?.focus();
+      return;
+    }
+
+    if (button === "{enter}") {
+      void onSearch();
+      return;
+    }
+
+    updateSearchText(applyVirtualKeyboardButton(searchText ?? "", button));
+  };
+
   return (
-    <Modal
-      open={open}
-      onCancel={onCancel}
-      width={800}
-      title="Sử dụng CTKM cho thành viên"
-      centered
-      onOk={onConfirm}
-    >
-      <div className="space-y-4">
-        <div className="flex items-center justify-center gap-4 mt-4">
-          <p>Số thẻ</p>
-          <Space.Compact className="flex-1">
-            <Input
-              ref={cardInputRef}
-              placeholder="Nhập số thẻ"
-              value={searchText}
-              onChange={(e) => {
-                setSearchText(normalizeMemberCardCode(e.target.value));
-                setStatus("");
-                setLastSearched(null);
-                setIsValidatingU22(false);
-                setU22ValidationReason(null);
-              }}
-              status={status}
-              onPressEnter={onSearch}
-            />
-            <Button variant="outlined" color="primary" onClick={onSearch} loading={isFetching}>
-              Tìm kiếm
-            </Button>
-          </Space.Compact>
-        </div>
-
-        <Descriptions bordered items={items} column={2} />
-
-        <Radio.Group
-          value={voucherType}
-          onChange={(e) => setVoucherType(e.target.value)}
-          className="flex flex-col gap-2"
-        >
-          <Radio value="campaign" disabled={!isCustomerSearched || hasSeatTypeDiscount}>
-            Áp dụng chương trình khuyến mãi
-          </Radio>
-          <Radio value="u22" disabled={isU22Disabled}>
-            Áp dụng ưu đãi cho thành viên U22
-          </Radio>
-          <Radio value="none" disabled={!isCustomerSearched}>
-            Không áp dụng khuyến mãi
-          </Radio>
-        </Radio.Group>
-
-        {!hasSeatTypeDiscount && selectedSeats.length > 1 && (
-          <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
-            Ưu đãi U22 chỉ áp dụng khi chọn đúng 1 ghế. Vui lòng bỏ bớt ghế nếu muốn dùng ưu đãi
-            này.
-          </NoticeCard>
-        )}
-
-        {!hasSeatTypeDiscount && isCustomerSearched && isValidatingU22 && isSingleSeatSelected && (
-          <NoticeCard
-            tone="info"
-            icon={<LoaderCircle size={14} strokeWidth={2.25} className="animate-spin" />}
-          >
-            Đang kiểm tra điều kiện sử dụng ưu đãi U22 trong ngày.
-          </NoticeCard>
-        )}
-
-        {!hasSeatTypeDiscount && isCustomerSearched && isU22UsedToday && (
-          <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
-            Thành viên U22 này đã sử dụng voucher hôm nay, nên không thể chọn ưu đãi U22 thêm lần
-            nữa.
-          </NoticeCard>
-        )}
-
-        {!isCustomerSearched && (
-          <NoticeCard tone="neutral" icon={<Info size={14} strokeWidth={2.25} />}>
-            Nhập số thẻ và tìm kiếm khách hàng để chọn hình thức áp dụng khuyến mãi.
-          </NoticeCard>
-        )}
-
-        {isCustomerSearched && hasSeatTypeDiscount && (
-          <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
-            Đã áp dụng giảm giá theo loại vé ở ngoài. Chỉ được áp mã khách hàng, không thể dùng thêm
-            voucher hoặc ưu đãi U22.
-          </NoticeCard>
-        )}
-
-        {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "campaign" && (
-          <Table
-            rowKey={(record) => record.batchId}
-            dataSource={voucherItems}
-            columns={columns}
-            bordered
-            size="small"
-            scroll={{ x: "max-content", y: 400 }}
-            loading={isFetching || isFetchingVouchers}
-            pagination={false}
-            rowSelection={{
-              type: "radio",
-              selectedRowKeys: selectedBatchId ? [selectedBatchId] : [],
-              getCheckboxProps: (record) => ({
-                disabled: !record.vouchers?.length
-              }),
-              onChange: (selectedRowKeys) => {
-                const nextKey = selectedRowKeys[0];
-                setSelectedBatchId(typeof nextKey === "number" ? nextKey : null);
-              }
-            }}
-            onRow={(record) => ({
-              onClick: () => {
-                if (!record.vouchers?.length) return;
-                setSelectedBatchId(record.batchId);
-              }
-            })}
-            rowClassName={(record) =>
-              record.vouchers?.length ? "cursor-pointer" : "cursor-not-allowed opacity-60"
-            }
-          />
-        )}
-
-        {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "u22" && !is2DVersion && (
-          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-            Suất chiếu 3D không tính ưu đãi U22. Giá vé giữ nguyên theo giá hiện tại.
+    <>
+      <Modal
+        open={open}
+        onCancel={onCancel}
+        width={800}
+        title="Sử dụng CTKM cho thành viên"
+        centered
+        onOk={onConfirm}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <p>Số thẻ</p>
+            <Space.Compact className="flex-1">
+              <Input
+                ref={cardInputRef}
+                placeholder="Nhập số thẻ"
+                value={searchText}
+                onFocus={() => setIsKeyboardOpen(true)}
+                onChange={(e) => updateSearchText(e.target.value)}
+                status={status}
+                onPressEnter={onSearch}
+              />
+              <Button variant="outlined" color="primary" onClick={onSearch} loading={isFetching}>
+                Tìm kiếm
+              </Button>
+            </Space.Compact>
           </div>
-        )}
 
-        <div className="bg-gray-100 dark:bg-app-bg-container p-4 rounded-md">
-          <div className="grid grid-cols-2 gap-10">
-            <div>
-              <div className="flex justify-between">
-                <p>Tiền mua vé:</p>
-                <p className="text-primary font-semibold">
-                  {formatMoney(voucherType === "u22" && is2DVersion ? 55000 : totalPrice || 0)}
-                </p>
-              </div>
-              <div className="flex justify-between">
-                <p>Tiền thanh toán sau khuyến mãi:</p>
-                <p className="text-red-500 font-semibold">{formatMoney(finalAmount)}</p>
+          <Descriptions bordered items={items} column={2} />
+
+          <Radio.Group
+            value={voucherType}
+            onChange={(e) => setVoucherType(e.target.value)}
+            className="flex flex-col gap-2"
+          >
+            <Radio value="campaign" disabled={!isCustomerSearched || hasSeatTypeDiscount}>
+              Áp dụng chương trình khuyến mãi
+            </Radio>
+            <Radio value="u22" disabled={isU22Disabled}>
+              Áp dụng ưu đãi cho thành viên U22
+            </Radio>
+            <Radio value="none" disabled={!isCustomerSearched}>
+              Không áp dụng khuyến mãi
+            </Radio>
+          </Radio.Group>
+
+          {!hasSeatTypeDiscount && selectedSeats.length > 1 && (
+            <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
+              Ưu đãi U22 chỉ áp dụng khi chọn đúng 1 ghế. Vui lòng bỏ bớt ghế nếu muốn dùng ưu đãi
+              này.
+            </NoticeCard>
+          )}
+
+          {!hasSeatTypeDiscount &&
+            isCustomerSearched &&
+            isValidatingU22 &&
+            isSingleSeatSelected && (
+              <NoticeCard
+                tone="info"
+                icon={<LoaderCircle size={14} strokeWidth={2.25} className="animate-spin" />}
+              >
+                Đang kiểm tra điều kiện sử dụng ưu đãi U22 trong ngày.
+              </NoticeCard>
+            )}
+
+          {!hasSeatTypeDiscount && isCustomerSearched && isU22UsedToday && (
+            <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
+              Thành viên U22 này đã sử dụng voucher hôm nay, nên không thể chọn ưu đãi U22 thêm lần
+              nữa.
+            </NoticeCard>
+          )}
+
+          {!isCustomerSearched && (
+            <NoticeCard tone="neutral" icon={<Info size={14} strokeWidth={2.25} />}>
+              Nhập số thẻ và tìm kiếm khách hàng để chọn hình thức áp dụng khuyến mãi.
+            </NoticeCard>
+          )}
+
+          {isCustomerSearched && hasSeatTypeDiscount && (
+            <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
+              Đã áp dụng giảm giá theo loại vé ở ngoài. Chỉ được áp mã khách hàng, không thể dùng
+              thêm voucher hoặc ưu đãi U22.
+            </NoticeCard>
+          )}
+
+          {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "campaign" && (
+            <Table
+              rowKey={(record) => record.batchId}
+              dataSource={voucherItems}
+              columns={columns}
+              bordered
+              size="small"
+              scroll={{ x: "max-content", y: 400 }}
+              loading={isFetching || isFetchingVouchers}
+              pagination={false}
+              rowSelection={{
+                type: "radio",
+                selectedRowKeys: selectedBatchId ? [selectedBatchId] : [],
+                getCheckboxProps: (record) => ({
+                  disabled: !record.vouchers?.length
+                }),
+                onChange: (selectedRowKeys) => {
+                  const nextKey = selectedRowKeys[0];
+                  setSelectedBatchId(typeof nextKey === "number" ? nextKey : null);
+                }
+              }}
+              onRow={(record) => ({
+                onClick: () => {
+                  if (!record.vouchers?.length) return;
+                  setSelectedBatchId(record.batchId);
+                }
+              })}
+              rowClassName={(record) =>
+                record.vouchers?.length ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+              }
+            />
+          )}
+
+          {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "u22" && !is2DVersion && (
+            <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+              Suất chiếu 3D không tính ưu đãi U22. Giá vé giữ nguyên theo giá hiện tại.
+            </div>
+          )}
+
+          <div className="bg-gray-100 dark:bg-app-bg-container p-4 rounded-md">
+            <div className="grid grid-cols-2 gap-10">
+              <div>
+                <div className="flex justify-between">
+                  <p>Tiền mua vé:</p>
+                  <p className="text-primary font-semibold">
+                    {formatMoney(voucherType === "u22" && is2DVersion ? 55000 : totalPrice || 0)}
+                  </p>
+                </div>
+                <div className="flex justify-between">
+                  <p>Tiền thanh toán sau khuyến mãi:</p>
+                  <p className="text-red-500 font-semibold">{formatMoney(finalAmount)}</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      {open && (
+        <VirtualKeyboardDrawer
+          open={isKeyboardOpen}
+          activeFieldLabel="Số thẻ thành viên"
+          layoutName={layoutName}
+          keyboardRef={(instance) => {
+            keyboardRef.current = instance;
+          }}
+          onClose={() => setIsKeyboardOpen(false)}
+          onKeyPress={handleKeyboardKeyPress}
+        />
+      )}
+    </>
   );
 };
 

@@ -1,6 +1,7 @@
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
+import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
@@ -16,7 +17,6 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, Form, Input, Modal, Select } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
-import { ChevronDown } from "lucide-react";
 import {
   ChangeEvent,
   Dispatch,
@@ -26,8 +26,6 @@ import {
   useRef,
   useState
 } from "react";
-import Keyboard from "react-simple-keyboard";
-import "react-simple-keyboard/build/css/index.css";
 import PrintInvitationTicketDialog from "./PrintInvitationTicketDialog";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
@@ -422,45 +420,21 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
             onFocus={() => setIsKeyboardOpen(true)}
             onChange={handleNoteChange}
           />
-          <div className={`invoice-keyboard-drawer ${isKeyboardOpen ? "is-open" : ""}`}>
-            <div className="invoice-keyboard-drawer__header">
-              <span className="invoice-keyboard-drawer__title">Bàn phím ảo</span>
-              <button
-                type="button"
-                onClick={() => setIsKeyboardOpen(false)}
-                className="invoice-keyboard-drawer__close"
-              >
-                <ChevronDown size={18} />
-              </button>
-            </div>
-            <Keyboard
-              keyboardRef={(instance) => {
-                keyboardRef.current = instance;
-              }}
-              theme="hg-theme-default invoice-keyboard-theme"
-              layoutName={layoutName}
-              inputName="note"
-              onKeyPress={handleKeyboardKeyPress}
-              layout={{
-                default: [
-                  "` 1 2 3 4 5 6 7 8 9 0 - = {bksp}",
-                  "{tab} q w e r t y u i o p [ ] \\",
-                  "{lock} a s d f g h j k l ; '",
-                  "{shift} z x c v b n m , . / {shift}",
-                  ".com @ {space} {enter}"
-                ],
-                shift: [
-                  "~ ! @ # $ % ^ & * ( ) _ + {bksp}",
-                  "{tab} Q W E R T Y U I O P { } |",
-                  '{lock} A S D F G H J K L : "',
-                  "{shift} Z X C V B N M < > ? {shift}",
-                  ".com @ {space} {enter}"
-                ]
-              }}
-            />
-          </div>
         </div>
       </Modal>
+
+      {noteModalOpen && (
+        <VirtualKeyboardDrawer
+          open={isKeyboardOpen}
+          activeFieldLabel="Ghi chú vé mời"
+          layoutName={layoutName}
+          keyboardRef={(instance) => {
+            keyboardRef.current = instance;
+          }}
+          onClose={() => setIsKeyboardOpen(false)}
+          onKeyPress={handleKeyboardKeyPress}
+        />
+      )}
     </div>
   );
 };

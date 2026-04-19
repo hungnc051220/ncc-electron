@@ -74,7 +74,13 @@ export const getTotalTicketAndContract = (
 ) => row.totalQuantity + row.totalContractQuantity;
 
 const RevenueByFilm = ({ dateType }: { dateType: number }) => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const defaultFilterValues = useMemo<ValuesProps>(
+    () => ({
+      dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
+    }),
+    []
+  );
+  const [filterValues, setFilterValues] = useState<ValuesProps>(defaultFilterValues);
 
   const params = useMemo(() => {
     const filtered = filterEmptyValues({
@@ -358,7 +364,8 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   ];
 
   const onSearch = (values: ValuesProps) => {
-    setFilterValues(filterEmptyValues(values as Record<string, unknown>) as ValuesProps);
+    const nextValues = filterEmptyValues(values as Record<string, unknown>) as ValuesProps;
+    setFilterValues(Object.keys(nextValues).length === 0 ? defaultFilterValues : nextValues);
   };
 
   return (

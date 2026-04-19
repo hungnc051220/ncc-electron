@@ -1,4 +1,5 @@
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 
 import { useCreateInvitationTicket } from "@renderer/hooks/invitationTickets/useCreateInvitationTicket";
 import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
@@ -13,13 +14,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Button, Checkbox, Form, Input, Modal, Select, Space } from "antd";
 import dayjs from "dayjs";
-import { ChevronDown } from "lucide-react";
 import QRCode from "qrcode";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactQuill from "react-quill-new";
-import Keyboard from "react-simple-keyboard";
 import "react-quill-new/dist/quill.snow.css";
-import "react-simple-keyboard/build/css/index.css";
 
 const templateHtml = `<!DOCTYPE html>
 <html>
@@ -439,43 +437,16 @@ const PrintInvitationTicketDialog = ({
       </Modal>
 
       {open && (
-        <div className={`invoice-keyboard-drawer ${isKeyboardOpen ? "is-open" : ""}`}>
-          <div className="invoice-keyboard-drawer__header">
-            <span className="invoice-keyboard-drawer__title">Bàn phím ảo</span>
-            <button
-              type="button"
-              onClick={() => setIsKeyboardOpen(false)}
-              className="invoice-keyboard-drawer__close"
-            >
-              <ChevronDown size={18} />
-            </button>
-          </div>
-          <Keyboard
-            keyboardRef={(instance) => {
-              keyboardRef.current = instance;
-            }}
-            theme="hg-theme-default invoice-keyboard-theme"
-            layoutName={layoutName}
-            inputName={activeField}
-            onKeyPress={handleKeyboardKeyPress}
-            layout={{
-              default: [
-                "` 1 2 3 4 5 6 7 8 9 0 - = {bksp}",
-                "{tab} q w e r t y u i o p [ ] \\",
-                "{lock} a s d f g h j k l ; '",
-                "{shift} z x c v b n m , . / {shift}",
-                ".com @ {space} {enter}"
-              ],
-              shift: [
-                "~ ! @ # $ % ^ & * ( ) _ + {bksp}",
-                "{tab} Q W E R T Y U I O P { } |",
-                '{lock} A S D F G H J K L : "',
-                "{shift} Z X C V B N M < > ? {shift}",
-                ".com @ {space} {enter}"
-              ]
-            }}
-          />
-        </div>
+        <VirtualKeyboardDrawer
+          open={isKeyboardOpen}
+          activeFieldLabel="Nhập thông tin vé mời"
+          layoutName={layoutName}
+          keyboardRef={(instance) => {
+            keyboardRef.current = instance;
+          }}
+          onClose={() => setIsKeyboardOpen(false)}
+          onKeyPress={handleKeyboardKeyPress}
+        />
       )}
     </>
   );
