@@ -38,7 +38,7 @@ const renderSeat = (overrides: Partial<ComponentProps<typeof Seat>> = {}) => {
 
   return {
     onSelect,
-    seatElement: screen.getByText("A1").closest("div") as HTMLDivElement
+    seatElement: screen.getByText("A1").closest("[data-seat-code='A1']") as HTMLDivElement
   };
 };
 

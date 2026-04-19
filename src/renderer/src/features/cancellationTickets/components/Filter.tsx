@@ -1,14 +1,10 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { rangePresets } from "@renderer/lib/dateRangePresets";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button, DatePicker, Form, Modal, Select } from "antd";
-import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
-import { getDefaultFilterValues, ValuesProps } from "../CancellationTicketsPage";
 import { filterEmptyValues } from "@renderer/lib/utils";
-import { useDebounce } from "@renderer/hooks/useDebounce";
-import { usersApi } from "@renderer/api/users.api";
-import { filmsApi } from "@renderer/api/films.api";
+import { Button, DatePicker, Form, Modal } from "antd";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import { getDefaultFilterValues, ValuesProps } from "../CancellationTicketsPage";
 
 const { RangePicker } = DatePicker;
 
@@ -21,76 +17,6 @@ interface FilterProps {
 const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const [searchText, setSearchText] = useState<string | undefined>(undefined);
-  const [searchTextUser, setSearchTextUser] = useState<string | undefined>(undefined);
-  const debouncedSearch = useDebounce(searchText, 300);
-  const debouncedSearchUser = useDebounce(searchTextUser, 300);
-
-  const {
-    data: films,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isFetching
-  } = useInfiniteQuery({
-    queryKey: ["movies", debouncedSearch],
-    queryFn: ({ pageParam = 1 }) => {
-      return filmsApi.getAll({ current: pageParam, pageSize: 20, filmName: debouncedSearch });
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
-  });
-
-  const {
-    data: users,
-    fetchNextPage: fetchNextPageUsers,
-    hasNextPage: hasNextPageUsers,
-    isFetching: isFetchingUsers,
-    isFetchingNextPage: isFetchingNextPageUsers
-  } = useInfiniteQuery({
-    queryKey: ["users", debouncedSearchUser],
-    queryFn: ({ pageParam = 1 }) =>
-      usersApi.getAll({
-        current: pageParam,
-        pageSize: 100,
-        keyword: debouncedSearchUser
-      }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => {
-      const currentPage = pages.length;
-      return currentPage < lastPage.pageCount ? currentPage + 1 : undefined;
-    }
-  });
-
-  const userOptions = useMemo(() => {
-    const userOpts =
-      users?.pages.flatMap((page) =>
-        page.data.map((user) => ({
-          value: user.id.toString(),
-          label:
-            [user.customerFirstName, user.customerLastName]
-              .filter((value): value is string => !!value?.trim())
-              .join(" ") || user.username
-        }))
-      ) ?? [];
-
-    return userOpts;
-  }, [users]);
-
-  const filmOptions = useMemo(() => {
-    const filmOpts =
-      films?.pages.flatMap((page) =>
-        page.data.map((film) => ({
-          value: film.id,
-          label: film.filmName
-        }))
-      ) ?? [];
-
-    return filmOpts;
-  }, [films]);
 
   useEffect(() => {
     form.setFieldsValue({
@@ -103,10 +29,7 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
     const defaultValues = getDefaultFilterValues();
     setOpen(false);
     setCurrent(1);
-    setSearchText(undefined);
-    setSearchTextUser(undefined);
     form.setFieldsValue({
-      ...defaultValues,
       dateRange: defaultValues.dateRange?.map((value) => dayjs(value))
     });
     onSearch(defaultValues);
@@ -157,50 +80,6 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
           </>
         )}
       >
-        <Form.Item name="filmId" label="Phim">
-          <Select
-            showSearch={{
-              filterOption: false,
-              onSearch: (value) => setSearchText(value)
-            }}
-            options={filmOptions}
-            placeholder="Chọn phim"
-            allowClear
-            loading={isFetching}
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPage &&
-                !isFetchingNextPage &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPage();
-              }
-            }}
-          />
-        </Form.Item>
-        <Form.Item name="userId" label="Người hủy">
-          <Select
-            options={userOptions}
-            placeholder="Chọn người hủy"
-            showSearch={{
-              filterOption: false,
-              onSearch: (value) => setSearchTextUser(value)
-            }}
-            allowClear
-            loading={isFetchingUsers}
-            onPopupScroll={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                hasNextPageUsers &&
-                !isFetchingNextPageUsers &&
-                target.scrollHeight - target.scrollTop <= target.clientHeight + 50
-              ) {
-                fetchNextPageUsers();
-              }
-            }}
-          />
-        </Form.Item>
         <Form.Item name="dateRange" label="Ngày hủy">
           <RangePicker format="DD/MM/YYYY" presets={rangePresets} className="w-full" />
         </Form.Item>

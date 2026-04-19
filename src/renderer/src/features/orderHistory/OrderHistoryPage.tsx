@@ -20,7 +20,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
-import { Checkbox, Dropdown, Form, Modal, Select, Tabs } from "antd";
+import { Checkbox, Dropdown, Form, Modal, Select, Tabs, Typography } from "antd";
 import dayjs from "dayjs";
 import { CircleStop, Eye, Printer, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -415,7 +415,18 @@ const OrderHistoryPage = () => {
       title: "Vị trí ghế",
       key: "positions",
       dataIndex: "positions",
-      render: (_, record) => formatSeatValues(record.order.items)
+      render: (_, record) => {
+        const seatCodes = formatSeatValues(record.order.items);
+        return (
+          <Typography.Text
+            style={{ width: 200 }}
+            className="max-w-full"
+            ellipsis={{ tooltip: seatCodes || undefined }}
+          >
+            {seatCodes || "-"}
+          </Typography.Text>
+        );
+      }
     },
     {
       title: "Trạng thái thanh toán",

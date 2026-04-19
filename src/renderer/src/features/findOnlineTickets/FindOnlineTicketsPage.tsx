@@ -24,7 +24,7 @@ export interface ValuesProps {
 }
 
 export const getDefaultFilterValues = (): ValuesProps => ({
-  dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+  dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
 });
 
 const compareText = (left?: string | null, right?: string | null) =>

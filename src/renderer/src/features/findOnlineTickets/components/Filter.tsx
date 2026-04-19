@@ -2,7 +2,7 @@ import { FilterOutlined } from "@ant-design/icons";
 import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { useVirtualKeyboard } from "@renderer/hooks/useVirtualKeyboard";
 import { Button, DatePicker, Form, Input, Modal } from "antd";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { getDefaultFilterValues, ValuesProps } from "../FindOnlineTicketsPage";
 
@@ -14,8 +14,12 @@ interface FilterProps {
   setCurrent: (page: number) => void;
 }
 
+type FilterFormValues = Omit<ValuesProps, "dateRange"> & {
+  dateRange?: [Dayjs, Dayjs];
+};
+
 const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
-  const [form] = Form.useForm<ValuesProps>();
+  const [form] = Form.useForm<FilterFormValues>();
   const [open, setOpen] = useState(false);
   const keyboard = useVirtualKeyboard({
     form,
@@ -77,7 +81,12 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
             onFinish={(values) => {
               setOpen(false);
               setCurrent(1);
-              onSearch(values);
+              onSearch({
+                ...values,
+                dateRange: values.dateRange?.map((value) => value.toISOString()) as
+                  | [string, string]
+                  | undefined
+              });
             }}
           >
             {dom}

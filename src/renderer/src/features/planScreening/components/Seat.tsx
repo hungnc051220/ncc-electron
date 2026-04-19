@@ -80,6 +80,7 @@ const Seat = ({
   isSelected,
   size,
   canSelect,
+  onSelect,
   isPendingPayment,
   isBlockedOnline,
   isSelectingByOther,
@@ -94,6 +95,7 @@ const Seat = ({
   isSelected: boolean;
   size: number;
   canSelect: boolean;
+  onSelect?: (seat: ListSeat) => void;
   isPendingPayment?: boolean;
   isBlockedOnline?: boolean;
   isSelectingByOther?: boolean;
@@ -117,6 +119,8 @@ const Seat = ({
 
   return (
     <div
+      role={canSelect && !isSelectingByOther ? "button" : undefined}
+      tabIndex={canSelect && !isSelectingByOther ? 0 : undefined}
       className={cn(
         "relative rounded-sm flex items-center justify-center",
         canSelect && !isSelectingByOther && "selectable-seat",
@@ -143,6 +147,16 @@ const Seat = ({
       data-seat-code={seat.code}
       data-seat-floor={seat.floor}
       data-seat-unique-key={seatUniqueKey ?? `${seat.floor}-${seat.seat}`}
+      onClick={() => {
+        if (!canSelect || isSelectingByOther) return;
+        onSelect?.(seat);
+      }}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && canSelect && !isSelectingByOther) {
+          e.preventDefault();
+          onSelect?.(seat);
+        }
+      }}
       onMouseEnter={(e) => onHover?.(seat, e)}
       onMouseLeave={onLeave}
     >

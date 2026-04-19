@@ -74,7 +74,10 @@ const AutoHeightTable = <RecordType extends object>({
   return (
     <div
       ref={containerRef}
-      className={cn("flex-1 min-h-0 min-w-0 overflow-hidden", containerClassName)}
+      className={cn(
+        "flex-1 min-h-0 min-w-0 overflow-hidden [&_.ant-table-thead_.ant-table-cell]:whitespace-nowrap",
+        containerClassName
+      )}
     >
       <Table<RecordType>
         {...tableProps}

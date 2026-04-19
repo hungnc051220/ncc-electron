@@ -11,7 +11,7 @@ export interface FilterValues {
 }
 
 export const getDefaultFilterValues = (): FilterValues => ({
-  dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
+  dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
 });
 
 type FormValues = {
