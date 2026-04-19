@@ -8,7 +8,7 @@ import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/util
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ReportRevenueSharingProps } from "@shared/types";
 import type { TableProps } from "antd";
-import { Button, Dropdown, Table, message } from "antd";
+import { Button, Dropdown, Table } from "antd";
 import { DownloadIcon, FileSpreadsheet, PlusIcon, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { exportRevenueSharingExcel } from "./components/ExportExcel";
@@ -16,6 +16,7 @@ import { exportRevenueSharingListExcel } from "./components/ExportListExcel";
 import Filter from "./components/Filter";
 import RevenueSharingDialog from "./components/RevenueSharingDialog";
 import dayjs from "dayjs";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 export interface ValuesProps {
   manufacturerId?: number;
@@ -29,6 +30,8 @@ const compareText = (left?: string | null, right?: string | null) =>
 const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const RevenueSharingPage = () => {
+  const { message } = useAntdApp();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRevenueSharing, setSelectedRevenueSharing] =
     useState<ReportRevenueSharingProps | null>(null);
@@ -121,7 +124,7 @@ const RevenueSharingPage = () => {
         });
       }
     },
-    [filterValues.dateRange]
+    [filterValues.dateRange, message]
   );
 
   const actionItems = [
@@ -213,7 +216,7 @@ const RevenueSharingPage = () => {
         content: getApiErrorMessage(error, "Xuất excel thất bại")
       });
     }
-  }, [filterValues.dateRange, groupedRevenueSharings, revenueSummary]);
+  }, [filterValues.dateRange, groupedRevenueSharings, message, revenueSummary]);
 
   const columns: TableProps<ReportRevenueSharingProps>["columns"] = [
     {

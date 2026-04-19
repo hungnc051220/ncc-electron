@@ -14,7 +14,7 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Form, Input, Modal, Select, message } from "antd";
+import { Button, Descriptions, Form, Input, Modal, Select } from "antd";
 import type { TextAreaRef } from "antd/es/input/TextArea";
 import { ChevronDown } from "lucide-react";
 import {
@@ -29,6 +29,7 @@ import {
 import Keyboard from "react-simple-keyboard";
 import "react-simple-keyboard/build/css/index.css";
 import PrintInvitationTicketDialog from "./PrintInvitationTicketDialog";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
   const floors = [1, 2, 3] as const;
@@ -78,6 +79,8 @@ type FieldType = {
 };
 
 const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: ActionsProps) => {
+  const { message } = useAntdApp();
+
   const [cancelForm] = Form.useForm<FieldType>();
   const queryClient = useQueryClient();
   const keyboardRef = useRef<{

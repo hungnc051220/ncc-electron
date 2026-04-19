@@ -1,7 +1,8 @@
 import { useUpdateManufacturer } from "@renderer/hooks/manufacturers/useUpdateManufacturer";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { ManufacturerProps } from "@shared/types";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface ChangeHiddenManufacturerDialogProps {
   open: boolean;
@@ -16,6 +17,8 @@ const ChangeHiddenManufacturerDialog = ({
   manufacturer,
   name
 }: ChangeHiddenManufacturerDialogProps) => {
+  const { message } = useAntdApp();
+
   const updateManufacturer = useUpdateManufacturer();
 
   const onOk = () => {

@@ -1,10 +1,10 @@
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
-import { App } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import { UpdateDownloadProgress, UpdateInfo } from "@shared/types";
 import VersionInfoModalContent from "@renderer/components/VersionInfoModalContent";
 import UpdateProgressNotification from "@renderer/components/UpdateProgressNotification";
 import UpdateProgressDock from "@renderer/components/UpdateProgressDock";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const UPDATE_PROGRESS_NOTIFICATION_KEY = "update-progress-notification";
 const UPDATE_PROGRESS_DOCK_KEY = "update-progress-dock";
@@ -17,7 +17,7 @@ const INITIAL_PROGRESS: UpdateDownloadProgress = {
 };
 
 export function useAutoUpdater() {
-  const { modal, message, notification } = App.useApp();
+  const { modal, message, notification } = useAntdApp();
   const [version, setVersion] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);

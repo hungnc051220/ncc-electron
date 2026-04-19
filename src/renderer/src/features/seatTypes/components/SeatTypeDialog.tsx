@@ -5,20 +5,9 @@ import { useCreateSeatType } from "@renderer/hooks/seatTypes/useCreateSeatType";
 import { useUpdateSeatType } from "@renderer/hooks/seatTypes/useUpdateSeatType";
 import { SeatTypeProps } from "@shared/types";
 import type { ColorPickerProps, FormProps, GetProp, UploadProps } from "antd";
-import {
-  Checkbox,
-  Col,
-  ColorPicker,
-  Divider,
-  Form,
-  Input,
-  message,
-  Modal,
-  Row,
-  theme,
-  Upload
-} from "antd";
+import { Checkbox, Col, ColorPicker, Divider, Form, Input, Modal, Row, theme, Upload } from "antd";
 import { useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 type Presets = Required<ColorPickerProps>["presets"][number];
@@ -47,6 +36,8 @@ interface SeatTypeDialogProps {
 }
 
 const SeatTypeDialog = ({ open, onOpenChange, editingSeatType }: SeatTypeDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingSeatType;
   const [loading, setLoading] = useState(false);

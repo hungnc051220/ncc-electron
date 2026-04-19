@@ -1,6 +1,7 @@
 import { useDeleteCustomerRole } from "@renderer/hooks/customerRoles/useDeleteCustomerRole";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { Modal, message } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteCustomerRoleDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ const DeleteCustomerRoleDialog = ({
   id,
   name
 }: DeleteCustomerRoleDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteCustomerRole = useDeleteCustomerRole();
 
   const onOk = () => {

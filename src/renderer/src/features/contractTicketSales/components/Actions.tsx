@@ -20,9 +20,10 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Checkbox, Descriptions, Form, Modal, Select, message } from "antd";
+import { Button, Checkbox, Descriptions, Form, Modal, Select } from "antd";
 import dayjs from "dayjs";
 import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
   const floors = [1, 2, 3] as const;
@@ -87,6 +88,8 @@ const Actions = ({
   cancelMode,
   setCancelMode
 }: ActionsProps) => {
+  const { message } = useAntdApp();
+
   const printMessageKey = `contract-ticket-sales-print-${contractOrderId}`;
   const [form] = Form.useForm<FieldType>();
   const queryClient = useQueryClient();
@@ -210,7 +213,15 @@ const Actions = ({
         duration: 4
       });
     }
-  }, [hasPrintableTickets, posName, printMessageKey, printableOrderDetail, selectedPrinter, user]);
+  }, [
+    hasPrintableTickets,
+    message,
+    posName,
+    printMessageKey,
+    printableOrderDetail,
+    selectedPrinter,
+    user
+  ]);
 
   const items: DescriptionsProps["items"] = [
     {

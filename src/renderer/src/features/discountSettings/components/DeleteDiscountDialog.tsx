@@ -1,6 +1,7 @@
 import { useDeleteDiscount } from "@renderer/hooks/discounts/useDeleteDiscount";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteDiscountDialogProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface DeleteDiscountDialogProps {
 }
 
 const DeleteDiscountDialog = ({ open, onOpenChange, id, name }: DeleteDiscountDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteDiscount = useDeleteDiscount();
 
   const onOk = () => {

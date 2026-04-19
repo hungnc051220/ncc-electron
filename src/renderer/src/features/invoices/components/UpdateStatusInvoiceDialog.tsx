@@ -3,7 +3,8 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateStatusInvoice } from "@renderer/hooks/invoices/useUpdateStatusInvoice";
 import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, message, Modal, Select } from "antd";
+import { Form, Modal, Select } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface UpdateStatusInvoiceDialogProps {
   open: boolean;
@@ -16,6 +17,8 @@ const UpdateStatusInvoiceDialog = ({
   onOpenChange,
   editingItem
 }: UpdateStatusInvoiceDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
 
   const updateStatusInvoice = useUpdateStatusInvoice();

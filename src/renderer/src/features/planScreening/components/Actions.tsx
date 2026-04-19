@@ -23,7 +23,7 @@ import {
 } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
-import { Button, Checkbox, Descriptions, Form, message, Modal, Select } from "antd";
+import { Button, Checkbox, Descriptions, Form, Modal, Select } from "antd";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
@@ -37,6 +37,7 @@ import InvoiceDialog from "../../invoices/components/InvoiceDialog";
 import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 export const paymentTypes = [
   {
@@ -121,6 +122,8 @@ const Actions = ({
   cancelMode,
   setCancelMode
 }: ActionsProps) => {
+  const { message } = useAntdApp();
+
   const printMessageKey = "plan-screening-print";
   const [form] = Form.useForm();
   const [searchParams] = useSearchParams();
@@ -255,7 +258,7 @@ const Actions = ({
         });
       }
     },
-    [planScreenId, queryClient, selectedPrinter, user, posName, posShortName]
+    [message, planScreenId, queryClient, selectedPrinter, user, posName, posShortName]
   );
 
   const handleQrPaymentSuccess = useCallback(
@@ -276,7 +279,7 @@ const Actions = ({
       setOpenQrDialog(false);
       window.api?.sendQrClose();
     },
-    [canPrint, handlePrint, planScreenId, queryClient, setSelectedSeats, syncLastSaleTotal]
+    [canPrint, handlePrint, message, planScreenId, queryClient, setSelectedSeats, syncLastSaleTotal]
   );
 
   useEffect(() => {

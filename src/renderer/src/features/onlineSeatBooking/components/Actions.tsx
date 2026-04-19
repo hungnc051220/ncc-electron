@@ -8,8 +8,9 @@ import { useAuthStore } from "@renderer/store/auth.store";
 import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, message, Typography } from "antd";
+import { Button, Descriptions, Typography } from "antd";
 import { Dispatch, SetStateAction, useMemo } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const buildMergedNoOnlinePayload = (
   selected: ListSeat[],
@@ -57,6 +58,8 @@ interface ActionsProps {
 }
 
 const Actions = ({ planScreeningId, selectedSeats, setSelectedSeats, data }: ActionsProps) => {
+  const { message } = useAntdApp();
+
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);

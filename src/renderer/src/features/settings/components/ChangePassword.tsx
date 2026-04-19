@@ -22,9 +22,9 @@ import {
   Input,
   Row,
   Skeleton,
-  Typography,
-  message
+  Typography
 } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   password: string;
@@ -34,6 +34,8 @@ type FieldType = {
 const { Paragraph, Text, Title } = Typography;
 
 const ChangePassword = () => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm<FieldType>();
   const logout = useAuthStore((s) => s.logout);
   const userId = useAuthStore((s) => s.userId);

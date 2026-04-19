@@ -1,6 +1,7 @@
 import { useDeleteUser } from "@renderer/hooks/users/useDeleteUser";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteUserDialogProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface DeleteUserDialogProps {
 }
 
 const DeleteUserDialog = ({ open, onOpenChange, id, username }: DeleteUserDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteUser = useDeleteUser();
 
   const onOk = () => {

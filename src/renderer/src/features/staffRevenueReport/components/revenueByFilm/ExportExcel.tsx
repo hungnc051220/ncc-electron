@@ -2,11 +2,12 @@ import Icon from "@ant-design/icons";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { saveExcelFile } from "@renderer/lib/saveFile";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { Button, message } from "antd";
+import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { DownloadIcon } from "lucide-react";
 import dayjs from "dayjs";
 import { RevenueColumnMode, getActualRemittance, getTotalTicketAndContract } from ".";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type Row = {
   filmName: string;
@@ -220,6 +221,8 @@ const ExportRevenueExcelButton = ({
   fileName,
   columnMode
 }: Props) => {
+  const { message } = useAntdApp();
+
   const { can } = usePermission();
   const canExport = can("staff_revenue_report", "export");
   const isDisabled = tableData.length === 0 || allPrices.length === 0;

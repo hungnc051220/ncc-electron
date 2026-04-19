@@ -3,7 +3,8 @@ import { useUpdateFilmCategory } from "@renderer/hooks/filmCategories/useUpdateF
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { FilmCategoryProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Checkbox, Form, Input, message, Modal } from "antd";
+import { Checkbox, Form, Input, Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   name: string;
@@ -22,6 +23,8 @@ const FilmCategoryDialog = ({
   onOpenChange,
   editingFilmCategory
 }: FilmCategoryDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingFilmCategory;
 

@@ -2,10 +2,10 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth.store";
 import { AxiosError } from "axios";
-import { message } from "antd";
 import { jwtDecode } from "jwt-decode";
 import { JwtPayload } from "@shared/types";
 import { connectSocket } from "@renderer/socket/socket";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type ApiError = {
   message?: string;
@@ -17,6 +17,8 @@ type LoginPayload = {
 };
 
 export const useLogin = () => {
+  const { message } = useAntdApp();
+
   const login = useAuthStore((s) => s.login);
 
   return useMutation({

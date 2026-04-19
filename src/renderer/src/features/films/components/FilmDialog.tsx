@@ -16,21 +16,11 @@ import {
   FilmLanguageProps
 } from "@shared/types";
 import type { FormProps, GetProp, UploadProps } from "antd";
-import {
-  Checkbox,
-  DatePicker,
-  Form,
-  Image,
-  Input,
-  InputNumber,
-  message,
-  Modal,
-  Select,
-  Upload
-} from "antd";
+import { Checkbox, DatePicker, Form, Image, Input, InputNumber, Modal, Select, Upload } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useEffect } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
@@ -122,6 +112,8 @@ const FilmDialog = ({
   languages,
   filmStatuses
 }: FilmDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingFilm;
 

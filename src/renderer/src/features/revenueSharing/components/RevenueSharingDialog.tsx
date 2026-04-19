@@ -14,8 +14,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import type { FormProps } from "antd";
-import { Button, DatePicker, Form, InputNumber, Modal, Select, Space, message } from "antd";
+import { Button, DatePicker, Form, InputNumber, Modal, Select, Space } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const { RangePicker } = DatePicker;
 
@@ -54,6 +55,8 @@ const RevenueSharingDialog = ({
   onOpenChange,
   editingRevenueSharing
 }: RevenueSharingDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm<FieldType>();
   const sharingRates = Form.useWatch("sharingRates", form) ?? [];
   const isEdit = !!editingRevenueSharing;

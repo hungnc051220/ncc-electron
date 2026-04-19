@@ -1,6 +1,7 @@
 import { useDeleteShowTimeSlot } from "@renderer/hooks/showTimeSlots/useDeleteShowTimeSlot";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteShowTimeSlotDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ const DeleteShowTimeSlotDialog = ({
   id,
   name
 }: DeleteShowTimeSlotDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteShowTimeSlot = useDeleteShowTimeSlot();
 
   const onOk = () => {

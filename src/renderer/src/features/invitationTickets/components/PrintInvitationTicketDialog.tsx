@@ -1,4 +1,4 @@
-"use client";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 import { useCreateInvitationTicket } from "@renderer/hooks/invitationTickets/useCreateInvitationTicket";
 import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
@@ -11,7 +11,7 @@ import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { OrderDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FormProps } from "antd";
-import { Button, Checkbox, Form, Input, message, Modal, Select, Space } from "antd";
+import { Button, Checkbox, Form, Input, Modal, Select, Space } from "antd";
 import dayjs from "dayjs";
 import { ChevronDown } from "lucide-react";
 import QRCode from "qrcode";
@@ -63,6 +63,8 @@ const PrintInvitationTicketDialog = ({
   onOpenChange,
   selectedItem
 }: PrintInvitationTicketDialogProps) => {
+  const { message } = useAntdApp();
+
   const queryClient = useQueryClient();
   const [form] = Form.useForm<FieldType>();
   const keyboardRef = useRef<{

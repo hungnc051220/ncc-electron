@@ -1,6 +1,7 @@
 import { useDeleteManufacturer } from "@renderer/hooks/manufacturers/useDeleteManufacturer";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteManufacturerDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ const DeleteManufacturerDialog = ({
   id,
   name
 }: DeleteManufacturerDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteManufacturer = useDeleteManufacturer();
 
   const onOk = () => {

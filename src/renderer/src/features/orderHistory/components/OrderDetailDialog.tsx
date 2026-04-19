@@ -6,11 +6,12 @@ import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
 import { cn, formatMoney, formatPaymentMethod, formatSeatValues } from "@renderer/lib/utils";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Checkbox, Modal, Tag, message } from "antd";
+import { Button, Checkbox, Modal, Tag } from "antd";
 import dayjs from "dayjs";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface OrderDialogProps {
   open: boolean;
@@ -25,6 +26,8 @@ const OrderDetailDialog = ({
   selectedOrderId,
   selectedItem
 }: OrderDialogProps) => {
+  const { message, modal } = useAntdApp();
+
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -260,7 +263,7 @@ const OrderDetailDialog = ({
   const goToSwapSeats = () => {
     if (!currentDetail) return;
 
-    Modal.confirm({
+    modal.confirm({
       title: "Cảnh báo đổi ghế",
       content: "Đã tránh hiện tượng trùng ghế, bạn phải chọn lại toàn bộ ghế cho khách hàng",
       okText: "Xác nhận",

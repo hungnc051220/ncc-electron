@@ -1,7 +1,8 @@
 import { useCreateHoliday } from "@renderer/hooks/holidays/useCreateHoliday";
 import type { FormProps } from "antd";
-import { Checkbox, Col, DatePicker, Form, message, Modal, Row } from "antd";
+import { Checkbox, Col, DatePicker, Form, Modal, Row } from "antd";
 import dayjs from "dayjs";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const DAYS_OF_WEEK = [
   { label: "Thứ 2", value: 1 },
@@ -36,6 +37,8 @@ interface HolidayDialogProps {
 }
 
 const HolidayDialog = ({ open, onOpenChange, dateTypeId, year }: HolidayDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
 
   const createHoliday = useCreateHoliday();

@@ -5,9 +5,10 @@ import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { FilmProps, PlanFilmProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Input, message, Modal, Table } from "antd";
+import { Button, Input, Modal, Table } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type TableRowSelection<T extends object = object> = TableProps<T>["rowSelection"];
 
@@ -18,6 +19,8 @@ interface AddMoviesProps {
 }
 
 const AddMovies = ({ planCinemaId, selectedFilmIds }: AddMoviesProps) => {
+  const { message } = useAntdApp();
+
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [current, setCurrent] = useState(1);

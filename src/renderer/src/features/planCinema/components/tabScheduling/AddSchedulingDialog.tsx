@@ -13,7 +13,6 @@ import {
   Form,
   Input,
   InputNumber,
-  message,
   Modal,
   Select,
   TimePicker
@@ -22,6 +21,7 @@ import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const MIN_SCREENING_BREAK_MINUTES = 5;
 
@@ -153,6 +153,7 @@ const AddSchedulingDialog = ({
     priceOfPosition4: string;
     isOnlineSelling?: boolean;
   } | null>(null);
+  const { message } = useAntdApp();
   const { can } = usePermission();
   const canUpdate = can("plan_cinema", "update");
   const defaultFormValues = useMemo(

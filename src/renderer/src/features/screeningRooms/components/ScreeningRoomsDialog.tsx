@@ -3,7 +3,8 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateScreeningRoom } from "@renderer/hooks/screeningRooms/useUpdateScreeningRoom";
 import { RoomProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Col, Form, Input, InputNumber, message, Modal, Row, Select } from "antd";
+import { Col, Form, Input, InputNumber, Modal, Row, Select } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const ruleOrderOptions = [
   {
@@ -37,6 +38,8 @@ interface ScreeningRoomsDialogProps {
 }
 
 const ScreeningRoomsDialog = ({ open, onOpenChange, editingRoom }: ScreeningRoomsDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingRoom;
 

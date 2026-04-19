@@ -4,9 +4,10 @@ import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptio
 import { useCreateUser } from "@renderer/hooks/users/useCreateUser";
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
 import type { FormProps } from "antd";
-import { Form, Input, message, Modal, Select } from "antd";
+import { Form, Input, Modal, Select } from "antd";
 import { CustomerRoleProps, UserProps } from "@shared/types";
 import { UserDto } from "@renderer/api/users.api";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 interface UserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,6 +23,8 @@ const UserDialog = ({
   customerRoles,
   isFetchingCustomerRoles
 }: UserDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingUser;
 

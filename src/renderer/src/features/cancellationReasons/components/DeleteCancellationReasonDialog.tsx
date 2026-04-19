@@ -1,6 +1,7 @@
 import { useDeleteCancellationReason } from "@renderer/hooks/cancellationReasons/useDeleteCancellationReason";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteCancellationReasonDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ const DeleteCancellationReasonDialog = ({
   id,
   name
 }: DeleteCancellationReasonDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteCancellationReason = useDeleteCancellationReason();
 
   const onOk = () => {

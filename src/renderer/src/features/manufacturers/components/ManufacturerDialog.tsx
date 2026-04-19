@@ -3,7 +3,8 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateManufacturer } from "@renderer/hooks/manufacturers/useUpdateManufacturer";
 import { ManufacturerProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, Input, message, Modal } from "antd";
+import { Form, Input, Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   name: string;
@@ -29,6 +30,8 @@ const ManufacturerDialog = ({
   onOpenChange,
   editingManufacturer
 }: ManufacturerDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingManufacturer;
 

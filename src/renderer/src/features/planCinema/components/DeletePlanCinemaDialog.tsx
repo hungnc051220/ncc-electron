@@ -1,7 +1,8 @@
 import { useDeletePlanCinema } from "@renderer/hooks/planCinemas/useDeletePlanCinema";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { PlanCinemaProps } from "@shared/types";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeletePlanCinemaDialogProps {
   open: boolean;
@@ -18,6 +19,8 @@ const DeletePlanCinemaDialog = ({
   name,
   setSelectedPlan
 }: DeletePlanCinemaDialogProps) => {
+  const { message } = useAntdApp();
+
   const deletePlanCinema = useDeletePlanCinema();
 
   const onOk = () => {

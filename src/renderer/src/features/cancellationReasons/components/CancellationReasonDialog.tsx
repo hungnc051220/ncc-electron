@@ -3,7 +3,8 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateCancellationReason } from "@renderer/hooks/cancellationReasons/useUpdateCancellationReason";
 import { CancellationReasonProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, Input, message, Modal } from "antd";
+import { Form, Input, Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   reason: string;
@@ -20,6 +21,8 @@ const CancellationReasonDialog = ({
   onOpenChange,
   editingCancellationReason
 }: CancellationReasonDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingCancellationReason;
 

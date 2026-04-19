@@ -9,11 +9,12 @@ import { formatNumber, getPlanScreeningDateTime, isPlanScreeningLocked } from "@
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import type { MenuProps, PaginationProps, TableProps } from "antd";
-import { Dropdown, message } from "antd";
+import { Dropdown } from "antd";
 import dayjs from "dayjs";
 import { Check, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import Filter, { OnlineShowtimeBookingFilterValues } from "./Filter";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const compareText = (left?: string | null, right?: string | null) =>
   (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
@@ -21,6 +22,8 @@ const compareText = (left?: string | null, right?: string | null) =>
 const compareDate = (left?: number, right?: number) => (left || 0) - (right || 0);
 
 const OnlineShowtimeBookingPage = () => {
+  const { message } = useAntdApp();
+
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<OnlineShowtimeBookingFilterValues>({
@@ -80,7 +83,7 @@ const OnlineShowtimeBookingPage = () => {
         }
       );
     },
-    [isPastShowtime, updatePlanScreening]
+    [isPastShowtime, message, updatePlanScreening]
   );
 
   const getActionItems = useCallback(

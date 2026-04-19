@@ -5,12 +5,13 @@ import { useUpdateInvoice } from "@renderer/hooks/invoices/useUpdateInvoice";
 import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { InvoiceProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, Input, message, Modal, Select } from "antd";
+import { Form, Input, Modal, Select } from "antd";
 import { ChevronDown } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import Keyboard from "react-simple-keyboard";
 import "react-simple-keyboard/build/css/index.css";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   partyA?: string;
@@ -53,6 +54,8 @@ const InvoiceDialog = ({
   editingItem,
   enableVirtualKeyboardDrawer = false
 }: InvoiceDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const keyboardRef = useRef<{
     setInput: (input: string, inputName?: string) => void;

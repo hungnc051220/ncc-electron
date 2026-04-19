@@ -8,15 +8,18 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { cn } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, message, Select, Space, Spin } from "antd";
+import { Button, Descriptions, Select, Space, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import Selecto from "react-selecto";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FloorNumber = 1 | 2 | 3;
 type SeatAssignments = Record<FloorNumber, Record<string, number>>;
 
 const ScreeningRoomSeatMapPage = () => {
+  const { message } = useAntdApp();
+
   const navigate = useNavigate();
   const { data: generalData } = useGeneralData();
   const { id } = useParams();

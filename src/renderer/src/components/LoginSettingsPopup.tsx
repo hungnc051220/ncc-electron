@@ -10,8 +10,9 @@ import { initSocket } from "@renderer/socket/socket";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { AppConfig } from "@shared/types";
 import type { InputRef } from "antd";
-import { Alert, Button, Form, Input, message, Modal, Select, Tabs, Typography } from "antd";
+import { Alert, Button, Form, Input, Modal, Select, Tabs, Typography } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type PrinterFormValues = {
   printerName?: string;
@@ -38,6 +39,8 @@ const toSocketUrl = (apiUrl: string) => {
 };
 
 const LoginSettingsPopup = () => {
+  const { message } = useAntdApp();
+
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("printer");
   const [savingPrinter, setSavingPrinter] = useState(false);

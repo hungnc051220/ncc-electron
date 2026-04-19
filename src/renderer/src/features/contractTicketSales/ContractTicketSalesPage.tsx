@@ -22,7 +22,7 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown, Form, Modal, Select, Table, Tooltip, message } from "antd";
+import { Button, Dropdown, Form, Modal, Select, Table, Tooltip } from "antd";
 import dayjs from "dayjs";
 import {
   Armchair,
@@ -41,6 +41,7 @@ import { exportContractTicketSaleExcel } from "./components/exportContractTicket
 import ContractTicketSaleDialog from "./components/ContractTicketSaleDialog";
 import Filter from "./components/Filter";
 import { useSummaryContractTicketSales } from "@renderer/hooks/contractTicketSales/useSummaryContractTicketSales";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 export interface ValuesProps {
   dateRange?: [string, string];
@@ -70,6 +71,8 @@ type DeleteContractFormValues = {
 };
 
 const ContractTicketSalesPage = () => {
+  const { message } = useAntdApp();
+
   const navigate = useNavigate();
   const userId = useAuthStore((s) => s.userId);
   const { posShortName } = useSettingPosStore();
@@ -179,44 +182,47 @@ const ContractTicketSalesPage = () => {
         });
       }
     },
-    [posShortName, selectedPrinter, user]
+    [message, posShortName, selectedPrinter, user]
   );
 
-  const handleExportExcel = useCallback(async (item: OrderDetailProps) => {
-    const messageKey = `export-contract-ticket-sale-${item.order.id}`;
+  const handleExportExcel = useCallback(
+    async (item: OrderDetailProps) => {
+      const messageKey = `export-contract-ticket-sale-${item.order.id}`;
 
-    message.open({
-      key: messageKey,
-      type: "loading",
-      content: "Đang xuất file excel...",
-      duration: 0
-    });
+      message.open({
+        key: messageKey,
+        type: "loading",
+        content: "Đang xuất file excel...",
+        duration: 0
+      });
 
-    try {
-      const result = await exportContractTicketSaleExcel(item);
+      try {
+        const result = await exportContractTicketSaleExcel(item);
 
-      if (result.canceled) {
+        if (result.canceled) {
+          message.open({
+            key: messageKey,
+            type: "warning",
+            content: "Bạn đã hủy lưu file excel"
+          });
+          return;
+        }
+
         message.open({
           key: messageKey,
-          type: "warning",
-          content: "Bạn đã hủy lưu file excel"
+          type: "success",
+          content: "Xuất file excel thành công"
         });
-        return;
+      } catch (error) {
+        message.open({
+          key: messageKey,
+          type: "error",
+          content: getApiErrorMessage(error, "Xuất excel thất bại")
+        });
       }
-
-      message.open({
-        key: messageKey,
-        type: "success",
-        content: "Xuất file excel thành công"
-      });
-    } catch (error) {
-      message.open({
-        key: messageKey,
-        type: "error",
-        content: getApiErrorMessage(error, "Xuất excel thất bại")
-      });
-    }
-  }, []);
+    },
+    [message]
+  );
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open);
@@ -383,7 +389,13 @@ const ContractTicketSalesPage = () => {
         }
       });
     },
-    [cancelContractTicketSale, cancelReasonOptions, handleDeleteDialogClose, selectedDeleteItem]
+    [
+      cancelContractTicketSale,
+      cancelReasonOptions,
+      handleDeleteDialogClose,
+      message,
+      selectedDeleteItem
+    ]
   );
 
   const getActionItems = useCallback(

@@ -7,7 +7,8 @@ import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { formatter } from "@renderer/lib/utils";
 import { DiscountProps } from "@shared/types";
 import type { FormProps, GetProp, UploadProps } from "antd";
-import { Form, Image, Input, InputNumber, message, Modal, Select, Upload } from "antd";
+import { Form, Image, Input, InputNumber, Modal, Select, Upload } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
@@ -30,6 +31,8 @@ const DiscountSettingsDialog = ({
   onOpenChange,
   editingDiscount
 }: DiscountSettingsDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingDiscount;
 

@@ -3,10 +3,11 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { saveExcelFile } from "@renderer/lib/saveFile";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { U22UsageProps } from "@shared/types";
-import { Button, message } from "antd";
+import { Button } from "antd";
 import dayjs from "dayjs";
 import ExcelJS from "exceljs";
 import { DownloadIcon } from "lucide-react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type Props = {
   tableData: U22UsageProps[];
@@ -29,6 +30,8 @@ const ExportRevenueExcelButton = ({
   totalOrders,
   totalAmount
 }: Props) => {
+  const { message } = useAntdApp();
+
   const { can } = usePermission();
   const canExport = can("staff_revenue_report", "export");
   const isDisabled = tableData.length === 0;

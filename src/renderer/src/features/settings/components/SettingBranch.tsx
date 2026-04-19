@@ -5,7 +5,8 @@ import {
   useSettingBranchStore
 } from "@renderer/store/settingBranch.store";
 import type { FormProps } from "antd";
-import { Alert, Avatar, Button, Card, Col, Form, Input, Row, Typography, message } from "antd";
+import { Alert, Avatar, Button, Card, Col, Form, Input, Row, Typography } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   cinemaName: string;
@@ -15,6 +16,8 @@ type FieldType = {
 const { Paragraph, Text, Title } = Typography;
 
 const SettingBranch = () => {
+  const { message } = useAntdApp();
+
   const { cinemaName, address, setBranch } = useSettingBranchStore();
   const { can } = usePermission();
   const canUpdate = can("settings_branch", "update");

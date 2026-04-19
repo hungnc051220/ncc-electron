@@ -14,8 +14,9 @@ import {
 } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MenuProps, TableProps } from "antd";
-import { Button, Checkbox, Layout, Menu, message, Table } from "antd";
+import { Button, Checkbox, Layout, Menu, Table } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const { Content } = Layout;
 type MenuItem = Required<MenuProps>["items"][number];
@@ -145,6 +146,8 @@ const getRowToggleState = (row: PermissionTreeRow) => {
 };
 
 const UserRolesPage = () => {
+  const { message } = useAntdApp();
+
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [bodyData, setBodyData] = useState<PermissionMatrixRow[]>(buildPermissionMatrix());
   const queryClient = useQueryClient();

@@ -6,8 +6,9 @@ import {
 } from "@ant-design/icons";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import type { FormProps } from "antd";
-import { Alert, Avatar, Button, Card, Form, Select, Typography, message } from "antd";
+import { Alert, Avatar, Button, Card, Form, Select, Typography } from "antd";
 import { useEffect } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   printerName: string;
@@ -16,6 +17,8 @@ type FieldType = {
 const { Paragraph, Text, Title } = Typography;
 
 const SettingPrinter = () => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm<FieldType>();
   const { printers, selectedPrinter, setSelectedPrinter, fetchPrinters, loading } =
     usePrinterStore();

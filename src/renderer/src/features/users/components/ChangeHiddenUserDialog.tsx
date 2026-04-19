@@ -1,7 +1,8 @@
 import { useUpdateUser } from "@renderer/hooks/users/useUpdateUser";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { UserProps } from "@shared/types";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface ChangeHiddenUserDialogProps {
   open: boolean;
@@ -16,6 +17,8 @@ const ChangeHiddenUserDialog = ({
   user,
   username
 }: ChangeHiddenUserDialogProps) => {
+  const { message } = useAntdApp();
+
   const changeStatusUser = useUpdateUser();
 
   const onOk = () => {

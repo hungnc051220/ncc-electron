@@ -1,7 +1,8 @@
 import { useUpdatePlanCinema } from "@renderer/hooks/planCinemas/useUpdatePlanCinema";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { Button, message } from "antd";
+import { Button } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const RestoreActions = ({
   planCinemaId,
@@ -10,6 +11,8 @@ const RestoreActions = ({
   planCinemaId: number;
   clearSelectedPlan: () => void;
 }) => {
+  const { message } = useAntdApp();
+
   const updatePlanCinema = useUpdatePlanCinema();
   const { can } = usePermission();
   const canApprove = can("plan_cinema", "approve");

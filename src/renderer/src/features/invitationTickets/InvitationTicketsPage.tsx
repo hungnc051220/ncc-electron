@@ -1,4 +1,4 @@
-"use client";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
@@ -13,7 +13,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown, Form, Modal, Select, Tag, Tooltip, message } from "antd";
+import { Button, Dropdown, Form, Modal, Select, Tag, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { Eye, Printer, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -77,6 +77,8 @@ const renderInvitationTicketStatus = (status?: string | null) => {
 };
 
 const InvitationTicketsPage = () => {
+  const { message } = useAntdApp();
+
   const navigate = useNavigate();
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -215,7 +217,7 @@ const InvitationTicketsPage = () => {
         }
       );
     },
-    [cancelOrder, handleCancelDialogClose, selectedCancelOrder]
+    [cancelOrder, handleCancelDialogClose, message, selectedCancelOrder]
   );
 
   const getActionItems = (record: OrderDetailProps) => {

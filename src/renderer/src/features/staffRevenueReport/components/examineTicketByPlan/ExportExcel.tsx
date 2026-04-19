@@ -2,12 +2,13 @@ import Icon from "@ant-design/icons";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { saveExcelFile } from "@renderer/lib/saveFile";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { Button, message } from "antd";
+import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { DownloadIcon } from "lucide-react";
 import dayjs from "dayjs";
 import { ExamineTicketTotalOnlineProps, ExamineTicketTotalProps } from "@shared/types";
 import { TableRow } from ".";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type Props = {
   tableData: TableRow[];
@@ -31,6 +32,8 @@ const ExportRevenueExcelButton = ({
   totalOnline,
   totalOffline
 }: Props) => {
+  const { message } = useAntdApp();
+
   const { can } = usePermission();
   const canExport = can("staff_revenue_report", "export");
   const isDisabled = tableData.length === 0;

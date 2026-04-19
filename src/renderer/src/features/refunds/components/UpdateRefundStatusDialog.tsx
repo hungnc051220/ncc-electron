@@ -2,7 +2,8 @@ import { useUpdateRefundStatusOrder } from "@renderer/hooks/orders/useUpdateRefu
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { OrderDetailProps, RefundStatus } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, message, Modal, Select } from "antd";
+import { Form, Modal, Select } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface UpdateRefundStatusDialogProps {
   open: boolean;
@@ -25,6 +26,8 @@ const UpdateRefundStatusDialog = ({
   onOpenChange,
   selectedItem
 }: UpdateRefundStatusDialogProps) => {
+  const { message, modal } = useAntdApp();
+
   const [form] = Form.useForm<UpdateRefundStatusFormValues>();
   const updateRefundStatusOrder = useUpdateRefundStatusOrder();
 
@@ -38,7 +41,7 @@ const UpdateRefundStatusDialog = ({
   const onFinish: FormProps<UpdateRefundStatusFormValues>["onFinish"] = (values) => {
     if (!selectedItem) return;
 
-    Modal.confirm({
+    modal.confirm({
       title: "Xác nhận đổi trạng thái hoàn tiền",
       content: (
         <div>

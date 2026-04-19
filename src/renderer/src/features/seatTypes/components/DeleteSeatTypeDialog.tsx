@@ -1,6 +1,7 @@
 import { useDeleteSeatType } from "@renderer/hooks/seatTypes/useDeleteSeatType";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteSeatTypeDialogProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface DeleteSeatTypeDialogProps {
 }
 
 const DeleteSeatTypeDialog = ({ open, onOpenChange, id, name }: DeleteSeatTypeDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteSeatType = useDeleteSeatType();
 
   const onOk = () => {

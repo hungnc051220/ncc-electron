@@ -1,6 +1,7 @@
 import { useDeleteScreeningRoom } from "@renderer/hooks/screeningRooms/useDeleteScreeningRoom";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteScreeningRoomDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ const DeleteScreeningRoomDialog = ({
   id,
   name
 }: DeleteScreeningRoomDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteScreeningRoom = useDeleteScreeningRoom();
 
   const onOk = () => {

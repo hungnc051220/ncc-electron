@@ -1,4 +1,4 @@
-"use client";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 import { useCreateContractTicketSale } from "@renderer/hooks/contractTicketSales/useCreateContractTicketSale";
 import { useUpdateContractTicketSale } from "@renderer/hooks/contractTicketSales/useUpdateContractTicketSale";
@@ -6,7 +6,7 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { formatter } from "@renderer/lib/utils";
 import { OrderResponseProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, Input, InputNumber, message, Modal } from "antd";
+import { Form, Input, InputNumber, Modal } from "antd";
 
 type FieldType = {
   customerFirstName: string;
@@ -26,6 +26,8 @@ const ContractTicketSaleDialog = ({
   onOpenChange,
   selectedItem
 }: CancellationReasonDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!selectedItem;
 

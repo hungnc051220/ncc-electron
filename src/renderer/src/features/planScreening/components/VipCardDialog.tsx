@@ -5,13 +5,14 @@ import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { BatchProps, ListSeat } from "@shared/types";
 import type { DescriptionsProps } from "antd";
 import type { InputRef } from "antd";
-import { Button, Radio, Descriptions, Input, message, Modal, Space, Table } from "antd";
+import { Button, Radio, Descriptions, Input, Modal, Space, Table } from "antd";
 import { InputStatus } from "antd/es/_util/statusUtils";
 import dayjs from "dayjs";
 import { AlertTriangle, Info, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { TableProps } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface VipCardDialogProps {
   open: boolean;
@@ -137,6 +138,8 @@ const VipCardDialog = ({
   hasSeatTypeDiscount,
   filmVersionCode
 }: VipCardDialogProps) => {
+  const { message } = useAntdApp();
+
   const [searchText, setSearchText] = useState<string | undefined>(undefined);
   const [lastSearched, setLastSearched] = useState<string | null>(null);
   const [status, setStatus] = useState<InputStatus>("");

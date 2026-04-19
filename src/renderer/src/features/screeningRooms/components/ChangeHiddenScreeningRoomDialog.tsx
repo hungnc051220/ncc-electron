@@ -1,7 +1,8 @@
 import { useUpdateScreeningRoom } from "@renderer/hooks/screeningRooms/useUpdateScreeningRoom";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { RoomProps } from "@shared/types";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface ChangeHiddenScreeningRoomDialogProps {
   open: boolean;
@@ -16,6 +17,8 @@ const ChangeHiddenScreeningRoomDialog = ({
   room,
   name
 }: ChangeHiddenScreeningRoomDialogProps) => {
+  const { message } = useAntdApp();
+
   const updateScreeningRoom = useUpdateScreeningRoom();
 
   const onOk = () => {

@@ -1,6 +1,7 @@
 import { useDeleteFilmCategory } from "@renderer/hooks/filmCategories/useDeleteFilmCategory";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteFilmCategoryDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ const DeleteFilmCategoryDialog = ({
   id,
   name
 }: DeleteFilmCategoryDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteFilmCategory = useDeleteFilmCategory();
 
   const onOk = () => {

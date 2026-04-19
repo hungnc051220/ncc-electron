@@ -7,8 +7,9 @@ import { formatter } from "@renderer/lib/utils";
 import { TicketPriceProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
-import { Form, Input, InputNumber, message, Modal, Select } from "antd";
+import { Form, Input, InputNumber, Modal, Select } from "antd";
 import { useMemo } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   versionCode: string;
@@ -24,6 +25,8 @@ interface TicketPriceDialogProps {
 }
 
 const TicketPriceDialog = ({ open, onOpenChange, editingTicketPrice }: TicketPriceDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingTicketPrice;
 

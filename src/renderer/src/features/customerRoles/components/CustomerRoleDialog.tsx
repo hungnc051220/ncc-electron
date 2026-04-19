@@ -3,8 +3,9 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useCreateCustomerRole } from "@renderer/hooks/customerRoles/useCreateCustomerRole";
 import { useUpdateCustomerRole } from "@renderer/hooks/customerRoles/useUpdateCustomerRole";
 import { CustomerRoleProps } from "@shared/types";
-import { Checkbox, Form, Input, Modal, message } from "antd";
+import { Checkbox, Form, Input, Modal } from "antd";
 import type { FormProps } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = CustomerRoleDto;
 
@@ -19,6 +20,8 @@ const CustomerRoleDialog = ({
   onOpenChange,
   editingCustomerRole
 }: CustomerRoleDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm<FieldType>();
   const isEdit = !!editingCustomerRole;
 

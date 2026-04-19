@@ -1,6 +1,7 @@
 import { useDeleteTicketPrice } from "@renderer/hooks/ticketPrices/useDeleteTicketPrice";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteTicketPriceDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ const DeleteTicketPriceDialog = ({
   id,
   name
 }: DeleteTicketPriceDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteTicketPrice = useDeleteTicketPrice();
 
   const onOk = () => {

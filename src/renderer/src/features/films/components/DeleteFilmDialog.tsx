@@ -1,6 +1,7 @@
 import { useDeleteFilm } from "@renderer/hooks/films/useDeleteFilm";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteFilmDialogProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface DeleteFilmDialogProps {
 }
 
 const DeleteFilmDialog = ({ open, onOpenChange, id, filmName }: DeleteFilmDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteFilm = useDeleteFilm();
 
   const onOk = () => {

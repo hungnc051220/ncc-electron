@@ -3,9 +3,10 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useUpdateShowTimeSlot } from "@renderer/hooks/showTimeSlots/useUpdateShowTimeSlot";
 import { DayPartProps } from "@shared/types";
 import type { FormProps } from "antd";
-import { Form, Input, message, Modal, Select, TimePicker } from "antd";
+import { Form, Input, Modal, Select, TimePicker } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const format = "HH:mm";
 
@@ -26,6 +27,8 @@ const ShowTimeSlotDialog = ({
   onOpenChange,
   editingShowTimeSlot
 }: ShowTimeSlotDialogProps) => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm();
   const isEdit = !!editingShowTimeSlot;
 

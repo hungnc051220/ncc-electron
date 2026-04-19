@@ -1,7 +1,8 @@
 import { useDeleteHoliday } from "@renderer/hooks/holidays/useDeleteHoliday";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
 import dayjs from "dayjs";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface DeleteHolidayDialogProps {
   open: boolean;
@@ -11,6 +12,8 @@ interface DeleteHolidayDialogProps {
 }
 
 const DeleteHolidayDialog = ({ open, onOpenChange, id, date }: DeleteHolidayDialogProps) => {
+  const { message } = useAntdApp();
+
   const deleteHoliday = useDeleteHoliday();
 
   const onOk = () => {

@@ -1,4 +1,4 @@
-"use client";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
@@ -11,7 +11,7 @@ import { formatMoney } from "@renderer/lib/utils";
 import { ListSeat, OrderStatus } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Spin, message } from "antd";
+import { Button, Descriptions, Spin } from "antd";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import Seats from "../planScreening/components/Seats";
@@ -58,6 +58,8 @@ const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
 };
 
 const OrderHistorySwapSeatsPage = () => {
+  const { message } = useAntdApp();
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { id } = useParams();
@@ -121,7 +123,7 @@ const OrderHistorySwapSeatsPage = () => {
 
     limitWarningRef.current = now;
     message.warning(`Bạn chỉ được chọn đúng ${requiredSeatCount} ghế cho đơn này`);
-  }, [requiredSeatCount]);
+  }, [message, requiredSeatCount]);
 
   const handleSwapSeats = async () => {
     if (!orderDetail || !planScreeningId) {

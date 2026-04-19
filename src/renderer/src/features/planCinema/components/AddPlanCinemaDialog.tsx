@@ -3,9 +3,10 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useCreatePlanCinema } from "@renderer/hooks/planCinemas/useCreatePlanCinema";
 import { usePermission } from "@renderer/permissions/usePermission";
 import type { FormProps } from "antd";
-import { Button, Form, Input, message, Modal } from "antd";
+import { Button, Form, Input, Modal } from "antd";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   name: string;
@@ -13,6 +14,8 @@ type FieldType = {
 };
 
 const AddPlanCinemaDialog = () => {
+  const { message } = useAntdApp();
+
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
   const { can } = usePermission();

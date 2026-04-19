@@ -18,15 +18,18 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanFilmProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
-import { Button, message, Modal } from "antd";
+import { Button, Modal } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import AddMovies from "./AddMovies";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface TabFilmProps {
   planCinemaId?: number;
 }
 
 const TabFilm = ({ planCinemaId }: TabFilmProps) => {
+  const { message } = useAntdApp();
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {

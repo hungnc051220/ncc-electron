@@ -2,7 +2,8 @@ import { DesktopOutlined, IdcardOutlined, InfoCircleOutlined } from "@ant-design
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import type { FormProps } from "antd";
-import { Alert, Avatar, Button, Card, Col, Form, Input, Row, Typography, message } from "antd";
+import { Alert, Avatar, Button, Card, Col, Form, Input, Row, Typography } from "antd";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type FieldType = {
   posName: string;
@@ -12,6 +13,8 @@ type FieldType = {
 const { Paragraph, Text, Title } = Typography;
 
 const SettingPos = () => {
+  const { message } = useAntdApp();
+
   const { posName, posShortName, setPos } = useSettingPosStore();
   const { can } = usePermission();
   const canUpdate = can("settings_pos", "update");

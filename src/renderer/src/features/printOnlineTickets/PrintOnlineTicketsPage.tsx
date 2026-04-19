@@ -20,12 +20,13 @@ import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Dropdown, message } from "antd";
+import { Dropdown } from "antd";
 import dayjs from "dayjs";
 import { Check, Eye, Printer, RotateCcw, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 import Filter from "./components/Filter";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 export interface ValuesProps {
   id?: string;
@@ -45,6 +46,8 @@ const compareText = (left?: string | null, right?: string | null) =>
 const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const PrintOnlineTicketsPage = () => {
+  const { message } = useAntdApp();
+
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>(() => getDefaultFilterValues());

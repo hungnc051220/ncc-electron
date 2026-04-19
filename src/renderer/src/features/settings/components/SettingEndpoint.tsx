@@ -10,20 +10,9 @@ import { disconnectSocket, initSocket } from "@renderer/socket/socket";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { AppConfig } from "@shared/types";
 import type { FormProps } from "antd";
-import {
-  Alert,
-  Avatar,
-  Button,
-  Card,
-  Col,
-  Form,
-  Input,
-  Row,
-  Skeleton,
-  Typography,
-  message
-} from "antd";
+import { Alert, Avatar, Button, Card, Col, Form, Input, Row, Skeleton, Typography } from "antd";
 import { useEffect, useState } from "react";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -36,6 +25,8 @@ const toSocketUrl = (apiUrl: string) => {
 };
 
 const SettingEndpoint = () => {
+  const { message } = useAntdApp();
+
   const [form] = Form.useForm<AppConfig>();
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);

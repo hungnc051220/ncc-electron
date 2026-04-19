@@ -9,10 +9,11 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
-import { Button, DatePicker, message, Modal, Select } from "antd";
+import { Button, DatePicker, Modal, Select } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import AddSchedulingDialog from "./AddSchedulingDialog";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface TabSchedulingProps {
   planCinemaId?: number;
@@ -76,6 +77,8 @@ const formatScreeningDate = (value?: string) => dayjs(value).format("DD/MM/YYYY"
 const formatScreeningTime = (value?: string) => dayjs(value).format("HH:mm");
 
 const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
+  const { message } = useAntdApp();
+
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [roomId, setRoomId] = useState<number | undefined>(undefined);
   const [date, setDate] = useState<Dayjs | null>(null);

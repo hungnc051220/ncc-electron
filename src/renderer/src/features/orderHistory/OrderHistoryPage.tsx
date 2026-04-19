@@ -20,7 +20,7 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
-import { Checkbox, Dropdown, Form, Modal, Select, message, Tabs } from "antd";
+import { Checkbox, Dropdown, Form, Modal, Select, Tabs } from "antd";
 import dayjs from "dayjs";
 import { CircleStop, Eye, Printer, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -31,6 +31,7 @@ import { useAuthStore } from "@renderer/store/auth.store";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const items: TabsProps["items"] = [
   {
@@ -66,6 +67,8 @@ const defaultFilterValues: ValuesProps = {
 };
 
 const OrderHistoryPage = () => {
+  const { message } = useAntdApp();
+
   const [cancelForm] = Form.useForm<CancelOrderFormValues>();
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -232,7 +235,7 @@ const OrderHistoryPage = () => {
         }
       );
     },
-    [cancelOrder, handleCancelDialogClose, selectedCancelOrder]
+    [cancelOrder, handleCancelDialogClose, message, selectedCancelOrder]
   );
 
   const handleOpenEndOrderDialog = useCallback((orderDetail: OrderDetailProps) => {
@@ -272,7 +275,7 @@ const OrderHistoryPage = () => {
         }
       }
     );
-  }, [handleEndOrderDialogClose, selectedEndOrder, updateOrder]);
+  }, [handleEndOrderDialogClose, message, selectedEndOrder, updateOrder]);
 
   const columns: TableProps<OrderDetailProps>["columns"] = [
     {
