@@ -1,5 +1,4 @@
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 
 import { useCreateInvitationTicket } from "@renderer/hooks/invitationTickets/useCreateInvitationTicket";
 import { useInvitationTicketBackgrounds } from "@renderer/hooks/invitationTickets/useInvitationTicketBackgrounds";
@@ -8,14 +7,13 @@ import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { formatSeatValues } from "@renderer/lib/utils";
-import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { OrderDetailProps } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Button, Checkbox, Form, Input, Modal, Select, Space } from "antd";
 import dayjs from "dayjs";
 import QRCode from "qrcode";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 
@@ -54,8 +52,6 @@ interface PrintInvitationTicketDialogProps {
   selectedItem?: OrderDetailProps | null;
 }
 
-type KeyboardField = "receivedEmail" | "title" | "phoneNumber";
-
 const PrintInvitationTicketDialog = ({
   open,
   onOpenChange,
@@ -65,22 +61,7 @@ const PrintInvitationTicketDialog = ({
 
   const queryClient = useQueryClient();
   const [form] = Form.useForm<FieldType>();
-  const keyboardRef = useRef<{
-    setInput: (input: string, inputName?: string) => void;
-  } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeField, setActiveField] = useState<KeyboardField>("receivedEmail");
-  const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-  const [keyboardInputs, setKeyboardInputs] = useState<Partial<Record<KeyboardField, string>>>({});
-  const inputRefs = useRef(
-    new Map<
-      KeyboardField,
-      {
-        focus: () => void;
-      }
-    >()
-  );
   const uploadImage = useUploadImage();
   const { data: backgrounds, isFetching: isFetchingBackgrounds } = useInvitationTicketBackgrounds();
   const createInvitationTicket = useCreateInvitationTicket();
@@ -97,10 +78,7 @@ const PrintInvitationTicketDialog = ({
   }, [form]);
 
   useEffect(() => {
-    if (!open) {
-      setIsKeyboardOpen(false);
-      setLayoutName("default");
-    }
+    if (!open) return;
   }, [open]);
 
   const handleSelectFolder = async () => {
@@ -243,70 +221,15 @@ const PrintInvitationTicketDialog = ({
 
   const image = Form.useWatch("background", form);
   const sendZaloOA = Form.useWatch("sendZaloOA", form);
-  const visibleKeyboardFields = useMemo<KeyboardField[]>(
-    () => ["receivedEmail", "title", ...(sendZaloOA ? (["phoneNumber"] as const) : [])],
-    [sendZaloOA]
-  );
+  const handleInputChange =
+    (field: "receivedEmail" | "title" | "phoneNumber") => (e: ChangeEvent<HTMLInputElement>) => {
+      form.setFieldValue(field, e.target.value);
+    };
 
-  const updateFieldValue = (field: KeyboardField, value: string) => {
-    setKeyboardInputs((current) => ({ ...current, [field]: value }));
-    form.setFieldValue(field, value);
-    keyboardRef.current?.setInput(value, field);
-  };
-
-  const openKeyboardDrawer = (field: KeyboardField) => {
-    setActiveField(field);
-    setIsKeyboardOpen(true);
-  };
-
-  const handleInputChange = (field: KeyboardField) => (e: ChangeEvent<HTMLInputElement>) => {
-    updateFieldValue(field, e.target.value);
-  };
-
-  const inputProps = (field: KeyboardField, placeholder: string) => ({
+  const inputProps = (field: "receivedEmail" | "title" | "phoneNumber", placeholder: string) => ({
     placeholder,
-    value: keyboardInputs[field] ?? form.getFieldValue(field),
-    onFocus: () => openKeyboardDrawer(field),
-    onChange: handleInputChange(field),
-    ref: (node: { focus: () => void } | null) => {
-      if (node) {
-        inputRefs.current.set(field, node);
-      } else {
-        inputRefs.current.delete(field);
-      }
-    }
+    onChange: handleInputChange(field)
   });
-
-  const handleKeyboardKeyPress = (button: string) => {
-    if (button === "{shift}" || button === "{lock}") {
-      setLayoutName((current) => (current === "default" ? "shift" : "default"));
-      return;
-    }
-
-    if (button === "{tab}") {
-      const currentIndex = visibleKeyboardFields.indexOf(activeField);
-      const nextField =
-        visibleKeyboardFields[
-          currentIndex >= 0 ? (currentIndex + 1) % visibleKeyboardFields.length : 0
-        ];
-
-      setActiveField(nextField);
-      window.setTimeout(() => {
-        inputRefs.current.get(nextField)?.focus();
-      }, 0);
-      return;
-    }
-
-    if (button === "{enter}") {
-      form.submit();
-      return;
-    }
-
-    const currentValue = String(
-      keyboardInputs[activeField] ?? form.getFieldValue(activeField) ?? ""
-    );
-    updateFieldValue(activeField, applyVirtualKeyboardButton(currentValue, button));
-  };
 
   return (
     <>
@@ -329,7 +252,6 @@ const PrintInvitationTicketDialog = ({
         )}
         width={1000}
         centered
-        className="invoice-dialog-with-keyboard"
       >
         <div className="grid grid-cols-2 gap-x-4">
           <Form.Item
@@ -435,19 +357,6 @@ const PrintInvitationTicketDialog = ({
           </div>
         </div>
       </Modal>
-
-      {open && (
-        <VirtualKeyboardDrawer
-          open={isKeyboardOpen}
-          activeFieldLabel="Nhập thông tin vé mời"
-          layoutName={layoutName}
-          keyboardRef={(instance) => {
-            keyboardRef.current = instance;
-          }}
-          onClose={() => setIsKeyboardOpen(false)}
-          onKeyPress={handleKeyboardKeyPress}
-        />
-      )}
     </>
   );
 };

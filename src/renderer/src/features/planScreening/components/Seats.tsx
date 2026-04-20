@@ -33,6 +33,9 @@ type TooltipPosition = {
   y: number;
 };
 
+const SEAT_COLUMN_GAP = 4;
+const SEAT_ROW_GAP = 3;
+
 interface SeatsProps {
   data?: PlanScreeningDetailProps;
   orders?: OrderResponseProps[];
@@ -82,6 +85,7 @@ const Seats = ({
 }: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
+  const seatGridRef = useRef<HTMLDivElement>(null);
   const selectoRef = useRef<Selecto>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [seatSize, setSeatSize] = useState<number | null>(null);
@@ -475,6 +479,11 @@ const Seats = ({
     ]
   );
 
+  const clearSelectedSeats = useCallback(() => {
+    setSelectedSeats([]);
+    selectoRef.current?.setSelectedTargets([]);
+  }, [setSelectedSeats]);
+
   useEffect(() => {
     const selecto = selectoRef.current;
     const container = seatContainerRef.current;
@@ -486,6 +495,20 @@ const Seats = ({
 
     selecto.setSelectedTargets(selectedTargets);
   }, [selectedSeatKeySet, selectedFloor, filteredSeats]);
+
+  const handleSeatAreaPointerDownCapture = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement)) return;
+      if (target.closest(".selectable-seat")) return;
+      if (target !== event.currentTarget && target !== seatGridRef.current) return;
+      if (selectedSeats.length === 0) return;
+
+      clearSelectedSeats();
+    },
+    [clearSelectedSeats, selectedSeats.length]
+  );
 
   const calculateSeatSize = useCallback(() => {
     const container = seatContainerRef.current;
@@ -514,8 +537,8 @@ const Seats = ({
     if (!maxRows || !maxSeatsPerRow) return null;
 
     // ===== Layout constants (match CSS thật) =====
-    const seatGap = 6; // gap-1.5
-    const rowGap = 4; // space-y-1
+    const seatGap = SEAT_COLUMN_GAP;
+    const rowGap = SEAT_ROW_GAP;
     const safety = 8; // buffer chống overflow
 
     // ===== Height-based seat size =====
@@ -618,7 +641,7 @@ const Seats = ({
       <div
         key={index}
         className="flex items-center justify-center seat-row"
-        style={{ columnGap: "6px", height: `${seatSize}px` }}
+        style={{ columnGap: `${SEAT_COLUMN_GAP}px`, height: `${seatSize}px` }}
       >
         <div
           className="text-trunks dark:text-white font-medium flex items-center justify-center"
@@ -805,11 +828,16 @@ const Seats = ({
             "seat-selecto-drag-area mt-2 flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
             hasSeatSpotlight && cancelMode && "relative"
           )}
+          onPointerDownCapture={handleSeatAreaPointerDownCapture}
           ref={seatContainerRef}
         >
           <div
-            className="space-y-1 flex flex-col items-center px-2"
-            style={{ visibility: seatSize === null ? "hidden" : "visible" }}
+            ref={seatGridRef}
+            className="flex flex-col items-center px-2"
+            style={{
+              rowGap: `${SEAT_ROW_GAP}px`,
+              visibility: seatSize === null ? "hidden" : "visible"
+            }}
           >
             {renderedSeats}
           </div>
@@ -842,7 +870,8 @@ const Seats = ({
             hitRate={0}
             selectByClick={true}
             selectFromInside={true}
-            toggleContinueSelect={["shift"]}
+            continueSelect={true}
+            continueSelectWithoutDeselect={true}
             ratio={0}
             onSelect={handleSelectoSelect}
           />

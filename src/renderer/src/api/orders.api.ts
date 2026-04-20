@@ -26,6 +26,7 @@ export interface OrdersQuery {
   paymentStatusId?: PaymentStatus;
   refundStatusId?: RefundStatus;
   isRefund?: boolean;
+  projectDate?: string;
 }
 
 export interface OrderDto {
@@ -83,6 +84,7 @@ export interface OrderUpdateStatusDto {
   orderStatusId: number;
   shippingStatusId: number;
   paymentStatusId: number;
+  planScreenId?: number;
 }
 
 export interface OrderCancelReserveDto {
@@ -178,7 +180,8 @@ export const ordersApi = {
       isInvitation,
       orderStatusId,
       paymentStatusId,
-      isRefund
+      isRefund,
+      projectDate
     } = params;
 
     const filter: Record<string, unknown> = {};
@@ -217,6 +220,10 @@ export const ordersApi = {
 
     if (fromDate && toDate) {
       filter.createdOnUtc = { between: [fromDate, toDate] };
+    }
+
+    if (projectDate) {
+      filter.projectDate = { startDate: projectDate, endDate: projectDate };
     }
 
     if (isInvitation !== undefined) {

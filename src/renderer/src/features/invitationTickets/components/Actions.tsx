@@ -1,14 +1,12 @@
 import { CancelOrderDto, OrderDto, ordersApi } from "@renderer/api/orders.api";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
-import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
@@ -16,16 +14,7 @@ import { ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/ty
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
 import { Button, Descriptions, Form, Input, Modal, Select } from "antd";
-import type { TextAreaRef } from "antd/es/input/TextArea";
-import {
-  ChangeEvent,
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useMemo,
-  useRef,
-  useState
-} from "react";
+import { ChangeEvent, Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
 import PrintInvitationTicketDialog from "./PrintInvitationTicketDialog";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
@@ -81,10 +70,6 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
 
   const [cancelForm] = Form.useForm<FieldType>();
   const queryClient = useQueryClient();
-  const keyboardRef = useRef<{
-    setInput: (input: string, inputName?: string) => void;
-  } | null>(null);
-  const inputRef = useRef<TextAreaRef | null>(null);
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
   const { posName, posShortName } = useSettingPosStore();
@@ -97,8 +82,6 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
   const [note, setNote] = useState("");
-  const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
 
   const handleDialogPrintClose = useCallback((open: boolean) => {
@@ -110,8 +93,6 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
 
   const handleNoteModalClose = useCallback(() => {
     setNoteModalOpen(false);
-    setIsKeyboardOpen(false);
-    setLayoutName("default");
   }, []);
 
   const createOrder = useCreateOrder();
@@ -183,29 +164,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
   };
 
   const handleNoteChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setNote(value);
-    keyboardRef.current?.setInput(value, "note");
-  };
-
-  const handleKeyboardKeyPress = (button: string) => {
-    if (button === "{shift}" || button === "{lock}") {
-      setLayoutName((current) => (current === "default" ? "shift" : "default"));
-      return;
-    }
-
-    if (button === "{enter}") {
-      setNote((current) => {
-        const nextValue = `${current}\n`;
-        keyboardRef.current?.setInput(nextValue, "note");
-        return nextValue;
-      });
-      return;
-    }
-
-    const nextValue = applyVirtualKeyboardButton(note, button);
-    setNote(nextValue);
-    keyboardRef.current?.setInput(nextValue, "note");
+    setNote(e.target.value);
   };
 
   const onBooking = () => {
@@ -399,42 +358,16 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
         cancelText="Đóng"
         width={680}
         style={{ top: 20 }}
-        className="invoice-dialog-with-keyboard"
-        afterOpenChange={(open) => {
-          if (!open) return;
-
-          window.setTimeout(() => {
-            setIsKeyboardOpen(true);
-            window.requestAnimationFrame(() => {
-              inputRef.current?.focus();
-            });
-          }, 120);
-        }}
       >
         <div className="space-y-3">
           <Input.TextArea
-            ref={inputRef}
             value={note}
             rows={5}
             placeholder="Nhập ghi chú vé mời"
-            onFocus={() => setIsKeyboardOpen(true)}
             onChange={handleNoteChange}
           />
         </div>
       </Modal>
-
-      {noteModalOpen && (
-        <VirtualKeyboardDrawer
-          open={isKeyboardOpen}
-          activeFieldLabel="Ghi chú vé mời"
-          layoutName={layoutName}
-          keyboardRef={(instance) => {
-            keyboardRef.current = instance;
-          }}
-          onClose={() => setIsKeyboardOpen(false)}
-          onKeyPress={handleKeyboardKeyPress}
-        />
-      )}
     </div>
   );
 };

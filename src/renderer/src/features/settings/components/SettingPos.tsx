@@ -1,7 +1,5 @@
 import { DesktopOutlined, IdcardOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { useVirtualKeyboard } from "@renderer/hooks/useVirtualKeyboard";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import type { FormProps } from "antd";
 import { Alert, Avatar, Button, Card, Col, Form, Input, Row, Typography } from "antd";
@@ -21,15 +19,6 @@ const SettingPos = () => {
   const { can } = usePermission();
   const canUpdate = can("settings_pos", "update");
   const [form] = Form.useForm<FieldType>();
-  const keyboard = useVirtualKeyboard({
-    form,
-    fields: ["posName", "posShortName"] as const,
-    labels: {
-      posName: "Tên máy POS",
-      posShortName: "Mã máy POS"
-    },
-    onEnter: () => form.submit()
-  });
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
     setPos(values.posName, values.posShortName);
@@ -129,11 +118,7 @@ const SettingPos = () => {
                     name="posName"
                     rules={[{ required: true, message: "Nhập tên máy POS" }]}
                   >
-                    <Input
-                      {...keyboard.bindInput("posName", { disabled: !canUpdate })}
-                      placeholder="Ví dụ: POS Quầy Vé 01"
-                      disabled={!canUpdate}
-                    />
+                    <Input placeholder="Ví dụ: POS Quầy Vé 01" disabled={!canUpdate} />
                   </Form.Item>
                 </Col>
 
@@ -143,11 +128,7 @@ const SettingPos = () => {
                     name="posShortName"
                     rules={[{ required: true, message: "Nhập mã máy POS" }]}
                   >
-                    <Input
-                      {...keyboard.bindInput("posShortName", { disabled: !canUpdate })}
-                      placeholder="Ví dụ: QV01"
-                      disabled={!canUpdate}
-                    />
+                    <Input placeholder="Ví dụ: QV01" disabled={!canUpdate} />
                   </Form.Item>
                 </Col>
 
@@ -180,15 +161,6 @@ const SettingPos = () => {
           </Card>
         </div>
       </div>
-
-      <VirtualKeyboardDrawer
-        open={keyboard.isKeyboardOpen}
-        activeFieldLabel={keyboard.activeFieldLabel}
-        layoutName={keyboard.layoutName}
-        keyboardRef={keyboard.registerKeyboard}
-        onClose={() => keyboard.setIsKeyboardOpen(false)}
-        onKeyPress={keyboard.handleKeyPress}
-      />
     </>
   );
 };

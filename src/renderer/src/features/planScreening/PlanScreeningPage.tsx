@@ -21,7 +21,8 @@ import {
   onSocketConnect,
   onOrderCreated,
   onOrderPaymentUpdated,
-  onSelectingChairsUpdate
+  onSelectingChairsUpdate,
+  onOrderUpdated
 } from "@renderer/socket/socket";
 import { ordersApi } from "@renderer/api/orders.api";
 import { useSelectingChairs } from "@renderer/hooks/orders/useSelectingChairs";
@@ -405,6 +406,11 @@ const PlanScreeningPage = () => {
       invalidateCurrentScreeningData();
     });
 
+    const cleanupOrderUpdated = onOrderUpdated((payload) => {
+      if (payload.planScreenId !== currentPlanScreenId) return;
+      invalidateCurrentScreeningData();
+    });
+
     const cleanupOrderPaymentUpdated = onOrderPaymentUpdated((payload) => {
       if (payload.paymentStatus !== 30) return;
       if (payload.planScreenId !== currentPlanScreenId) return;
@@ -418,6 +424,7 @@ const PlanScreeningPage = () => {
 
     return () => {
       cleanupOrderCreated?.();
+      cleanupOrderUpdated?.();
       cleanupOrderPaymentUpdated?.();
       cleanupSocketConnect?.();
     };

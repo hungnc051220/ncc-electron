@@ -429,6 +429,12 @@ const OrderHistoryPage = () => {
       }
     },
     {
+      title: "Mã VĐT",
+      key: "invNo",
+      sorter: (a, b) => compareText(a.order.invNo, b.order.invNo),
+      render: (_, record) => record.order.invNo
+    },
+    {
       title: "Trạng thái thanh toán",
       key: "paymentStatusId",
       dataIndex: "paymentStatusId",

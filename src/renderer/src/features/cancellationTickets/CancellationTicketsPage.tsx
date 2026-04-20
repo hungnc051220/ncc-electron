@@ -71,8 +71,6 @@ const CancellationTicketsPage = () => {
         current: pageParam,
         pageSize: CANCEL_TICKETS_PAGE_SIZE,
         ...(params as {
-          filmId?: number;
-          userId?: number;
           fromDate?: string;
           toDate?: string;
         })
@@ -241,7 +239,7 @@ const CancellationTicketsPage = () => {
       key: "no",
       align: "center",
       render: (_, __, index) => index + 1,
-      width: 100,
+      width: 50,
       fixed: "left"
     },
     {
@@ -334,7 +332,7 @@ const CancellationTicketsPage = () => {
       key: "cancelChairValue",
       dataIndex: "cancelChairValue",
       render: (_, record) => {
-        const seatsCodes = [
+        const seatCodes = [
           record.cancelChairValueF1,
           record.cancelChairValueF2,
           record.cancelChairValueF3
@@ -343,8 +341,8 @@ const CancellationTicketsPage = () => {
           .join(", ");
         return (
           <div className="flex-1 overflow-hidden">
-            <Typography.Text className="max-w-full" ellipsis={{ tooltip: seatsCodes || undefined }}>
-              {seatsCodes || "-"}
+            <Typography.Text className="max-w-full" ellipsis={{ tooltip: seatCodes || undefined }}>
+              {seatCodes}
             </Typography.Text>
           </div>
         );
@@ -495,9 +493,7 @@ const CancellationTicketsPage = () => {
           displayedRows.length > 0 ? (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                <Table.Summary.Cell index={0} align="center">
-                  <span className="font-bold">Tổng</span>
-                </Table.Summary.Cell>
+                <Table.Summary.Cell index={0} />
                 <Table.Summary.Cell index={1} align="right">
                   <span className="font-bold">{formatNumber(totalRecords)} đơn</span>
                 </Table.Summary.Cell>

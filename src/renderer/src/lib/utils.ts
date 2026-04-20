@@ -157,6 +157,56 @@ export const sortSeats = (seats: string[]): string[] => {
   });
 };
 
+const ROOM_ONE_SPECIAL_PRINT_NAME = "1";
+
+const getSpecialPrintSeatOrder = (seat?: string | null) => {
+  const matchedSeat = seat?.trim().match(/^([A-Za-z]+)(\d+)$/);
+
+  if (!matchedSeat) {
+    return null;
+  }
+
+  const [, rowLabel, seatNumberText] = matchedSeat;
+  const seatNumber = Number(seatNumberText);
+
+  if (!Number.isFinite(seatNumber)) {
+    return null;
+  }
+
+  return {
+    rowLabel: rowLabel.toUpperCase(),
+    parityOrder: seatNumber % 2 === 0 ? 0 : 1,
+    seatNumber
+  };
+};
+
+export const sortSeatsForPrint = (seats: string[], roomName?: string | null): string[] => {
+  if ((roomName || "").trim() !== ROOM_ONE_SPECIAL_PRINT_NAME) {
+    return sortSeats(seats);
+  }
+
+  return [...seats].sort((left, right) => {
+    const leftOrder = getSpecialPrintSeatOrder(left);
+    const rightOrder = getSpecialPrintSeatOrder(right);
+
+    if (!leftOrder || !rightOrder) {
+      return sortSeats([left, right])[0] === left ? -1 : 1;
+    }
+
+    if (leftOrder.rowLabel !== rightOrder.rowLabel) {
+      return leftOrder.rowLabel.localeCompare(rightOrder.rowLabel, "vi", {
+        sensitivity: "base"
+      });
+    }
+
+    if (leftOrder.parityOrder !== rightOrder.parityOrder) {
+      return leftOrder.parityOrder - rightOrder.parityOrder;
+    }
+
+    return leftOrder.seatNumber - rightOrder.seatNumber;
+  });
+};
+
 type SeatValueSource = {
   listChairValueF1?: string | null;
   listChairValueF2?: string | null;
@@ -242,7 +292,10 @@ export const buildTicketsFromOrder = async (
     );
 
     const remainingPlanSeats = [...planSeats];
-    const sortedPlanSeats = sortSeats(planSeats.map(({ seat }) => seat))
+    const sortedPlanSeats = sortSeatsForPrint(
+      planSeats.map(({ seat }) => seat),
+      detail.room?.name
+    )
       .map((seat) => {
         const matchedIndex = remainingPlanSeats.findIndex((planSeat) => planSeat.seat === seat);
 

@@ -1,6 +1,4 @@
 import { FilterOutlined } from "@ant-design/icons";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
-import { useVirtualKeyboard } from "@renderer/hooks/useVirtualKeyboard";
 import { Button, DatePicker, Form, Input, Modal } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
@@ -21,17 +19,6 @@ type FilterFormValues = Omit<ValuesProps, "dateRange"> & {
 const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
   const [form] = Form.useForm<FilterFormValues>();
   const [open, setOpen] = useState(false);
-  const keyboard = useVirtualKeyboard({
-    form,
-    fields: ["id", "barCode", "phoneNumber", "email"] as const,
-    labels: {
-      id: "Mã thanh toán",
-      barCode: "Mã vé",
-      phoneNumber: "Số điện thoại",
-      email: "Email"
-    },
-    onEnter: () => form.submit()
-  });
 
   useEffect(() => {
     form.setFieldsValue({
@@ -101,32 +88,21 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
         )}
       >
         <Form.Item name="id" label="Mã thanh toán">
-          <Input {...keyboard.bindInput("id")} placeholder="Nhập mã thanh toán" />
+          <Input placeholder="Nhập mã thanh toán" />
         </Form.Item>
         <Form.Item name="barCode" label="Mã vé">
-          <Input {...keyboard.bindInput("barCode")} placeholder="Nhập mã vé" />
+          <Input placeholder="Nhập mã vé" />
         </Form.Item>
         <Form.Item name="phoneNumber" label="Số điện thoại">
-          <Input {...keyboard.bindInput("phoneNumber")} placeholder="Nhập số điện thoại" />
+          <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
         <Form.Item name="email" label="Email">
-          <Input {...keyboard.bindInput("email")} placeholder="Nhập email" />
+          <Input placeholder="Nhập email" />
         </Form.Item>
         <Form.Item name="dateRange" label="Thời gian mua">
           <RangePicker format="DD/MM/YYYY" className="w-full" />
         </Form.Item>
       </Modal>
-
-      {open && (
-        <VirtualKeyboardDrawer
-          open={keyboard.isKeyboardOpen}
-          activeFieldLabel={keyboard.activeFieldLabel}
-          layoutName={keyboard.layoutName}
-          keyboardRef={keyboard.registerKeyboard}
-          onClose={() => keyboard.setIsKeyboardOpen(false)}
-          onKeyPress={keyboard.handleKeyPress}
-        />
-      )}
     </>
   );
 };

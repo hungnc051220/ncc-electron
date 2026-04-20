@@ -1,8 +1,6 @@
 import { ordersApi } from "@renderer/api/orders.api";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { useCustomer } from "@renderer/hooks/useCustomer";
 import { useAvailableVouchersForPos } from "@renderer/hooks/vouchers/useAvailableVouchersForPos";
-import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { BatchProps, ListSeat } from "@shared/types";
 import type { DescriptionsProps } from "antd";
@@ -149,11 +147,6 @@ const VipCardDialog = ({
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [isValidatingU22, setIsValidatingU22] = useState(false);
   const [u22ValidationReason, setU22ValidationReason] = useState<string | null>(null);
-  const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-  const keyboardRef = useRef<{
-    setInput: (input: string, inputName?: string) => void;
-  } | null>(null);
   const cardInputRef = useRef<InputRef>(null);
 
   const { data, isFetching, refetch } = useCustomer({
@@ -284,10 +277,7 @@ const VipCardDialog = ({
   }, [open]);
 
   useEffect(() => {
-    if (!open) {
-      setIsKeyboardOpen(false);
-      setLayoutName("default");
-    }
+    if (!open) return;
   }, [open]);
 
   useEffect(() => {
@@ -491,26 +481,6 @@ const VipCardDialog = ({
     setLastSearched(null);
     setIsValidatingU22(false);
     setU22ValidationReason(null);
-    keyboardRef.current?.setInput(normalizedValue, "memberCardCode");
-  };
-
-  const handleKeyboardKeyPress = (button: string) => {
-    if (button === "{shift}" || button === "{lock}") {
-      setLayoutName((current) => (current === "default" ? "shift" : "default"));
-      return;
-    }
-
-    if (button === "{tab}") {
-      cardInputRef.current?.focus();
-      return;
-    }
-
-    if (button === "{enter}") {
-      void onSearch();
-      return;
-    }
-
-    updateSearchText(applyVirtualKeyboardButton(searchText ?? "", button));
   };
 
   return (
@@ -531,7 +501,6 @@ const VipCardDialog = ({
                 ref={cardInputRef}
                 placeholder="Nhập số thẻ"
                 value={searchText}
-                onFocus={() => setIsKeyboardOpen(true)}
                 onChange={(e) => updateSearchText(e.target.value)}
                 status={status}
                 onPressEnter={onSearch}
@@ -656,19 +625,6 @@ const VipCardDialog = ({
           </div>
         </div>
       </Modal>
-
-      {open && (
-        <VirtualKeyboardDrawer
-          open={isKeyboardOpen}
-          activeFieldLabel="Số thẻ thành viên"
-          layoutName={layoutName}
-          keyboardRef={(instance) => {
-            keyboardRef.current = instance;
-          }}
-          onClose={() => setIsKeyboardOpen(false)}
-          onKeyPress={handleKeyboardKeyPress}
-        />
-      )}
     </>
   );
 };

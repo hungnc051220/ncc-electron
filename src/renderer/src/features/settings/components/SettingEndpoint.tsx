@@ -5,9 +5,7 @@ import {
   LinkOutlined
 } from "@ant-design/icons";
 import { initApi } from "@renderer/api/client";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { useVirtualKeyboard } from "@renderer/hooks/useVirtualKeyboard";
 import { disconnectSocket, initSocket } from "@renderer/socket/socket";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { AppConfig } from "@shared/types";
@@ -37,13 +35,6 @@ const SettingEndpoint = () => {
   const canUpdate = can("settings_endpoint", "configure");
   const apiBaseUrl = Form.useWatch("apiBaseUrl", form);
   const nextSocketUrl = apiBaseUrl ? toSocketUrl(apiBaseUrl) : config?.socketUrl || "";
-  const keyboard = useVirtualKeyboard({
-    form,
-    fields: ["apiBaseUrl"] as const,
-    labels: {
-      apiBaseUrl: "API Base URL"
-    }
-  });
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -177,11 +168,7 @@ const SettingEndpoint = () => {
                     name="apiBaseUrl"
                     rules={[{ required: true, message: "Nhập endpoint" }]}
                   >
-                    <Input
-                      {...keyboard.bindInput("apiBaseUrl", { disabled: !canUpdate })}
-                      placeholder="Ví dụ: https://api.example.com"
-                      disabled={!canUpdate}
-                    />
+                    <Input placeholder="Ví dụ: https://api.example.com" disabled={!canUpdate} />
                   </Form.Item>
                 </Col>
 
@@ -228,15 +215,6 @@ const SettingEndpoint = () => {
           </Card>
         </div>
       </div>
-
-      <VirtualKeyboardDrawer
-        open={keyboard.isKeyboardOpen}
-        activeFieldLabel={keyboard.activeFieldLabel}
-        layoutName={keyboard.layoutName}
-        keyboardRef={keyboard.registerKeyboard}
-        onClose={() => keyboard.setIsKeyboardOpen(false)}
-        onKeyPress={keyboard.handleKeyPress}
-      />
     </>
   );
 };

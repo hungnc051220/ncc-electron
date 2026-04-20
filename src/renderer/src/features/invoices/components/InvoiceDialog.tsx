@@ -1,13 +1,11 @@
 import { useCreateInvoice } from "@renderer/hooks/invoices/useCreateInvoice";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
 import { useUpdateInvoice } from "@renderer/hooks/invoices/useUpdateInvoice";
-import { applyVirtualKeyboardButton } from "@renderer/lib/vietnameseTelex";
 import { InvoiceProps } from "@shared/types";
 import type { FormProps } from "antd";
 import { Form, Input, Modal, Select } from "antd";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
@@ -42,35 +40,14 @@ interface InvoiceDialogProps {
   onOpenChange: (open: boolean) => void;
   orderId?: number;
   editingItem?: InvoiceProps | null;
-  enableVirtualKeyboardDrawer?: boolean;
 }
 
-const InvoiceDialog = ({
-  open,
-  onOpenChange,
-  orderId,
-  editingItem,
-  enableVirtualKeyboardDrawer = false
-}: InvoiceDialogProps) => {
+const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDialogProps) => {
   const { message } = useAntdApp();
 
   const [form] = Form.useForm();
-  const keyboardRef = useRef<{
-    setInput: (input: string, inputName?: string) => void;
-  } | null>(null);
   const isEdit = !!editingItem;
-  const [activeField, setActiveField] = useState<KeyboardField>("partyA");
-  const [layoutName, setLayoutName] = useState<"default" | "shift">("default");
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [keyboardInputs, setKeyboardInputs] = useState<Partial<FieldType>>({});
-  const inputRefs = useRef(
-    new Map<
-      KeyboardField,
-      {
-        focus: () => void;
-      }
-    >()
-  );
 
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
@@ -88,10 +65,7 @@ const InvoiceDialog = ({
   }, [invoiceData, form]);
 
   useEffect(() => {
-    if (!open) {
-      setIsKeyboardOpen(false);
-      setLayoutName("default");
-    }
+    if (!open) return;
   }, [open]);
 
   const onOk = () => form.submit();
@@ -107,110 +81,20 @@ const InvoiceDialog = ({
     return { ...editingItem };
   };
 
-  const keyboardFields = useMemo<KeyboardField[]>(
-    () => [
-      "partyA",
-      "address",
-      "taxCode",
-      "phoneNumber",
-      "email",
-      "citizenId",
-      "representative",
-      "position",
-      "contractCode"
-    ],
-    []
-  );
-
-  const visibleKeyboardFields = useMemo(() => {
-    return keyboardFields.filter((field) => {
-      if (field === "taxCode" || field === "representative" || field === "position") {
-        return invoiceType === "business";
-      }
-
-      if (field === "citizenId") {
-        return invoiceType === "personal";
-      }
-
-      return true;
-    });
-  }, [invoiceType, keyboardFields]);
-
-  const keyboardFieldSet = useMemo(
-    () =>
-      new Set<KeyboardField>([
-        "partyA",
-        "address",
-        "taxCode",
-        "phoneNumber",
-        "email",
-        "citizenId",
-        "representative",
-        "position",
-        "contractCode"
-      ]),
-    []
-  );
-
   const updateFieldValue = (field: KeyboardField, value: string) => {
     const nextValues = { ...keyboardInputs, [field]: value };
     setKeyboardInputs(nextValues);
     form.setFieldValue(field, value);
-    keyboardRef.current?.setInput(value, String(field));
-  };
-
-  const openKeyboardDrawer = (field: KeyboardField) => {
-    if (!enableVirtualKeyboardDrawer || !keyboardFieldSet.has(field)) return;
-    setActiveField(field);
-    setIsKeyboardOpen(true);
   };
 
   const handleInputChange = (field: KeyboardField) => (e: ChangeEvent<HTMLInputElement>) => {
     updateFieldValue(field, e.target.value);
   };
 
-  const handleKeyboardKeyPress = (button: string) => {
-    if (button === "{shift}" || button === "{lock}") {
-      setLayoutName((current) => (current === "default" ? "shift" : "default"));
-      return;
-    }
-
-    if (button === "{tab}") {
-      const currentIndex = visibleKeyboardFields.indexOf(activeField);
-      const nextField =
-        visibleKeyboardFields[
-          currentIndex >= 0 ? (currentIndex + 1) % visibleKeyboardFields.length : 0
-        ];
-      setActiveField(nextField);
-      window.setTimeout(() => {
-        inputRefs.current.get(nextField)?.focus();
-      }, 0);
-      return;
-    }
-
-    if (button === "{enter}") {
-      form.submit();
-      return;
-    }
-
-    const currentValue = String(
-      keyboardInputs[activeField] ?? form.getFieldValue(activeField) ?? ""
-    );
-    updateFieldValue(activeField, applyVirtualKeyboardButton(currentValue, button));
-  };
-
   const inputProps = (field: KeyboardField, placeholder: string) => ({
     placeholder,
     value: keyboardInputs[field] ?? form.getFieldValue(field),
-    onFocus: () => openKeyboardDrawer(field),
-    onChange: handleInputChange(field),
-    ref: (node: { focus: () => void } | null) => {
-      if (node) {
-        inputRefs.current.set(field, node);
-      } else {
-        inputRefs.current.delete(field);
-      }
-    }
+    onChange: handleInputChange(field)
   });
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
@@ -220,7 +104,6 @@ const InvoiceDialog = ({
         {
           onSuccess: () => {
             message.success("Thêm hóa đơn điện tử thành công");
-            setIsKeyboardOpen(false);
             onCancel();
           },
           onError: (error: unknown) => {
@@ -242,7 +125,6 @@ const InvoiceDialog = ({
         {
           onSuccess: () => {
             message.success("Cập nhật hóa đơn điện tử thành công");
-            setIsKeyboardOpen(false);
             onCancel();
           },
           onError: (error: unknown) => {
@@ -267,7 +149,6 @@ const InvoiceDialog = ({
           disabled: createInvoice.isPending || updateInvoice.isPending
         }}
         width={600}
-        className={enableVirtualKeyboardDrawer ? "invoice-dialog-with-keyboard" : undefined}
         style={{ top: 20 }}
       >
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>
@@ -332,19 +213,6 @@ const InvoiceDialog = ({
           </div>
         </Form>
       </Modal>
-
-      {enableVirtualKeyboardDrawer && open && (
-        <VirtualKeyboardDrawer
-          open={isKeyboardOpen}
-          activeFieldLabel="Nhập thông tin hóa đơn"
-          layoutName={layoutName}
-          keyboardRef={(instance) => {
-            keyboardRef.current = instance;
-          }}
-          onClose={() => setIsKeyboardOpen(false)}
-          onKeyPress={handleKeyboardKeyPress}
-        />
-      )}
     </>
   );
 };

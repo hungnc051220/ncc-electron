@@ -1,7 +1,5 @@
 import { EnvironmentOutlined, InfoCircleOutlined, ShopOutlined } from "@ant-design/icons";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { usePermission } from "@renderer/permissions/usePermission";
-import { useVirtualKeyboard } from "@renderer/hooks/useVirtualKeyboard";
 import {
   DEFAULT_BRANCH_SETTINGS,
   useSettingBranchStore
@@ -24,15 +22,6 @@ const SettingBranch = () => {
   const { can } = usePermission();
   const canUpdate = can("settings_branch", "update");
   const [form] = Form.useForm<FieldType>();
-  const keyboard = useVirtualKeyboard({
-    form,
-    fields: ["cinemaName", "address"] as const,
-    labels: {
-      cinemaName: "Tên chi nhánh",
-      address: "Địa chỉ"
-    },
-    onEnter: () => form.submit()
-  });
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
     setBranch(values.cinemaName.trim(), values.address.trim());
@@ -137,7 +126,6 @@ const SettingBranch = () => {
                     rules={[{ required: true, message: "Nhập tên chi nhánh" }]}
                   >
                     <Input
-                      {...keyboard.bindInput("cinemaName", { disabled: !canUpdate })}
                       placeholder="Ví dụ: TRUNG TÂM CHIẾU PHIM QUỐC GIA"
                       disabled={!canUpdate}
                     />
@@ -151,7 +139,6 @@ const SettingBranch = () => {
                     rules={[{ required: true, message: "Nhập địa chỉ chi nhánh" }]}
                   >
                     <Input.TextArea
-                      {...keyboard.bindInput("address", { disabled: !canUpdate })}
                       placeholder="Ví dụ: Số 87 Láng Hạ, Ô Chợ Dừa, Hà Nội"
                       autoSize={{ minRows: 3, maxRows: 5 }}
                       disabled={!canUpdate}
@@ -188,15 +175,6 @@ const SettingBranch = () => {
           </Card>
         </div>
       </div>
-
-      <VirtualKeyboardDrawer
-        open={keyboard.isKeyboardOpen}
-        activeFieldLabel={keyboard.activeFieldLabel}
-        layoutName={keyboard.layoutName}
-        keyboardRef={keyboard.registerKeyboard}
-        onClose={() => keyboard.setIsKeyboardOpen(false)}
-        onKeyPress={keyboard.handleKeyPress}
-      />
     </>
   );
 };

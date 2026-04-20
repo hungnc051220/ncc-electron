@@ -5,10 +5,8 @@ import {
   PhoneOutlined,
   UserOutlined
 } from "@ant-design/icons";
-import VirtualKeyboardDrawer from "@renderer/components/VirtualKeyboardDrawer";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { useChangePasswordUser } from "@renderer/hooks/users/useChangePasswordUser";
-import { useVirtualKeyboard } from "@renderer/hooks/useVirtualKeyboard";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -44,15 +42,6 @@ const ChangePassword = () => {
   const changePassword = useChangePasswordUser();
   const { data: user, isLoading } = useUserDetail(userId ?? 0);
   const { data: customerRoles } = useCustomerRoles();
-  const keyboard = useVirtualKeyboard({
-    form,
-    fields: ["password", "new_password"] as const,
-    labels: {
-      password: "Mật khẩu hiện tại",
-      new_password: "Mật khẩu mới"
-    },
-    onEnter: () => form.submit()
-  });
 
   const roleNames =
     user?.roleIds
@@ -236,10 +225,7 @@ const ChangePassword = () => {
                     name="password"
                     rules={[{ required: true, message: "Nhập mật khẩu hiện tại" }]}
                   >
-                    <Input.Password
-                      {...keyboard.bindInput("password")}
-                      placeholder="Nhập mật khẩu hiện tại"
-                    />
+                    <Input.Password placeholder="Nhập mật khẩu hiện tại" />
                   </Form.Item>
                 </Col>
 
@@ -249,10 +235,7 @@ const ChangePassword = () => {
                     name="new_password"
                     rules={[{ required: true, message: "Nhập mật khẩu mới" }]}
                   >
-                    <Input.Password
-                      {...keyboard.bindInput("new_password")}
-                      placeholder="Nhập mật khẩu mới"
-                    />
+                    <Input.Password placeholder="Nhập mật khẩu mới" />
                   </Form.Item>
                 </Col>
 
@@ -282,15 +265,6 @@ const ChangePassword = () => {
           </Card>
         </div>
       </div>
-
-      <VirtualKeyboardDrawer
-        open={keyboard.isKeyboardOpen}
-        activeFieldLabel={keyboard.activeFieldLabel}
-        layoutName={keyboard.layoutName}
-        keyboardRef={keyboard.registerKeyboard}
-        onClose={() => keyboard.setIsKeyboardOpen(false)}
-        onKeyPress={keyboard.handleKeyPress}
-      />
     </>
   );
 };

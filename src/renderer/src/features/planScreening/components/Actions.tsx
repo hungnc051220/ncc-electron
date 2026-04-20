@@ -404,7 +404,13 @@ const Actions = ({
             setOpenQrDialog(true);
             window.api.sendQrOpen(body);
           } catch {
-            onUpdateOrder(order.id, order.shippingStatusId, order.paymentStatusId, "QR_FAILED");
+            onUpdateOrder(
+              order.id,
+              order.shippingStatusId,
+              order.paymentStatusId,
+              planScreenId,
+              "QR_FAILED"
+            );
           }
           return;
         }
@@ -532,6 +538,7 @@ const Actions = ({
     orderId: number,
     shippingStatusId: number,
     paymentStatusId: number,
+    planScreenId: number,
     error: "PAYMENT_FAILED" | "QR_FAILED"
   ) => {
     updateOrder.mutate(
@@ -540,7 +547,8 @@ const Actions = ({
         dto: {
           orderStatusId: OrderStatus.FAIL,
           shippingStatusId: shippingStatusId,
-          paymentStatusId: paymentStatusId
+          paymentStatusId: paymentStatusId,
+          planScreenId
         }
       },
       {
@@ -871,6 +879,7 @@ const Actions = ({
               qrData.orderId,
               qrData.shippingStatusId,
               qrData.paymentStatusId,
+              planScreenId,
               "PAYMENT_FAILED"
             );
             setOpenQrDialog(false);
@@ -905,7 +914,6 @@ const Actions = ({
             }
           }}
           orderId={invoiceOrderId}
-          enableVirtualKeyboardDrawer
         />
       )}
     </div>

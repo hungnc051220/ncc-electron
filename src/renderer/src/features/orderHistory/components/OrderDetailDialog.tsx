@@ -240,11 +240,14 @@ const OrderDetailDialog = ({
       borderClassName?: string;
       valueClassName?: string;
       fallback?: ReactNode;
+      stackedOnMobile?: boolean;
     }
   ) => (
     <div
       className={cn(
-        "grid grid-cols-[96px_minmax(0,1fr)] items-start gap-4 border-b border-slate-100 py-2 last:border-b-0 dark:border-app-border",
+        options?.stackedOnMobile
+          ? "grid grid-cols-1 items-start gap-2 border-b border-slate-100 py-2 last:border-b-0 md:grid-cols-[132px_minmax(0,1fr)] md:gap-4 dark:border-app-border"
+          : "grid grid-cols-[96px_minmax(0,1fr)] items-start gap-4 border-b border-slate-100 py-2 last:border-b-0 dark:border-app-border",
         options?.borderClassName
       )}
     >
@@ -462,6 +465,26 @@ const OrderDetailDialog = ({
                     {renderInfoRow("Tên khách hàng", customerName)}
                     {renderInfoRow("Email", currentOrder?.customerEmail)}
                     {renderInfoRow("Số điện thoại", currentOrder?.customerPhone)}
+                    {renderInfoRow("Mã vé điện tử", currentOrder?.invNo)}
+                    {renderInfoRow(
+                      "Đường dẫn vé điện tử",
+                      currentOrder?.eTicketUrl ? (
+                        <a
+                          href={currentOrder.eTicketUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary underline underline-offset-2 break-all hover:opacity-80"
+                        >
+                          {currentOrder.eTicketUrl}
+                        </a>
+                      ) : undefined,
+                      {
+                        valueClassName: "text-left md:text-right",
+                        stackedOnMobile: true
+                      }
+                    )}
+                  </div>
+                  <div>
                     {renderInfoRow(
                       "Thời gian mua",
                       currentOrder?.createdOnUtc
@@ -472,8 +495,6 @@ const OrderDetailDialog = ({
                       "Kênh thanh toán",
                       formatPaymentMethod(currentOrder?.paymentMethodSystemName)
                     )}
-                  </div>
-                  <div>
                     <div className="border-b border-slate-100 py-2 dark:border-app-border">
                       <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
                         Trạng thái gửi vé
