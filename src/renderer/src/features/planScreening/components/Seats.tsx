@@ -85,8 +85,8 @@ const Seats = ({
 }: SeatsProps) => {
   const navigate = useNavigate();
   const seatContainerRef = useRef<HTMLDivElement>(null);
-  const seatGridRef = useRef<HTMLDivElement>(null);
   const selectoRef = useRef<Selecto>(null);
+  const isSelectingRef = useRef(false);
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const [seatSize, setSeatSize] = useState<number | null>(null);
   const [userSelectedFloor, setUserSelectedFloor] = useState<number | null>(null);
@@ -427,8 +427,32 @@ const Seats = ({
     [selectingSeatsByOther]
   );
 
+  const handleSelectSeat = useCallback(
+    (seat: ListSeat) => {
+      const seatUniqueKey = getSeatUniqueKey(seat);
+      if (selectingSeatKeysByOther.has(seatUniqueKey)) return;
+
+      setSelectedSeats((prev) => {
+        const isAlreadySelected = prev.find((s) => getSeatUniqueKey(s) === seatUniqueKey);
+        if (isAlreadySelected) {
+          return prev.filter((s) => getSeatUniqueKey(s) !== seatUniqueKey);
+        }
+
+        if (maxSelectableSeats && prev.length >= maxSelectableSeats) {
+          onSelectionLimitReached?.();
+          return prev;
+        }
+
+        return [...prev, seat];
+      });
+    },
+    [maxSelectableSeats, onSelectionLimitReached, selectingSeatKeysByOther, setSelectedSeats]
+  );
+
   const handleSelectoSelect = useCallback(
     (e: { added: (HTMLElement | SVGElement)[]; removed: (HTMLElement | SVGElement)[] }) => {
+      isSelectingRef.current = true;
+
       setSelectedSeats((prev) => {
         const newSelected = new Set(prev.map((s) => getSeatUniqueKey(s)));
         let hasReachedLimit = false;
@@ -469,6 +493,10 @@ const Seats = ({
 
         return nextSelected;
       });
+
+      setTimeout(() => {
+        isSelectingRef.current = false;
+      }, 100);
     },
     [
       maxSelectableSeats,
@@ -477,37 +505,6 @@ const Seats = ({
       selectingSeatKeysByOther,
       setSelectedSeats
     ]
-  );
-
-  const clearSelectedSeats = useCallback(() => {
-    setSelectedSeats([]);
-    selectoRef.current?.setSelectedTargets([]);
-  }, [setSelectedSeats]);
-
-  useEffect(() => {
-    const selecto = selectoRef.current;
-    const container = seatContainerRef.current;
-    if (!selecto || !container) return;
-
-    const selectedTargets = Array.from(
-      container.querySelectorAll<HTMLElement>(".selectable-seat[data-seat-unique-key]")
-    ).filter((element) => selectedSeatKeySet.has(element.dataset.seatUniqueKey || ""));
-
-    selecto.setSelectedTargets(selectedTargets);
-  }, [selectedSeatKeySet, selectedFloor, filteredSeats]);
-
-  const handleSeatAreaPointerDownCapture = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      const target = event.target;
-
-      if (!(target instanceof HTMLElement)) return;
-      if (target.closest(".selectable-seat")) return;
-      if (target !== event.currentTarget && target !== seatGridRef.current) return;
-      if (selectedSeats.length === 0) return;
-
-      clearSelectedSeats();
-    },
-    [clearSelectedSeats, selectedSeats.length]
   );
 
   const calculateSeatSize = useCallback(() => {
@@ -669,6 +666,7 @@ const Seats = ({
               isSelected={selectedSeatKeySet.has(seatUniqueKey)}
               isPendingPayment={isPendingPayment}
               isSelectingByOther={selectingSeatKeysByOther.has(seatUniqueKey)}
+              onSelect={handleSelectSeat}
               size={seatSize}
               canSelect={canSelectSeat(seat)}
               isBlockedOnline={isBlockedOnline}
@@ -696,6 +694,7 @@ const Seats = ({
   }, [
     filteredSeats,
     selectedSeatKeySet,
+    handleSelectSeat,
     seatSize,
     canSelectSeat,
     cancelMode,
@@ -815,7 +814,7 @@ const Seats = ({
 
       <div
         ref={mainContainerRef}
-        className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/20 m-2 p-1 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
+        className="relative pt-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
           <legend className="mx-auto px-3 text-xs xl:text-sm text-trunks font-bold">
@@ -828,16 +827,11 @@ const Seats = ({
             "seat-selecto-drag-area mt-2 flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
             hasSeatSpotlight && cancelMode && "relative"
           )}
-          onPointerDownCapture={handleSeatAreaPointerDownCapture}
           ref={seatContainerRef}
         >
           <div
-            ref={seatGridRef}
-            className="flex flex-col items-center px-2"
-            style={{
-              rowGap: `${SEAT_ROW_GAP}px`,
-              visibility: seatSize === null ? "hidden" : "visible"
-            }}
+            className="space-y-1 flex flex-col items-center px-2"
+            style={{ visibility: seatSize === null ? "hidden" : "visible" }}
           >
             {renderedSeats}
           </div>
@@ -868,12 +862,19 @@ const Seats = ({
             dragContainer=".seat-selecto-drag-area"
             selectableTargets={[".selectable-seat"]}
             hitRate={0}
-            selectByClick={true}
+            selectByClick={false}
             selectFromInside={true}
-            continueSelect={true}
-            continueSelectWithoutDeselect={true}
+            toggleContinueSelect={["shift"]}
             ratio={0}
+            onSelectStart={() => {
+              isSelectingRef.current = true;
+            }}
             onSelect={handleSelectoSelect}
+            onSelectEnd={() => {
+              setTimeout(() => {
+                isSelectingRef.current = false;
+              }, 100);
+            }}
           />
         )}
       </div>

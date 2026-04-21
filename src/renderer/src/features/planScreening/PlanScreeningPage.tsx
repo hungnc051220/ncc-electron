@@ -61,10 +61,6 @@ const PlanScreeningPage = () => {
   const { mutateAsync: mutateSelectingChairsAsync } = useSelectingChairs();
   const mutateSelectingChairsRef = useRef(mutateSelectingChairsAsync);
   const seatTypes = useMemo(() => seatTypesRes?.data || [], [seatTypesRes]);
-  const latestSelectedSeatsRef = useRef<ListSeat[]>([]);
-  const isSyncingSelectingSeatsRef = useRef(false);
-  const hasPendingSelectingSeatsSyncRef = useRef(false);
-  const selectingSeatsSyncRunIdRef = useRef(0);
   const seatKeyLookup = useMemo(() => {
     const lookup = new Map<string, string>();
 
@@ -150,13 +146,6 @@ const PlanScreeningPage = () => {
       .join(",")
   });
 
-  const areSeatCollectionsEqual = useCallback((left: ListSeat[], right: ListSeat[]) => {
-    if (left.length !== right.length) return false;
-
-    const rightSeatKeys = new Set(right.map((seat) => `${seat.floor}-${seat.seat}`));
-    return left.every((seat) => rightSeatKeys.has(`${seat.floor}-${seat.seat}`));
-  }, []);
-
   const loadOwnSelectingSeatsSnapshot = useCallback(async () => {
     if (!id || isCustomerMode || !posName) return [];
 
@@ -182,100 +171,6 @@ const PlanScreeningPage = () => {
       .map((seatKey) => seatMap.get(seatKey))
       .filter((seat): seat is ListSeat => Boolean(seat));
   }, [data?.listSeats, id, isCustomerMode, parseSelectingSeatIndexes, posName]);
-
-  const syncSelectingSeatsToServer = useCallback(async () => {
-    if (!id || isCustomerMode || !posName || isSyncingSelectingSeatsRef.current) return;
-
-    isSyncingSelectingSeatsRef.current = true;
-
-    try {
-      while (true) {
-        hasPendingSelectingSeatsSyncRef.current = false;
-        const runId = ++selectingSeatsSyncRunIdRef.current;
-        const targetSeats = latestSelectedSeatsRef.current;
-        const syncedSeats = syncedSelectedSeatsRef.current;
-        const targetSeatKeys = new Set(targetSeats.map((seat) => `${seat.floor}-${seat.seat}`));
-        const syncedSeatKeys = new Set(syncedSeats.map((seat) => `${seat.floor}-${seat.seat}`));
-
-        const removedSeats = syncedSeats.filter(
-          (seat) => !targetSeatKeys.has(`${seat.floor}-${seat.seat}`)
-        );
-        const addedSeats = targetSeats.filter(
-          (seat) => !syncedSeatKeys.has(`${seat.floor}-${seat.seat}`)
-        );
-
-        if (removedSeats.length > 0) {
-          await mutateSelectingChairsRef.current({
-            operation: "remove",
-            dto: buildSelectingDto(Number(id), posName, removedSeats)
-          });
-        }
-
-        if (addedSeats.length > 0) {
-          await mutateSelectingChairsRef.current({
-            operation: "add",
-            dto: buildSelectingDto(Number(id), posName, addedSeats)
-          });
-        }
-
-        const serverSeats = await loadOwnSelectingSeatsSnapshot();
-        if (runId !== selectingSeatsSyncRunIdRef.current) {
-          continue;
-        }
-
-        if (!areSeatCollectionsEqual(serverSeats, targetSeats)) {
-          const targetSnapshotSeatKeys = new Set(
-            targetSeats.map((seat) => `${seat.floor}-${seat.seat}`)
-          );
-          const serverSnapshotSeatKeys = new Set(
-            serverSeats.map((seat) => `${seat.floor}-${seat.seat}`)
-          );
-          const serverOnlySeats = serverSeats.filter(
-            (seat) => !targetSnapshotSeatKeys.has(`${seat.floor}-${seat.seat}`)
-          );
-          const targetOnlySeats = targetSeats.filter(
-            (seat) => !serverSnapshotSeatKeys.has(`${seat.floor}-${seat.seat}`)
-          );
-
-          if (serverOnlySeats.length > 0) {
-            await mutateSelectingChairsRef.current({
-              operation: "remove",
-              dto: buildSelectingDto(Number(id), posName, serverOnlySeats)
-            });
-          }
-
-          if (targetOnlySeats.length > 0) {
-            await mutateSelectingChairsRef.current({
-              operation: "add",
-              dto: buildSelectingDto(Number(id), posName, targetOnlySeats)
-            });
-          }
-
-          const verifiedServerSeats = await loadOwnSelectingSeatsSnapshot();
-          if (!areSeatCollectionsEqual(verifiedServerSeats, targetSeats)) {
-            syncedSelectedSeatsRef.current = verifiedServerSeats;
-            syncedSelectedSeatKeysRef.current = new Set(
-              verifiedServerSeats.map((seat) => `${seat.floor}-${seat.seat}`)
-            );
-          } else {
-            syncedSelectedSeatsRef.current = targetSeats;
-            syncedSelectedSeatKeysRef.current = new Set(targetSeatKeys);
-          }
-        } else {
-          syncedSelectedSeatsRef.current = targetSeats;
-          syncedSelectedSeatKeysRef.current = new Set(targetSeatKeys);
-        }
-
-        if (!hasPendingSelectingSeatsSyncRef.current) {
-          break;
-        }
-      }
-    } catch (error) {
-      console.error("Failed to sync selecting chairs:", error);
-    } finally {
-      isSyncingSelectingSeatsRef.current = false;
-    }
-  }, [areSeatCollectionsEqual, id, isCustomerMode, loadOwnSelectingSeatsSnapshot, posName]);
 
   useEffect(() => {
     mutateSelectingChairsRef.current = mutateSelectingChairsAsync;
@@ -374,7 +269,31 @@ const PlanScreeningPage = () => {
 
     const cleanup = onSelectingChairsUpdate((payload) => {
       if (payload.planScreenId !== Number(id) || payload.posName === posName) return;
-      void loadSelectingSeatsByOther();
+
+      const seatKeys = [
+        ...parseSelectingSeatIndexes(payload.selectingChairIndexF1, 1),
+        ...parseSelectingSeatIndexes(payload.selectingChairIndexF2, 2),
+        ...parseSelectingSeatIndexes(payload.selectingChairIndexF3, 3)
+      ];
+
+      setSelectingSeatsByOther((prev) => {
+        const nextState = { ...prev };
+
+        if (payload.operation === "remove") {
+          seatKeys.forEach((seatKey) => {
+            if (nextState[seatKey] === payload.posName) {
+              delete nextState[seatKey];
+            }
+          });
+          return nextState;
+        }
+
+        seatKeys.forEach((seatKey) => {
+          nextState[seatKey] = payload.posName;
+        });
+
+        return nextState;
+      });
     });
 
     const cleanupSocketConnect = onSocketConnect(() => {
@@ -386,7 +305,7 @@ const PlanScreeningPage = () => {
       cleanup?.();
       cleanupSocketConnect?.();
     };
-  }, [id, isCustomerMode, loadSelectingSeatsByOther, posName]);
+  }, [id, isCustomerMode, loadSelectingSeatsByOther, parseSelectingSeatIndexes, posName]);
 
   useEffect(() => {
     if (!id || isCustomerMode) return;
@@ -433,18 +352,18 @@ const PlanScreeningPage = () => {
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;
 
+    let isDisposed = false;
+
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
       syncTimeoutRef.current = null;
     }
 
-    latestSelectedSeatsRef.current = selectedSeats;
+    const selectedSeatKeys = new Set(selectedSeats.map((seat) => `${seat.floor}-${seat.seat}`));
+    const syncedSeatKeys = syncedSelectedSeatKeysRef.current;
+    const syncedSeats = syncedSelectedSeatsRef.current;
 
     if (cancelMode) {
-      hasPendingSelectingSeatsSyncRef.current = false;
-      selectingSeatsSyncRunIdRef.current += 1;
-
-      const syncedSeats = syncedSelectedSeatsRef.current;
       void (async () => {
         try {
           if (syncedSeats.length > 0) {
@@ -453,30 +372,94 @@ const PlanScreeningPage = () => {
               dto: buildSelectingDto(Number(id), posName, syncedSeats)
             });
           }
-        } catch (error) {
-          console.error("Failed to clear selecting chairs in cancel mode:", error);
-        } finally {
+
+          if (isDisposed) return;
+
           syncedSelectedSeatsRef.current = [];
           syncedSelectedSeatKeysRef.current = new Set();
-          latestSelectedSeatsRef.current = [];
+        } catch (error) {
+          console.error("Failed to clear selecting chairs in cancel mode:", error);
+
+          try {
+            const serverSeats = await loadOwnSelectingSeatsSnapshot();
+            if (isDisposed) return;
+
+            syncedSelectedSeatsRef.current = serverSeats;
+            syncedSelectedSeatKeysRef.current = new Set(
+              serverSeats.map((seat) => `${seat.floor}-${seat.seat}`)
+            );
+          } catch (snapshotError) {
+            console.error(
+              "Failed to reload selecting chairs snapshot after cancel-mode sync error:",
+              snapshotError
+            );
+          }
         }
       })();
+
       return;
     }
 
     syncTimeoutRef.current = setTimeout(() => {
-      hasPendingSelectingSeatsSyncRef.current = true;
       syncTimeoutRef.current = null;
-      void syncSelectingSeatsToServer();
+
+      void (async () => {
+        const addedSeats = selectedSeats.filter(
+          (seat) => !syncedSeatKeys.has(`${seat.floor}-${seat.seat}`)
+        );
+        const removedSeats = syncedSeats.filter(
+          (seat) => !selectedSeatKeys.has(`${seat.floor}-${seat.seat}`)
+        );
+
+        try {
+          if (addedSeats.length > 0) {
+            await mutateSelectingChairsRef.current({
+              operation: "add",
+              dto: buildSelectingDto(Number(id), posName, addedSeats)
+            });
+          }
+
+          if (removedSeats.length > 0) {
+            await mutateSelectingChairsRef.current({
+              operation: "remove",
+              dto: buildSelectingDto(Number(id), posName, removedSeats)
+            });
+          }
+
+          if (isDisposed) return;
+
+          syncedSelectedSeatsRef.current = selectedSeats;
+          syncedSelectedSeatKeysRef.current = new Set(selectedSeatKeys);
+        } catch (error) {
+          console.error("Failed to sync selecting chairs:", error);
+
+          try {
+            const serverSeats = await loadOwnSelectingSeatsSnapshot();
+            if (isDisposed) return;
+
+            syncedSelectedSeatsRef.current = serverSeats;
+            syncedSelectedSeatKeysRef.current = new Set(
+              serverSeats.map((seat) => `${seat.floor}-${seat.seat}`)
+            );
+          } catch (snapshotError) {
+            console.error(
+              "Failed to reload selecting chairs snapshot after sync error:",
+              snapshotError
+            );
+          }
+        }
+      })();
     }, 150);
 
     return () => {
+      isDisposed = true;
+
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
         syncTimeoutRef.current = null;
       }
     };
-  }, [cancelMode, id, isCustomerMode, posName, selectedSeats, syncSelectingSeatsToServer]);
+  }, [cancelMode, id, isCustomerMode, loadOwnSelectingSeatsSnapshot, posName, selectedSeats]);
 
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;

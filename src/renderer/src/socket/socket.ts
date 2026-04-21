@@ -47,6 +47,9 @@ function attachManagedListener<K extends ManagedSocketEvent>(
     case "orderCreated":
       targetSocket.on("orderCreated", handler as ManagedSocketHandlerMap["orderCreated"]);
       break;
+    case "orderUpdated":
+      targetSocket.on("orderUpdated", handler as ManagedSocketHandlerMap["orderUpdated"]);
+      break;
     case "selecting_chair_update":
       targetSocket.on(
         "selecting_chair_update",

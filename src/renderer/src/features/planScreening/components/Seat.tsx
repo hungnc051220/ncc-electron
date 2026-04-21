@@ -1,6 +1,6 @@
 import { cn } from "@renderer/lib/utils";
 import { ListSeat } from "@shared/types";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -78,9 +78,9 @@ const getContrastTextColor = (backgroundColor: string) => {
 const Seat = ({
   seat,
   isSelected,
+  onSelect,
   size,
   canSelect,
-  onSelect,
   isPendingPayment,
   isBlockedOnline,
   isSelectingByOther,
@@ -93,9 +93,9 @@ const Seat = ({
 }: {
   seat: ListSeat;
   isSelected: boolean;
+  onSelect: (seat: ListSeat) => void;
   size: number;
   canSelect: boolean;
-  onSelect?: (seat: ListSeat) => void;
   isPendingPayment?: boolean;
   isBlockedOnline?: boolean;
   isSelectingByOther?: boolean;
@@ -106,6 +106,12 @@ const Seat = ({
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
 }) => {
+  const handleClick = useCallback(() => {
+    if (canSelect && !isSelectingByOther) {
+      onSelect(seat);
+    }
+  }, [canSelect, isSelectingByOther, onSelect, seat]);
+
   const shouldShowPositionColor =
     !!seatColor &&
     !isSelected &&
@@ -119,8 +125,6 @@ const Seat = ({
 
   return (
     <div
-      role={canSelect && !isSelectingByOther ? "button" : undefined}
-      tabIndex={canSelect && !isSelectingByOther ? 0 : undefined}
       className={cn(
         "relative rounded-sm flex items-center justify-center",
         canSelect && !isSelectingByOther && "selectable-seat",
@@ -144,19 +148,10 @@ const Seat = ({
         width: `${size}px`,
         height: `${size}px`
       }}
+      onClick={handleClick}
       data-seat-code={seat.code}
       data-seat-floor={seat.floor}
       data-seat-unique-key={seatUniqueKey ?? `${seat.floor}-${seat.seat}`}
-      onClick={() => {
-        if (!canSelect || isSelectingByOther) return;
-        onSelect?.(seat);
-      }}
-      onKeyDown={(e) => {
-        if ((e.key === "Enter" || e.key === " ") && canSelect && !isSelectingByOther) {
-          e.preventDefault();
-          onSelect?.(seat);
-        }
-      }}
       onMouseEnter={(e) => onHover?.(seat, e)}
       onMouseLeave={onLeave}
     >
