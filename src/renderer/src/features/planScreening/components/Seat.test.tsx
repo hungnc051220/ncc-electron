@@ -92,4 +92,14 @@ describe("Seat", () => {
     expect(seatElement).toHaveClass("bg-roshi", "text-white");
     expect(seatElement).not.toHaveClass("bg-trunks");
   });
+
+  it("does not render sold color for seats released from a failed order update", () => {
+    const { seatElement } = renderSeat({
+      seat: createSeat({ status: 1 }),
+      isReleasedFromOrder: true
+    });
+
+    expect(seatElement).not.toHaveClass("bg-trunks");
+    expect(seatElement.style.backgroundColor).toBe("");
+  });
 });

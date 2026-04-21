@@ -22,3 +22,15 @@ export interface SelectingChairPayload {
   operation: "add" | "remove";
   expiredSeconds: number;
 }
+
+export interface TicketsCancelledChairIndex {
+  F1?: string[];
+  F2?: string;
+  F3?: string;
+}
+
+export interface TicketsCancelledPayload {
+  orderIds: number[] | null;
+  chairIndex: TicketsCancelledChairIndex[];
+  planScreenId: number;
+}

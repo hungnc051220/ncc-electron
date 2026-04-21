@@ -1,7 +1,8 @@
 import {
   OrderCreatedPayload,
   OrderPaymentUpdatedPayload,
-  SelectingChairPayload
+  SelectingChairPayload,
+  TicketsCancelledPayload
 } from "@shared/types";
 import { io, Socket } from "socket.io-client";
 
@@ -12,12 +13,14 @@ type ManagedSocketEvent =
   | "orderPaymentUpdated"
   | "orderCreated"
   | "orderUpdated"
+  | "ticketsCancelled"
   | "selecting_chair_update"
   | "connect";
 type ManagedSocketHandlerMap = {
   orderPaymentUpdated: (data: OrderPaymentUpdatedPayload) => void;
   orderCreated: (data: OrderCreatedPayload) => void;
   orderUpdated: (data: OrderCreatedPayload) => void;
+  ticketsCancelled: (data: TicketsCancelledPayload) => void;
   selecting_chair_update: (data: SelectingChairPayload) => void;
   connect: () => void;
 };
@@ -28,6 +31,7 @@ const managedListeners: {
   orderPaymentUpdated: new Set(),
   orderCreated: new Set(),
   orderUpdated: new Set(),
+  ticketsCancelled: new Set(),
   selecting_chair_update: new Set(),
   connect: new Set()
 };
@@ -49,6 +53,9 @@ function attachManagedListener<K extends ManagedSocketEvent>(
       break;
     case "orderUpdated":
       targetSocket.on("orderUpdated", handler as ManagedSocketHandlerMap["orderUpdated"]);
+      break;
+    case "ticketsCancelled":
+      targetSocket.on("ticketsCancelled", handler as ManagedSocketHandlerMap["ticketsCancelled"]);
       break;
     case "selecting_chair_update":
       targetSocket.on(
@@ -79,6 +86,9 @@ function detachManagedListener<K extends ManagedSocketEvent>(
       break;
     case "orderUpdated":
       targetSocket.off("orderUpdated", handler as ManagedSocketHandlerMap["orderUpdated"]);
+      break;
+    case "ticketsCancelled":
+      targetSocket.off("ticketsCancelled", handler as ManagedSocketHandlerMap["ticketsCancelled"]);
       break;
     case "selecting_chair_update":
       targetSocket.off(
@@ -190,6 +200,10 @@ export function onOrderUpdated(callback: (data: OrderCreatedPayload) => void) {
 
 export function onSelectingChairsUpdate(callback: (data: SelectingChairPayload) => void) {
   return subscribeManagedSocketEvent("selecting_chair_update", callback);
+}
+
+export function onTicketsCancelled(callback: (data: TicketsCancelledPayload) => void) {
+  return subscribeManagedSocketEvent("ticketsCancelled", callback);
 }
 
 export function onSocketConnect(callback: () => void) {

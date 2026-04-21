@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { ListSeat, PlanScreeningDetailProps } from "@shared/types";
+import { ListSeat, OrderStatus, PaymentStatus, PlanScreeningDetailProps } from "@shared/types";
 import Seats from "./Seats";
 
 vi.mock("@renderer/hooks/seatTypes/useSeatTypes", () => ({
@@ -184,5 +184,41 @@ describe("Seats", () => {
 
     expect(setSelectedSeats).toHaveBeenCalledWith([]);
     expect(screen.getByText("A1").closest("div")).toHaveClass("cursor-not-allowed");
+  });
+
+  it("does not flash sold color when the latest order for a seat is failed", () => {
+    const failedSeat = createSeat({ status: 1, positionId: undefined });
+    const setSelectedSeats = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <Seats
+          data={createPlanScreening(failedSeat)}
+          orders={[
+            {
+              id: 100,
+              createdOnUtc: "2026-03-16T10:05:00.000Z",
+              orderStatusId: OrderStatus.FAIL,
+              paymentStatusId: PaymentStatus.PENDING,
+              items: [
+                {
+                  planScreenId: 1,
+                  listChairIndexF1: "1",
+                  listChairIndexF2: "",
+                  listChairIndexF3: "",
+                  listChairValueF1: "A1",
+                  listChairValueF2: "",
+                  listChairValueF3: ""
+                }
+              ]
+            }
+          ] as any}
+          selectedSeats={[]}
+          setSelectedSeats={setSelectedSeats}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("A1").closest("[data-seat-code='A1']")).not.toHaveClass("bg-trunks");
   });
 });

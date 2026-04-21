@@ -108,4 +108,26 @@ describe("socket", () => {
 
     expect(secondSocket.on).toHaveBeenCalledWith("orderCreated", callback);
   });
+
+  it("registers and cleans up tickets cancelled listeners", async () => {
+    const fakeSocket = {
+      on: vi.fn(),
+      off: vi.fn(),
+      disconnect: vi.fn()
+    };
+    const callback = vi.fn();
+    ioMock.mockReturnValue(fakeSocket);
+
+    const socketModule = await import("./socket");
+    socketModule.initSocket("https://ncc.local");
+    socketModule.connectSocket("token-1");
+
+    const cleanup = socketModule.onTicketsCancelled(callback);
+
+    expect(fakeSocket.on).toHaveBeenCalledWith("ticketsCancelled", callback);
+
+    cleanup?.();
+
+    expect(fakeSocket.off).toHaveBeenCalledWith("ticketsCancelled", callback);
+  });
 });

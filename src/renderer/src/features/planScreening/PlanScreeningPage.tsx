@@ -22,6 +22,7 @@ import {
   onOrderCreated,
   onOrderPaymentUpdated,
   onSelectingChairsUpdate,
+  onTicketsCancelled,
   onOrderUpdated
 } from "@renderer/socket/socket";
 import { ordersApi } from "@renderer/api/orders.api";
@@ -46,6 +47,7 @@ const PlanScreeningPage = () => {
   const syncedSelectedSeatKeysRef = useRef<Set<string>>(new Set());
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const selectingSeatsRequestIdRef = useRef(0);
+  const selectingSeatsReconcileTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     data,
@@ -267,6 +269,19 @@ const PlanScreeningPage = () => {
     setSelectingSeatsByOther({});
     void loadSelectingSeatsByOther();
 
+    const scheduleSelectingSeatsReconcile = () => {
+      if (selectingSeatsReconcileTimeoutRef.current) {
+        clearTimeout(selectingSeatsReconcileTimeoutRef.current);
+      }
+
+      // Re-sync from server snapshot to avoid stale underline state when
+      // socket add/remove events arrive out of order or omit one transition.
+      selectingSeatsReconcileTimeoutRef.current = setTimeout(() => {
+        selectingSeatsReconcileTimeoutRef.current = null;
+        void loadSelectingSeatsByOther();
+      }, 180);
+    };
+
     const cleanup = onSelectingChairsUpdate((payload) => {
       if (payload.planScreenId !== Number(id) || payload.posName === posName) return;
 
@@ -294,6 +309,8 @@ const PlanScreeningPage = () => {
 
         return nextState;
       });
+
+      scheduleSelectingSeatsReconcile();
     });
 
     const cleanupSocketConnect = onSocketConnect(() => {
@@ -302,6 +319,10 @@ const PlanScreeningPage = () => {
 
     return () => {
       selectingSeatsRequestIdRef.current += 1;
+      if (selectingSeatsReconcileTimeoutRef.current) {
+        clearTimeout(selectingSeatsReconcileTimeoutRef.current);
+        selectingSeatsReconcileTimeoutRef.current = null;
+      }
       cleanup?.();
       cleanupSocketConnect?.();
     };
@@ -337,6 +358,12 @@ const PlanScreeningPage = () => {
       invalidateCurrentScreeningData();
     });
 
+    const cleanupTicketsCancelled = onTicketsCancelled((payload) => {
+      if (payload.planScreenId !== currentPlanScreenId) return;
+
+      invalidateCurrentScreeningData();
+    });
+
     const cleanupSocketConnect = onSocketConnect(() => {
       invalidateCurrentScreeningData();
     });
@@ -345,6 +372,7 @@ const PlanScreeningPage = () => {
       cleanupOrderCreated?.();
       cleanupOrderUpdated?.();
       cleanupOrderPaymentUpdated?.();
+      cleanupTicketsCancelled?.();
       cleanupSocketConnect?.();
     };
   }, [id, isCustomerMode, queryClient]);
