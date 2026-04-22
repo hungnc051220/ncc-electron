@@ -8,12 +8,13 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Dropdown } from "antd";
-import { RefreshCcw, SquarePen } from "lucide-react";
+import { Eye, RefreshCcw, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import InvoiceDialog from "./components/InvoiceDialog";
 import { InvoiceStatusBadge } from "./components/InvoiceStatusBadge";
 import UpdateStatusInvoiceDialog from "./components/UpdateStatusInvoiceDialog";
 import dayjs from "dayjs";
+import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
 
 const compareText = (left?: string | null, right?: string | null) =>
   (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
@@ -27,6 +28,8 @@ const InvoicesPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedItem, setSelectedItem] = useState<InvoiceProps | null>(null);
+  const [dialogViewOrderDetailOpen, setDialogViewOrderDetailOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   const params = useMemo(
     () => ({
@@ -38,7 +41,17 @@ const InvoicesPage = () => {
 
   const { data: invoices, isFetching } = useInvoices(params);
   const { can } = usePermission();
+  const canView = can("invoices", "view");
   const canUpdate = can("invoices", "update");
+
+  const handleViewOrderDetail = useCallback((item: InvoiceProps) => {
+    if (!item.order?.id) {
+      return;
+    }
+
+    setSelectedOrderId(item.order.id);
+    setDialogViewOrderDetailOpen(true);
+  }, []);
 
   const handleEdit = useCallback((item: InvoiceProps) => {
     setSelectedItem(item);
@@ -64,12 +77,24 @@ const InvoicesPage = () => {
     }
   }, []);
 
-  const actionItems = canUpdate
-    ? [
-        { key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" },
-        { key: "2", icon: <RefreshCcw size={16} />, label: "Thay đổi trạng thái" }
-      ]
-    : [];
+  const handleDialogViewOrderDetailClose = useCallback((open: boolean) => {
+    setDialogViewOrderDetailOpen(open);
+    if (!open) {
+      setSelectedOrderId(null);
+    }
+  }, []);
+
+  const actionItems = [
+    ...(canView
+      ? [{ key: "view-order-detail", icon: <Eye size={16} />, label: "Xem chi tiết đơn" }]
+      : []),
+    ...(canUpdate
+      ? [
+          { key: "edit", icon: <SquarePen size={16} />, label: "Cập nhật" },
+          { key: "update-status", icon: <RefreshCcw size={16} />, label: "Thay đổi trạng thái" }
+        ]
+      : [])
+  ];
 
   const columns: TableProps<InvoiceProps>["columns"] = [
     {
@@ -186,10 +211,13 @@ const InvoicesPage = () => {
                 menu={{
                   items: actionItems,
                   onClick: (e) => {
-                    if (e.key === "1") {
+                    if (e.key === "view-order-detail") {
+                      handleViewOrderDetail(record);
+                    }
+                    if (e.key === "edit") {
                       handleEdit(record);
                     }
-                    if (e.key === "2") {
+                    if (e.key === "update-status") {
                       handleUpdateStatus(record);
                     }
                   }
@@ -253,6 +281,14 @@ const InvoicesPage = () => {
           open={dialogUpdateStatusOpen}
           onOpenChange={handleDialogUpdateStatusClose}
           editingItem={selectedItem}
+        />
+      )}
+
+      {dialogViewOrderDetailOpen && selectedOrderId && (
+        <OrderDetailDialog
+          open={dialogViewOrderDetailOpen}
+          onOpenChange={handleDialogViewOrderDetailClose}
+          selectedOrderId={selectedOrderId}
         />
       )}
     </div>

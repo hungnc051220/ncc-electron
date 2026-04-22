@@ -15,7 +15,7 @@ type FieldType = {
   note?: string;
 };
 
-interface CancellationReasonDialogProps {
+interface ContractTicketSaleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedItem?: OrderResponseProps | null;
@@ -25,7 +25,7 @@ const ContractTicketSaleDialog = ({
   open,
   onOpenChange,
   selectedItem
-}: CancellationReasonDialogProps) => {
+}: ContractTicketSaleDialogProps) => {
   const { message } = useAntdApp();
 
   const [form] = Form.useForm();

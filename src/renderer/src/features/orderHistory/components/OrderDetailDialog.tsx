@@ -1,17 +1,26 @@
 import { ReloadOutlined } from "@ant-design/icons";
+import { ordersApi } from "@renderer/api/orders.api";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
-import { cn, formatMoney, formatPaymentMethod, formatSeatValues } from "@renderer/lib/utils";
-import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
+import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import { getApiErrorMessage } from "@renderer/lib/apiError";
+import {
+  cn,
+  formatMoney,
+  formatPaymentMethod,
+  formatSeatValues,
+  resolvePaymentType
+} from "@renderer/lib/utils";
+import { OrderDetailProps, OrderStatus, PaymentStatus, PaymentType } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Checkbox, Modal, Tag } from "antd";
 import dayjs from "dayjs";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 interface OrderDialogProps {
   open: boolean;
@@ -32,6 +41,7 @@ const OrderDetailDialog = ({
   const location = useLocation();
   const queryClient = useQueryClient();
   const [isChangingToSuccess, setIsChangingToSuccess] = useState(false);
+  const updateOrder = useUpdateOrder();
   const {
     data: orderDetail,
     isFetching: isFetchingOrderDetail,
@@ -45,18 +55,33 @@ const OrderDetailDialog = ({
     .filter(Boolean)
     .join(" ");
   const totalTickets = currentItems.reduce((sum, item) => sum + item.quantity, 0);
-  const isRefundOrder = currentOrder?.refundStatusId != null;
+  const isRefundOrder = currentOrder?.refundStatusId !== null;
+  const isCancelOrder =
+    (currentOrder?.orderStatusId === OrderStatus.CANCELLED ||
+      currentOrder?.orderStatusId === OrderStatus.FAIL) &&
+    currentOrder?.cancelTicket !== null;
   const isInvitationOrder = !!currentOrder?.isInvitation;
   const isPastProjectDate = currentDetail?.planScreening?.projectDate
     ? dayjs().isAfter(dayjs(currentDetail.planScreening.projectDate).endOf("day"))
     : false;
-  const canShowChangeToSuccessButton =
+  const canShowSwapSeatsButton =
     !!currentOrder &&
-    currentOrder.orderStatusId !== OrderStatus.CANCELLED &&
+    !isCancelOrder &&
     !isInvitationOrder &&
     !currentOrder.isContract &&
     !isRefundOrder &&
     !isPastProjectDate;
+
+  const canShowChangeSuccessButton =
+    !!currentOrder &&
+    !isCancelOrder &&
+    currentOrder.orderStatusId !== OrderStatus.COMPLETED &&
+    !isInvitationOrder &&
+    !currentOrder.isContract &&
+    !isRefundOrder &&
+    !isPastProjectDate;
+  const isVietQrPayment =
+    resolvePaymentType(currentOrder?.paymentMethodSystemName) === PaymentType.VIETQR;
   const invitationTicket = currentOrder?.invitationTickets;
 
   const ticketPromotions = useMemo(() => {
@@ -312,6 +337,69 @@ const OrderDetailDialog = ({
     }
   };
 
+  const completeOrder = async (
+    orderToUpdate: NonNullable<typeof currentOrder>,
+    paymentStatusId: PaymentStatus = PaymentStatus.PAID
+  ) => {
+    await updateOrder.mutateAsync({
+      id: orderToUpdate.id,
+      dto: {
+        orderStatusId: OrderStatus.COMPLETED,
+        paymentStatusId,
+        shippingStatusId: orderToUpdate.shippingStatusId
+      }
+    });
+
+    await refreshOrderDetail();
+  };
+
+  const onMarkOrderSuccess = async () => {
+    if (!currentOrder) return;
+
+    modal.confirm({
+      title: "Xác nhận chuyển trạng thái",
+      content: (
+        <span>
+          Bạn có chắc chắn muốn chuyển đơn hàng với Mã đặt vé:{" "}
+          <strong>{currentOrder.barCode ?? "-"}</strong> sang thành công không? Thao tác không thể
+          thu hồi.
+        </span>
+      ),
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          setIsChangingToSuccess(true);
+
+          if (isVietQrPayment) {
+            await ordersApi.checkTransaction({ orderId: currentOrder.id });
+            const latestDetail = await refreshOrderDetail();
+            const latestOrder = latestDetail?.order ?? currentOrder;
+
+            if (latestOrder.paymentStatusId !== PaymentStatus.PAID) {
+              message.warning("Giao dịch chưa được ghi nhận thành công. Vui lòng kiểm tra lại.");
+              return;
+            }
+
+            if (latestOrder.orderStatusId !== OrderStatus.COMPLETED) {
+              await completeOrder(latestOrder, PaymentStatus.PAID);
+            }
+
+            message.success("Chuyển trạng thái đơn hàng thành công");
+            return;
+          }
+
+          await completeOrder(currentOrder, PaymentStatus.PAID);
+          message.success("Chuyển trạng thái đơn hàng thành công");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Chuyển trạng thái đơn hàng thất bại"));
+        } finally {
+          setIsChangingToSuccess(false);
+        }
+      }
+    });
+  };
+
   return (
     <Modal
       title="Thông tin vé bán"
@@ -323,11 +411,16 @@ const OrderDetailDialog = ({
       footer={(_, { CancelBtn }) => (
         <>
           <CancelBtn />
-          {canShowChangeToSuccessButton && (
+          {canShowSwapSeatsButton && (
+            <Button onClick={() => void onChangeStatusOrder()} disabled={isChangingToSuccess}>
+              Đổi vé
+            </Button>
+          )}
+          {canShowChangeSuccessButton && (
             <Button
               variant="solid"
               color="green"
-              onClick={() => void onChangeStatusOrder()}
+              onClick={() => void onMarkOrderSuccess()}
               loading={isChangingToSuccess}
             >
               Chuyển sang thành công

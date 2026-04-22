@@ -49,6 +49,7 @@ export interface OrderDto {
   voucherCode?: string;
   note?: string;
   customerId?: number;
+  hasManualInvoice?: boolean;
 }
 
 export interface DiscountGroup {

@@ -67,6 +67,7 @@ const QrCodeDialog = ({
       closeIcon={isCustomerView ? false : true}
       width={800}
       centered
+      maskClosable={false}
       footer={() => {
         return (
           <div className="flex w-full gap-6">

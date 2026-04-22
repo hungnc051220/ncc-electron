@@ -1,3 +1,4 @@
+import { seatTypesApi } from "@renderer/api/seatTypes.api";
 import { saveExcelFile } from "@renderer/lib/saveFile";
 import type { SaveFileResult } from "@renderer/lib/saveFile";
 import { OrderDetailProps } from "@shared/types";
@@ -5,7 +6,6 @@ import dayjs from "dayjs";
 import ExcelJS from "exceljs";
 
 const moneyFormat = "#,##0";
-const invalidFileNameChars = new Set(["<", ">", ":", '"', "/", "\\", "|", "?", "*"]);
 
 type ExportRow = {
   viewingDate: string;
@@ -13,23 +13,14 @@ type ExportRow = {
   showTime: string;
   roomName: string;
   quantity: number;
-  unitPrice: number;
-  amount: number;
+  details: Array<{
+    quantity: number;
+    quantityDisplay: string;
+    unitPrice: number;
+    unitPriceDisplay: string;
+    amount: number;
+  }>;
 };
-
-const sanitizeFileName = (value: string) =>
-  Array.from(value)
-    .map((char) => {
-      const code = char.charCodeAt(0);
-      if (invalidFileNameChars.has(char) || code < 32) {
-        return " ";
-      }
-
-      return char;
-    })
-    .join("")
-    .replace(/\s+/g, " ")
-    .trim();
 
 const viWeekdays = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
 
@@ -142,6 +133,8 @@ const numberToVietnameseWords = (value: number) => {
 const capitalizeFirstLetter = (value: string) =>
   value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : value;
 
+const formatDisplayPrice = (value: number) => `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
+
 const applyThinBorder = (
   worksheet: ExcelJS.Worksheet,
   startRow: number,
@@ -161,43 +154,10 @@ const applyThinBorder = (
   }
 };
 
-const mergeConsecutiveRows = (
-  worksheet: ExcelJS.Worksheet,
-  rows: ExportRow[],
-  startRow: number,
-  valueGetter: (row: ExportRow) => string,
-  columnIndex: number
-) => {
-  if (rows.length === 0) {
-    return;
-  }
-
-  let groupStartIndex = 0;
-
-  for (let index = 1; index <= rows.length; index++) {
-    const currentValue = index < rows.length ? valueGetter(rows[index]) : null;
-    const groupValue = valueGetter(rows[groupStartIndex]);
-
-    if (currentValue === groupValue) {
-      continue;
-    }
-
-    const groupLength = index - groupStartIndex;
-
-    if (groupLength > 1 && groupValue) {
-      worksheet.mergeCells(
-        startRow + groupStartIndex,
-        columnIndex,
-        startRow + index - 1,
-        columnIndex
-      );
-    }
-
-    groupStartIndex = index;
-  }
-};
-
-const buildExportRows = (orderDetail: OrderDetailProps): ExportRow[] => {
+const buildExportRows = (
+  orderDetail: OrderDetailProps,
+  seatTypeNameMap: Map<number, string>
+): ExportRow[] => {
   const planDetailMap = new Map(
     (orderDetail.planDetails || [])
       .filter((item) => item.planScreening?.id)
@@ -210,29 +170,82 @@ const buildExportRows = (orderDetail: OrderDetailProps): ExportRow[] => {
 
   const aggregatedRows = Array.from(
     (orderDetail.order.items || [])
-      .reduce((map, item) => {
-        const key = item.planScreenId;
-        const current = map.get(key) || {
-          planScreenId: key,
-          quantity: 0,
-          unitPrice: Number(item.unitPriceInclTax || 0),
-          amount: 0
-        };
+      .reduce(
+        (map, item) => {
+          const key = item.planScreenId;
+          const current = map.get(key) || {
+            planScreenId: key,
+            quantity: 0,
+            amount: 0,
+            positions: new Map<
+              number,
+              { positionId: number; quantity: number; unitPrice: number }
+            >()
+          };
 
-        current.quantity += Number(item.quantity || 0);
-        current.amount += Number(item.priceInclTax || 0);
-        current.unitPrice =
-          current.quantity > 0 ? Math.round(current.amount / current.quantity) : current.unitPrice;
+          current.quantity += Number(item.quantity || 0);
+          current.amount += Number(item.priceInclTax || 0);
 
-        map.set(key, current);
-        return map;
-      }, new Map<number, { planScreenId: number; quantity: number; unitPrice: number; amount: number }>())
+          const positionKey = Number(item.positionId || 0);
+          const currentPosition = current.positions.get(positionKey) || {
+            positionId: positionKey,
+            quantity: 0,
+            unitPrice: Number(item.originUnitPriceInclTax || item.unitPriceInclTax || 0)
+          };
+
+          currentPosition.quantity += Number(item.quantity || 0);
+          currentPosition.unitPrice = Number(
+            item.originUnitPriceInclTax || currentPosition.unitPrice || item.unitPriceInclTax || 0
+          );
+          current.positions.set(positionKey, currentPosition);
+
+          map.set(key, current);
+          return map;
+        },
+        new Map<
+          number,
+          {
+            planScreenId: number;
+            quantity: number;
+            amount: number;
+            positions: Map<number, { positionId: number; quantity: number; unitPrice: number }>;
+          }
+        >()
+      )
       .values()
   );
 
   return aggregatedRows
     .map((item) => {
       const planDetail = planDetailMap.get(item.planScreenId);
+      const positionNameMap = new Map<number, string>();
+
+      planDetail?.planScreening?.listSeats?.flat().forEach((seat) => {
+        if (seat.positionId == null || positionNameMap.has(seat.positionId)) {
+          return;
+        }
+
+        positionNameMap.set(seat.positionId, seat.positionName);
+      });
+
+      const positionRows = Array.from(item.positions.values()).sort(
+        (left, right) => left.unitPrice - right.unitPrice || left.positionId - right.positionId
+      );
+
+      const details = positionRows.map((position) => {
+        const positionName =
+          seatTypeNameMap.get(position.positionId) ||
+          positionNameMap.get(position.positionId) ||
+          (position.positionId === 1 ? "Vip" : position.positionId === 2 ? "Thường" : "");
+
+        return {
+          quantity: position.quantity,
+          quantityDisplay: [position.quantity, positionName].filter(Boolean).join("\n"),
+          unitPrice: position.unitPrice,
+          unitPriceDisplay: formatDisplayPrice(position.unitPrice),
+          amount: position.quantity * position.unitPrice
+        };
+      });
 
       return {
         viewingDate: formatViewingDate(planDetail?.planScreening?.projectDate),
@@ -240,8 +253,10 @@ const buildExportRows = (orderDetail: OrderDetailProps): ExportRow[] => {
         showTime: formatShowTime(planDetail?.planScreening?.projectTime),
         roomName: planDetail?.room?.name || "",
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        amount: item.amount
+        details:
+          details.length > 0
+            ? details
+            : [{ quantity: 0, quantityDisplay: "", unitPrice: 0, unitPriceDisplay: "", amount: 0 }]
       };
     })
     .sort((left, right) => {
@@ -260,26 +275,29 @@ const buildExportRows = (orderDetail: OrderDetailProps): ExportRow[] => {
 export const exportContractTicketSaleExcel = async (
   orderDetail: OrderDetailProps
 ): Promise<SaveFileResult> => {
+  const seatTypes = await seatTypesApi.getAll({ current: 1, pageSize: 200 });
+  const seatTypeNameMap = new Map(
+    (seatTypes.data || []).map((seatType) => [seatType.id, seatType.name])
+  );
   const customerName = [orderDetail.order.customerFirstName, orderDetail.order.customerLastName]
     .filter(Boolean)
     .join(" ")
     .trim();
-  const exportRows = buildExportRows(orderDetail);
+  const exportRows = buildExportRows(orderDetail, seatTypeNameMap);
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Bao cao hop dong");
   const totalColumns = 7;
   const bodyStartRow = 4;
-  const subtotal = exportRows.reduce((total, row) => total + row.amount, 0);
+  const subtotal = exportRows.reduce(
+    (total, row) => total + row.details.reduce((sum, detail) => sum + detail.amount, 0),
+    0
+  );
   const discount = Number(orderDetail.order.orderDiscount || 0);
-  const finalTotal = Number(orderDetail.order.orderTotal || subtotal - discount);
+  const finalTotal = Math.max(subtotal - discount, 0);
   const discountPercent =
     subtotal > 0 && discount > 0 ? Math.round((discount / subtotal) * 100) : null;
   const title = `Báo cáo doanh thu ca chiếu hợp đồng${customerName ? ` ${customerName}` : ""}`;
-  const fileName = sanitizeFileName(
-    `bao-cao-doanh-thu-ca-chieu-hop-dong-${customerName || orderDetail.order.id}.xlsx`
-  );
-  const quantityRangeFormula = `SUM(E${bodyStartRow}:E${bodyStartRow + exportRows.length - 1})`;
-  const amountRangeFormula = `SUM(G${bodyStartRow}:G${bodyStartRow + exportRows.length - 1})`;
+  const fileName = `${title}.xlsx`;
 
   worksheet.mergeCells(1, 1, 1, totalColumns);
   worksheet.getCell(1, 1).value = title;
@@ -307,26 +325,46 @@ export const exportContractTicketSaleExcel = async (
     wrapText: true
   };
 
-  exportRows.forEach((row) => {
-    const excelRow = worksheet.addRow([
-      row.viewingDate,
-      row.filmName,
-      row.showTime,
-      row.roomName,
-      row.quantity,
-      row.unitPrice,
-      row.amount
-    ]);
+  let currentBodyRow = bodyStartRow;
 
-    excelRow.height = row.viewingDate ? 36 : 22;
+  exportRows.forEach((row) => {
+    const groupStartRow = currentBodyRow;
+
+    row.details.forEach((detail) => {
+      const excelRow = worksheet.addRow([
+        "",
+        "",
+        "",
+        "",
+        detail.quantityDisplay,
+        detail.unitPrice,
+        ""
+      ]);
+
+      const quantityLineCount = Math.max(detail.quantityDisplay.split("\n").length, 1);
+      excelRow.height = Math.max(26, quantityLineCount * 18 + 8);
+      worksheet.getCell(currentBodyRow, 7).value = {
+        formula: `${detail.quantity}*F${currentBodyRow}`,
+        result: detail.amount
+      };
+      currentBodyRow += 1;
+    });
+
+    const groupEndRow = currentBodyRow - 1;
+
+    worksheet.getCell(groupStartRow, 1).value = row.viewingDate;
+    worksheet.getCell(groupStartRow, 2).value = row.filmName;
+    worksheet.getCell(groupStartRow, 3).value = row.showTime;
+    worksheet.getCell(groupStartRow, 4).value = row.roomName;
+    if (groupEndRow > groupStartRow) {
+      worksheet.mergeCells(groupStartRow, 1, groupEndRow, 1);
+      worksheet.mergeCells(groupStartRow, 2, groupEndRow, 2);
+      worksheet.mergeCells(groupStartRow, 3, groupEndRow, 3);
+      worksheet.mergeCells(groupStartRow, 4, groupEndRow, 4);
+    }
   });
 
-  mergeConsecutiveRows(worksheet, exportRows, bodyStartRow, (row) => row.viewingDate, 1);
-  mergeConsecutiveRows(worksheet, exportRows, bodyStartRow, (row) => row.filmName, 2);
-  mergeConsecutiveRows(worksheet, exportRows, bodyStartRow, (row) => row.showTime, 3);
-  mergeConsecutiveRows(worksheet, exportRows, bodyStartRow, (row) => row.roomName, 4);
-
-  const subtotalRowNumber = bodyStartRow + exportRows.length;
+  const subtotalRowNumber = currentBodyRow;
   const discountRowNumber = subtotalRowNumber + 1;
   const finalTotalRowNumber = discountRowNumber + 1;
   const wordsRowNumber = finalTotalRowNumber + 1;
@@ -334,14 +372,11 @@ export const exportContractTicketSaleExcel = async (
   worksheet.mergeCells(subtotalRowNumber, 1, subtotalRowNumber, 4);
   worksheet.mergeCells(subtotalRowNumber, 5, subtotalRowNumber, 6);
   worksheet.getCell(subtotalRowNumber, 1).value = "Tổng (Chưa giảm giá)";
-  worksheet.getCell(subtotalRowNumber, 5).value = {
-    formula: quantityRangeFormula,
-    result: exportRows.reduce((total, row) => total + row.quantity, 0)
-  };
-  worksheet.getCell(subtotalRowNumber, 7).value = {
-    formula: amountRangeFormula,
-    result: subtotal
-  };
+  worksheet.getCell(subtotalRowNumber, 5).value = exportRows.reduce(
+    (total, row) => total + row.quantity,
+    0
+  );
+  worksheet.getCell(subtotalRowNumber, 7).value = subtotal;
 
   worksheet.mergeCells(discountRowNumber, 1, discountRowNumber, 6);
   worksheet.getCell(discountRowNumber, 1).value =
@@ -371,22 +406,30 @@ export const exportContractTicketSaleExcel = async (
   ];
 
   for (let row = bodyStartRow; row < subtotalRowNumber; row++) {
-    worksheet.getCell(row, 1).alignment = {
-      horizontal: "center",
-      vertical: "middle",
-      wrapText: true
-    };
+    [1, 3, 4].forEach((column) => {
+      worksheet.getCell(row, column).alignment = {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true
+      };
+    });
+
     worksheet.getCell(row, 2).alignment = {
       horizontal: "left",
       vertical: "middle",
       wrapText: true
     };
-    worksheet.getCell(row, 3).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 4).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 5).alignment = { horizontal: "right", vertical: "middle" };
-    worksheet.getCell(row, 6).alignment = { horizontal: "right", vertical: "middle" };
+    worksheet.getCell(row, 5).alignment = {
+      horizontal: "center",
+      vertical: "middle",
+      wrapText: true
+    };
+    worksheet.getCell(row, 6).alignment = {
+      horizontal: "right",
+      vertical: "middle",
+      wrapText: true
+    };
     worksheet.getCell(row, 7).alignment = { horizontal: "right", vertical: "middle" };
-
     worksheet.getCell(row, 6).numFmt = moneyFormat;
     worksheet.getCell(row, 7).numFmt = moneyFormat;
   }
@@ -396,8 +439,8 @@ export const exportContractTicketSaleExcel = async (
   worksheet.getRow(finalTotalRowNumber).font = { bold: true };
   worksheet.getRow(wordsRowNumber).font = { italic: true };
 
-  worksheet.getCell(subtotalRowNumber, 1).alignment = { horizontal: "center", vertical: "middle" };
-  worksheet.getCell(subtotalRowNumber, 5).alignment = { horizontal: "right", vertical: "middle" };
+  worksheet.getCell(subtotalRowNumber, 1).alignment = { horizontal: "left", vertical: "middle" };
+  worksheet.getCell(subtotalRowNumber, 5).alignment = { horizontal: "center", vertical: "middle" };
   worksheet.getCell(subtotalRowNumber, 7).alignment = { horizontal: "right", vertical: "middle" };
   worksheet.getCell(discountRowNumber, 1).alignment = { horizontal: "left", vertical: "middle" };
   worksheet.getCell(discountRowNumber, 7).alignment = { horizontal: "right", vertical: "middle" };
@@ -415,6 +458,7 @@ export const exportContractTicketSaleExcel = async (
     wrapText: true
   };
 
+  worksheet.getCell(subtotalRowNumber, 5).numFmt = "0";
   worksheet.getCell(subtotalRowNumber, 7).numFmt = moneyFormat;
   worksheet.getCell(discountRowNumber, 7).numFmt = moneyFormat;
   worksheet.getCell(finalTotalRowNumber, 7).numFmt = moneyFormat;

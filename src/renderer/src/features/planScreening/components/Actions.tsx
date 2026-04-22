@@ -368,6 +368,7 @@ const Actions = ({
       memberCardCode: params?.memberCardCode,
       voucherCode: params?.voucherCode,
       discountGroups: discountGroupsPayload,
+      hasManualInvoice: exportInvoice ? true : false,
       ...buildSeatFieldsByFloor(selectedSeats)
     };
 

@@ -1,7 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { ListSeat, OrderStatus, PaymentStatus, PlanScreeningDetailProps } from "@shared/types";
+import {
+  ListSeat,
+  OrderResponseProps,
+  OrderStatus,
+  PaymentStatus,
+  PlanScreeningDetailProps
+} from "@shared/types";
 import Seats from "./Seats";
 
 vi.mock("@renderer/hooks/seatTypes/useSeatTypes", () => ({
@@ -164,6 +170,16 @@ const createPlanScreening = (seat: ListSeat): PlanScreeningDetailProps => ({
   listSeats: [[seat]]
 });
 
+const createOrder = (overrides: Partial<OrderResponseProps> = {}): OrderResponseProps =>
+  ({
+    id: 100,
+    createdOnUtc: "2026-03-16T10:05:00.000Z",
+    orderStatusId: OrderStatus.PENDING,
+    paymentStatusId: PaymentStatus.PENDING,
+    items: [],
+    ...overrides
+  }) as OrderResponseProps;
+
 describe("Seats", () => {
   it("does not allow sold seats to be selected in normal mode", () => {
     const setSelectedSeats = vi.fn();
@@ -195,11 +211,8 @@ describe("Seats", () => {
         <Seats
           data={createPlanScreening(failedSeat)}
           orders={[
-            {
-              id: 100,
-              createdOnUtc: "2026-03-16T10:05:00.000Z",
+            createOrder({
               orderStatusId: OrderStatus.FAIL,
-              paymentStatusId: PaymentStatus.PENDING,
               items: [
                 {
                   planScreenId: 1,
@@ -210,9 +223,9 @@ describe("Seats", () => {
                   listChairValueF2: "",
                   listChairValueF3: ""
                 }
-              ]
-            }
-          ] as any}
+              ] as OrderResponseProps["items"]
+            })
+          ]}
           selectedSeats={[]}
           setSelectedSeats={setSelectedSeats}
         />
