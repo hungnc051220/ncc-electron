@@ -9,6 +9,7 @@ import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import {
   cn,
+  extractSeatValues,
   formatMoney,
   formatPaymentMethod,
   formatSeatValues,
@@ -105,9 +106,7 @@ const OrderDetailDialog = ({
       }
 
       const existing = map.get(item.discount.id);
-      const seats = [item.listChairValueF1, item.listChairValueF2, item.listChairValueF3].filter(
-        Boolean
-      ) as string[];
+      const seats = extractSeatValues([item]);
 
       if (existing) {
         existing.quantity += item.quantity;

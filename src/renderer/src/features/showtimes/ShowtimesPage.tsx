@@ -3,7 +3,7 @@ import { useRealtimeClock } from "@renderer/hooks/useRealtimeClock";
 import { DetailPlanScreeningProps, PlanScreeningProps } from "@shared/types";
 import { Button, Checkbox, DatePicker, Table } from "antd";
 import dayjs from "dayjs";
-import { useQueryState } from "nuqs";
+import { parseAsBoolean, useQueryState } from "nuqs";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { DatePickerProps, TableProps } from "antd";
@@ -36,7 +36,7 @@ const ShowtimesPage = () => {
   const [date, setDate] = useQueryState("date", {
     defaultValue: dayjs().format("YYYY-MM-DD")
   });
-  const [showPast, setShowPast] = useState(false);
+  const [showPast, setShowPast] = useQueryState("showPast", parseAsBoolean.withDefault(false));
   const today = dayjs().format("YYYY-MM-DD");
   const [lastSelectedPlanScreeningId, setLastSelectedPlanScreeningId] = useState<number | null>(
     null
@@ -83,8 +83,10 @@ const ShowtimesPage = () => {
       void setDate(today);
     }
 
-    setShowPast(false);
-  }, [date, isSwapSeatsFlow, setDate, today]);
+    if (showPast) {
+      void setShowPast(false);
+    }
+  }, [date, isSwapSeatsFlow, setDate, setShowPast, showPast, today]);
 
   const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
   const toDate = dayjs(date, "YYYY-MM-DD").endOf("month").format("DD-MM-YYYY");
@@ -257,7 +259,7 @@ const ShowtimesPage = () => {
           <Checkbox
             checked={showPast}
             disabled={isSwapSeatsFlow}
-            onChange={(e) => setShowPast(e.target.checked)}
+            onChange={(e) => void setShowPast(e.target.checked)}
           >
             Hiển thị lịch đã chiếu
           </Checkbox>

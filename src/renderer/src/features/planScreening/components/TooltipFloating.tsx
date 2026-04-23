@@ -152,7 +152,9 @@ const TooltipFloating = ({
     "--";
 
   const seatInfo = seat.positionName?.trim() || labelSeatByType[seat.type] || "Ghế";
-  const promotionAmount = itemMatchedSeat ? itemMatchedSeat.discountAmountInclTax : 0;
+  const promotionAmount = itemMatchedSeat
+    ? itemMatchedSeat.discountAmountInclTax / itemMatchedSeat.quantity
+    : 0;
   const originalPrice = itemMatchedSeat ? itemMatchedSeat.originUnitPriceInclTax : 0;
   const finalAmount = itemMatchedSeat ? itemMatchedSeat.unitPriceInclTax : 0;
   const isU22Voucher = order?.voucherCode === "U22Ticket";

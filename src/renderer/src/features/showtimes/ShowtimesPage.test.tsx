@@ -1,11 +1,13 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import dayjs from "dayjs";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import ShowtimesPage from "./ShowtimesPage";
+import type { Mock } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   setDate: vi.fn(),
+  setShowPast: vi.fn(),
   screeningsData: [] as Array<{
     filmName: string;
     details: Array<{
@@ -79,6 +81,9 @@ vi.mock("antd", () => ({
 }));
 
 vi.mock("nuqs", () => ({
+  parseAsBoolean: {
+    withDefault: vi.fn((defaultValue: boolean) => ({ defaultValue, type: "boolean" }))
+  },
   useQueryState: vi.fn()
 }));
 
@@ -103,15 +108,27 @@ import { useQueryState } from "nuqs";
 
 const mockedUseQueryState = vi.mocked(useQueryState);
 
+const mockShowtimesQueryState = (date: string, showPast = false) => {
+  (mockedUseQueryState as unknown as Mock).mockImplementation((key: string) => {
+    if (key === "showPast") {
+      return [showPast, mocks.setShowPast];
+    }
+
+    return [date, mocks.setDate];
+  });
+};
+
 describe("ShowtimesPage", () => {
   beforeEach(() => {
     mocks.setDate.mockReset();
+    mocks.setShowPast.mockReset();
     mocks.screeningsData = [];
     sessionStorage.clear();
+    mockedUseQueryState.mockReset();
   });
 
   it("resets the selected date to today when opening showtimes with the reset flag", async () => {
-    mockedUseQueryState.mockReturnValue(["2026-04-08", mocks.setDate]);
+    mockShowtimesQueryState("2026-04-08");
 
     render(
       <MemoryRouter initialEntries={["/showtimes?resetDate=1"]}>
@@ -127,7 +144,7 @@ describe("ShowtimesPage", () => {
   });
 
   it("keeps the current filter when the reset flag is absent", async () => {
-    mockedUseQueryState.mockReturnValue(["2026-04-09", mocks.setDate]);
+    mockShowtimesQueryState("2026-04-09");
 
     render(
       <MemoryRouter initialEntries={["/showtimes?date=2026-04-09"]}>
@@ -143,7 +160,7 @@ describe("ShowtimesPage", () => {
   });
 
   it("disables showing past schedules in swap seats flow", async () => {
-    mockedUseQueryState.mockReturnValue([dayjs().format("YYYY-MM-DD"), mocks.setDate]);
+    mockShowtimesQueryState(dayjs().format("YYYY-MM-DD"));
 
     render(
       <MemoryRouter initialEntries={["/showtimes?callbackUrl=/order-history/swap-seats&id=1"]}>
@@ -156,9 +173,43 @@ describe("ShowtimesPage", () => {
     expect(screen.getByLabelText("Hiển thị lịch đã chiếu")).toBeDisabled();
   });
 
+  it("saves the show past schedules checkbox to query state", async () => {
+    mockShowtimesQueryState("2026-04-14");
+
+    render(
+      <MemoryRouter initialEntries={["/showtimes?date=2026-04-14"]}>
+        <Routes>
+          <Route path="/showtimes" element={<ShowtimesPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByLabelText("Hiển thị lịch đã chiếu"));
+
+    expect(mocks.setShowPast).toHaveBeenCalledWith(true);
+  });
+
+  it("clears show past schedules query state in swap seats flow", async () => {
+    mockShowtimesQueryState(dayjs().format("YYYY-MM-DD"), true);
+
+    render(
+      <MemoryRouter
+        initialEntries={["/showtimes?callbackUrl=/order-history/swap-seats&id=1&showPast=true"]}
+      >
+        <Routes>
+          <Route path="/showtimes" element={<ShowtimesPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(mocks.setShowPast).toHaveBeenCalledWith(false);
+    });
+  });
+
   it("hides screenings that have already passed on the selected day", async () => {
     vi.setSystemTime(new Date("2026-04-14T11:46:00+07:00"));
-    mockedUseQueryState.mockReturnValue(["2026-04-14", mocks.setDate]);
+    mockShowtimesQueryState("2026-04-14");
     mocks.screeningsData = [
       {
         filmName: "THỎ ƠI-T18",
@@ -201,7 +252,7 @@ describe("ShowtimesPage", () => {
   });
 
   it("keeps the last selected showtime button highlighted when returning to the page", async () => {
-    mockedUseQueryState.mockReturnValue(["2026-04-14", mocks.setDate]);
+    mockShowtimesQueryState("2026-04-14");
     mocks.screeningsData = [
       {
         filmName: "Movie A",
@@ -236,7 +287,7 @@ describe("ShowtimesPage", () => {
   });
 
   it("clears the last selected showtime when reopening from another flow", async () => {
-    mockedUseQueryState.mockReturnValue(["2026-04-14", mocks.setDate]);
+    mockShowtimesQueryState("2026-04-14");
     mocks.screeningsData = [
       {
         filmName: "Movie A",
