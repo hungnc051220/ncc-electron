@@ -119,6 +119,39 @@ const Seats = ({
     setSelectedSeats([]);
   }, [cancelMode, setSelectedSeats]);
 
+  useEffect(() => {
+    if (selectedSeats.length === 0) {
+      return;
+    }
+
+    const handlePointerDownOutsideSeats = (event: PointerEvent) => {
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      if (
+        target.closest(".selectable-seat") ||
+        target.closest(".selecto-selection") ||
+        target.closest('[data-seat-selection-ignore="true"]') ||
+        target.closest(
+          'button, [role="button"], a, input, textarea, select, label, .ant-btn, .ant-checkbox-wrapper, .ant-select, .ant-picker, .ant-modal-root'
+        )
+      ) {
+        return;
+      }
+
+      setSelectedSeats([]);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutsideSeats);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutsideSeats);
+    };
+  }, [selectedSeats.length, setSelectedSeats]);
+
   const canSelectSeat = useCallback(
     (seat: ListSeat) => {
       const seatUniqueKey = getSeatUniqueKey(seat);
@@ -749,7 +782,7 @@ const Seats = ({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_56%,rgba(6,18,12,0.1)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,transparent_50%,rgba(1,10,6,0.34)_100%)]" />
       </div>
 
-      <div className="relative px-2 pt-2">
+      <div className="relative px-2 pt-2" data-seat-selection-ignore="true">
         <div className="rounded-xl border border-green-200/70 bg-white/60 px-3 py-2 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.55)] backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/34">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5 justify-self-start">

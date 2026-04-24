@@ -706,6 +706,7 @@ const Actions = ({
 
   return (
     <div
+      data-seat-selection-ignore="true"
       className={cn(
         "shrink-0 border-t border-emerald-900/20 bg-emerald-100/50 px-2 backdrop-blur-md dark:border-emerald-300/20 dark:bg-emerald-950/80",
         isCustomerView && "hidden"

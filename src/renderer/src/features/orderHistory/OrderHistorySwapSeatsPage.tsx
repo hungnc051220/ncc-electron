@@ -188,7 +188,10 @@ const OrderHistorySwapSeatsPage = () => {
           onSelectionLimitReached={handleSelectionLimitReached}
         />
         {planScreeningDetail && orderDetail && (
-          <div className="bg-jiren dark:bg-app-bg border-t border-gray-300 dark:border-app-border shrink-0 px-4">
+          <div
+            data-seat-selection-ignore="true"
+            className="bg-jiren dark:bg-app-bg border-t border-gray-300 dark:border-app-border shrink-0 px-4"
+          >
             <div className="p-2 flex gap-6 max-w-5xl mx-auto">
               <div className="flex-1 bg-app-bg-container py-2 px-4 rounded-md">
                 <Descriptions size="small" items={items} column={2} />
