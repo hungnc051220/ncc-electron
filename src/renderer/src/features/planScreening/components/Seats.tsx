@@ -23,7 +23,7 @@ import {
   useRef,
   useState
 } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import Selecto from "react-selecto";
 import Seat from "./Seat";
 import TooltipFloating from "./TooltipFloating";
@@ -84,6 +84,7 @@ const Seats = ({
   spotlightSeatKeys
 }: SeatsProps) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const seatContainerRef = useRef<HTMLDivElement>(null);
   const selectoRef = useRef<Selecto>(null);
   const isSelectingRef = useRef(false);
@@ -96,6 +97,7 @@ const Seats = ({
   const { data: seatTypesResponse } = useSeatTypes({ current: 1, pageSize: 1000 });
 
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const returnTo = searchParams.get("returnTo");
 
   const seats = data?.listSeats;
   const resolvedSeatTypes = useMemo(
@@ -824,6 +826,11 @@ const Seats = ({
                   variant="outlined"
                   onClick={() => {
                     sessionStorage.removeItem("lastTotal");
+                    if (returnTo) {
+                      navigate(returnTo, { replace: true });
+                      return;
+                    }
+
                     navigate(-1);
                   }}
                 >
@@ -875,6 +882,7 @@ const Seats = ({
           ))}
           <Legend color="bg-raditz" label="Ghế hợp đồng" />
           <Legend color="bg-teal-500" label="Vé mời" />
+          <Legend color="bg-trunks/50" label="Không bán online" />
         </div>
 
         {/* React-Selecto với cấu hình tối ưu */}

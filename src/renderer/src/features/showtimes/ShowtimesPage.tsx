@@ -5,7 +5,7 @@ import { Button, Checkbox, DatePicker, Table } from "antd";
 import dayjs from "dayjs";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import type { DatePickerProps, TableProps } from "antd";
 import type { Dayjs } from "dayjs";
 
@@ -23,6 +23,7 @@ const capitalizeFirstLetter = (value: string) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
 const ShowtimesPage = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tick = useRealtimeClock();
@@ -30,6 +31,7 @@ const ShowtimesPage = () => {
   const id = searchParams.get("id");
   const returnTo = searchParams.get("returnTo");
   const reopenOrderId = searchParams.get("reopenOrderId");
+  const autoOpenPlanScreening = searchParams.get("autoOpenPlanScreening");
   const shouldResetDate = searchParams.get("resetDate") === "1";
   const isSwapSeatsFlow = callbackUrl === "/order-history/swap-seats";
 
@@ -87,6 +89,42 @@ const ShowtimesPage = () => {
       void setShowPast(false);
     }
   }, [date, isSwapSeatsFlow, setDate, setShowPast, showPast, today]);
+
+  useEffect(() => {
+    if (!callbackUrl || !id || !autoOpenPlanScreening) {
+      return;
+    }
+
+    const returnToSearchParams = new URLSearchParams(searchParams);
+    returnToSearchParams.delete("autoOpenPlanScreening");
+    const showtimesReturnTo = `${location.pathname}${
+      returnToSearchParams.toString() ? `?${returnToSearchParams.toString()}` : ""
+    }`;
+
+    const nextSearchParams = new URLSearchParams({
+      "plan-screening": autoOpenPlanScreening,
+      returnTo: showtimesReturnTo
+    });
+
+    if (returnTo) {
+      nextSearchParams.set("successReturnTo", returnTo);
+    }
+
+    if (reopenOrderId) {
+      nextSearchParams.set("reopenOrderId", reopenOrderId);
+    }
+
+    navigate(`${callbackUrl}/${id}?${nextSearchParams.toString()}`);
+  }, [
+    autoOpenPlanScreening,
+    callbackUrl,
+    id,
+    location.pathname,
+    navigate,
+    reopenOrderId,
+    returnTo,
+    searchParams
+  ]);
 
   const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
   const toDate = dayjs(date, "YYYY-MM-DD").endOf("month").format("DD-MM-YYYY");
@@ -192,7 +230,14 @@ const ShowtimesPage = () => {
 
                       navigate(`${callbackUrl}/${id}?${nextSearchParams.toString()}`);
                     } else {
-                      navigate(`/plan-screening/${s.planScreeningsId}`);
+                      const nextSearchParams = new URLSearchParams({
+                        returnTo: `${location.pathname}${location.search}`
+                      });
+
+                      navigate(
+                        `/plan-screening/${s.planScreeningsId}?${nextSearchParams.toString()}`,
+                        { replace: true }
+                      );
                     }
                   });
                 }}
@@ -264,7 +309,24 @@ const ShowtimesPage = () => {
             Hiển thị lịch đã chiếu
           </Checkbox>
         </div>
-        <Button onClick={() => navigate(-1)}>Đóng</Button>
+        <Button
+          onClick={() => {
+            if (returnTo) {
+              const nextReturnTo = new URL(returnTo, window.location.origin);
+
+              if (reopenOrderId) {
+                nextReturnTo.searchParams.set("reopenOrderId", reopenOrderId);
+              }
+
+              navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`, { replace: true });
+              return;
+            }
+
+            navigate(-1);
+          }}
+        >
+          Đóng
+        </Button>
       </div>
 
       <Table

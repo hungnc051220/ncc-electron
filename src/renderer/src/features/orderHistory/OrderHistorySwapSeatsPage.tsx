@@ -66,6 +66,7 @@ const OrderHistorySwapSeatsPage = () => {
   const [searchParams] = useSearchParams();
   const planScreeningId = Number(searchParams.get("plan-screening"));
   const returnTo = searchParams.get("returnTo") || "/order-history";
+  const successReturnTo = searchParams.get("successReturnTo") || "/order-history";
   const reopenOrderId = searchParams.get("reopenOrderId");
   const orderId = Number(id);
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
@@ -160,13 +161,13 @@ const OrderHistorySwapSeatsPage = () => {
       queryClient.invalidateQueries({
         queryKey: ordersKeys.all
       });
-      const nextReturnTo = new URL(returnTo, window.location.origin);
+      const nextReturnTo = new URL(successReturnTo, window.location.origin);
 
       if (reopenOrderId) {
         nextReturnTo.searchParams.set("reopenOrderId", reopenOrderId);
       }
 
-      navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`);
+      navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`, { replace: true });
     } catch (error: unknown) {
       message.error(getApiErrorMessage(error, "Đổi ghế thất bại"));
     }
@@ -211,7 +212,9 @@ const OrderHistorySwapSeatsPage = () => {
                       nextReturnTo.searchParams.set("reopenOrderId", reopenOrderId);
                     }
 
-                    navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`);
+                    navigate(`${nextReturnTo.pathname}${nextReturnTo.search}`, {
+                      replace: true
+                    });
                   }}
                 >
                   Hủy

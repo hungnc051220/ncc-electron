@@ -125,7 +125,8 @@ const normalizeMemberCardCode = (value?: string) => {
     .replace(/%(?:20|09|0A|0D)/gi, "")
     .replace(/\+/g, "")
     .replace(/\s+/g, "")
-    .replace(/[^\d]/g, "");
+    .replace(/[^0-9a-z]/gi, "")
+    .toUpperCase();
 };
 
 const VipCardDialog = ({
