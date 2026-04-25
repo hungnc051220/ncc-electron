@@ -72,6 +72,7 @@ const NavItems = () => {
       items={items}
       triggerSubMenuAction="click"
       style={{
+        background: "transparent",
         minWidth: 0,
         flex: "auto",
         justifyContent: "center",

@@ -16,7 +16,7 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <Layout className="h-screen">
-      <header className="flex items-center gap-10 h-12 sticky top-0 z-50 w-full px-4 shadow-sm bg-app-bg-container">
+      <header className="sticky top-0 z-50 flex h-12 w-full items-center gap-10 border-b border-transparent bg-white/80 px-4 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/58 dark:shadow-[0_14px_40px_-28px_rgba(0,0,0,0.9)]">
         <Link to="/">
           <img src={logo} alt="logo" className="h-8 w-auto object-contain" />
         </Link>
@@ -26,8 +26,8 @@ const DashboardLayout: React.FC = () => {
       <Content className="flex-1 overflow-y-auto bg-app-bg">
         <Outlet />
       </Content>
-      <footer className="mt-auto py-4 px-4 lg:px-8 border-t border-app-border bg-app-bg">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-gray-500">
+      <footer className="mt-auto border-t border-slate-200/80 bg-white/80 px-4 py-4 backdrop-blur-xl dark:border-white/12 dark:bg-slate-950/60 lg:px-8">
+        <div className="flex flex-col items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-300/75 sm:flex-row">
           <p>Sản phẩm được phát triển bởi AN VUI JSC. {version && `Phiên bản ${version}`}</p>
         </div>
       </footer>

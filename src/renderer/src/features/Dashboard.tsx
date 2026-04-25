@@ -7,6 +7,7 @@ import mainIcon2 from "@renderer/assets/icons/redeem.svg";
 import secondaryIcon3 from "@renderer/assets/icons/summarize.svg";
 import MainCard from "@renderer/components/cards/MainCard";
 import bgDashboard from "@renderer/assets/images/bg-dashboard.png";
+import spidermanVideo from "@renderer/assets/videos/spiderman.mp4";
 import SecondaryCard from "@renderer/components/cards/SecondaryCard";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -24,14 +25,23 @@ const Dashboard = () => {
   return (
     <main className="relative flex-1 overflow-hidden h-full text-black dark:text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-app-bg" />
+        <div className="absolute inset-0 bg-app-bg dark:hidden" />
+        <video
+          className="absolute inset-0 hidden size-full object-cover dark:block"
+          src={spidermanVideo}
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+        <div className="absolute inset-0 hidden bg-black/50 dark:block" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.1),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] dark:bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.1),transparent_30%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
         <div className="absolute -top-16 left-8 h-40 w-40 rounded-full bg-red-200/35 blur-3xl dark:bg-rose-500/12" />
         <div className="absolute top-24 right-0 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-500/10" />
         <div className="absolute bottom-10 left-1/3 h-44 w-44 rounded-full bg-amber-100/30 blur-3xl dark:bg-indigo-500/10" />
       </div>
 
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 flex w-[36vw] min-w-[320px] max-w-130 items-end justify-end opacity-100 dark:opacity-70">
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 flex w-[36vw] min-w-[320px] max-w-130 items-end justify-end opacity-100 dark:hidden">
         <img
           src={bgDashboard}
           alt="bg-dashboard"
@@ -48,7 +58,9 @@ const Dashboard = () => {
                   Xin chào, <span className="text-primary">{user?.fullname}</span>
                 </h2>
               </div>
-              <p className="text-trunks text-sm xl:text-base capitalize">{dateFormat}</p>
+              <p className="text-trunks text-sm capitalize dark:text-slate-200/75 xl:text-base">
+                {dateFormat}
+              </p>
             </div>
             <div>
               <div className="rounded-[14px] border border-white/70 bg-white/80 py-2 px-3 font-bold text-sm shadow-sm xl:text-base dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.8)]">
