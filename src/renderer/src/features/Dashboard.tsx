@@ -12,28 +12,42 @@ import SecondaryCard from "@renderer/components/cards/SecondaryCard";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
+import { useThemeStore } from "@renderer/store/theme.store";
 import dayjs from "dayjs";
+import { Volume2, VolumeX } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const Dashboard = () => {
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
   const { posName } = useSettingPosStore();
+  const isDarkTheme = useThemeStore((s) => s.theme === "dark");
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
 
   const date = dayjs();
   const dateFormat = `${date.format("dddd")}, ngày ${date.format("D [tháng] M [năm] YYYY")}`;
+
+  useEffect(() => {
+    if (!isDarkTheme) {
+      setIsVideoMuted(true);
+    }
+  }, [isDarkTheme]);
 
   return (
     <main className="relative flex-1 overflow-hidden h-full text-black dark:text-white">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-app-bg dark:hidden" />
-        <video
-          className="absolute inset-0 hidden size-full object-cover dark:block"
-          src={spidermanVideo}
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
+        {isDarkTheme && (
+          <video
+            className="absolute inset-0 size-full object-cover"
+            src={spidermanVideo}
+            autoPlay
+            muted={isVideoMuted}
+            loop
+            playsInline
+            preload="none"
+          />
+        )}
         <div className="absolute inset-0 hidden bg-black/50 dark:block" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.1),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] dark:bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.1),transparent_30%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
         <div className="absolute -top-16 left-8 h-40 w-40 rounded-full bg-red-200/35 blur-3xl dark:bg-rose-500/12" />
@@ -48,6 +62,18 @@ const Dashboard = () => {
           className="h-auto max-h-[88%] w-full object-contain object-bottom-right brightness-150 contrast-110 saturate-125 dark:brightness-160 dark:contrast-110"
         />
       </div>
+
+      {isDarkTheme && (
+        <button
+          type="button"
+          className="absolute right-5 bottom-5 z-10 flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-[0_12px_28px_-18px_rgba(0,0,0,0.9)] backdrop-blur-md transition hover:border-white/35 hover:bg-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+          title={isVideoMuted ? "Bật âm lượng" : "Tắt âm lượng"}
+          aria-label={isVideoMuted ? "Bật âm lượng video nền" : "Tắt âm lượng video nền"}
+          onClick={() => setIsVideoMuted((muted) => !muted)}
+        >
+          {isVideoMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </button>
+      )}
 
       <div className="relative mx-auto flex h-full max-w-7xl px-6 py-8 lg:py-10">
         <div className="w-full">

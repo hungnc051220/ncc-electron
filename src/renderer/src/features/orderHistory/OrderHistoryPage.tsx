@@ -61,7 +61,15 @@ type CancelOrderFormValues = {
 const compareText = (left?: string | null, right?: string | null) =>
   (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
+const compareNaturalText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
+
 const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
+const getSellerName = (orderDetail: OrderDetailProps) =>
+  [orderDetail.order?.seller?.customerFirstName, orderDetail.order?.seller?.customerLastName]
+    .filter(Boolean)
+    .join(" ") || orderDetail.order?.seller?.username;
 
 const defaultFilterValues: ValuesProps = {
   dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
@@ -332,11 +340,8 @@ const OrderHistoryPage = () => {
             title: "Nhân viên bán",
             key: "seller",
             dataIndex: "seller",
-            sorter: (a, b) => compareText(a.order.items?.[0]?.posName, b.order.items?.[0]?.posName),
-            render: (_, record) =>
-              [record.order?.seller?.customerFirstName, record.order?.seller?.customerLastName]
-                .filter(Boolean)
-                .join(" ") || record.order?.seller?.username
+            sorter: (a, b) => compareText(getSellerName(a), getSellerName(b)),
+            render: (_, record) => getSellerName(record)
           },
           {
             title: "Máy bán",
@@ -384,7 +389,7 @@ const OrderHistoryPage = () => {
       title: "Phòng chiếu",
       key: "roomName",
       dataIndex: "room",
-      sorter: (a, b) => compareText(a.room?.name, b.room?.name),
+      sorter: (a, b) => compareNaturalText(a.room?.name, b.room?.name),
       render: (room) => room?.name
     },
     {
