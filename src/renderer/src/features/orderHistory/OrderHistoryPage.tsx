@@ -18,7 +18,7 @@ import {
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
 import { Checkbox, Dropdown, Form, Modal, Select, Tabs, Typography } from "antd";
 import dayjs from "dayjs";
@@ -32,6 +32,7 @@ import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import { ordersKeys } from "@renderer/hooks/orders/keys";
 
 const items: TabsProps["items"] = [
   {
@@ -68,6 +69,7 @@ const defaultFilterValues: ValuesProps = {
 
 const OrderHistoryPage = () => {
   const { message } = useAntdApp();
+  const queryClient = useQueryClient();
 
   const [cancelForm] = Form.useForm<CancelOrderFormValues>();
   const [current, setCurrent] = useState(1);
@@ -217,15 +219,22 @@ const OrderHistoryPage = () => {
         return;
       }
 
+      const cancelledOrderId = selectedCancelOrder.order.id;
+      const cancelledPlanScreenId = selectedCancelOrder.planScreening.id;
+
       cancelOrder.mutate(
         {
-          planScreenId: selectedCancelOrder.planScreening.id,
-          orderIds: [selectedCancelOrder.order.id],
+          planScreenId: cancelledPlanScreenId,
+          orderIds: [cancelledOrderId],
           cancelReasonId: values.cancelReasonId,
           isRefund: values.isRefund
         },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ordersKeys.getAll(params) }),
+              queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(cancelledOrderId) })
+            ]);
             handleCancelDialogClose(false);
             message.success("Hủy vé thành công");
           },
@@ -235,7 +244,7 @@ const OrderHistoryPage = () => {
         }
       );
     },
-    [cancelOrder, handleCancelDialogClose, message, selectedCancelOrder]
+    [cancelOrder, handleCancelDialogClose, message, params, queryClient, selectedCancelOrder]
   );
 
   const handleOpenEndOrderDialog = useCallback((orderDetail: OrderDetailProps) => {
