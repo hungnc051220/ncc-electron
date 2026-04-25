@@ -175,8 +175,7 @@ const SettingPrinter = () => {
                 loading={loading}
                 options={printerOptions}
                 placeholder="Chọn máy in mặc định"
-                showSearch
-                optionFilterProp="label"
+                showSearch={{ optionFilterProp: "label" }}
                 notFoundContent={loading ? "Đang tải danh sách máy in..." : "Không có máy in nào"}
               />
             </Form.Item>

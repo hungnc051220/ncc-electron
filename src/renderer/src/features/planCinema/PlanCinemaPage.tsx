@@ -70,7 +70,7 @@ const PlanCinemaPage = () => {
   };
 
   const planItems = (
-    <Spin spinning={isFetching} size="small" className="w-full" wrapperClassName="w-full">
+    <Spin spinning={isFetching} size="small" className="w-full" classNames={{ root: "w-full" }}>
       <div className="w-full space-y-1.5">
         {plans?.map((plan) => {
           const isSelected = selectedPlan?.id === plan.id;

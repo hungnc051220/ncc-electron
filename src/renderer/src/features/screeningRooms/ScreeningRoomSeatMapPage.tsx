@@ -523,7 +523,7 @@ const ScreeningRoomSeatMapPage = () => {
           >
             {isSeatMapLoading ? (
               <div className="h-full w-full flex items-center justify-center">
-                <Spin size="large" tip="Đang tải sơ đồ ghế..." />
+                <Spin size="large" description="Đang tải sơ đồ ghế..." />
               </div>
             ) : selectedFloorConfig ? (
               <div className="w-full h-full flex justify-center items-center">
