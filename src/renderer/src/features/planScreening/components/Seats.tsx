@@ -877,7 +877,7 @@ const Seats = ({
 
       <div
         ref={mainContainerRef}
-        className="relative pt-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
+        className="relative m-2 pt-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
           <legend className="mx-auto px-3 text-xs xl:text-sm text-trunks font-bold">
