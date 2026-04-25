@@ -6,7 +6,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formatMoney } from "@renderer/lib/utils";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
-import { DiscountProps, ListSeat, PaymentType, PlanScreeningDetailProps } from "@shared/types";
+import {
+  DiscountProps,
+  ListSeat,
+  OrderStatus,
+  PaymentType,
+  PlanScreeningDetailProps
+} from "@shared/types";
 import Actions from "./Actions";
 
 let paymentUpdatedHandler:
@@ -24,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   createOrderMutate: vi.fn(),
   createQrMutateAsync: vi.fn(),
   cancelOrderMutate: vi.fn(),
+  updateOrderMutate: vi.fn(),
   cancelReserve: vi.fn(),
   messageSuccess: vi.fn(),
   messageError: vi.fn(),
@@ -99,6 +106,22 @@ vi.mock("@renderer/hooks/orders/useCancelOrder", () => ({
   useCancelOrder: () => ({
     mutate: mocks.cancelOrderMutate,
     isPending: false
+  })
+}));
+
+vi.mock("@renderer/hooks/orders/useUpdateOrder", () => ({
+  useUpdateOrder: () => ({
+    mutate: mocks.updateOrderMutate,
+    isPending: false
+  })
+}));
+
+vi.mock("@renderer/hooks/useAntdApp", () => ({
+  useAntdApp: () => ({
+    message: {
+      success: mocks.messageSuccess,
+      error: mocks.messageError
+    }
   })
 }));
 
@@ -364,6 +387,7 @@ describe("Actions", () => {
     mocks.createOrderMutate.mockReset();
     mocks.createQrMutateAsync.mockReset();
     mocks.cancelOrderMutate.mockReset();
+    mocks.updateOrderMutate.mockReset();
     mocks.cancelReserve.mockReset();
     mocks.messageSuccess.mockReset();
     mocks.messageError.mockReset();
@@ -427,6 +451,60 @@ describe("Actions", () => {
 
     expect(screen.getByLabelText("Quét VietQR")).not.toBeChecked();
     expect(screen.getByLabelText("Quét VNPayQR")).toBeChecked();
+  });
+
+  it("keeps selected seats until screening data is refreshed after creating an order", async () => {
+    const setSelectedSeats = vi.fn();
+    let resolveRefresh: () => void = () => {};
+    const refreshPromise = new Promise<void>((resolve) => {
+      resolveRefresh = resolve;
+    });
+
+    mocks.invalidateQueries.mockReturnValue(refreshPromise);
+    mocks.createOrderMutate.mockImplementation(
+      (
+        _body: unknown,
+        options: {
+          onSuccess: (order: {
+            id: number;
+            orderTotal: number;
+            orderDiscount: number;
+            createdOnUtc: string;
+          }) => Promise<void>;
+        }
+      ) => {
+        void options.onSuccess({
+          id: 98,
+          orderTotal: 100000,
+          orderDiscount: 0,
+          createdOnUtc: "2026-03-16T10:00:00.000Z"
+        });
+      }
+    );
+
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={[createSeat()]}
+        setSelectedSeats={setSelectedSeats}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /in vé/i }));
+
+    await waitFor(() => {
+      expect(mocks.invalidateQueries).toHaveBeenCalled();
+    });
+    expect(setSelectedSeats).not.toHaveBeenCalledWith([]);
+
+    resolveRefresh();
+
+    await waitFor(() => {
+      expect(setSelectedSeats).toHaveBeenCalledWith([]);
+    });
   });
 
   it("creates a QR order and opens the QR dialog", async () => {
@@ -521,14 +599,16 @@ describe("Actions", () => {
     fireEvent.click(screen.getByRole("button", { name: /in vé/i }));
 
     await waitFor(() => {
-      expect(mocks.cancelOrderMutate).toHaveBeenCalledWith(
+      expect(mocks.updateOrderMutate).toHaveBeenCalledWith(
         expect.objectContaining({
-          orderIds: [100],
-          planScreenId: 1
+          id: 100,
+          dto: expect.objectContaining({
+            orderStatusId: OrderStatus.FAIL,
+            planScreenId: 1
+          })
         }),
         expect.any(Object)
       );
-      expect(mocks.messageError).toHaveBeenCalledWith("Tạo QR thất bại");
     });
   });
 
@@ -620,8 +700,60 @@ describe("Actions", () => {
     );
 
     expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /huỷ giữ/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /hủy giữ/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
+  });
+
+  it("keeps only the cancel ticket action enabled in cancel mode", () => {
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={[createSeat({ status: 1 })]}
+        setSelectedSeats={vi.fn()}
+        cancelMode
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /^hủy vé$/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /hủy giữ/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
+    expect(screen.getByLabelText("Xuất hóa đơn")).toBeDisabled();
+    expect(screen.getByLabelText("Quẹt thẻ VIP")).toBeDisabled();
+    expect(screen.getByLabelText("Quét VietQR")).toBeDisabled();
+    expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
+  });
+
+  it("resets the cancel reason when the cancel ticket modal is closed", async () => {
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={[createSeat({ status: 1 })]}
+        setSelectedSeats={vi.fn()}
+        cancelMode
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^hủy vé$/i }));
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByText("Khach doi y"));
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^hủy vé$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ok/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Chọn lý do hủy vé")).toBeInTheDocument();
+    });
+    expect(mocks.cancelOrderMutate).not.toHaveBeenCalled();
   });
 
   it("cancels reserved seats with all matching order ids", async () => {
@@ -651,7 +783,7 @@ describe("Actions", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /huỷ giữ/i }));
+    fireEvent.click(screen.getByRole("button", { name: /hủy giữ/i }));
 
     await waitFor(() => {
       expect(mocks.cancelReserve).toHaveBeenCalledWith({

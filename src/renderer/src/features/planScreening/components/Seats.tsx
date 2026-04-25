@@ -136,7 +136,7 @@ const Seats = ({
         target.closest(".selecto-selection") ||
         target.closest('[data-seat-selection-ignore="true"]') ||
         target.closest(
-          'button, [role="button"], a, input, textarea, select, label, .ant-btn, .ant-checkbox-wrapper, .ant-select, .ant-picker, .ant-modal-root'
+          'button, [role="button"], a, input, textarea, select, label, .ant-btn, .ant-checkbox-wrapper, .ant-select, .ant-select-dropdown, .ant-picker, .ant-picker-dropdown, .ant-dropdown, .ant-modal-root'
         )
       ) {
         return;
@@ -164,8 +164,8 @@ const Seats = ({
 
       // --- Nếu đang ở chế độ hủy ---
       if (cancelMode) {
-        // Ghế chưa bán thì không hủy được
-        if (seat.status !== 1) return false;
+        // Chỉ ghế đã bán mới được hủy, ghế giữ chỗ không đi qua luồng hủy vé.
+        if (seat.status !== 1 || seat.isHold === 1) return false;
 
         // 🎫 Màn giấy mời
         if (screenMode === "invitation") {

@@ -262,20 +262,22 @@ const Actions = ({
   );
 
   const handleQrPaymentSuccess = useCallback(
-    (orderId: number, orderTotal: number) => {
+    async (orderId: number, orderTotal: number) => {
       syncLastSaleTotal(orderTotal);
       message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
       if (canPrint) {
         void handlePrint(orderId);
       }
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: planScreeningsKeys.getDetail(planScreenId)
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.getOrdersByScreening(planScreenId)
+        })
+      ]);
       setSelectedSeats([]);
       setSelectedDiscountGroups({});
-      queryClient.invalidateQueries({
-        queryKey: planScreeningsKeys.getDetail(planScreenId)
-      });
-      queryClient.invalidateQueries({
-        queryKey: ordersKeys.getOrdersByScreening(planScreenId)
-      });
       setOpenQrDialog(false);
       window.api?.sendQrClose();
     },
@@ -287,7 +289,7 @@ const Actions = ({
       if (data.paymentStatus !== 30) return;
 
       if (qrData && String(qrData.orderId) === String(data.orderId)) {
-        handleQrPaymentSuccess(Number(data.orderId), qrData.orderTotal);
+        void handleQrPaymentSuccess(Number(data.orderId), qrData.orderTotal);
         return;
       }
     });
@@ -418,12 +420,16 @@ const Actions = ({
 
         syncLastSaleTotal(order.orderTotal);
         message.success("Tạo đơn thành công");
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: planScreeningsKeys.getDetail(planScreenId)
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ordersKeys.getOrdersByScreening(planScreenId)
+          })
+        ]);
         setSelectedSeats([]);
         setSelectedDiscountGroups({});
-        queryClient.invalidateQueries({
-          queryKey: planScreeningsKeys.getDetail(planScreenId)
-        });
-        queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
         if (canPrint) {
           handlePrint(order.id);
         }
@@ -510,8 +516,15 @@ const Actions = ({
       label: <span className="text-xs font-semibold">Giảm giá</span>,
       children: (
         <p
-          onClick={() => setOpenDiscount(true)}
-          className="text-right flex-1 font-bold cursor-pointer text-xs self-center"
+          onClick={() => {
+            if (!cancelMode) {
+              setOpenDiscount(true);
+            }
+          }}
+          className={cn(
+            "text-right flex-1 font-bold text-xs self-center",
+            cancelMode ? "cursor-not-allowed text-slate-400 dark:text-slate-500" : "cursor-pointer"
+          )}
         >
           {priceDiscount > 0 || Object.keys(selectedDiscountGroups).length > 0
             ? formatMoney(priceDiscount)
@@ -593,7 +606,7 @@ const Actions = ({
       ]);
 
       if (orderDetail.order.paymentStatusId === PaymentStatus.PAID) {
-        handleQrPaymentSuccess(qrData.orderId, qrData.orderTotal);
+        await handleQrPaymentSuccess(qrData.orderId, qrData.orderTotal);
         return;
       }
 
@@ -628,6 +641,7 @@ const Actions = ({
       onSuccess: () => {
         setSelectedSeats([]);
         setOpenCancelSeats(false);
+        form.resetFields();
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
         queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
         message.success("Hủy vé thành công");
@@ -703,6 +717,7 @@ const Actions = ({
     isCancelReservePending ||
     isPlanScreeningPast ||
     updateOrder.isPending;
+  const disableNonCancelActions = disableActions || cancelMode;
 
   return (
     <div
@@ -733,7 +748,10 @@ const Actions = ({
             onOk={() => {
               form.submit();
             }}
-            onCancel={() => setOpenCancelSeats(false)}
+            onCancel={() => {
+              setOpenCancelSeats(false);
+              form.resetFields();
+            }}
             okButtonProps={{
               loading: cancelOrder.isPending
             }}
@@ -754,6 +772,7 @@ const Actions = ({
                 {dom}
               </Form>
             )}
+            destroyOnHidden
           >
             <Form.Item<FieldType>
               name="cancelReasonId"
@@ -790,7 +809,7 @@ const Actions = ({
           <Checkbox
             className="mt-1"
             checked={exportInvoice}
-            disabled={!canUpdate || isPlanScreeningPast}
+            disabled={!canUpdate || isPlanScreeningPast || cancelMode}
             onChange={(e) => setExportInvoice(e.target.checked)}
           >
             <span className="text-xs">Xuất hóa đơn</span>
@@ -804,7 +823,7 @@ const Actions = ({
           <Button
             variant="outlined"
             color="green"
-            disabled={disableActions || !canUpdate || selectedSeats.length === 0}
+            disabled={disableNonCancelActions || !canUpdate || selectedSeats.length === 0}
             onClick={onReserveSeats}
           >
             Giữ chỗ
@@ -812,7 +831,7 @@ const Actions = ({
           <Button
             variant="outlined"
             danger
-            disabled={disableActions || !canUpdate || selectedSeats.length === 0}
+            disabled={disableNonCancelActions || !canUpdate || selectedSeats.length === 0}
             onClick={() => void onCancelReserve()}
           >
             Hủy giữ
@@ -821,10 +840,18 @@ const Actions = ({
 
         <div className="flex gap-3">
           <div className="flex flex-col">
-            <Checkbox checked={vipCard} onChange={(e) => setVipCard(e.target.checked)}>
+            <Checkbox
+              checked={vipCard}
+              disabled={disableNonCancelActions || !canCreate}
+              onChange={(e) => setVipCard(e.target.checked)}
+            >
               Quẹt thẻ VIP
             </Checkbox>
-            <Checkbox.Group value={paymentMethod} onChange={onChange}>
+            <Checkbox.Group
+              value={paymentMethod}
+              disabled={disableNonCancelActions || !canCreate}
+              onChange={onChange}
+            >
               <div className="flex flex-col">
                 {paymentTypes.map((paymentType) => (
                   <Checkbox key={paymentType.value} value={paymentType.value}>

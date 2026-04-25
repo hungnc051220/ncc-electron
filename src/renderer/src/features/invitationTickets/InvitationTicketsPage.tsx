@@ -526,6 +526,7 @@ const InvitationTicketsPage = () => {
             {dom}
           </Form>
         )}
+        destroyOnHidden
       >
         <Form.Item<CancelOrderFormValues>
           name="cancelReasonId"

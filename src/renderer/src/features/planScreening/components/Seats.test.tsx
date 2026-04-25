@@ -202,6 +202,76 @@ describe("Seats", () => {
     expect(screen.getByText("A1").closest("div")).toHaveClass("cursor-not-allowed");
   });
 
+  it("allows only sold seats, not reserved seats, to be selected in cancel mode", () => {
+    const setSelectedSeats = vi.fn();
+    const soldSeat = createSeat({ status: 1 });
+    const reservedSeat = createSeat({ status: 1, isHold: 1 });
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <Seats
+          data={createPlanScreening(soldSeat)}
+          orders={[]}
+          selectedSeats={[]}
+          setSelectedSeats={setSelectedSeats}
+          cancelMode
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("A1").closest("[data-seat-code='A1']")).toHaveClass("cursor-pointer");
+
+    rerender(
+      <MemoryRouter>
+        <Seats
+          data={createPlanScreening(reservedSeat)}
+          orders={[]}
+          selectedSeats={[]}
+          setSelectedSeats={setSelectedSeats}
+          cancelMode
+        />
+      </MemoryRouter>
+    );
+
+    setSelectedSeats.mockClear();
+    fireEvent.click(screen.getByText("A1"));
+
+    expect(screen.getByText("A1").closest("[data-seat-code='A1']")).toHaveClass(
+      "cursor-not-allowed"
+    );
+    expect(setSelectedSeats).not.toHaveBeenCalled();
+  });
+
+  it("keeps selected seats when interacting with an Ant Design select dropdown", () => {
+    const setSelectedSeats = vi.fn();
+    const selectedSeat = createSeat({ status: 1 });
+    const dropdownOption = document.createElement("div");
+
+    dropdownOption.className = "ant-select-dropdown";
+    document.body.appendChild(dropdownOption);
+
+    try {
+      render(
+        <MemoryRouter>
+          <Seats
+            data={createPlanScreening(selectedSeat)}
+            orders={[]}
+            selectedSeats={[selectedSeat]}
+            setSelectedSeats={setSelectedSeats}
+            cancelMode
+          />
+        </MemoryRouter>
+      );
+
+      setSelectedSeats.mockClear();
+      fireEvent.pointerDown(dropdownOption);
+
+      expect(setSelectedSeats).not.toHaveBeenCalled();
+    } finally {
+      document.body.removeChild(dropdownOption);
+    }
+  });
+
   it("does not flash sold color when the latest order for a seat is failed", () => {
     const failedSeat = createSeat({ status: 1, positionId: undefined });
     const setSelectedSeats = vi.fn();

@@ -315,6 +315,7 @@ const Actions = ({
       onSuccess: () => {
         setSelectedSeats([]);
         setOpenCancelSeats(false);
+        form.resetFields();
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) });
         queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(contractOrderId) });
         queryClient.invalidateQueries({ queryKey: contractTicketSalesKeys.all });
@@ -402,7 +403,10 @@ const Actions = ({
         onOk={() => {
           form.submit();
         }}
-        onCancel={() => setOpenCancelSeats(false)}
+        onCancel={() => {
+          setOpenCancelSeats(false);
+          form.resetFields();
+        }}
         okButtonProps={{
           loading: cancelContractTicketSale.isPending
         }}
@@ -419,6 +423,7 @@ const Actions = ({
             {dom}
           </Form>
         )}
+        destroyOnHidden
       >
         <Form.Item<FieldType>
           name="cancelReasonId"
