@@ -33,6 +33,8 @@ const mockUpdateProgressHoldAt = Number(process.env.APP_MOCK_UPDATE_PROGRESS_HOL
 const shouldEnableDevTools = is.dev || enablePackagedDevTools;
 const mockDownloadProgressSteps = [8, 23, 41, 58, 76, 91, 100];
 
+const gotTheLock = app.requestSingleInstanceLock();
+
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
 let currentScreeningData: PlanScreeningDetailProps | null = null;
@@ -497,275 +499,287 @@ function createCustomerWindow(route: string) {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId("com.electron");
-
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on("browser-window-created", (_, window) => {
-    optimizer.watchWindowShortcuts(window);
-  });
-
-  ipcMain.handle("get-config", () => {
-    return getConfig();
-  });
-
-  ipcMain.handle("set-config", (_, config: AppConfig) => {
-    setConfig(config);
-  });
-
-  ipcMain.handle("get-printers", async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return [];
-
-    const printers = await win.webContents.getPrintersAsync();
-    return printers;
-  });
-
-  ipcMain.handle("customer:open", async (_, id: number) => {
-    createCustomerWindow(`/plan-screening/${id}?view=customer`);
-  });
-
-  ipcMain.handle("customer:open-route", async (_, route: string) => {
-    createCustomerWindow(route);
-  });
-
-  ipcMain.handle("customer:close", async () => {
-    if (!customerWindow || customerWindow.isDestroyed()) {
-      return { success: false };
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      mainWindow.show();
     }
-
-    customerWindow.close();
-    customerWindow = null;
-
-    return { success: true };
   });
 
-  ipcMain.on("customer:request-init", (event) => {
-    event.sender.send("customer:update-data", {
-      data: currentScreeningData,
-      seatTypes: currentSeatTypes,
-      orders: currentScreeningOrders
+  app.whenReady().then(() => {
+    // Set app user model id for windows
+    electronApp.setAppUserModelId("com.electron");
+
+    // Default open or close DevTools by F12 in development
+    // and ignore CommandOrControl + R in production.
+    // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+    app.on("browser-window-created", (_, window) => {
+      optimizer.watchWindowShortcuts(window);
     });
-    event.sender.send("customer:seat-sync", currentSeatState);
-  });
 
-  ipcMain.on(
-    "customer:update-data",
-    (
-      _,
-      payload: {
-        data: PlanScreeningDetailProps | null;
-        seatTypes: SeatTypeProps[];
-        orders: OrderResponseProps[];
+    ipcMain.handle("get-config", () => {
+      return getConfig();
+    });
+
+    ipcMain.handle("set-config", (_, config: AppConfig) => {
+      setConfig(config);
+    });
+
+    ipcMain.handle("get-printers", async (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win) return [];
+
+      const printers = await win.webContents.getPrintersAsync();
+      return printers;
+    });
+
+    ipcMain.handle("customer:open", async (_, id: number) => {
+      createCustomerWindow(`/plan-screening/${id}?view=customer`);
+    });
+
+    ipcMain.handle("customer:open-route", async (_, route: string) => {
+      createCustomerWindow(route);
+    });
+
+    ipcMain.handle("customer:close", async () => {
+      if (!customerWindow || customerWindow.isDestroyed()) {
+        return { success: false };
       }
-    ) => {
-      currentScreeningData = payload?.data ?? null;
-      currentSeatTypes = payload?.seatTypes ?? [];
-      currentScreeningOrders = payload?.orders ?? [];
 
+      customerWindow.close();
+      customerWindow = null;
+
+      return { success: true };
+    });
+
+    ipcMain.on("customer:request-init", (event) => {
+      event.sender.send("customer:update-data", {
+        data: currentScreeningData,
+        seatTypes: currentSeatTypes,
+        orders: currentScreeningOrders
+      });
+      event.sender.send("customer:seat-sync", currentSeatState);
+    });
+
+    ipcMain.on(
+      "customer:update-data",
+      (
+        _,
+        payload: {
+          data: PlanScreeningDetailProps | null;
+          seatTypes: SeatTypeProps[];
+          orders: OrderResponseProps[];
+        }
+      ) => {
+        currentScreeningData = payload?.data ?? null;
+        currentSeatTypes = payload?.seatTypes ?? [];
+        currentScreeningOrders = payload?.orders ?? [];
+
+        if (customerWindow && !customerWindow.isDestroyed()) {
+          customerWindow.webContents.send("customer:update-data", payload);
+        }
+      }
+    );
+
+    ipcMain.on("booking:seat-update", (_, payload) => {
+      // update state trung tâm
+      currentSeatState = payload;
+
+      // broadcast sang customer
       if (customerWindow && !customerWindow.isDestroyed()) {
-        customerWindow.webContents.send("customer:update-data", payload);
+        customerWindow.webContents.send("customer:seat-sync", currentSeatState);
       }
-    }
-  );
-
-  ipcMain.on("booking:seat-update", (_, payload) => {
-    // update state trung tâm
-    currentSeatState = payload;
-
-    // broadcast sang customer
-    if (customerWindow && !customerWindow.isDestroyed()) {
-      customerWindow.webContents.send("customer:seat-sync", currentSeatState);
-    }
-  });
-
-  ipcMain.on("qr:open", (_, data) => {
-    currentQrState = {
-      isOpen: true,
-      data
-    };
-
-    customerWindow?.webContents.send("qr:sync", currentQrState);
-  });
-
-  ipcMain.on("qr:close", () => {
-    currentQrState = { isOpen: false };
-
-    customerWindow?.webContents.send("qr:sync", currentQrState);
-  });
-
-  ipcMain.handle(
-    "print-tickets",
-    async (_, tickets: PrintTicketPayload[], printerName?: string) => {
-      if (!tickets || tickets.length === 0) {
-        throw new Error("No tickets to print");
-      }
-
-      if (!printerName) {
-        throw new Error("No printer selected");
-      }
-
-      return printService.enqueue(async () => {
-        for (const ticket of tickets) {
-          await printService.printSingleTicket(ticket, printerName);
-        }
-      });
-    }
-  );
-
-  ipcMain.on("theme:update", (_, theme: AppTheme) => {
-    currentTheme = theme;
-    store.set("theme", theme);
-
-    mainWindow?.webContents.send("theme:update", theme);
-    customerWindow?.webContents.send("theme:update", theme);
-  });
-
-  ipcMain.on("theme:request", (event) => {
-    event.sender.send("theme:update", currentTheme);
-  });
-
-  function getDefaultExportDir() {
-    if (!app.isPackaged) {
-      return path.join(process.cwd(), "dev-data", "temp");
-    }
-
-    return path.join(app.getPath("downloads"), "ncc-system", "temp");
-  }
-
-  ipcMain.handle("get-default-export-folder", () => {
-    const tempDir = getDefaultExportDir();
-
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    return tempDir;
-  });
-
-  ipcMain.handle("select-folder", async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ["openDirectory"]
     });
 
-    if (result.canceled) return null;
+    ipcMain.on("qr:open", (_, data) => {
+      currentQrState = {
+        isOpen: true,
+        data
+      };
 
-    return result.filePaths[0];
-  });
+      customerWindow?.webContents.send("qr:sync", currentQrState);
+    });
 
-  ipcMain.handle("read-file", async (_, filePath) => {
-    const data = await fs.promises.readFile(filePath);
-    return new Uint8Array(data.buffer);
-  });
+    ipcMain.on("qr:close", () => {
+      currentQrState = { isOpen: false };
 
-  ipcMain.handle("save-file", async (event, payload) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    const dialogOptions = {
-      defaultPath: payload.defaultFileName,
-      filters: payload.filters
-    };
-    const result = win
-      ? await dialog.showSaveDialog(win, dialogOptions)
-      : await dialog.showSaveDialog(dialogOptions);
+      customerWindow?.webContents.send("qr:sync", currentQrState);
+    });
 
-    if (result.canceled || !result.filePath) {
-      return { canceled: true };
-    }
-
-    try {
-      await fs.promises.writeFile(result.filePath, Buffer.from(payload.content));
-
-      if (payload.openAfterSave) {
-        const openError = await shell.openPath(result.filePath);
-
-        if (openError) {
-          throw new Error(`Đã lưu file nhưng không thể mở tự động: ${openError}`);
+    ipcMain.handle(
+      "print-tickets",
+      async (_, tickets: PrintTicketPayload[], printerName?: string) => {
+        if (!tickets || tickets.length === 0) {
+          throw new Error("No tickets to print");
         }
-      }
-    } catch (error) {
-      if (error && typeof error === "object" && "code" in error) {
-        const errorCode = String(error.code);
 
-        if (errorCode === "EBUSY" || errorCode === "EPERM" || errorCode === "EACCES") {
-          throw new Error(
-            "Không thể lưu file vì file đang được mở hoặc bị khóa bởi ứng dụng khác. Vui lòng đóng file rồi thử lại."
-          );
+        if (!printerName) {
+          throw new Error("No printer selected");
         }
+
+        return printService.enqueue(async () => {
+          for (const ticket of tickets) {
+            await printService.printSingleTicket(ticket, printerName);
+          }
+        });
+      }
+    );
+
+    ipcMain.on("theme:update", (_, theme: AppTheme) => {
+      currentTheme = theme;
+      store.set("theme", theme);
+
+      mainWindow?.webContents.send("theme:update", theme);
+      customerWindow?.webContents.send("theme:update", theme);
+    });
+
+    ipcMain.on("theme:request", (event) => {
+      event.sender.send("theme:update", currentTheme);
+    });
+
+    function getDefaultExportDir() {
+      if (!app.isPackaged) {
+        return path.join(process.cwd(), "dev-data", "temp");
       }
 
-      throw error;
+      return path.join(app.getPath("downloads"), "ncc-system", "temp");
     }
 
-    return {
-      canceled: false,
-      filePath: result.filePath
-    };
-  });
+    ipcMain.handle("get-default-export-folder", () => {
+      const tempDir = getDefaultExportDir();
 
-  ipcMain.handle("export-ticket", async (_, payload) => {
-    try {
-      const templatePath = getTemplatePath();
-      writeExportTicketLog("templatePath", templatePath);
-      writeExportTicketLog("payload", {
-        barCode: payload.barCode,
-        folder: payload.folder,
-        imageSource: payload.imageSource,
-        filmName: payload.filmName
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      return tempDir;
+    });
+
+    ipcMain.handle("select-folder", async () => {
+      const result = await dialog.showOpenDialog({
+        properties: ["openDirectory"]
       });
 
-      const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+      if (result.canceled) return null;
 
-      const html = renderTemplate(htmlTemplate, {
-        filmName: payload.filmName,
-        filmNameEn: payload.filmNameEn,
-        countryName: payload.countryName,
-        duration: payload.duration,
-        date: payload.date,
-        datetime: payload.datetime,
-        room: payload.room,
-        seat: payload.seat,
-        imageSource: payload.imageSource,
-        qrImage: payload.qrImage,
-        barCode: payload.barCode,
-        categories: payload.categories,
-        floor: payload.floor
-      });
+      return result.filePaths[0];
+    });
 
-      const outputPath = path.join(payload.folder, `${payload.barCode}.png`);
-      writeExportTicketLog("outputPath", outputPath);
+    ipcMain.handle("read-file", async (_, filePath) => {
+      const data = await fs.promises.readFile(filePath);
+      return new Uint8Array(data.buffer);
+    });
 
-      fs.mkdirSync(payload.folder, { recursive: true });
+    ipcMain.handle("save-file", async (event, payload) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const dialogOptions = {
+        defaultPath: payload.defaultFileName,
+        filters: payload.filters
+      };
+      const result = win
+        ? await dialog.showSaveDialog(win, dialogOptions)
+        : await dialog.showSaveDialog(dialogOptions);
 
-      await renderTicketImage(html, outputPath);
+      if (result.canceled || !result.filePath) {
+        return { canceled: true };
+      }
 
-      writeExportTicketLog("success", outputPath);
-      return outputPath;
-    } catch (error) {
-      console.error("[export-ticket] failed:", error);
-      writeExportTicketLog("failed", {
-        message: error instanceof Error ? error.message : "Unknown export-ticket error",
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      const message = error instanceof Error ? error.message : "Unknown export-ticket error";
-      throw new Error(`Xuất vé thất bại: ${message}`);
-    }
+      try {
+        await fs.promises.writeFile(result.filePath, Buffer.from(payload.content));
+
+        if (payload.openAfterSave) {
+          const openError = await shell.openPath(result.filePath);
+
+          if (openError) {
+            throw new Error(`Đã lưu file nhưng không thể mở tự động: ${openError}`);
+          }
+        }
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error) {
+          const errorCode = String(error.code);
+
+          if (errorCode === "EBUSY" || errorCode === "EPERM" || errorCode === "EACCES") {
+            throw new Error(
+              "Không thể lưu file vì file đang được mở hoặc bị khóa bởi ứng dụng khác. Vui lòng đóng file rồi thử lại."
+            );
+          }
+        }
+
+        throw error;
+      }
+
+      return {
+        canceled: false,
+        filePath: result.filePath
+      };
+    });
+
+    ipcMain.handle("export-ticket", async (_, payload) => {
+      try {
+        const templatePath = getTemplatePath();
+        writeExportTicketLog("templatePath", templatePath);
+        writeExportTicketLog("payload", {
+          barCode: payload.barCode,
+          folder: payload.folder,
+          imageSource: payload.imageSource,
+          filmName: payload.filmName
+        });
+
+        const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+
+        const html = renderTemplate(htmlTemplate, {
+          filmName: payload.filmName,
+          filmNameEn: payload.filmNameEn,
+          countryName: payload.countryName,
+          duration: payload.duration,
+          date: payload.date,
+          datetime: payload.datetime,
+          room: payload.room,
+          seat: payload.seat,
+          imageSource: payload.imageSource,
+          qrImage: payload.qrImage,
+          barCode: payload.barCode,
+          categories: payload.categories,
+          floor: payload.floor
+        });
+
+        const outputPath = path.join(payload.folder, `${payload.barCode}.png`);
+        writeExportTicketLog("outputPath", outputPath);
+
+        fs.mkdirSync(payload.folder, { recursive: true });
+
+        await renderTicketImage(html, outputPath);
+
+        writeExportTicketLog("success", outputPath);
+        return outputPath;
+      } catch (error) {
+        console.error("[export-ticket] failed:", error);
+        writeExportTicketLog("failed", {
+          message: error instanceof Error ? error.message : "Unknown export-ticket error",
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        const message = error instanceof Error ? error.message : "Unknown export-ticket error";
+        throw new Error(`Xuất vé thất bại: ${message}`);
+      }
+    });
+
+    ipcMain.on("app:quit", () => {
+      app.quit();
+    });
+
+    createWindow();
+
+    app.on("activate", function () {
+      // On macOS it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
   });
-
-  ipcMain.on("app:quit", () => {
-    app.quit();
-  });
-
-  createWindow();
-
-  app.on("activate", function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
+}
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
