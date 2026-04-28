@@ -536,7 +536,7 @@ const Actions = ({
       key: "4",
       label: <span className="text-xs font-semibold">Thành tiền</span>,
       children: (
-        <p className="text-right flex-1 font-bold text-blue-600 self-center">
+        <p className="text-right flex-1 font-bold text-blue-600 self-center dark:text-amber-200">
           {formatMoney(totalPrice - priceDiscount)}
         </p>
       )
@@ -723,7 +723,7 @@ const Actions = ({
     <div
       data-seat-selection-ignore="true"
       className={cn(
-        "shrink-0 border-t border-emerald-900/20 bg-emerald-100/50 px-2 backdrop-blur-md dark:border-emerald-300/20 dark:bg-emerald-950/80",
+        "shrink-0 border-t border-emerald-900/20 bg-emerald-100/50 px-2 backdrop-blur-md dark:border-amber-100/18 dark:bg-[linear-gradient(180deg,rgba(24,22,24,0.98),rgba(8,9,12,0.98))] dark:shadow-[0_-18px_48px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(250,240,220,0.12)]",
         isCustomerView && "hidden"
       )}
     >
@@ -802,7 +802,7 @@ const Actions = ({
             </Form.Item>
           </Modal>
         </div>
-        <div className="flex-1 max-w-120 rounded-md bg-white px-4 py-2 backdrop-blur-md dark:bg-emerald-950/28">
+        <div className="flex-1 max-w-120 rounded-md border border-transparent bg-white px-4 py-2 backdrop-blur-md dark:border-amber-100/14 dark:bg-[#181518] dark:shadow-[0_10px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(250,240,220,0.08)]">
           <Descriptions size="small" items={items} column={2} />
         </div>
         <div className="text-xs">
@@ -814,8 +814,8 @@ const Actions = ({
           >
             <span className="text-xs">Xuất hóa đơn</span>
           </Checkbox>
-          <p className="text-slate-500 dark:text-slate-300">Tiền vừa bán:</p>
-          <p className="font-bold text-emerald-700 dark:text-emerald-300 text-sm">
+          <p className="text-slate-500 dark:text-stone-300">Tiền vừa bán:</p>
+          <p className="font-bold text-emerald-700 dark:text-amber-200 text-sm">
             {formatMoney(lastSaleTotal)}
           </p>
         </div>

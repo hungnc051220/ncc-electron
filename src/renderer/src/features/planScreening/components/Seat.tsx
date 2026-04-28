@@ -133,14 +133,17 @@ const Seat = ({
         canSelect && !isSelectingByOther && "selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
-        isBlockedOnline && "bg-trunks/50",
-        seat.status === 1 && !isPendingPayment && !isReleasedFromOrder && "bg-trunks text-white",
+        isBlockedOnline && "bg-trunks/50 dark:bg-gray-500",
+        seat.status === 1 &&
+          !isPendingPayment &&
+          !isReleasedFromOrder &&
+          "bg-trunks dark:bg-gray-700 text-white",
         seat.isContract && "bg-raditz text-white",
         (seat.isHold || isPendingPayment) && "bg-roshi text-white",
         seat.isInvitation && "bg-teal-500 text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white",
-        isSelectingByOther && !isSelected && "ring-1 ring-primary/70",
+        isSelectingByOther && !isSelected && "ring-1 ring-primary/70 dark:ring-white",
         isDimmed && "opacity-30 saturate-50",
         isSpotlighted && "ring-2 ring-white/90 shadow-[0_0_0_2px_rgba(59,130,246,0.55)] z-10",
         isSpotlighted && !isSelected && "opacity-100 saturate-100"

@@ -616,7 +616,8 @@ body,
   }
 
   .dark .showtimes-transparent-table .ant-table-tbody > tr:hover > td {
-    background: rgb(15 23 42 / 0.34) !important;
+    background: rgb(41 37 36 / 0.4) !important;
+    backdrop-filter: blur(3px);
   }
 
   @media (max-width: 1024px) {

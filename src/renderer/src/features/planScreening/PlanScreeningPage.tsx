@@ -654,7 +654,7 @@ const PlanScreeningPage = () => {
 
   return (
     <Spin spinning={!renderData && isFetching}>
-      <div className="relative flex flex-col h-screen overflow-hidden select-none">
+      <div className="relative flex flex-col h-screen overflow-hidden bg-app-bg select-none dark:bg-[#050609]">
         <Seats
           data={renderData}
           orders={renderOrders}
