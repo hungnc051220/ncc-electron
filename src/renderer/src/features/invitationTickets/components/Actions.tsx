@@ -200,7 +200,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
             setSelectedItem(res);
             setDialogPrintOpen(true);
           } catch (error) {
-            console.log(error);
+            message.error(getApiErrorMessage(error, "Lấy thông tin vé mời thất bại"));
           }
         }
         setSelectedSeats([]);

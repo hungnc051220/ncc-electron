@@ -329,6 +329,12 @@ const Tab1 = ({ filterValues }: Tab1Props) => {
     [rooms, hasCompareDate, filterValues.fromDate, filterValues.compareDate]
   );
 
+  const isChartDataReady =
+    hasFromDate &&
+    !!formatData &&
+    !isFetching &&
+    (!hasCompareDate || (!!compareFormatData && !isCompareFetching));
+
   const items: TabsProps["items"] = [
     {
       key: "chart",
@@ -336,7 +342,12 @@ const Tab1 = ({ filterValues }: Tab1Props) => {
       forceRender: true,
       children: hasFromDate ? (
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <RoomScreeningChart data={dataSource} rooms={rooms} filterValues={filterValues} />
+          <RoomScreeningChart
+            data={dataSource}
+            rooms={rooms}
+            filterValues={filterValues}
+            isReady={isChartDataReady}
+          />
         </div>
       ) : (
         <DateRangeRequiredEmptyState description="Vui lòng chọn quý để xem biểu đồ" />

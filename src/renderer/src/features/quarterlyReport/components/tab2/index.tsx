@@ -67,6 +67,11 @@ const Tab2 = ({ filterValues }: Tab2Props) => {
   const compareFormatData = (hasCompareDate ? compareData : undefined) as
     | MonthlyReportTicketProps
     | undefined;
+  const isChartDataReady =
+    hasFromDate &&
+    !!formatData &&
+    !isFetching &&
+    (!hasCompareDate || (!!compareFormatData && !isCompareFetching));
 
   function collectAllPrices(data: Manufacturer2[]) {
     const set = new Set<number>();
@@ -511,6 +516,7 @@ const Tab2 = ({ filterValues }: Tab2Props) => {
             currentData={currentTreeData}
             compareData={compareTreeData}
             filterValues={filterValues}
+            isReady={isChartDataReady}
           />
         </div>
       ) : (

@@ -9,5 +9,6 @@ export const useReportQuarterly = (dto: ReportQuarterlyDto, enabled = true) =>
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
+    refetchOnWindowFocus: false,
     enabled
   });

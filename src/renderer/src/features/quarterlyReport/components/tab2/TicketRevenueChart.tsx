@@ -1,19 +1,54 @@
-import { DualAxes, type DualAxesConfig } from "@ant-design/charts";
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+  type ChartData,
+  type ChartOptions
+} from "chart.js";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useThemeStore } from "@renderer/store/theme.store";
-import { theme as antdTheme } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { Spin, theme as antdTheme } from "antd";
+import { useMemo } from "react";
+import { Chart } from "react-chartjs-2";
 import { QuarterlyReportFilterValues } from "../../types";
 import { formatQuarterLabel } from "../../utils";
 import { TreeRow } from ".";
+
+ChartJS.register(
+  BarElement,
+  CategoryScale,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip
+);
 
 interface TicketRevenueChartProps {
   currentData: TreeRow[];
   compareData: TreeRow[];
   filterValues: QuarterlyReportFilterValues;
+  isReady: boolean;
 }
 
-type PeriodKey = "compare" | "current";
+interface ManufacturerChartData {
+  manufacturerName: string;
+  currentRevenue: number;
+  compareRevenue: number;
+  currentTickets: number;
+  compareTickets: number;
+  revenueDiff: number;
+  revenuePercent?: number;
+  ticketDiff: number;
+  ticketPercent?: number;
+}
 
 const formatCompactMoney = (value: number) => {
   if (Math.abs(value) >= 1_000_000_000) {
@@ -35,88 +70,51 @@ const getManufacturerTotals = (row?: TreeRow) => ({
 const TicketRevenueChart = ({
   currentData,
   compareData,
-  filterValues
+  filterValues,
+  isReady
 }: TicketRevenueChartProps) => {
   const hasCompareDate = !!filterValues.compareDate;
   const isDark = useThemeStore((state) => state.theme === "dark");
   const { token } = antdTheme.useToken();
-  const [hiddenPeriods, setHiddenPeriods] = useState<PeriodKey[]>([]);
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const [chartHeight, setChartHeight] = useState(360);
 
-  const togglePeriod = (period: PeriodKey) => {
-    setHiddenPeriods((current) => {
-      if (current.includes(period)) {
-        return current.filter((item) => item !== period);
-      }
+  const currentLabel = filterValues.fromDate ? formatQuarterLabel(filterValues.fromDate) : "";
+  const compareLabel = filterValues.compareDate ? formatQuarterLabel(filterValues.compareDate) : "";
 
-      if (current.length >= 1) {
-        return current;
-      }
-
-      return [...current, period];
-    });
-  };
-
-  useEffect(() => {
-    const container = chartContainerRef.current;
-
-    if (!container) {
-      return;
+  const chartData = useMemo<ManufacturerChartData[]>(() => {
+    if (!isReady) {
+      return [];
     }
 
-    const updateHeight = () => {
-      setChartHeight(Math.max(1, Math.floor(container.clientHeight)));
-    };
+    const manufacturerNames = Array.from(
+      new Set([
+        ...currentData.map((item) => item.name || ""),
+        ...compareData.map((item) => item.name || "")
+      ])
+    ).filter(Boolean);
 
-    updateHeight();
+    return manufacturerNames.map((manufacturerName) => {
+      const current = getManufacturerTotals(
+        currentData.find((item) => item.name === manufacturerName)
+      );
+      const compare = hasCompareDate
+        ? getManufacturerTotals(compareData.find((item) => item.name === manufacturerName))
+        : { tickets: 0, revenue: 0 };
+      const revenueDiff = current.revenue - compare.revenue;
+      const ticketDiff = current.tickets - compare.tickets;
 
-    const resizeObserver = new ResizeObserver(([entry]) => {
-      setChartHeight(Math.max(1, Math.floor(entry.contentRect.height)));
+      return {
+        manufacturerName,
+        currentRevenue: current.revenue,
+        compareRevenue: compare.revenue,
+        currentTickets: current.tickets,
+        compareTickets: compare.tickets,
+        revenueDiff,
+        revenuePercent: compare.revenue ? (revenueDiff / compare.revenue) * 100 : undefined,
+        ticketDiff,
+        ticketPercent: compare.tickets ? (ticketDiff / compare.tickets) * 100 : undefined
+      };
     });
-
-    resizeObserver.observe(container);
-
-    return () => resizeObserver.disconnect();
-  }, []);
-
-  if (!filterValues.fromDate || (!currentData.length && !compareData.length)) {
-    return null;
-  }
-
-  const currentLabel = formatQuarterLabel(filterValues.fromDate);
-  const compareLabel = filterValues.compareDate ? formatQuarterLabel(filterValues.compareDate) : "";
-  const manufacturerNames = Array.from(
-    new Set([
-      ...currentData.map((item) => item.name || ""),
-      ...compareData.map((item) => item.name || "")
-    ])
-  ).filter(Boolean);
-
-  const chartData = manufacturerNames.map((manufacturerName) => {
-    const current = getManufacturerTotals(
-      currentData.find((item) => item.name === manufacturerName)
-    );
-    const compare = hasCompareDate
-      ? getManufacturerTotals(compareData.find((item) => item.name === manufacturerName))
-      : { tickets: 0, revenue: 0 };
-    const revenueDiff = current.revenue - compare.revenue;
-    const revenuePercent = compare.revenue ? (revenueDiff / compare.revenue) * 100 : undefined;
-    const ticketDiff = current.tickets - compare.tickets;
-    const ticketPercent = compare.tickets ? (ticketDiff / compare.tickets) * 100 : undefined;
-
-    return {
-      manufacturerName,
-      currentRevenue: current.revenue,
-      compareRevenue: compare.revenue,
-      currentTickets: current.tickets,
-      compareTickets: compare.tickets,
-      revenueDiff,
-      revenuePercent,
-      ticketDiff,
-      ticketPercent
-    };
-  });
+  }, [compareData, currentData, hasCompareDate, isReady]);
 
   const totalCurrentRevenue = chartData.reduce((sum, item) => sum + item.currentRevenue, 0);
   const totalCompareRevenue = chartData.reduce((sum, item) => sum + item.compareRevenue, 0);
@@ -125,183 +123,199 @@ const TicketRevenueChart = ({
   const totalCompareTickets = chartData.reduce((sum, item) => sum + item.compareTickets, 0);
   const totalTicketDiff = totalCurrentTickets - totalCompareTickets;
 
-  const revenueSource = chartData
-    .flatMap((item) =>
-      hasCompareDate
-        ? [
-            {
-              manufacturerName: item.manufacturerName,
-              periodKey: "compare",
-              period: compareLabel,
-              revenue: item.compareRevenue
-            },
-            {
-              manufacturerName: item.manufacturerName,
-              periodKey: "current",
-              period: currentLabel,
-              revenue: item.currentRevenue
-            }
-          ]
-        : [
-            {
-              manufacturerName: item.manufacturerName,
-              periodKey: "current",
-              period: currentLabel,
-              revenue: item.currentRevenue
-            }
-          ]
-    )
-    .filter((item) => !hiddenPeriods.includes(item.periodKey as PeriodKey));
+  const textColor = token.colorText;
+  const mutedTextColor = token.colorTextSecondary;
+  const gridColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)";
+  const borderColor = token.colorBorderSecondary;
 
-  const ticketSource = chartData
-    .flatMap((item) =>
-      hasCompareDate
-        ? [
-            {
-              manufacturerName: item.manufacturerName,
-              periodKey: "compare",
-              period: compareLabel,
-              tickets: item.compareTickets
-            },
-            {
-              manufacturerName: item.manufacturerName,
-              periodKey: "current",
-              period: currentLabel,
-              tickets: item.currentTickets
-            }
-          ]
-        : [
-            {
-              manufacturerName: item.manufacturerName,
-              periodKey: "current",
-              period: currentLabel,
-              tickets: item.currentTickets
-            }
-          ]
-    )
-    .filter((item) => !hiddenPeriods.includes(item.periodKey as PeriodKey));
+  const data = useMemo<ChartData<"bar" | "line">>(() => {
+    const labels = chartData.map((item) => item.manufacturerName);
+    const datasets: ChartData<"bar" | "line">["datasets"] = [];
 
-  const chartConfig: DualAxesConfig = {
-    xField: "manufacturerName",
-    data: chartData,
-    height: chartHeight,
-    autoFit: true,
-    theme: {
-      type: isDark ? "dark" : "light",
-      view: {
-        viewFill: "transparent"
-      }
-    },
-    axis: {
-      x: {
-        title: false
-      },
-      y: {
-        title: "",
-        titleFillOpacity: 0,
-        titleFontSize: 0,
-        titleSpacing: 0
-      }
-    },
-    legend: false,
-    children: [
-      {
-        type: "interval",
-        data: revenueSource,
-        xField: "manufacturerName",
-        yField: "revenue",
-        colorField: "period",
-        transform: [{ type: "dodgeX" }],
-        axis: {
-          x: {
-            title: false,
-            labelAutoHide: true,
-            labelAutoRotate: false,
-            labelFill: token.colorTextSecondary,
-            line: true,
-            lineStroke: token.colorBorderSecondary,
-            tickStroke: token.colorBorderSecondary
-          },
-          y: {
-            title: "",
-            titleFillOpacity: 0,
-            titleFontSize: 0,
-            titleSpacing: 0,
-            grid: true,
-            gridLineStroke: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)",
-            labelFill: token.colorTextSecondary,
-            labelFormatter: (value: number) => formatCompactMoney(value)
-          }
+    if (hasCompareDate) {
+      datasets.push(
+        {
+          type: "bar",
+          label: `${compareLabel} - Doanh thu`,
+          data: chartData.map((item) => item.compareRevenue),
+          yAxisID: "revenue",
+          backgroundColor: "#738095",
+          borderColor: "#738095",
+          borderRadius: 4,
+          barPercentage: 0.55,
+          categoryPercentage: 0.64,
+          order: 2
         },
-        scale: {
-          color: {
-            range: hasCompareDate ? ["#94a3b8", "#16a34a"] : ["#16a34a"]
-          }
-        },
-        style: {
-          radiusTopLeft: 4,
-          radiusTopRight: 4,
-          maxWidth: hasCompareDate ? 26 : 40
-        },
-        tooltip: {
-          title: (datum: { manufacturerName: string }) => datum.manufacturerName,
-          items: [
-            {
-              field: "revenue",
-              name: "Doanh thu",
-              valueFormatter: (value: number) => formatMoney(value)
-            }
-          ]
+        {
+          type: "line",
+          label: `${compareLabel} - Tổng vé`,
+          data: chartData.map((item) => item.compareTickets),
+          yAxisID: "tickets",
+          borderColor: "#64748b",
+          backgroundColor: "#64748b",
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 4,
+          tension: 0.42,
+          order: 1
         }
+      );
+    }
+
+    datasets.push(
+      {
+        type: "bar",
+        label: `${currentLabel} - Doanh thu`,
+        data: chartData.map((item) => item.currentRevenue),
+        yAxisID: "revenue",
+        backgroundColor: "#3b82f6",
+        borderColor: "#3b82f6",
+        borderRadius: 4,
+        barPercentage: 0.55,
+        categoryPercentage: 0.64,
+        order: 2
       },
       {
         type: "line",
-        data: ticketSource,
-        xField: "manufacturerName",
-        yField: "tickets",
-        colorField: "period",
-        shapeField: "smooth",
-        scale: {
-          y: {
-            independent: true,
-            key: "tickets"
-          },
-          color: {
-            range: hasCompareDate ? ["#64748b", "#1677ff"] : ["#1677ff"]
+        label: `${currentLabel} - Tổng vé`,
+        data: chartData.map((item) => item.currentTickets),
+        yAxisID: "tickets",
+        borderColor: "#2563ff",
+        backgroundColor: "#2563ff",
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 4,
+        tension: 0.42,
+        order: 1
+      }
+    );
+
+    return { labels, datasets };
+  }, [chartData, compareLabel, currentLabel, hasCompareDate]);
+
+  const options = useMemo<ChartOptions<"bar" | "line">>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: {
+        intersect: false,
+        mode: "index"
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom",
+          align: "center",
+          labels: {
+            boxHeight: 8,
+            boxWidth: 18,
+            color: mutedTextColor,
+            padding: 16,
+            usePointStyle: true
           }
-        },
-        axis: {
-          y: {
-            position: "right",
-            title: "",
-            titleFillOpacity: 0,
-            titleFontSize: 0,
-            titleSpacing: 0,
-            grid: null,
-            labelFill: token.colorTextSecondary,
-            labelFormatter: (value: number) => formatNumber(value)
-          }
-        },
-        style: {
-          lineWidth: 2
-        },
-        point: {
-          sizeField: 3,
-          shapeField: "circle"
         },
         tooltip: {
-          items: [
-            {
-              field: "tickets",
-              name: "Tổng vé",
-              valueFormatter: (value: number) => formatNumber(value)
+          backgroundColor: isDark ? "rgba(15,23,42,0.96)" : "rgba(255,255,255,0.98)",
+          bodyColor: textColor,
+          borderColor,
+          borderWidth: 1,
+          titleColor: textColor,
+          padding: 10,
+          callbacks: {
+            label: (context) => {
+              const label = context.dataset.label || "";
+              const value = Number(context.parsed.y || 0);
+
+              if (context.dataset.yAxisID === "revenue") {
+                return `${label}: ${formatMoney(value)}`;
+              }
+
+              return `${label}: ${formatNumber(value)}`;
             }
-          ]
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          border: {
+            color: borderColor
+          },
+          ticks: {
+            color: mutedTextColor,
+            maxRotation: 0,
+            minRotation: 0
+          }
+        },
+        revenue: {
+          type: "linear",
+          position: "left",
+          beginAtZero: true,
+          grid: {
+            color: gridColor,
+            drawTicks: false
+          },
+          border: {
+            color: borderColor
+          },
+          title: {
+            display: true,
+            align: "start",
+            color: textColor,
+            font: {
+              size: 12,
+              weight: 500
+            },
+            padding: {
+              bottom: 8
+            },
+            text: "Doanh thu"
+          },
+          ticks: {
+            color: mutedTextColor,
+            callback: (value) => formatCompactMoney(Number(value))
+          }
+        },
+        tickets: {
+          type: "linear",
+          position: "right",
+          beginAtZero: true,
+          grid: {
+            drawOnChartArea: false,
+            drawTicks: false
+          },
+          border: {
+            color: borderColor
+          },
+          title: {
+            display: true,
+            align: "end",
+            color: textColor,
+            font: {
+              size: 12,
+              weight: 500
+            },
+            padding: {
+              bottom: 8
+            },
+            text: "Tổng vé"
+          },
+          ticks: {
+            color: mutedTextColor,
+            callback: (value) => formatNumber(Number(value))
+          }
         }
       }
-    ],
-    padding: [32, 72, 54, 64]
-  };
+    }),
+    [borderColor, gridColor, isDark, mutedTextColor, textColor]
+  );
+
+  if (!filterValues.fromDate) {
+    return null;
+  }
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm dark:border-white/10 dark:bg-app-bg-container dark:text-slate-100 dark:shadow-none">
@@ -315,112 +329,87 @@ const TicketRevenueChart = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-start justify-end gap-4 text-right">
-          <div>
-            <div className="text-xs text-muted-foreground">{currentLabel} - Doanh thu</div>
-            <div className="text-base font-semibold">{formatCompactMoney(totalCurrentRevenue)}</div>
+        {isReady && chartData.length > 0 && (
+          <div className="flex flex-wrap items-start justify-end gap-4 text-right">
+            <div>
+              <div className="text-xs text-muted-foreground">{currentLabel} - Doanh thu</div>
+              <div className="text-base font-semibold">
+                {formatCompactMoney(totalCurrentRevenue)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">{currentLabel} - Tổng vé</div>
+              <div className="text-base font-semibold">{formatNumber(totalCurrentTickets)}</div>
+            </div>
+            {hasCompareDate && (
+              <>
+                <div>
+                  <div className="text-xs text-muted-foreground">{compareLabel} - Doanh thu</div>
+                  <div className="text-base font-semibold">
+                    {formatCompactMoney(totalCompareRevenue)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">{compareLabel} - Tổng vé</div>
+                  <div className="text-base font-semibold">{formatNumber(totalCompareTickets)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Chênh lệch DT</div>
+                  <div
+                    className={`text-base font-semibold ${
+                      totalRevenueDiff > 0
+                        ? "text-green-600 dark:text-green-400"
+                        : totalRevenueDiff < 0
+                          ? "text-red-600"
+                          : ""
+                    }`}
+                  >
+                    {totalRevenueDiff > 0 ? "+" : ""}
+                    {formatCompactMoney(totalRevenueDiff)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Chênh lệch vé</div>
+                  <div
+                    className={`text-base font-semibold ${
+                      totalTicketDiff > 0
+                        ? "text-green-600 dark:text-green-400"
+                        : totalTicketDiff < 0
+                          ? "text-red-600"
+                          : ""
+                    }`}
+                  >
+                    {totalTicketDiff > 0 ? "+" : ""}
+                    {formatNumber(totalTicketDiff)}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">{currentLabel} - Tổng vé</div>
-            <div className="text-base font-semibold">{formatNumber(totalCurrentTickets)}</div>
-          </div>
-          {hasCompareDate && (
-            <>
-              <div>
-                <div className="text-xs text-muted-foreground">{compareLabel} - Doanh thu</div>
-                <div className="text-base font-semibold">
-                  {formatCompactMoney(totalCompareRevenue)}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">{compareLabel} - Tổng vé</div>
-                <div className="text-base font-semibold">{formatNumber(totalCompareTickets)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Chênh lệch DT</div>
-                <div
-                  className={`text-base font-semibold ${
-                    totalRevenueDiff > 0
-                      ? "text-green-600 dark:text-green-400"
-                      : totalRevenueDiff < 0
-                        ? "text-red-600"
-                        : ""
-                  }`}
-                >
-                  {totalRevenueDiff > 0 ? "+" : ""}
-                  {formatCompactMoney(totalRevenueDiff)}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Chênh lệch vé</div>
-                <div
-                  className={`text-base font-semibold ${
-                    totalTicketDiff > 0
-                      ? "text-green-600 dark:text-green-400"
-                      : totalTicketDiff < 0
-                        ? "text-red-600"
-                        : ""
-                  }`}
-                >
-                  {totalTicketDiff > 0 ? "+" : ""}
-                  {formatNumber(totalTicketDiff)}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
-      <div
-        ref={chartContainerRef}
-        className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-md border border-slate-100 bg-slate-50/40 px-2 pb-1 pt-2 dark:border-white/8 dark:bg-black/10 [&_.g2-tooltip]:text-slate-900"
-      >
-        <DualAxes key={chartHeight} {...chartConfig} />
-      </div>
-
-      <div className="mt-2 flex shrink-0 flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-        <span className="mr-2 inline-flex items-center gap-1.5">
-          <span className="size-2 rounded-sm bg-[#16a34a]" />
-          Doanh thu
-        </span>
-        <span className="mr-4 inline-flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded bg-[#1677ff]" />
-          Tổng vé
-        </span>
-        {hasCompareDate && (
-          <>
-            <button
-              type="button"
-              className={`inline-flex items-center gap-1.5 rounded px-2 py-1 transition hover:bg-slate-100 dark:hover:bg-white/10 ${
-                hiddenPeriods.includes("compare") ? "opacity-45" : ""
-              }`}
-              onClick={() => togglePeriod("compare")}
-            >
-              <span className="size-2 rounded-sm bg-slate-400" />
-              {compareLabel}
-            </button>
-            <button
-              type="button"
-              className={`inline-flex items-center gap-1.5 rounded px-2 py-1 transition hover:bg-slate-100 dark:hover:bg-white/10 ${
-                hiddenPeriods.includes("current") ? "opacity-45" : ""
-              }`}
-              onClick={() => togglePeriod("current")}
-            >
-              <span className="size-2 rounded-sm bg-[#16a34a]" />
-              {currentLabel}
-            </button>
-          </>
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-md border border-slate-100 bg-slate-50/40 px-2 pb-1 pt-2 dark:border-white/8 dark:bg-black/10 [&_.chartjs-tooltip]:text-slate-900">
+        {isReady && chartData.length > 0 ? (
+          <Chart data={data} options={options} type="bar" />
+        ) : (
+          <div className="flex h-full min-h-52 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+            {!isReady && <Spin size="large" />}
+            <div>{isReady ? "Không có dữ liệu" : "Đang tải dữ liệu..."}</div>
+          </div>
         )}
       </div>
 
       {hasCompareDate && chartData.some((item) => item.revenuePercent !== undefined) && (
         <div className="mt-1 shrink-0 rounded-md border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs text-muted-foreground dark:border-white/8 dark:bg-white/4">
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2 xl:grid-cols-4">
             {chartData
               .filter((item) => item.revenuePercent !== undefined)
               .map((item) => (
-                <span key={item.manufacturerName}>
-                  {item.manufacturerName}:{" "}
+                <div key={item.manufacturerName} className="min-w-0 truncate">
+                  <span className="text-slate-700 dark:text-slate-200">
+                    {item.manufacturerName}:{" "}
+                  </span>
                   <span
                     className={
                       item.revenueDiff > 0
@@ -441,7 +430,7 @@ const TicketRevenueChart = ({
                       </>
                     )}
                   </span>
-                </span>
+                </div>
               ))}
           </div>
         </div>

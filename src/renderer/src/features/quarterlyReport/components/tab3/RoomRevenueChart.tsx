@@ -1,19 +1,54 @@
-import { Bar, type BarConfig } from "@ant-design/charts";
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip,
+  type ChartData,
+  type ChartOptions
+} from "chart.js";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useThemeStore } from "@renderer/store/theme.store";
-import { theme as antdTheme } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { Spin, theme as antdTheme } from "antd";
+import { useMemo } from "react";
+import { Chart } from "react-chartjs-2";
 import { QuarterlyReportFilterValues } from "../../types";
 import { formatQuarterLabel } from "../../utils";
 import { TimeTreeRow } from ".";
+
+ChartJS.register(
+  BarElement,
+  CategoryScale,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip
+);
 
 interface RoomRevenueChartProps {
   currentData: TimeTreeRow[];
   compareData: TimeTreeRow[];
   filterValues: QuarterlyReportFilterValues;
+  isReady: boolean;
 }
 
-type PeriodKey = "compare" | "current";
+interface RoomRevenueChartData {
+  room: string;
+  currentRevenue: number;
+  compareRevenue: number;
+  currentTickets: number;
+  compareTickets: number;
+  revenueDiff: number;
+  revenuePercent?: number;
+  ticketDiff: number;
+  ticketPercent?: number;
+}
 
 const formatCompactMoney = (value: number) => {
   if (Math.abs(value) >= 1_000_000_000) {
@@ -32,249 +67,350 @@ const sumRoomTotals = (row?: TimeTreeRow) => ({
   revenue: row?.totalRevenue || 0
 });
 
-const RoomRevenueChart = ({ currentData, compareData, filterValues }: RoomRevenueChartProps) => {
+const compareRoomLabel = (a: string, b: string) =>
+  a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+
+const RoomRevenueChart = ({
+  currentData,
+  compareData,
+  filterValues,
+  isReady
+}: RoomRevenueChartProps) => {
   const hasCompareDate = !!filterValues.compareDate;
   const isDark = useThemeStore((state) => state.theme === "dark");
   const { token } = antdTheme.useToken();
-  const [hiddenPeriods, setHiddenPeriods] = useState<PeriodKey[]>([]);
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const [chartHeight, setChartHeight] = useState(360);
 
-  const togglePeriod = (period: PeriodKey) => {
-    setHiddenPeriods((current) => {
-      if (current.includes(period)) {
-        return current.filter((item) => item !== period);
-      }
+  const currentLabel = filterValues.fromDate ? formatQuarterLabel(filterValues.fromDate) : "";
+  const compareLabel = filterValues.compareDate ? formatQuarterLabel(filterValues.compareDate) : "";
 
-      if (current.length >= 1) {
-        return current;
-      }
-
-      return [...current, period];
-    });
-  };
-
-  useEffect(() => {
-    const container = chartContainerRef.current;
-
-    if (!container) {
-      return;
+  const chartData = useMemo<RoomRevenueChartData[]>(() => {
+    if (!isReady) {
+      return [];
     }
 
-    const resizeObserver = new ResizeObserver(([entry]) => {
-      setChartHeight(Math.max(1, Math.floor(entry.contentRect.height)));
+    const roomLabels = Array.from(
+      new Set([...currentData.map((item) => item.label), ...compareData.map((item) => item.label)])
+    ).sort(compareRoomLabel);
+
+    return roomLabels.map((label) => {
+      const currentTotals = sumRoomTotals(currentData.find((item) => item.label === label));
+      const compareTotals = hasCompareDate
+        ? sumRoomTotals(compareData.find((item) => item.label === label))
+        : { tickets: 0, revenue: 0 };
+      const revenueDiff = currentTotals.revenue - compareTotals.revenue;
+      const ticketDiff = currentTotals.tickets - compareTotals.tickets;
+
+      return {
+        room: label,
+        currentRevenue: currentTotals.revenue,
+        compareRevenue: compareTotals.revenue,
+        currentTickets: currentTotals.tickets,
+        compareTickets: compareTotals.tickets,
+        revenueDiff,
+        revenuePercent: compareTotals.revenue
+          ? (revenueDiff / compareTotals.revenue) * 100
+          : undefined,
+        ticketDiff,
+        ticketPercent: compareTotals.tickets
+          ? (ticketDiff / compareTotals.tickets) * 100
+          : undefined
+      };
     });
+  }, [compareData, currentData, hasCompareDate, isReady]);
 
-    resizeObserver.observe(container);
+  const totalCurrentRevenue = chartData.reduce((sum, item) => sum + item.currentRevenue, 0);
+  const totalCompareRevenue = chartData.reduce((sum, item) => sum + item.compareRevenue, 0);
+  const totalRevenueDiff = totalCurrentRevenue - totalCompareRevenue;
+  const totalCurrentTickets = chartData.reduce((sum, item) => sum + item.currentTickets, 0);
+  const totalCompareTickets = chartData.reduce((sum, item) => sum + item.compareTickets, 0);
+  const totalTicketDiff = totalCurrentTickets - totalCompareTickets;
 
-    return () => resizeObserver.disconnect();
-  }, []);
+  const textColor = token.colorText;
+  const mutedTextColor = token.colorTextSecondary;
+  const gridColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)";
+  const borderColor = token.colorBorderSecondary;
 
-  if (!filterValues.fromDate || (!currentData.length && !compareData.length)) {
-    return null;
-  }
+  const chartJsData = useMemo<ChartData<"bar" | "line">>(() => {
+    const labels = chartData.map((item) => item.room);
+    const datasets: ChartData<"bar" | "line">["datasets"] = [];
 
-  const currentLabel = formatQuarterLabel(filterValues.fromDate);
-  const compareLabel = filterValues.compareDate ? formatQuarterLabel(filterValues.compareDate) : "";
-  const roomLabels = Array.from(
-    new Set([...currentData.map((item) => item.label), ...compareData.map((item) => item.label)])
+    if (hasCompareDate) {
+      datasets.push(
+        {
+          type: "bar",
+          label: `${compareLabel} - Doanh thu`,
+          data: chartData.map((item) => item.compareRevenue),
+          yAxisID: "revenue",
+          backgroundColor: "#738095",
+          borderColor: "#738095",
+          borderRadius: 4,
+          barPercentage: 0.55,
+          categoryPercentage: 0.64,
+          order: 2
+        },
+        {
+          type: "line",
+          label: `${compareLabel} - Tổng vé`,
+          data: chartData.map((item) => item.compareTickets),
+          yAxisID: "tickets",
+          borderColor: "#64748b",
+          backgroundColor: "#64748b",
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 4,
+          tension: 0.42,
+          order: 1
+        }
+      );
+    }
+
+    datasets.push(
+      {
+        type: "bar",
+        label: `${currentLabel} - Doanh thu`,
+        data: chartData.map((item) => item.currentRevenue),
+        yAxisID: "revenue",
+        backgroundColor: "#f97316",
+        borderColor: "#f97316",
+        borderRadius: 4,
+        barPercentage: 0.55,
+        categoryPercentage: 0.64,
+        order: 2
+      },
+      {
+        type: "line",
+        label: `${currentLabel} - Tổng vé`,
+        data: chartData.map((item) => item.currentTickets),
+        yAxisID: "tickets",
+        borderColor: "#ea580c",
+        backgroundColor: "#ea580c",
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 4,
+        tension: 0.42,
+        order: 1
+      }
+    );
+
+    return { labels, datasets };
+  }, [chartData, compareLabel, currentLabel, hasCompareDate]);
+
+  const options = useMemo<ChartOptions<"bar" | "line">>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: {
+        intersect: false,
+        mode: "index"
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom",
+          labels: {
+            boxHeight: 8,
+            boxWidth: 18,
+            color: mutedTextColor,
+            padding: 16,
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          backgroundColor: isDark ? "rgba(15,23,42,0.96)" : "rgba(255,255,255,0.98)",
+          bodyColor: textColor,
+          borderColor,
+          borderWidth: 1,
+          titleColor: textColor,
+          padding: 10,
+          callbacks: {
+            label: (context) => {
+              const label = context.dataset.label || "";
+              const value = Number(context.parsed.y || 0);
+
+              if (context.dataset.yAxisID === "revenue") {
+                return `${label}: ${formatMoney(value)}`;
+              }
+
+              return `${label}: ${formatNumber(value)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          border: {
+            color: borderColor
+          },
+          ticks: {
+            color: mutedTextColor,
+            maxRotation: 0,
+            minRotation: 0
+          }
+        },
+        revenue: {
+          type: "linear",
+          position: "left",
+          beginAtZero: true,
+          grid: {
+            color: gridColor,
+            drawTicks: false
+          },
+          border: {
+            color: borderColor
+          },
+          title: {
+            display: true,
+            align: "start",
+            color: textColor,
+            font: {
+              size: 12,
+              weight: 500
+            },
+            padding: {
+              bottom: 8
+            },
+            text: "Doanh thu"
+          },
+          ticks: {
+            color: mutedTextColor,
+            callback: (value) => formatCompactMoney(Number(value))
+          }
+        },
+        tickets: {
+          type: "linear",
+          position: "right",
+          beginAtZero: true,
+          grid: {
+            drawOnChartArea: false,
+            drawTicks: false
+          },
+          border: {
+            color: borderColor
+          },
+          title: {
+            display: true,
+            align: "end",
+            color: textColor,
+            font: {
+              size: 12,
+              weight: 500
+            },
+            padding: {
+              bottom: 8
+            },
+            text: "Tổng vé"
+          },
+          ticks: {
+            color: mutedTextColor,
+            callback: (value) => formatNumber(Number(value))
+          }
+        }
+      }
+    }),
+    [borderColor, gridColor, isDark, mutedTextColor, textColor]
   );
 
-  const chartData = roomLabels.map((label) => {
-    const currentTotals = sumRoomTotals(currentData.find((item) => item.label === label));
-    const compareTotals = hasCompareDate
-      ? sumRoomTotals(compareData.find((item) => item.label === label))
-      : { tickets: 0, revenue: 0 };
-    const revenueDiff = currentTotals.revenue - compareTotals.revenue;
-    const revenuePercent = compareTotals.revenue
-      ? (revenueDiff / compareTotals.revenue) * 100
-      : undefined;
-
-    return {
-      room: label,
-      currentRevenue: currentTotals.revenue,
-      compareRevenue: compareTotals.revenue,
-      currentTickets: currentTotals.tickets,
-      compareTickets: compareTotals.tickets,
-      revenueDiff,
-      revenuePercent
-    };
-  });
-
-  const totalCurrent = chartData.reduce((sum, item) => sum + item.currentRevenue, 0);
-  const totalCompare = chartData.reduce((sum, item) => sum + item.compareRevenue, 0);
-  const totalDiff = totalCurrent - totalCompare;
-
-  const chartSource = chartData
-    .flatMap((item) =>
-      hasCompareDate
-        ? [
-            {
-              room: item.room,
-              periodKey: "compare",
-              period: compareLabel,
-              value: item.compareRevenue
-            },
-            {
-              room: item.room,
-              periodKey: "current",
-              period: currentLabel,
-              value: item.currentRevenue
-            }
-          ]
-        : [
-            {
-              room: item.room,
-              periodKey: "current",
-              period: currentLabel,
-              value: item.currentRevenue
-            }
-          ]
-    )
-    .filter((item) => !hiddenPeriods.includes(item.periodKey as PeriodKey));
-
-  const chartConfig: BarConfig = {
-    data: chartSource,
-    xField: "room",
-    yField: "value",
-    colorField: "period",
-    group: hasCompareDate,
-    height: chartHeight,
-    autoFit: true,
-    color: hasCompareDate ? ["#94a3b8", "#f97316"] : ["#f97316"],
-    theme: {
-      type: isDark ? "dark" : "light",
-      view: {
-        viewFill: "transparent"
-      }
-    },
-    axis: {
-      x: {
-        title: false,
-        labelFill: token.colorTextSecondary,
-        labelFormatter: (value: number) => formatCompactMoney(value)
-      },
-      y: {
-        title: false,
-        labelAutoHide: true,
-        labelAutoRotate: false,
-        labelFill: token.colorTextSecondary,
-        line: true,
-        lineStroke: token.colorBorderSecondary,
-        tickStroke: token.colorBorderSecondary
-      }
-    },
-    legend: false,
-    tooltip: {
-      title: (datum: { room: string }) => datum.room,
-      items: [
-        {
-          field: "value",
-          name: "Doanh thu",
-          valueFormatter: (value: number) => formatMoney(value)
-        }
-      ]
-    },
-    label: {
-      text: (datum: { value: number }) => (datum.value ? formatCompactMoney(datum.value) : ""),
-      position: "right",
-      style: {
-        fontSize: 11,
-        fontWeight: 600,
-        fill: token.colorText
-      }
-    },
-    style: {
-      radiusTopRight: 4,
-      radiusBottomRight: 4,
-      maxWidth: hasCompareDate ? 18 : 28
-    },
-    padding: [24, 88, 36, 72]
-  };
+  if (!filterValues.fromDate) {
+    return null;
+  }
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm dark:border-white/10 dark:bg-app-bg-container dark:text-slate-100 dark:shadow-none">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold">
-            {hasCompareDate ? "So sánh doanh thu theo phòng chiếu" : "Doanh thu theo phòng chiếu"}
+            {hasCompareDate
+              ? "So sánh doanh thu, tổng vé theo phòng chiếu"
+              : "Doanh thu, tổng vé theo phòng chiếu"}
           </div>
           <div className="text-xs text-muted-foreground">
             {hasCompareDate ? `${currentLabel} và ${compareLabel}` : currentLabel}
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-4 text-right">
-          <div>
-            <div className="text-xs text-muted-foreground">{currentLabel}</div>
-            <div className="text-base font-semibold">{formatCompactMoney(totalCurrent)}</div>
-          </div>
-          {hasCompareDate && (
-            <>
-              <div>
-                <div className="text-xs text-muted-foreground">{compareLabel}</div>
-                <div className="text-base font-semibold">{formatCompactMoney(totalCompare)}</div>
+        {isReady && chartData.length > 0 && (
+          <div className="flex flex-wrap items-start justify-end gap-4 text-right">
+            <div>
+              <div className="text-xs text-muted-foreground">{currentLabel} - Doanh thu</div>
+              <div className="text-base font-semibold">
+                {formatCompactMoney(totalCurrentRevenue)}
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Chênh lệch</div>
-                <div
-                  className={`text-base font-semibold ${
-                    totalDiff > 0
-                      ? "text-green-600 dark:text-green-400"
-                      : totalDiff < 0
-                        ? "text-red-600"
-                        : ""
-                  }`}
-                >
-                  {totalDiff > 0 ? "+" : ""}
-                  {formatCompactMoney(totalDiff)}
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">{currentLabel} - Tổng vé</div>
+              <div className="text-base font-semibold">{formatNumber(totalCurrentTickets)}</div>
+            </div>
+            {hasCompareDate && (
+              <>
+                <div>
+                  <div className="text-xs text-muted-foreground">{compareLabel} - Doanh thu</div>
+                  <div className="text-base font-semibold">
+                    {formatCompactMoney(totalCompareRevenue)}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">{compareLabel} - Tổng vé</div>
+                  <div className="text-base font-semibold">{formatNumber(totalCompareTickets)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Chênh lệch DT</div>
+                  <div
+                    className={`text-base font-semibold ${
+                      totalRevenueDiff > 0
+                        ? "text-green-600 dark:text-green-400"
+                        : totalRevenueDiff < 0
+                          ? "text-red-600"
+                          : ""
+                    }`}
+                  >
+                    {totalRevenueDiff > 0 ? "+" : ""}
+                    {formatCompactMoney(totalRevenueDiff)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Chênh lệch vé</div>
+                  <div
+                    className={`text-base font-semibold ${
+                      totalTicketDiff > 0
+                        ? "text-green-600 dark:text-green-400"
+                        : totalTicketDiff < 0
+                          ? "text-red-600"
+                          : ""
+                    }`}
+                  >
+                    {totalTicketDiff > 0 ? "+" : ""}
+                    {formatNumber(totalTicketDiff)}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      <div
-        ref={chartContainerRef}
-        className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-md border border-slate-100 bg-slate-50/40 px-2 pb-1 pt-2 dark:border-white/8 dark:bg-black/10 [&_.g2-tooltip]:text-slate-900"
-      >
-        <Bar {...chartConfig} />
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-md border border-slate-100 bg-slate-50/40 px-2 pb-1 pt-2 dark:border-white/8 dark:bg-black/10">
+        {isReady && chartData.length > 0 ? (
+          <Chart data={chartJsData} options={options} type="bar" />
+        ) : (
+          <div className="flex h-full min-h-52 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+            {!isReady && <Spin size="large" />}
+            <div>{isReady ? "Không có dữ liệu" : "Đang tải dữ liệu..."}</div>
+          </div>
+        )}
       </div>
-
-      {hasCompareDate && (
-        <div className="mt-2 flex shrink-0 items-center justify-center gap-2 text-xs text-muted-foreground">
-          <button
-            type="button"
-            className={`inline-flex items-center gap-1.5 rounded px-2 py-1 transition hover:bg-slate-100 dark:hover:bg-white/10 ${
-              hiddenPeriods.includes("compare") ? "opacity-45" : ""
-            }`}
-            onClick={() => togglePeriod("compare")}
-          >
-            <span className="size-2 rounded-sm bg-slate-400" />
-            {compareLabel}
-          </button>
-          <button
-            type="button"
-            className={`inline-flex items-center gap-1.5 rounded px-2 py-1 transition hover:bg-slate-100 dark:hover:bg-white/10 ${
-              hiddenPeriods.includes("current") ? "opacity-45" : ""
-            }`}
-            onClick={() => togglePeriod("current")}
-          >
-            <span className="size-2 rounded-sm bg-[#f97316]" />
-            {currentLabel}
-          </button>
-        </div>
-      )}
 
       {hasCompareDate && chartData.some((item) => item.revenuePercent !== undefined) && (
         <div className="mt-1 shrink-0 rounded-md border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs text-muted-foreground dark:border-white/8 dark:bg-white/4">
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2 xl:grid-cols-4">
             {chartData
               .filter((item) => item.revenuePercent !== undefined)
               .map((item) => (
-                <span key={item.room}>
-                  {item.room}:{" "}
+                <div key={item.room} className="min-w-0 truncate">
+                  <span className="text-slate-700 dark:text-slate-200">{item.room}: </span>
                   <span
                     className={
                       item.revenueDiff > 0
@@ -284,11 +420,18 @@ const RoomRevenueChart = ({ currentData, compareData, filterValues }: RoomRevenu
                           : ""
                     }
                   >
-                    {item.revenueDiff > 0 ? "+" : ""}
+                    DT {item.revenueDiff > 0 ? "+" : ""}
                     {formatCompactMoney(item.revenueDiff)} ({item.revenuePercent! > 0 ? "+" : ""}
                     {item.revenuePercent!.toFixed(1)}%)
+                    {item.ticketPercent !== undefined && (
+                      <>
+                        {" / "}Vé {item.ticketDiff > 0 ? "+" : ""}
+                        {formatNumber(item.ticketDiff)} ({item.ticketPercent > 0 ? "+" : ""}
+                        {item.ticketPercent.toFixed(1)}%)
+                      </>
+                    )}
                   </span>
-                </span>
+                </div>
               ))}
           </div>
         </div>

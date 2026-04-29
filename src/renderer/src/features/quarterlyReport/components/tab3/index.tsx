@@ -32,6 +32,9 @@ interface Tab3Props {
   filterValues: QuarterlyReportFilterValues;
 }
 
+const compareRoomName = (a: string, b: string) =>
+  a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+
 const Tab3 = ({ filterValues }: Tab3Props) => {
   const hasFromDate = !!filterValues.fromDate;
   const hasCompareDate = !!filterValues.compareDate;
@@ -75,28 +78,12 @@ const Tab3 = ({ filterValues }: Tab3Props) => {
   }
 
   function mapToFullTimeTree(data: RoomReport[], allTimes: string[]): TimeTreeRow[] {
-    return data.map((room) => {
-      const roomRow: TimeTreeRow = {
-        key: `room-${room.roomName}`,
-        label: `Phòng ${room.roomName}`,
-        totalV: 0,
-        totalT: 0,
-        totalTickets: 0,
-        totalRevenue: 0,
-        children: []
-      };
-
-      allTimes.forEach((t) => {
-        roomRow[`${t}_V`] = 0;
-        roomRow[`${t}_T`] = 0;
-        roomRow[`${t}_C`] = 0;
-        roomRow[`${t}_R`] = 0;
-      });
-
-      room.projectDates.forEach((d) => {
-        const dateRow: TimeTreeRow = {
-          key: `room-${room.roomName}-${d.projectDate}`,
-          label: d.projectDate,
+    return [...data]
+      .sort((a, b) => compareRoomName(a.roomName, b.roomName))
+      .map((room) => {
+        const roomRow: TimeTreeRow = {
+          key: `room-${room.roomName}`,
+          label: `Phòng ${room.roomName}`,
           totalV: 0,
           totalT: 0,
           totalTickets: 0,
@@ -104,91 +91,109 @@ const Tab3 = ({ filterValues }: Tab3Props) => {
           children: []
         };
 
-        const onlineRow: TimeTreeRow = {
-          key: `${dateRow.key}-online`,
-          label: "Online",
-          totalV: 0,
-          totalT: 0,
-          totalTickets: 0,
-          totalRevenue: 0
-        };
-
-        const offlineRow: TimeTreeRow = {
-          key: `${dateRow.key}-offline`,
-          label: "Offline",
-          totalV: 0,
-          totalT: 0,
-          totalTickets: 0,
-          totalRevenue: 0
-        };
-
-        // init all time columns
         allTimes.forEach((t) => {
-          dateRow[`${t}_V`] = 0;
-          dateRow[`${t}_T`] = 0;
-          dateRow[`${t}_C`] = 0;
-          dateRow[`${t}_R`] = 0;
-
-          onlineRow[`${t}_V`] = 0;
-          onlineRow[`${t}_T`] = 0;
-          onlineRow[`${t}_C`] = 0;
-          onlineRow[`${t}_R`] = 0;
-
-          offlineRow[`${t}_V`] = 0;
-          offlineRow[`${t}_T`] = 0;
-          offlineRow[`${t}_C`] = 0;
-          offlineRow[`${t}_R`] = 0;
+          roomRow[`${t}_V`] = 0;
+          roomRow[`${t}_T`] = 0;
+          roomRow[`${t}_C`] = 0;
+          roomRow[`${t}_R`] = 0;
         });
 
-        d.projectTimes.forEach((t) => {
-          t.details.forEach((det) => {
-            const target = det.isOnline ? onlineRow : offlineRow;
+        room.projectDates.forEach((d) => {
+          const dateRow: TimeTreeRow = {
+            key: `room-${room.roomName}-${d.projectDate}`,
+            label: d.projectDate,
+            totalV: 0,
+            totalT: 0,
+            totalTickets: 0,
+            totalRevenue: 0,
+            children: []
+          };
 
-            // ---- channel row ----
-            target[`${t.projectTime}_V`] += det.quantityV;
-            target[`${t.projectTime}_T`] += det.quantityT;
-            target[`${t.projectTime}_C`] += det.conQuantity;
-            target[`${t.projectTime}_R`] += det.orderTotal;
+          const onlineRow: TimeTreeRow = {
+            key: `${dateRow.key}-online`,
+            label: "Online",
+            totalV: 0,
+            totalT: 0,
+            totalTickets: 0,
+            totalRevenue: 0
+          };
 
-            // ---- date row (sum online + offline) ----
-            dateRow[`${t.projectTime}_V`] += det.quantityV;
-            dateRow[`${t.projectTime}_T`] += det.quantityT;
-            dateRow[`${t.projectTime}_C`] += det.conQuantity;
-            dateRow[`${t.projectTime}_R`] += det.orderTotal;
+          const offlineRow: TimeTreeRow = {
+            key: `${dateRow.key}-offline`,
+            label: "Offline",
+            totalV: 0,
+            totalT: 0,
+            totalTickets: 0,
+            totalRevenue: 0
+          };
 
-            // ---- totals ----
-            target.totalV! += det.quantityV;
-            target.totalT! += det.quantityT;
-            target.totalTickets! += det.conQuantity;
-            target.totalRevenue! += det.orderTotal;
+          // init all time columns
+          allTimes.forEach((t) => {
+            dateRow[`${t}_V`] = 0;
+            dateRow[`${t}_T`] = 0;
+            dateRow[`${t}_C`] = 0;
+            dateRow[`${t}_R`] = 0;
 
-            dateRow.totalV! += det.quantityV;
-            dateRow.totalT! += det.quantityT;
-            dateRow.totalTickets! += det.conQuantity;
-            dateRow.totalRevenue! += det.orderTotal;
+            onlineRow[`${t}_V`] = 0;
+            onlineRow[`${t}_T`] = 0;
+            onlineRow[`${t}_C`] = 0;
+            onlineRow[`${t}_R`] = 0;
+
+            offlineRow[`${t}_V`] = 0;
+            offlineRow[`${t}_T`] = 0;
+            offlineRow[`${t}_C`] = 0;
+            offlineRow[`${t}_R`] = 0;
           });
+
+          d.projectTimes.forEach((t) => {
+            t.details.forEach((det) => {
+              const target = det.isOnline ? onlineRow : offlineRow;
+
+              // ---- channel row ----
+              target[`${t.projectTime}_V`] += det.quantityV;
+              target[`${t.projectTime}_T`] += det.quantityT;
+              target[`${t.projectTime}_C`] += det.conQuantity;
+              target[`${t.projectTime}_R`] += det.orderTotal;
+
+              // ---- date row (sum online + offline) ----
+              dateRow[`${t.projectTime}_V`] += det.quantityV;
+              dateRow[`${t.projectTime}_T`] += det.quantityT;
+              dateRow[`${t.projectTime}_C`] += det.conQuantity;
+              dateRow[`${t.projectTime}_R`] += det.orderTotal;
+
+              // ---- totals ----
+              target.totalV! += det.quantityV;
+              target.totalT! += det.quantityT;
+              target.totalTickets! += det.conQuantity;
+              target.totalRevenue! += det.orderTotal;
+
+              dateRow.totalV! += det.quantityV;
+              dateRow.totalT! += det.quantityT;
+              dateRow.totalTickets! += det.conQuantity;
+              dateRow.totalRevenue! += det.orderTotal;
+            });
+          });
+
+          // ===== SUM DATE → ROOM =====
+
+          allTimes.forEach((t) => {
+            roomRow[`${t}_V`] += dateRow[`${t}_V`] || 0;
+            roomRow[`${t}_T`] += dateRow[`${t}_T`] || 0;
+            roomRow[`${t}_C`] += dateRow[`${t}_C`] || 0;
+            roomRow[`${t}_R`] += dateRow[`${t}_R`] || 0;
+          });
+
+          roomRow.totalV! += dateRow.totalV || 0;
+          roomRow.totalT! += dateRow.totalT || 0;
+          roomRow.totalTickets! += dateRow.totalTickets || 0;
+          roomRow.totalRevenue! += dateRow.totalRevenue || 0;
+
+          dateRow.children!.push(onlineRow, offlineRow);
+          roomRow.children!.push(dateRow);
         });
 
-        // ===== SUM DATE → ROOM =====
-
-        allTimes.forEach((t) => {
-          roomRow[`${t}_V`] += dateRow[`${t}_V`] || 0;
-          roomRow[`${t}_T`] += dateRow[`${t}_T`] || 0;
-          roomRow[`${t}_C`] += dateRow[`${t}_C`] || 0;
-          roomRow[`${t}_R`] += dateRow[`${t}_R`] || 0;
-        });
-
-        roomRow.totalV! += dateRow.totalV || 0;
-        roomRow.totalT! += dateRow.totalT || 0;
-        roomRow.totalTickets! += dateRow.totalTickets || 0;
-        roomRow.totalRevenue! += dateRow.totalRevenue || 0;
-
-        dateRow.children!.push(onlineRow, offlineRow);
-        roomRow.children!.push(dateRow);
+        return roomRow;
       });
-
-      return roomRow;
-    });
   }
 
   function buildColumns(): ColumnsType<TimeTreeRow> {
@@ -293,7 +298,7 @@ const Tab3 = ({ filterValues }: Tab3Props) => {
   ): TimeTreeRow[] => {
     const roomLabels = Array.from(
       new Set([...currentTree.map((item) => item.label), ...compareTree.map((item) => item.label)])
-    );
+    ).sort(compareRoomName);
 
     return roomLabels.map((label, index) => {
       const currentRoom = currentTree.find((item) => item.label === label);
@@ -493,6 +498,12 @@ const Tab3 = ({ filterValues }: Tab3Props) => {
     [hasCompareDate, filterValues.fromDate, filterValues.compareDate]
   );
 
+  const isChartDataReady =
+    hasFromDate &&
+    !!formatData &&
+    !isFetching &&
+    (!hasCompareDate || (!!compareFormatData && !isCompareFetching));
+
   const items: TabsProps["items"] = [
     {
       key: "chart",
@@ -504,6 +515,7 @@ const Tab3 = ({ filterValues }: Tab3Props) => {
             currentData={currentTreeData}
             compareData={compareTreeData}
             filterValues={filterValues}
+            isReady={isChartDataReady}
           />
         </div>
       ) : (

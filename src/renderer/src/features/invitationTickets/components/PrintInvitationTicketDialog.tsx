@@ -130,8 +130,6 @@ const PrintInvitationTicketDialog = ({
     let outputPath: string | null = null;
     const qrBase64 = await generateQrCode(selectedItem.order.barCode);
 
-    console.log(selectedItem);
-
     try {
       setLoading(true);
       outputPath = await window.api.exportTicket({
