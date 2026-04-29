@@ -1,13 +1,16 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Form, Modal } from "antd";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { startTransition, useEffect, useState } from "react";
-import { ValuesProps } from ".";
+import { QuarterlyReportFilterValues } from "../types";
+import { formatQuarterLabel } from "../utils";
 
 interface FilterProps {
-  onSearch: (values: ValuesProps) => void;
-  filterValues: ValuesProps;
+  onSearch: (values: QuarterlyReportFilterValues) => void;
+  filterValues: QuarterlyReportFilterValues;
 }
+
+const formatQuarter = (value: Dayjs) => formatQuarterLabel(value.format());
 
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const [form] = Form.useForm();
@@ -15,7 +18,8 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
 
   useEffect(() => {
     form.setFieldsValue({
-      fromDate: filterValues.fromDate ? dayjs(filterValues.fromDate) : undefined
+      fromDate: filterValues.fromDate ? dayjs(filterValues.fromDate) : undefined,
+      compareDate: filterValues.compareDate ? dayjs(filterValues.compareDate) : undefined
     });
   }, [filterValues, form]);
 
@@ -56,10 +60,14 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             layout="vertical"
             form={form}
             onFinish={(values) => {
-              const { fromDate } = values;
+              const { compareDate, fromDate } = values;
               setOpen(false);
               onSearch({
-                fromDate: fromDate ? dayjs(fromDate).startOf("quarter").format() : undefined
+                fromDate: fromDate ? dayjs(fromDate).startOf("quarter").format() : undefined,
+                compareDate:
+                  fromDate && compareDate
+                    ? dayjs(compareDate).startOf("quarter").format()
+                    : undefined
               });
             }}
           >
@@ -74,8 +82,23 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           </>
         )}
       >
-        <Form.Item name="fromDate" label="Khoảng thời gian">
-          <DatePicker picker="quarter" className="w-full" allowClear />
+        <Form.Item name="fromDate" label="Thời gian">
+          <DatePicker
+            picker="quarter"
+            className="w-full"
+            allowClear
+            format={formatQuarter}
+            inputReadOnly
+          />
+        </Form.Item>
+        <Form.Item name="compareDate" label="Quý so sánh">
+          <DatePicker
+            picker="quarter"
+            className="w-full"
+            allowClear
+            format={formatQuarter}
+            inputReadOnly
+          />
         </Form.Item>
       </Modal>
     </>

@@ -7,8 +7,12 @@ import { useUploadImage } from "@renderer/hooks/useUploadImage";
 import { formatter } from "@renderer/lib/utils";
 import { DiscountProps } from "@shared/types";
 import type { FormProps, GetProp, UploadProps } from "antd";
-import { Form, Image, Input, InputNumber, Modal, Select, Upload } from "antd";
+import { DatePicker, Form, Image, Input, InputNumber, Modal, Select, Upload } from "antd";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import { rangePresets } from "@renderer/lib/dateRangePresets";
+import type { Dayjs } from "dayjs";
+
+const { RangePicker } = DatePicker;
 
 type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
@@ -18,6 +22,11 @@ type FieldType = {
   discountAmount?: number;
   discountRate?: number;
   image?: string;
+  dateRange?: [string, string];
+};
+
+type FormValues = Omit<FieldType, "dateRange"> & {
+  dateRange?: [Dayjs, Dayjs];
 };
 
 interface DiscountSettingsDialogProps {
@@ -33,7 +42,7 @@ const DiscountSettingsDialog = ({
 }: DiscountSettingsDialogProps) => {
   const { message } = useAntdApp();
 
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<FormValues>();
   const isEdit = !!editingDiscount;
 
   const discountTypeValue = Form.useWatch("discountType", form);
@@ -45,7 +54,7 @@ const DiscountSettingsDialog = ({
   const onOk = () => form.submit();
   const onCancel = () => onOpenChange(false);
 
-  const getInitialValues = (): FieldType | undefined => {
+  const getInitialValues = (): FormValues | undefined => {
     if (!editingDiscount) {
       return {
         discountName: "",
@@ -55,7 +64,7 @@ const DiscountSettingsDialog = ({
     return editingDiscount;
   };
 
-  const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+  const onFinish: FormProps<FormValues>["onFinish"] = (values: FormValues) => {
     if (!isEdit) {
       createDiscount.mutate(values, {
         onSuccess: () => {
@@ -138,8 +147,8 @@ const DiscountSettingsDialog = ({
       width={640}
     >
       <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>
-        <Form.Item<FieldType> name="image" hidden />
-        <Form.Item<FieldType>
+        <Form.Item<FormValues> name="image" hidden />
+        <Form.Item<FormValues>
           name="discountName"
           label="Tên khuyến mại, giảm giá"
           rules={[{ required: true, message: "Nhập tên khuyến mại, giảm giá" }]}
@@ -147,7 +156,7 @@ const DiscountSettingsDialog = ({
           <Input placeholder="Nhập tên khuyến mại, giảm giá" />
         </Form.Item>
         <div className="grid grid-cols-2 gap-x-4">
-          <Form.Item<FieldType>
+          <Form.Item<FormValues>
             name="discountType"
             label="Hình thức"
             rules={[{ required: true, message: "Nhập tên khuyến mại, giảm giá" }]}
@@ -167,7 +176,7 @@ const DiscountSettingsDialog = ({
             />
           </Form.Item>
           {discountTypeValue === "amount" ? (
-            <Form.Item<FieldType>
+            <Form.Item<FormValues>
               name="discountAmount"
               label="Giá trị"
               rules={[{ required: true, message: "Nhập giá trị" }]}
@@ -182,7 +191,7 @@ const DiscountSettingsDialog = ({
               />
             </Form.Item>
           ) : (
-            <Form.Item<FieldType>
+            <Form.Item<FormValues>
               name="discountRate"
               label="Giá trị"
               rules={[{ required: true, message: "Nhập giá trị" }]}
@@ -197,7 +206,12 @@ const DiscountSettingsDialog = ({
             </Form.Item>
           )}
         </div>
-        <Form.Item<FieldType> label="Ảnh">
+
+        <Form.Item<FormValues> name="dateRange" label="Khoảng thời gian">
+          <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
+        </Form.Item>
+
+        <Form.Item<FormValues> label="Ảnh">
           <Upload
             showUploadList={false}
             accept="image/png,image/jpeg"

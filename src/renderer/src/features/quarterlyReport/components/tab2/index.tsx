@@ -6,14 +6,12 @@ import type { TabsProps } from "antd";
 import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { QuarterlyReportFilterValues } from "../../types";
+import { formatQuarterLabel } from "../../utils";
 import ExportRevenueExcelButton from "./ExportExcel";
-import Filter from "./Filter";
+import TicketRevenueChart from "./TicketRevenueChart";
 import TabRevenue from "./TabRevenue";
-
-export interface ValuesProps {
-  fromDate?: string;
-}
 
 export interface TreeRow {
   key: string;
@@ -34,9 +32,13 @@ export interface TreeRow {
   children?: TreeRow[];
 }
 
-const Tab2 = () => {
-  const [filterValues, setFilterValues] = useState<ValuesProps>({});
+interface Tab2Props {
+  filterValues: QuarterlyReportFilterValues;
+}
+
+const Tab2 = ({ filterValues }: Tab2Props) => {
   const hasFromDate = !!filterValues.fromDate;
+  const hasCompareDate = !!filterValues.compareDate;
 
   const params = useMemo(() => {
     const payload = {
@@ -47,8 +49,24 @@ const Tab2 = () => {
     return payload;
   }, [filterValues.fromDate]);
 
+  const compareParams = useMemo(() => {
+    const payload = {
+      year: filterValues.compareDate ? dayjs(filterValues.compareDate).year() : 0,
+      quarter: filterValues.compareDate ? dayjs(filterValues.compareDate).quarter() : 0,
+      reportType: "TICKET"
+    };
+    return payload;
+  }, [filterValues.compareDate]);
+
   const { data, isFetching } = useReportQuarterly(params, hasFromDate);
+  const { data: compareData, isFetching: isCompareFetching } = useReportQuarterly(
+    compareParams,
+    hasFromDate && hasCompareDate
+  );
   const formatData = (hasFromDate ? data : undefined) as MonthlyReportTicketProps | undefined;
+  const compareFormatData = (hasCompareDate ? compareData : undefined) as
+    | MonthlyReportTicketProps
+    | undefined;
 
   function collectAllPrices(data: Manufacturer2[]) {
     const set = new Set<number>();
@@ -252,36 +270,264 @@ const Tab2 = () => {
     });
   }
 
-  const allPrices = useMemo(() => collectAllPrices(formatData?.data || []), [formatData]);
+  const sumTicketTotals = (row?: TreeRow) => ({
+    tickets: row?.totalTickets || 0,
+    revenue: row?.totalRevenue || 0
+  });
 
-  const treeData = useMemo(() => {
+  const buildComparisonTreeData = (currentTree: TreeRow[], compareTree: TreeRow[]): TreeRow[] => {
+    const manufacturerNames = Array.from(
+      new Set([
+        ...currentTree.map((item) => item.name || ""),
+        ...compareTree.map((item) => item.name || "")
+      ])
+    ).filter(Boolean);
+
+    return manufacturerNames.map((manufacturerName, manufacturerIndex) => {
+      const currentManufacturer = currentTree.find((item) => item.name === manufacturerName);
+      const compareManufacturer = compareTree.find((item) => item.name === manufacturerName);
+      const filmNames = Array.from(
+        new Set([
+          ...(currentManufacturer?.children?.map((item) => item.name || "") || []),
+          ...(compareManufacturer?.children?.map((item) => item.name || "") || [])
+        ])
+      ).filter(Boolean);
+
+      const children = filmNames.map((filmName, filmIndex) => {
+        const currentFilm = currentManufacturer?.children?.find((item) => item.name === filmName);
+        const compareFilm = compareManufacturer?.children?.find((item) => item.name === filmName);
+        const currentTotals = sumTicketTotals(currentFilm);
+        const compareTotals = sumTicketTotals(compareFilm);
+        const ticketDiff = currentTotals.tickets - compareTotals.tickets;
+        const revenueDiff = currentTotals.revenue - compareTotals.revenue;
+
+        return {
+          key: `m-${manufacturerIndex}-f-${filmIndex}`,
+          name: filmName,
+          currentTickets: currentTotals.tickets,
+          compareTickets: compareTotals.tickets,
+          ticketDiff,
+          ticketPercent: compareTotals.tickets
+            ? (ticketDiff / compareTotals.tickets) * 100
+            : undefined,
+          currentRevenue: currentTotals.revenue,
+          compareRevenue: compareTotals.revenue,
+          revenueDiff,
+          revenuePercent: compareTotals.revenue
+            ? (revenueDiff / compareTotals.revenue) * 100
+            : undefined
+        };
+      });
+
+      const currentTotals = sumTicketTotals(currentManufacturer);
+      const compareTotals = sumTicketTotals(compareManufacturer);
+      const ticketDiff = currentTotals.tickets - compareTotals.tickets;
+      const revenueDiff = currentTotals.revenue - compareTotals.revenue;
+
+      return {
+        key: `m-${manufacturerIndex}`,
+        name: manufacturerName,
+        currentTickets: currentTotals.tickets,
+        compareTickets: compareTotals.tickets,
+        ticketDiff,
+        ticketPercent: compareTotals.tickets
+          ? (ticketDiff / compareTotals.tickets) * 100
+          : undefined,
+        currentRevenue: currentTotals.revenue,
+        compareRevenue: compareTotals.revenue,
+        revenueDiff,
+        revenuePercent: compareTotals.revenue
+          ? (revenueDiff / compareTotals.revenue) * 100
+          : undefined,
+        children
+      };
+    });
+  };
+
+  const renderPlainNumber = (value?: number) =>
+    typeof value === "number" ? formatNumber(value) : "";
+
+  const renderPlainMoney = (value?: number) =>
+    typeof value === "number" ? formatMoney(value) : "";
+
+  const renderDiffNumber = (value?: number, formatter = formatNumber) => {
+    if (!value) {
+      return "";
+    }
+
+    const className = value > 0 ? "text-green-600 dark:text-green-400" : "text-red-600";
+    const prefix = value > 0 ? "+" : "";
+
+    return <span className={className}>{`${prefix}${formatter(value)}`}</span>;
+  };
+
+  const renderPercent = (value?: number) => {
+    if (typeof value !== "number") {
+      return "";
+    }
+
+    const className = value > 0 ? "text-green-600 dark:text-green-400" : "text-red-600";
+
+    return <span className={className}>{`${value > 0 ? "+" : ""}${value.toFixed(1)}%`}</span>;
+  };
+
+  const buildComparisonColumns = (
+    currentLabel: string,
+    compareLabel: string
+  ): ColumnsType<TreeRow> => [
+    {
+      title: "Hãng phim / Phim",
+      dataIndex: "name",
+      width: 350,
+      fixed: "left",
+      render: (value) => value && <div style={{ whiteSpace: "pre-wrap" }}>{value}</div>
+    },
+    {
+      title: "So sánh tổng vé",
+      children: [
+        {
+          title: currentLabel,
+          dataIndex: "currentTickets",
+          align: "right",
+          width: 120,
+          render: renderPlainNumber
+        },
+        {
+          title: compareLabel,
+          dataIndex: "compareTickets",
+          align: "right",
+          width: 120,
+          render: renderPlainNumber
+        },
+        {
+          title: "+/-",
+          dataIndex: "ticketDiff",
+          align: "right",
+          width: 100,
+          render: (value) => renderDiffNumber(value)
+        },
+        {
+          title: "%",
+          dataIndex: "ticketPercent",
+          align: "right",
+          width: 100,
+          render: renderPercent
+        }
+      ]
+    },
+    {
+      title: "So sánh tổng tiền",
+      children: [
+        {
+          title: currentLabel,
+          dataIndex: "currentRevenue",
+          align: "right",
+          width: 140,
+          render: renderPlainMoney
+        },
+        {
+          title: compareLabel,
+          dataIndex: "compareRevenue",
+          align: "right",
+          width: 140,
+          render: renderPlainMoney
+        },
+        {
+          title: "+/-",
+          dataIndex: "revenueDiff",
+          align: "right",
+          width: 140,
+          render: (value) => renderDiffNumber(value, formatMoney)
+        },
+        {
+          title: "%",
+          dataIndex: "revenuePercent",
+          align: "right",
+          width: 100,
+          render: renderPercent
+        }
+      ]
+    }
+  ];
+
+  const allPrices = useMemo(() => collectAllPrices(formatData?.data || []), [formatData]);
+  const comparePrices = useMemo(
+    () => collectAllPrices(compareFormatData?.data || []),
+    [compareFormatData]
+  );
+  const exportPrices = useMemo(
+    () => Array.from(new Set([...allPrices, ...comparePrices])).sort((a, b) => a - b),
+    [allPrices, comparePrices]
+  );
+
+  const currentTreeData = useMemo(() => {
     const tree = mapApiToPivotTree(formatData?.data || [], allPrices);
     calculateTreeTotals(tree, allPrices);
     return tree;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, allPrices]);
 
-  const columns = useMemo(
-    () => [
-      ...baseColumns,
-      // {
-      //   title: "Loại giá vé (Đơn vị tính 1.000 đồng)",
-      //   children: buildPriceColumns(allPrices)
-      // },
-      ...totalColumns
-    ],
+  const compareTreeData = useMemo(() => {
+    const tree = mapApiToPivotTree(compareFormatData?.data || [], comparePrices);
+    calculateTreeTotals(tree, comparePrices);
+    return tree;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allPrices]
+  }, [compareData, comparePrices]);
+
+  const treeData = useMemo(
+    () =>
+      hasCompareDate ? buildComparisonTreeData(currentTreeData, compareTreeData) : currentTreeData,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentTreeData, compareTreeData, hasCompareDate]
+  );
+
+  const columns = useMemo(
+    () =>
+      hasCompareDate && filterValues.fromDate && filterValues.compareDate
+        ? buildComparisonColumns(
+            formatQuarterLabel(filterValues.fromDate),
+            formatQuarterLabel(filterValues.compareDate)
+          )
+        : [
+            ...baseColumns,
+            // {
+            //   title: "Loại giá vé (Đơn vị tính 1.000 đồng)",
+            //   children: buildPriceColumns(allPrices)
+            // },
+            ...totalColumns
+          ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allPrices, hasCompareDate, filterValues.fromDate, filterValues.compareDate]
   );
 
   const items: TabsProps["items"] = [
     {
-      key: "1",
+      key: "chart",
+      label: "Biểu đồ",
+      forceRender: true,
+      children: hasFromDate ? (
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
+          <TicketRevenueChart
+            currentData={currentTreeData}
+            compareData={compareTreeData}
+            filterValues={filterValues}
+          />
+        </div>
+      ) : (
+        <DateRangeRequiredEmptyState description="Vui lòng chọn quý để xem biểu đồ" />
+      )
+    },
+    {
+      key: "detail",
       label: "Chi tiết",
       forceRender: true,
       children: hasFromDate ? (
         <div className="flex h-full min-h-0 flex-col">
-          <TabRevenue tableData={treeData} columns={columns} isFetching={isFetching} />
+          <TabRevenue
+            tableData={treeData}
+            columns={columns}
+            isFetching={isFetching || isCompareFetching}
+          />
         </div>
       ) : (
         <DateRangeRequiredEmptyState description="Vui lòng chọn quý để xem báo cáo" />
@@ -289,24 +535,21 @@ const Tab2 = () => {
     }
   ];
 
-  const onSearch = (values: ValuesProps) => {
-    setFilterValues(values.fromDate ? values : {});
-  };
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Tabs
         items={items}
-        defaultActiveKey="1"
+        defaultActiveKey="chart"
         className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="flex justify-end mb-2 gap-3">
-            <Filter filterValues={filterValues} onSearch={onSearch} />
+          <div className="mb-2 flex justify-end gap-3">
             {filterValues.fromDate && (
               <ExportRevenueExcelButton
                 treeData={treeData}
-                allPrices={allPrices}
+                allPrices={hasCompareDate ? exportPrices : allPrices}
                 fromDate={filterValues.fromDate}
+                compareDate={filterValues.compareDate}
+                loading={isFetching || isCompareFetching}
               />
             )}
           </div>

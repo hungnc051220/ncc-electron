@@ -7,15 +7,17 @@ import { formatter } from "@renderer/lib/utils";
 import { TicketPriceProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { FormProps } from "antd";
-import { Form, Input, InputNumber, Modal, Select } from "antd";
+import { DatePicker, Form, Input, InputNumber, Modal, Select } from "antd";
 import { useMemo } from "react";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import type { Dayjs } from "dayjs";
 
 type FieldType = {
   versionCode: string;
   daypartId: number;
   positionId: number;
   price: number;
+  date?: Dayjs;
 };
 
 interface TicketPriceDialogProps {
@@ -194,6 +196,9 @@ const TicketPriceDialog = ({ open, onOpenChange, editingTicketPrice }: TicketPri
               }
             }}
           />
+        </Form.Item>
+        <Form.Item<FieldType> name="date" label="Ngày áp dụng">
+          <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày áp dụng" />
         </Form.Item>
         <Form.Item<FieldType>
           name="price"

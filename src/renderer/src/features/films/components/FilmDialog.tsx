@@ -141,7 +141,7 @@ const FilmDialog = ({
         current: pageParam,
         pageSize: 20,
         name: searchText,
-        published: true,
+        // published: true,
         sort: "name.asc"
       }),
     mapOption: (item) => ({

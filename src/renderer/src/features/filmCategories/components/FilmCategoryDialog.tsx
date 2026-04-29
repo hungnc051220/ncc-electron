@@ -110,7 +110,7 @@ const FilmCategoryDialog = ({
             <Input.TextArea rows={4} placeholder="Nhập mô tả" />
           </Form.Item>
 
-          <Form.Item<FieldType> name="published" valuePropName="checked">
+          <Form.Item<FieldType> name="published" hidden valuePropName="checked">
             <Checkbox>Xuất bản</Checkbox>
           </Form.Item>
         </div>

@@ -7,7 +7,7 @@ import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { FilmCategoryProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Button, Checkbox, Dropdown } from "antd";
+import { Button, Dropdown } from "antd";
 import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteFilmCategoryDialog from "./components/DeleteFilmCategoryDialog";
@@ -101,15 +101,6 @@ const FilmCategoriesPage = () => {
       sorter: (a, b) => dayjs(a.createdOnUtc).valueOf() - dayjs(b.createdOnUtc).valueOf(),
       render: (value?: string) => (value ? dayjs(value).format("HH:mm DD/MM/YYYY") : "-"),
       width: 150
-    },
-    {
-      title: "Xuất bản",
-      key: "published",
-      dataIndex: "published",
-      align: "center",
-      width: 100,
-      sorter: (a, b) => Number(a.published) - Number(b.published),
-      render: (value?: boolean) => <Checkbox checked={!!value} disabled />
     },
     ...(actionItems.length
       ? [
