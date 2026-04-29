@@ -889,7 +889,7 @@ const Seats = ({
 
         <div
           className={cn(
-            "seat-selecto-drag-area flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
+            "seat-selecto-drag-area my-2 flex-1 flex justify-center items-center min-h-0 transition-all duration-200",
             hasSeatSpotlight && cancelMode && "relative"
           )}
           ref={seatContainerRef}

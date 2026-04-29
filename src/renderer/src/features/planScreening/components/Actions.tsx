@@ -124,7 +124,6 @@ const Actions = ({
 }: ActionsProps) => {
   const { message } = useAntdApp();
 
-  const printMessageKey = "plan-screening-print";
   const [form] = Form.useForm();
   const [searchParams] = useSearchParams();
   const { posName, posShortName } = useSettingPosStore();
@@ -204,10 +203,14 @@ const Actions = ({
 
   const handlePrint = useCallback(
     async (orderId: number) => {
+      const printMessageKey = `plan-screening-print-${orderId}`;
+
       try {
-        message.loading({
+        message.open({
+          type: "loading",
           key: printMessageKey,
-          content: "Đang in vé..."
+          content: "Đang in vé...",
+          duration: 0
         });
 
         const orderDetail = await queryClient.fetchQuery({
@@ -223,7 +226,8 @@ const Actions = ({
         message.error({
           key: printMessageKey,
           content: getPrintErrorMessage(error),
-          duration: 4
+          duration: 4,
+          pauseOnHover: false
         });
         return;
       }
@@ -233,6 +237,15 @@ const Actions = ({
           orderId,
           posShortName
         });
+
+        message.open({
+          type: "success",
+          key: printMessageKey,
+          content: "In vé thành công",
+          duration: 2,
+          pauseOnHover: false
+        });
+
         await Promise.all([
           queryClient.invalidateQueries({
             queryKey: planScreeningsKeys.getDetail(planScreenId)
@@ -244,17 +257,13 @@ const Actions = ({
             queryKey: ordersKeys.getDetail(orderId)
           })
         ]);
-
-        message.success({
-          key: printMessageKey,
-          content: "In vé thành công"
-        });
       } catch (error) {
         console.error(error);
         message.error({
           key: printMessageKey,
           content: getApiErrorMessage(error, "Cập nhật trạng thái in vé thất bại"),
-          duration: 4
+          duration: 4,
+          pauseOnHover: false
         });
       }
     },

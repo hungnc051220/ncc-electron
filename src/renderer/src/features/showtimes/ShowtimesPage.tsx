@@ -127,7 +127,7 @@ const ShowtimesPage = () => {
   ]);
 
   const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
-  const toDate = dayjs(date, "YYYY-MM-DD").endOf("month").format("DD-MM-YYYY");
+  const toDate = dayjs(date, "YYYY-MM-DD").add(1, "month").endOf("month").format("DD-MM-YYYY");
 
   const { data, isFetching } = usePlanScreeningsByDate(date);
   const { data: showDates } = usePlanScreeningsAvailableDates(fromDate, toDate);
