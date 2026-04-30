@@ -75,10 +75,18 @@ function createFallbackPolicy(): UpdatePolicy {
 }
 
 function resolvePolicyMode(policy: UpdatePolicy): UpdateMode {
+  const currentVersion = app.getVersion();
   const minSupportedVersion = policy.minSupportedVersion;
+  const latestVersion = policy.latestVersion;
 
-  if (minSupportedVersion && compareVersions(app.getVersion(), minSupportedVersion) < 0) {
+  if (minSupportedVersion && compareVersions(currentVersion, minSupportedVersion) < 0) {
     return "force";
+  }
+
+  if (policy.mode === "force") {
+    return latestVersion && compareVersions(currentVersion, latestVersion) < 0
+      ? "force"
+      : "optional";
   }
 
   return policy.mode;

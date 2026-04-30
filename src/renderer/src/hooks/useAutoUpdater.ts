@@ -63,7 +63,19 @@ export function useAutoUpdater() {
   }, []);
 
   const getEffectiveMode = useCallback((info?: UpdateInfo | null): UpdateMode => {
-    return info?.mode ?? latestPolicyRef.current?.mode ?? latestModeRef.current;
+    const mode = info?.mode ?? latestPolicyRef.current?.mode ?? latestModeRef.current;
+    const latestVersion = info?.version ?? latestPolicyRef.current?.latestVersion;
+
+    if (
+      mode === "force" &&
+      versionRef.current &&
+      latestVersion &&
+      latestVersion === versionRef.current
+    ) {
+      return DEFAULT_UPDATE_MODE;
+    }
+
+    return mode;
   }, []);
 
   const closeVersionModal = useCallback(() => {
@@ -198,7 +210,8 @@ export function useAutoUpdater() {
     async (nextUpdate: UpdateInfo | null) => {
       const currentVersion = await ensureVersion();
       const updateMode = getEffectiveMode(nextUpdate);
-      const isForceUpdate = updateMode === "force";
+      const hasUpdate = Boolean(nextUpdate?.version && nextUpdate.version !== currentVersion);
+      const isForceUpdate = updateMode === "force" && hasUpdate;
 
       if (!isForceUpdate) {
         modalRef.current?.destroy();
