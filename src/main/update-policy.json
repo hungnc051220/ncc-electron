@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "latestVersion": "1.0.70",
+  "minSupportedVersion": "1.0.68",
+  "mode": "silent",
+  "message": "Cập nhật cải thiện ổn định hệ thống.",
+  "releaseNotesUrl": ""
+}
