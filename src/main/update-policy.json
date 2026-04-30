@@ -1,10 +1,11 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.70",
-  "minSupportedVersion": "1.0.70",
+  "latestVersion": "1.0.71",
+  "minSupportedVersion": "1.0.71",
   "mode": "optional",
   "message": "Có bản cập nhật mới.",
   "messages": [
+    "Sửa lỗi màn hình cập nhật vẫn hiển thị sau khi đã cài phiên bản mới.",
     "Cải thiện biểu đồ báo cáo quý để xem số suất chiếu, doanh thu vé và doanh thu theo phòng rõ ràng hơn.",
     "Không cho chọn trùng quý khi so sánh báo cáo, giúp dữ liệu đối chiếu chính xác hơn."
   ],
