@@ -12,9 +12,14 @@ interface FilterProps {
 
 const formatQuarter = (value: Dayjs) => formatQuarterLabel(value.format());
 
+const isSameQuarter = (left?: Dayjs, right?: Dayjs) =>
+  !!left && !!right && left.year() === right.year() && left.quarter() === right.quarter();
+
 const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
+  const fromDate = Form.useWatch("fromDate", form);
+  const compareDate = Form.useWatch("compareDate", form);
 
   useEffect(() => {
     form.setFieldsValue({
@@ -87,6 +92,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             picker="quarter"
             className="w-full"
             allowClear
+            disabledDate={(current) => isSameQuarter(current, compareDate)}
             format={formatQuarter}
             inputReadOnly
           />
@@ -96,6 +102,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             picker="quarter"
             className="w-full"
             allowClear
+            disabledDate={(current) => isSameQuarter(current, fromDate)}
             format={formatQuarter}
             inputReadOnly
           />

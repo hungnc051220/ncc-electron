@@ -3,31 +3,48 @@ import {
   CheckCircleFilled,
   CloudSyncOutlined,
   CloudDownloadOutlined,
-  MailOutlined
+  MailOutlined,
+  WarningFilled
 } from "@ant-design/icons";
 import logoText from "@renderer/assets/images/logo-text.png";
 import { useThemeStore } from "@renderer/store/theme.store";
+import { UpdateMode } from "@shared/types";
 
 type VersionInfoModalContentProps = {
   currentVersion: string;
   latestVersion?: string | null;
+  updateMode?: UpdateMode;
+  message?: string;
+  messages?: string[];
   isChecking?: boolean;
   isDownloading?: boolean;
   onClose: () => void;
+  onQuitApp?: () => void;
   onUpdateNow: () => void;
 };
 
 const VersionInfoModalContent = ({
   currentVersion,
   latestVersion,
+  updateMode = "optional",
+  message,
+  messages = [],
   isChecking = false,
   isDownloading = false,
   onClose,
+  onQuitApp,
   onUpdateNow
 }: VersionInfoModalContentProps) => {
   const { theme } = useThemeStore();
   const { token } = antdTheme.useToken();
   const hasUpdate = Boolean(latestVersion && latestVersion !== currentVersion);
+  const isForceUpdate = updateMode === "force";
+  const isSilentUpdate = updateMode === "silent";
+  const statusTitle = isForceUpdate
+    ? "Cần cập nhật ứng dụng"
+    : hasUpdate
+      ? "Đã tìm thấy phiên bản mới"
+      : "Bạn đang dùng phiên bản mới nhất";
   const isDark = theme === "dark";
   const shellStyle = {
     background: isDark
@@ -78,6 +95,10 @@ const VersionInfoModalContent = ({
   const updateChipStyle = {
     background: isDark ? `${token.colorSuccess}1c` : token.colorSuccessBg,
     color: token.colorSuccess
+  };
+  const warningPanelStyle = {
+    borderColor: isDark ? `${token.colorWarning}55` : token.colorWarningBorder,
+    background: isDark ? `${token.colorWarning}16` : token.colorWarningBg
   };
 
   return (
@@ -149,7 +170,9 @@ const VersionInfoModalContent = ({
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
                   style={statusIconStyle}
                 >
-                  {hasUpdate ? (
+                  {isForceUpdate ? (
+                    <WarningFilled className="text-xl" style={{ color: token.colorWarning }} />
+                  ) : hasUpdate ? (
                     <CloudSyncOutlined className="text-xl" />
                   ) : (
                     <CheckCircleFilled className="text-xl" />
@@ -157,20 +180,44 @@ const VersionInfoModalContent = ({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[18px] leading-6 font-semibold" style={titleStyle}>
-                    {hasUpdate ? "Đã tìm thấy phiên bản mới" : "Bạn đang dùng phiên bản mới nhất"}
+                    {statusTitle}
                   </div>
                   <div className="mt-1 text-[14px] leading-5" style={subtitleStyle}>
-                    {hasUpdate
-                      ? "Bản cập nhật mới đã được phát hiện. Hãy cập nhật ngay để trải nghiệm những tính năng mới và cải thiện hiệu suất!"
-                      : currentVersion
-                        ? "Hiện không có bản cập nhật mới nào."
-                        : "Đang tải thông tin phiên bản."}
+                    {hasUpdate && isForceUpdate
+                      ? "Phiên bản hiện tại không còn được hỗ trợ. Vui lòng cập nhật để tiếp tục sử dụng hệ thống."
+                      : hasUpdate && isSilentUpdate
+                        ? "Bản cập nhật sẽ được tải nền và sẵn sàng cài đặt khi bạn khởi động lại ứng dụng."
+                        : hasUpdate
+                          ? "Bản cập nhật mới đã được phát hiện. Hãy cập nhật ngay để trải nghiệm những tính năng mới và cải thiện hiệu suất!"
+                          : currentVersion
+                            ? "Hiện không có bản cập nhật mới nào."
+                            : "Đang tải thông tin phiên bản."}
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-4">
+              {(message || messages.length > 0) && (
+                <div className="rounded-[18px] border px-4 py-3 sm:px-5" style={warningPanelStyle}>
+                  {message && (
+                    <div className="text-[13px] leading-5" style={{ color: token.colorText }}>
+                      {message}
+                    </div>
+                  )}
+                  {messages.length > 0 && (
+                    <ul
+                      className={`${message ? "mt-2" : ""} list-disc space-y-1 pl-4 text-[13px] leading-5`}
+                      style={{ color: token.colorText }}
+                    >
+                      {messages.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
               {hasUpdate && (
                 <div className="rounded-[18px] border px-4 py-4 sm:px-5" style={panelStyle}>
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -193,7 +240,7 @@ const VersionInfoModalContent = ({
                       style={updateChipStyle}
                     >
                       <CloudDownloadOutlined className="text-[11px]" />
-                      Sẵn sàng cập nhật
+                      {isForceUpdate ? "Bắt buộc cập nhật" : "Sẵn sàng cập nhật"}
                     </span>
                   </div>
                 </div>
@@ -235,9 +282,15 @@ const VersionInfoModalContent = ({
             </div>
 
             <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">
-              <Button size="middle" className="h-9 rounded-xl px-4" onClick={onClose}>
-                Đóng
-              </Button>
+              {isForceUpdate ? (
+                <Button size="middle" danger className="h-9 rounded-xl px-4" onClick={onQuitApp}>
+                  Thoát chương trình
+                </Button>
+              ) : (
+                <Button size="middle" className="h-9 rounded-xl px-4" onClick={onClose}>
+                  Đóng
+                </Button>
+              )}
               {hasUpdate && (
                 <Button
                   type="primary"
@@ -247,7 +300,7 @@ const VersionInfoModalContent = ({
                   loading={isChecking || isDownloading}
                   onClick={onUpdateNow}
                 >
-                  Cập nhật ngay
+                  {isDownloading ? "Đang tải cập nhật" : "Cập nhật ngay"}
                 </Button>
               )}
             </div>

@@ -1,8 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.70",
+  "latestVersion": "1.0.69",
   "minSupportedVersion": "1.0.68",
-  "mode": "silent",
-  "message": "Cập nhật cải thiện ổn định hệ thống.",
+  "mode": "optional",
+  "message": "Có bản cập nhật mới.",
+  "messages": [
+    "Cải thiện biểu đồ báo cáo quý để xem số suất chiếu, doanh thu vé và doanh thu theo phòng rõ ràng hơn.",
+    "Không cho chọn trùng quý khi so sánh báo cáo, giúp dữ liệu đối chiếu chính xác hơn."
+  ],
   "releaseNotesUrl": ""
 }

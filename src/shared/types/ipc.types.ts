@@ -23,8 +23,24 @@ export type PrintTicketsArgs = {
   printerName?: string;
 };
 
+export type UpdateMode = "optional" | "silent" | "force";
+
+export interface UpdatePolicy {
+  enabled: boolean;
+  latestVersion?: string;
+  minSupportedVersion?: string;
+  mode: UpdateMode;
+  message?: string;
+  messages?: string[];
+  releaseNotesUrl?: string;
+}
+
 export interface UpdateInfo {
   version: string;
+  mode?: UpdateMode;
+  message?: string;
+  messages?: string[];
+  policy?: UpdatePolicy;
 }
 
 export interface UpdateDownloadProgress {
@@ -34,9 +50,15 @@ export interface UpdateDownloadProgress {
   bytesPerSecond: number;
 }
 
+export interface UpdateReadyInfo {
+  mode?: UpdateMode;
+  policy?: UpdatePolicy;
+}
+
 export interface UpdaterContextType {
   version: string;
   progress: number;
+  policy: UpdatePolicy | null;
   manualCheck: () => Promise<void>;
   showVersionInfo: () => Promise<void>;
   toggleMockDownloadPause?: () => Promise<void>;

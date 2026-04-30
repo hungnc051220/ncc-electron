@@ -10,28 +10,21 @@ import {
   SeatTypeProps
 } from "@shared/types";
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
-import { autoUpdater } from "electron-updater";
 import fs from "fs";
 import path, { join } from "path";
 import icon from "../../resources/icon.ico?asset";
 import { createPrintService } from "./print.service";
 import ElectronStore from "electron-store";
 import { getConfig, setConfig } from "./config.service";
+import { setupUpdater } from "./updater.service";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Store = (ElectronStore as any).default ?? ElectronStore;
 
 const store = new Store();
 let currentTheme: AppTheme = store.get("theme", "light") as AppTheme;
-const appReleaseChannel = process.env.APP_RELEASE_CHANNEL ?? "latest";
 const enablePackagedDevTools = process.env.APP_ENABLE_DEVTOOLS === "true";
-const enableMockUpdate = process.env.APP_MOCK_UPDATE === "true";
-const enableMockUpdateProgress = process.env.APP_MOCK_UPDATE_PROGRESS === "true";
-const mockUpdateVersion = process.env.APP_MOCK_UPDATE_VERSION || "9.9.9";
-const mockUpdateProgressStepMs = Number(process.env.APP_MOCK_UPDATE_PROGRESS_STEP_MS || "550");
-const mockUpdateProgressHoldAt = Number(process.env.APP_MOCK_UPDATE_PROGRESS_HOLD_AT || "");
 const shouldEnableDevTools = is.dev || enablePackagedDevTools;
-const mockDownloadProgressSteps = [8, 23, 41, 58, 76, 91, 100];
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -40,10 +33,6 @@ let customerWindow: BrowserWindow | null = null;
 let currentScreeningData: PlanScreeningDetailProps | null = null;
 let currentSeatTypes: SeatTypeProps[] = [];
 let currentScreeningOrders: OrderResponseProps[] = [];
-let mockDownloadTimer: NodeJS.Timeout | null = null;
-let mockDownloadCursor = 0;
-let mockDownloadActive = false;
-let mockDownloadPaused = false;
 
 let currentSeatState: CurrentSeatState = {
   selectedSeats: [],
@@ -56,201 +45,6 @@ let currentQrState: QrState = {
 };
 
 const printService = createPrintService();
-
-function createMockUpdateInfo() {
-  return {
-    version: mockUpdateVersion
-  };
-}
-
-function emitMockUpdateAvailable(win: BrowserWindow) {
-  if (win.isDestroyed()) {
-    return;
-  }
-
-  win.webContents.send("update:available", createMockUpdateInfo());
-}
-
-function clearMockDownloadTimer() {
-  if (mockDownloadTimer) {
-    clearTimeout(mockDownloadTimer);
-    mockDownloadTimer = null;
-  }
-}
-
-function scheduleMockDownloadStep(win: BrowserWindow) {
-  clearMockDownloadTimer();
-
-  if (win.isDestroyed() || !mockDownloadActive || mockDownloadPaused) {
-    return;
-  }
-
-  if (mockDownloadCursor >= mockDownloadProgressSteps.length) {
-    mockDownloadActive = false;
-    return;
-  }
-
-  const total = 42 * 1024 * 1024;
-
-  mockDownloadTimer = setTimeout(
-    () => {
-      if (win.isDestroyed() || !mockDownloadActive || mockDownloadPaused) {
-        return;
-      }
-
-      const currentIndex = mockDownloadCursor;
-      const percent = mockDownloadProgressSteps[currentIndex];
-      const previousPercent = currentIndex > 0 ? mockDownloadProgressSteps[currentIndex - 1] : 0;
-
-      win.webContents.send("update:progress", {
-        percent,
-        transferred: Math.round((percent / 100) * total),
-        total,
-        bytesPerSecond: 1_500_000 + currentIndex * 180_000
-      });
-
-      mockDownloadCursor = currentIndex + 1;
-
-      if (Number.isFinite(mockUpdateProgressHoldAt) && mockUpdateProgressHoldAt > 0) {
-        const shouldHold =
-          percent === mockUpdateProgressHoldAt ||
-          (percent > mockUpdateProgressHoldAt && previousPercent < mockUpdateProgressHoldAt);
-
-        if (shouldHold) {
-          mockDownloadPaused = true;
-          clearMockDownloadTimer();
-          return;
-        }
-      }
-
-      if (percent === 100) {
-        mockDownloadActive = false;
-        clearMockDownloadTimer();
-        setTimeout(() => {
-          if (!win.isDestroyed()) {
-            win.webContents.send("update:ready");
-          }
-        }, 350);
-        return;
-      }
-
-      scheduleMockDownloadStep(win);
-    },
-    Math.max(100, mockUpdateProgressStepMs)
-  );
-}
-
-function simulateMockDownload(win: BrowserWindow) {
-  mockDownloadActive = true;
-  mockDownloadPaused = false;
-  mockDownloadCursor = 0;
-  scheduleMockDownloadStep(win);
-}
-
-function pauseMockDownload() {
-  if (!mockDownloadActive) {
-    return;
-  }
-
-  mockDownloadPaused = true;
-  clearMockDownloadTimer();
-}
-
-function resumeMockDownload(win: BrowserWindow) {
-  if (!mockDownloadActive || !mockDownloadPaused) {
-    return;
-  }
-
-  mockDownloadPaused = false;
-  scheduleMockDownloadStep(win);
-}
-
-function setupUpdater(win: BrowserWindow) {
-  const isDev = !app.isPackaged;
-  const isDevReleaseChannel = appReleaseChannel === "dev";
-
-  ipcMain.handle("app:get-version", () => app.getVersion());
-
-  ipcMain.handle("app:check-update", async () => {
-    if (enableMockUpdate) {
-      return createMockUpdateInfo();
-    }
-
-    if (isDev) return null;
-
-    const result = await autoUpdater.checkForUpdates();
-    return result?.updateInfo ?? null;
-  });
-
-  ipcMain.handle("app:start-download", () => {
-    if (enableMockUpdate) {
-      if (enableMockUpdateProgress) {
-        simulateMockDownload(win);
-      } else {
-        win.webContents.send("update:ready");
-      }
-
-      return;
-    }
-
-    if (!isDev) autoUpdater.downloadUpdate();
-  });
-
-  ipcMain.handle("app:pause-mock-update-download", () => {
-    if (enableMockUpdate && enableMockUpdateProgress) {
-      pauseMockDownload();
-    }
-  });
-
-  ipcMain.handle("app:resume-mock-update-download", () => {
-    if (enableMockUpdate && enableMockUpdateProgress) {
-      resumeMockDownload(win);
-    }
-  });
-
-  ipcMain.handle("app:install-update", () => {
-    if (!isDev) autoUpdater.quitAndInstall();
-  });
-
-  if (enableMockUpdate) {
-    win.webContents.once("did-finish-load", () => {
-      setTimeout(() => {
-        emitMockUpdateAvailable(win);
-      }, 1800);
-    });
-
-    return;
-  }
-
-  if (isDev) return;
-
-  autoUpdater.channel = isDevReleaseChannel ? "dev" : "latest";
-  autoUpdater.allowPrerelease = isDevReleaseChannel;
-  autoUpdater.autoDownload = false;
-
-  autoUpdater.on("update-available", (info) => {
-    win.webContents.send("update:available", info);
-  });
-
-  autoUpdater.on("download-progress", (p) => {
-    win.webContents.send("update:progress", {
-      percent: Math.round(p.percent),
-      transferred: p.transferred,
-      total: p.total,
-      bytesPerSecond: p.bytesPerSecond
-    });
-  });
-
-  autoUpdater.on("update-downloaded", () => {
-    win.webContents.send("update:ready");
-  });
-
-  autoUpdater.on("error", (err) => {
-    win.webContents.send("update:error", err.message);
-  });
-
-  autoUpdater.checkForUpdates();
-}
 
 function configureDebugTools(win: BrowserWindow, openOnStart = false) {
   if (!shouldEnableDevTools) {

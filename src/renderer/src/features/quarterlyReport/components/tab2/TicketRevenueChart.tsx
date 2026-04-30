@@ -1,16 +1,4 @@
-import {
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip,
-  type ChartData,
-  type ChartOptions
-} from "chart.js";
+import type { ChartData, ChartOptions } from "chart.js";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useThemeStore } from "@renderer/store/theme.store";
 import { Spin, theme as antdTheme } from "antd";
@@ -19,17 +7,6 @@ import { Chart } from "react-chartjs-2";
 import { QuarterlyReportFilterValues } from "../../types";
 import { formatQuarterLabel } from "../../utils";
 import { TreeRow } from ".";
-
-ChartJS.register(
-  BarElement,
-  CategoryScale,
-  Filler,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip
-);
 
 interface TicketRevenueChartProps {
   currentData: TreeRow[];

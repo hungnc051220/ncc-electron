@@ -1,6 +1,6 @@
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import { ReloadOutlined } from "@ant-design/icons";
-import { UpdateDownloadProgress, UpdateInfo } from "@shared/types";
+import { UpdateDownloadProgress, UpdateInfo, UpdateMode, UpdatePolicy } from "@shared/types";
 import VersionInfoModalContent from "@renderer/components/VersionInfoModalContent";
 import UpdateProgressNotification from "@renderer/components/UpdateProgressNotification";
 import UpdateProgressDock from "@renderer/components/UpdateProgressDock";
@@ -15,12 +15,14 @@ const INITIAL_PROGRESS: UpdateDownloadProgress = {
   total: 0,
   bytesPerSecond: 0
 };
+const DEFAULT_UPDATE_MODE: UpdateMode = "optional";
 
 export function useAutoUpdater() {
   const { modal, message, notification } = useAntdApp();
   const [version, setVersion] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
+  const [policy, setPolicy] = useState<UpdatePolicy | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
   const modalRef = useRef<{
@@ -29,6 +31,8 @@ export function useAutoUpdater() {
   } | null>(null);
   const hiddenProgressRef = useRef<boolean>(false);
   const latestUpdateRef = useRef<UpdateInfo | null>(null);
+  const latestPolicyRef = useRef<UpdatePolicy | null>(null);
+  const latestModeRef = useRef<UpdateMode>(DEFAULT_UPDATE_MODE);
   const versionRef = useRef<string>("");
   const latestProgressRef = useRef<UpdateDownloadProgress>(INITIAL_PROGRESS);
   const isMockDownloadPausedRef = useRef<boolean>(false);
@@ -52,7 +56,21 @@ export function useAutoUpdater() {
     return currentVersion;
   }, []);
 
+  const setLatestPolicy = useCallback((nextPolicy: UpdatePolicy | null) => {
+    latestPolicyRef.current = nextPolicy;
+    latestModeRef.current = nextPolicy?.mode ?? DEFAULT_UPDATE_MODE;
+    setPolicy(nextPolicy);
+  }, []);
+
+  const getEffectiveMode = useCallback((info?: UpdateInfo | null): UpdateMode => {
+    return info?.mode ?? latestPolicyRef.current?.mode ?? latestModeRef.current;
+  }, []);
+
   const closeVersionModal = useCallback(() => {
+    if (latestModeRef.current === "force") {
+      return;
+    }
+
     modalRef.current?.destroy();
     modalRef.current = null;
   }, []);
@@ -156,22 +174,35 @@ export function useAutoUpdater() {
     toggleMockDownloadPauseRef.current = toggleMockDownloadPause;
   }, [toggleMockDownloadPause]);
 
-  const beginDownload = useCallback(async () => {
-    hiddenProgressRef.current = false;
-    closeVersionModal();
-    setIsDownloading(true);
-    isDownloadingRef.current = true;
-    isMockDownloadPausedRef.current = false;
-    closeProgressDock();
-    openProgressNotification(INITIAL_PROGRESS);
-    await window.api?.startDownload();
-  }, [closeProgressDock, closeVersionModal, openProgressNotification]);
+  const beginDownload = useCallback(
+    async (mode: UpdateMode = latestModeRef.current) => {
+      if (isDownloadingRef.current) {
+        return;
+      }
+
+      hiddenProgressRef.current = false;
+      if (mode !== "force") {
+        closeVersionModal();
+      }
+      setIsDownloading(true);
+      isDownloadingRef.current = true;
+      isMockDownloadPausedRef.current = false;
+      closeProgressDock();
+      openProgressNotification(INITIAL_PROGRESS);
+      await window.api?.startDownload();
+    },
+    [closeProgressDock, closeVersionModal, openProgressNotification]
+  );
 
   const openVersionInfoModal = useCallback(
     async (nextUpdate: UpdateInfo | null) => {
       const currentVersion = await ensureVersion();
+      const updateMode = getEffectiveMode(nextUpdate);
+      const isForceUpdate = updateMode === "force";
 
-      modalRef.current?.destroy();
+      if (!isForceUpdate) {
+        modalRef.current?.destroy();
+      }
 
       modalRef.current = modal.info({
         title: null,
@@ -179,6 +210,9 @@ export function useAutoUpdater() {
         footer: null,
         width: 560,
         className: "version-info-modal",
+        closable: !isForceUpdate,
+        keyboard: !isForceUpdate,
+        maskClosable: !isForceUpdate,
         styles: {
           body: {
             padding: 0
@@ -187,22 +221,48 @@ export function useAutoUpdater() {
         content: createElement(VersionInfoModalContent, {
           currentVersion: currentVersion,
           latestVersion: nextUpdate?.version,
+          updateMode,
+          message: nextUpdate?.message ?? latestPolicyRef.current?.message,
+          messages: nextUpdate?.messages ?? latestPolicyRef.current?.messages,
           isDownloading,
           onClose: closeVersionModal,
-          onUpdateNow: beginDownload
+          onQuitApp: () => window.api?.quitApp(),
+          onUpdateNow: () => {
+            void beginDownload(updateMode);
+          }
         })
       });
     },
-    [beginDownload, closeVersionModal, ensureVersion, isDownloading, modal]
+    [beginDownload, closeVersionModal, ensureVersion, getEffectiveMode, isDownloading, modal]
   );
 
   useEffect(() => {
     void ensureVersion();
+    void window.api?.getUpdatePolicy().then(setLatestPolicy);
 
     const onAvailable = async (info: UpdateInfo) => {
       latestUpdateRef.current = info;
       setAvailableUpdate(info);
+      if (info.policy) {
+        setLatestPolicy(info.policy);
+      }
+
+      const mode = getEffectiveMode(info);
+
+      if (mode === "silent") {
+        await beginDownload(mode);
+        return;
+      }
+
       await openVersionInfoModal(info);
+
+      if (mode === "force") {
+        await beginDownload(mode);
+      }
+    };
+
+    const onUpdatePolicy = (nextPolicy: UpdatePolicy) => {
+      setLatestPolicy(nextPolicy);
     };
 
     const onProgress = (progressInfo: UpdateDownloadProgress) => {
@@ -213,7 +273,14 @@ export function useAutoUpdater() {
       openProgressNotification(progressInfo);
     };
 
-    const onReady = () => {
+    const onReady = (readyInfo?: { mode?: UpdateMode; policy?: UpdatePolicy }) => {
+      if (readyInfo?.policy) {
+        setLatestPolicy(readyInfo.policy);
+      }
+
+      const mode = readyInfo?.mode ?? latestModeRef.current;
+      const isForceUpdate = mode === "force";
+
       setIsDownloading(false);
       isDownloadingRef.current = false;
       isMockDownloadPausedRef.current = false;
@@ -222,14 +289,25 @@ export function useAutoUpdater() {
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
       closeProgressDock();
       modal.confirm({
-        title: "Bản cập nhật đã sẵn sàng",
-        content: "Tải xuống hoàn tất. Khởi động lại ứng dụng để cài đặt phiên bản mới?",
+        title: isForceUpdate ? "Cập nhật bắt buộc đã sẵn sàng" : "Bản cập nhật đã sẵn sàng",
+        content: isForceUpdate
+          ? "Ứng dụng cần khởi động lại để hoàn tất cài đặt phiên bản mới. Bạn có thể khởi động lại ngay hoặc thoát chương trình."
+          : "Tải xuống hoàn tất. Khởi động lại ứng dụng để cài đặt phiên bản mới?",
         okText: "Khởi động lại ngay",
-        cancelText: "Để sau",
+        cancelText: isForceUpdate ? "Thoát chương trình" : "Để sau",
+        closable: !isForceUpdate,
+        keyboard: !isForceUpdate,
+        maskClosable: !isForceUpdate,
+        cancelButtonProps: isForceUpdate
+          ? {
+              danger: true
+            }
+          : undefined,
         okButtonProps: {
           icon: createElement(ReloadOutlined)
         },
-        onOk: () => window.api?.install()
+        onOk: () => window.api?.install({ isSilent: mode === "silent" }),
+        onCancel: isForceUpdate ? () => window.api?.quitApp() : undefined
       });
     };
 
@@ -244,30 +322,38 @@ export function useAutoUpdater() {
     };
 
     const unsubAvailable = window.api?.onAvailable(onAvailable);
+    const unsubPolicy = window.api?.onUpdatePolicy(onUpdatePolicy);
     const unsubProgress = window.api?.onProgress(onProgress);
     const unsubReady = window.api?.onReady(onReady);
     const unsubError = window.api?.onError(onError);
 
     return () => {
       unsubAvailable?.();
+      unsubPolicy?.();
       unsubProgress?.();
       unsubReady?.();
       unsubError?.();
     };
   }, [
     closeProgressDock,
+    beginDownload,
     ensureVersion,
+    getEffectiveMode,
     message,
     modal,
     notification,
     openProgressNotification,
-    openVersionInfoModal
+    openVersionInfoModal,
+    setLatestPolicy
   ]);
 
   const manualCheck = async (): Promise<void> => {
     const info = await window.api?.checkUpdate();
     latestUpdateRef.current = info ?? null;
     setAvailableUpdate(info ?? null);
+    if (info?.policy) {
+      setLatestPolicy(info.policy);
+    }
 
     if (!info) {
       setProgress(0);
@@ -279,5 +365,5 @@ export function useAutoUpdater() {
     await openVersionInfoModal(latestUpdateRef.current ?? availableUpdate);
   };
 
-  return { version, progress, manualCheck, showVersionInfo, toggleMockDownloadPause };
+  return { version, progress, policy, manualCheck, showVersionInfo, toggleMockDownloadPause };
 }

@@ -8,6 +8,8 @@ import {
   PlanScreeningDetailProps,
   QrState,
   SeatTypeProps,
+  UpdatePolicy,
+  UpdateReadyInfo,
   UpdateDownloadProgress,
   UpdateInfo
 } from "@shared/types";
@@ -63,17 +65,24 @@ const api: PreloadAPI = {
   },
   saveFile: (params) => ipcRenderer.invoke("save-file", params),
   getVersion: (): Promise<string> => ipcRenderer.invoke("app:get-version"),
+  getUpdatePolicy: (): Promise<UpdatePolicy> => ipcRenderer.invoke("app:get-update-policy"),
   checkUpdate: () => ipcRenderer.invoke("app:check-update"),
   startDownload: (): Promise<void> => ipcRenderer.invoke("app:start-download"),
   pauseMockUpdateDownload: (): Promise<void> =>
     ipcRenderer.invoke("app:pause-mock-update-download"),
   resumeMockUpdateDownload: (): Promise<void> =>
     ipcRenderer.invoke("app:resume-mock-update-download"),
-  install: (): Promise<void> => ipcRenderer.invoke("app:install-update"),
+  install: (options?: { isSilent?: boolean }): Promise<void> =>
+    ipcRenderer.invoke("app:install-update", options),
   onAvailable: (cb) => {
     const handler = (_: unknown, info: UpdateInfo) => cb(info);
     ipcRenderer.on("update:available", handler);
     return () => ipcRenderer.removeListener("update:available", handler);
+  },
+  onUpdatePolicy: (cb) => {
+    const handler = (_: unknown, policy: UpdatePolicy) => cb(policy);
+    ipcRenderer.on("update:policy", handler);
+    return () => ipcRenderer.removeListener("update:policy", handler);
   },
 
   onProgress: (cb) => {
@@ -81,8 +90,8 @@ const api: PreloadAPI = {
     ipcRenderer.on("update:progress", handler);
     return () => ipcRenderer.removeListener("update:progress", handler);
   },
-  onReady: (cb: () => void) => {
-    const handler = () => cb();
+  onReady: (cb: (info?: UpdateReadyInfo) => void) => {
+    const handler = (_: unknown, info?: UpdateReadyInfo) => cb(info);
     ipcRenderer.on("update:ready", handler);
     return () => ipcRenderer.removeListener("update:ready", handler);
   },

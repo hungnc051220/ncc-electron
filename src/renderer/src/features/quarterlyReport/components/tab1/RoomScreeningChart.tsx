@@ -1,13 +1,4 @@
-import {
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Legend,
-  LinearScale,
-  Tooltip,
-  type ChartData,
-  type ChartOptions
-} from "chart.js";
+import type { ChartData, ChartOptions } from "chart.js";
 import { formatNumber } from "@renderer/lib/utils";
 import { useThemeStore } from "@renderer/store/theme.store";
 import { Spin, theme as antdTheme } from "antd";
@@ -16,8 +7,6 @@ import { Bar } from "react-chartjs-2";
 import { QuarterlyReportFilterValues } from "../../types";
 import { formatQuarterLabel } from "../../utils";
 import { TreeRow } from ".";
-
-ChartJS.register(BarElement, CategoryScale, Legend, LinearScale, Tooltip);
 
 interface RoomScreeningChartProps {
   data: TreeRow[];
