@@ -235,7 +235,6 @@ export function useAutoUpdater() {
           currentVersion: currentVersion,
           latestVersion: nextUpdate?.version,
           updateMode,
-          message: nextUpdate?.message ?? latestPolicyRef.current?.message,
           messages: nextUpdate?.messages ?? latestPolicyRef.current?.messages,
           isDownloading,
           onClose: closeVersionModal,

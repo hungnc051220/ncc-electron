@@ -14,7 +14,6 @@ type VersionInfoModalContentProps = {
   currentVersion: string;
   latestVersion?: string | null;
   updateMode?: UpdateMode;
-  message?: string;
   messages?: string[];
   isChecking?: boolean;
   isDownloading?: boolean;
@@ -27,7 +26,6 @@ const VersionInfoModalContent = ({
   currentVersion,
   latestVersion,
   updateMode = "optional",
-  message,
   messages = [],
   isChecking = false,
   isDownloading = false,
@@ -198,23 +196,16 @@ const VersionInfoModalContent = ({
             </div>
 
             <div className="grid gap-4">
-              {(message || messages.length > 0) && (
+              {messages.length > 0 && (
                 <div className="rounded-[18px] border px-4 py-3 sm:px-5" style={warningPanelStyle}>
-                  {message && (
-                    <div className="text-[13px] leading-5" style={{ color: token.colorText }}>
-                      {message}
-                    </div>
-                  )}
-                  {messages.length > 0 && (
-                    <ul
-                      className={`${message ? "mt-2" : ""} list-disc space-y-1 pl-4 text-[13px] leading-5`}
-                      style={{ color: token.colorText }}
-                    >
-                      {messages.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  )}
+                  <ul
+                    className="list-disc space-y-1 pl-4 text-[13px] leading-5"
+                    style={{ color: token.colorText }}
+                  >
+                    {messages.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
