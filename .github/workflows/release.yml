@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-      - dev
+    paths-ignore:
+      - "src/main/update-policy.json"
 
 permissions:
   contents: write
