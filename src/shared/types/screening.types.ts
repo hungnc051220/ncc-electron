@@ -157,6 +157,7 @@ export interface TicketPriceProps {
   updatedUser: string;
   daypart: DayPartProps;
   position: SeatTypeProps;
+  pricingDate?: string;
 }
 
 export interface SeatTypeProps {

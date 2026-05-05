@@ -3,6 +3,7 @@ export interface BatchProps {
   batchName: string;
   valueType: number;
   valueTypeName: string;
+  minOrderAmount: number;
   discountValue: number;
   rewardTextValue: string;
   startAt: string;

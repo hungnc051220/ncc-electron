@@ -1,10 +1,12 @@
 import { api } from "@renderer/api/client";
 import { ApiResponse, DiscountProps } from "@shared/types";
+import dayjs from "dayjs";
 import queryString from "query-string";
 
 export interface DiscountsQuery {
   current: number;
   pageSize: number;
+  onlyApplicable?: boolean;
 }
 
 export interface DiscountDto {
@@ -13,15 +15,29 @@ export interface DiscountDto {
   discountAmount?: number;
   discountRate?: number;
   image?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export const discountsApi = {
   getAll: async (params: DiscountsQuery): Promise<ApiResponse<DiscountProps>> => {
-    const { current, pageSize } = params;
+    const { current, pageSize, onlyApplicable = false } = params;
 
     const filter: Record<string, unknown> = {
       deleted: false
     };
+
+    if (onlyApplicable) {
+      const now = dayjs().format();
+      filter.and = [
+        {
+          or: [{ startDate: null }, { startDate: { lte: now } }]
+        },
+        {
+          or: [{ endDate: null }, { endDate: { gte: now } }]
+        }
+      ];
+    }
 
     const queryObject: Record<string, unknown> = {
       current,

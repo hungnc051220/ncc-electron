@@ -31,6 +31,13 @@ interface VipCardDialogProps {
 
 type NoticeTone = "warning" | "info" | "neutral";
 
+const VOUCHER_TYPE_ID = {
+  percent: 1,
+  amount: 2,
+  ticket: 3,
+  text: 4
+} as const;
+
 interface NoticeCardProps {
   tone: NoticeTone;
   icon: ReactNode;
@@ -94,27 +101,77 @@ const buildSeatFieldsByFloor = (selectedSeats: ListSeat[]) => {
 const formatVoucherValue = (voucher?: BatchProps) => {
   if (!voucher) return "-";
 
-  const isPercentType =
-    voucher.valueTypeName?.includes("%") ||
-    voucher.valueTypeName?.toLowerCase().includes("phần trăm") ||
-    voucher.valueTypeName?.toLowerCase().includes("phan tram");
-
-  return isPercentType ? `${voucher.discountValue}%` : formatMoney(voucher.discountValue);
+  switch (voucher.valueType) {
+    case VOUCHER_TYPE_ID.percent:
+      return `${voucher.discountValue}%`;
+    case VOUCHER_TYPE_ID.amount:
+      return formatMoney(voucher.discountValue || 0);
+    case VOUCHER_TYPE_ID.ticket:
+      return `${formatNumber(voucher.discountValue || 1)} vé miễn phí`;
+    case VOUCHER_TYPE_ID.text:
+      return voucher.rewardTextValue || "Hiện vật / mô tả";
+    default:
+      return voucher.rewardTextValue || "--";
+  }
 };
 
-const calculateVoucherDiscount = (totalPrice: number, voucher?: BatchProps) => {
-  if (!voucher) return 0;
+const getFreeTicketVoucherRequiredSeatCount = (voucher: BatchProps) => {
+  const minPaidTicketCount = Math.max(Math.floor(voucher.minOrderAmount || 0), 0);
+  const freeTicketCount = Math.max(Math.floor(voucher.discountValue || 0), 0);
 
-  const isPercentType =
-    voucher.valueTypeName?.includes("%") ||
-    voucher.valueTypeName?.toLowerCase().includes("phần trăm") ||
-    voucher.valueTypeName?.toLowerCase().includes("phan tram");
+  return minPaidTicketCount + freeTicketCount;
+};
 
-  if (isPercentType) {
-    return Math.min((totalPrice * voucher.discountValue) / 100, totalPrice);
+const isVoucherSelectable = (voucher: BatchProps, selectedSeats: ListSeat[]) => {
+  if (!voucher.vouchers?.length) return false;
+
+  if (voucher.valueType !== VOUCHER_TYPE_ID.ticket) {
+    return true;
   }
 
-  return Math.min(voucher.discountValue || 0, totalPrice);
+  const freeTicketCount = Math.max(Math.floor(voucher.discountValue || 0), 0);
+
+  return (
+    freeTicketCount > 0 && selectedSeats.length >= getFreeTicketVoucherRequiredSeatCount(voucher)
+  );
+};
+
+const calculateFreeTicketDiscount = (
+  selectedSeats: ListSeat[],
+  voucher: BatchProps,
+  totalPrice: number
+) => {
+  if (!isVoucherSelectable(voucher, selectedSeats)) return 0;
+
+  const freeTicketCount = Math.max(Math.floor(voucher.discountValue || 0), 0);
+  const freeTicketTotal = [...selectedSeats]
+    .sort((left, right) => (left.price || 0) - (right.price || 0))
+    .slice(0, freeTicketCount)
+    .reduce((total, seat) => total + (seat.price || 0), 0);
+
+  return Math.min(freeTicketTotal, totalPrice);
+};
+
+const calculateVoucherDiscount = (
+  totalPrice: number,
+  selectedSeats: ListSeat[],
+  voucher?: BatchProps
+) => {
+  if (!voucher) return 0;
+
+  if (voucher.valueType === VOUCHER_TYPE_ID.percent) {
+    return Math.min((totalPrice * (voucher.discountValue || 0)) / 100, totalPrice);
+  }
+
+  if (voucher.valueType === VOUCHER_TYPE_ID.amount) {
+    return Math.min(voucher.discountValue || 0, totalPrice);
+  }
+
+  if (voucher.valueType === VOUCHER_TYPE_ID.ticket) {
+    return calculateFreeTicketDiscount(selectedSeats, voucher, totalPrice);
+  }
+
+  return 0;
 };
 
 const normalizeMemberCardCode = (value?: string) => {
@@ -247,19 +304,22 @@ const VipCardDialog = ({
   }, [isSingleSeatSelected]);
 
   useEffect(() => {
-    const defaultBatchId = voucherItems.find((item) => item.vouchers?.length > 0)?.batchId ?? null;
+    const defaultBatchId =
+      voucherItems.find((item) => isVoucherSelectable(item, selectedSeats))?.batchId ?? null;
 
     setSelectedBatchId((current) => {
       if (
         current &&
-        voucherItems.some((item) => item.batchId === current && item.vouchers?.length > 0)
+        voucherItems.some(
+          (item) => item.batchId === current && isVoucherSelectable(item, selectedSeats)
+        )
       ) {
         return current;
       }
 
       return defaultBatchId;
     });
-  }, [voucherItems]);
+  }, [selectedSeats, voucherItems]);
 
   useEffect(() => {
     if (open) {
@@ -350,6 +410,11 @@ const VipCardDialog = ({
     return voucherItems.find((item) => item.batchId === selectedBatchId);
   }, [selectedBatchId, voucherItems, voucherType]);
 
+  const selectedVoucherIsSelectable = useMemo(
+    () => (selectedVoucher ? isVoucherSelectable(selectedVoucher, selectedSeats) : false),
+    [selectedSeats, selectedVoucher]
+  );
+
   const is2DVersion = useMemo(
     () => filmVersionCode?.toUpperCase().includes("2D") ?? false,
     [filmVersionCode]
@@ -363,7 +428,7 @@ const VipCardDialog = ({
     }
 
     if (voucherType === "campaign") {
-      return calculateVoucherDiscount(baseTotal, selectedVoucher);
+      return calculateVoucherDiscount(baseTotal, selectedSeats, selectedVoucher);
     }
 
     if (voucherType === "u22" && is2DVersion) {
@@ -371,7 +436,7 @@ const VipCardDialog = ({
     }
 
     return 0;
-  }, [hasSeatTypeDiscount, is2DVersion, selectedVoucher, totalPrice, voucherType]);
+  }, [hasSeatTypeDiscount, is2DVersion, selectedSeats, selectedVoucher, totalPrice, voucherType]);
 
   const finalAmount = useMemo(
     () => (totalPrice || 0) - discountAmount,
@@ -421,7 +486,11 @@ const VipCardDialog = ({
       return;
     }
 
-    if (!hasSeatTypeDiscount && voucherType === "campaign" && !selectedVoucherCode) {
+    if (
+      !hasSeatTypeDiscount &&
+      voucherType === "campaign" &&
+      (!selectedVoucherCode || !selectedVoucherIsSelectable)
+    ) {
       message.error("Chưa chọn voucher áp dụng");
       return;
     }
@@ -583,7 +652,7 @@ const VipCardDialog = ({
                 type: "radio",
                 selectedRowKeys: selectedBatchId ? [selectedBatchId] : [],
                 getCheckboxProps: (record) => ({
-                  disabled: !record.vouchers?.length
+                  disabled: !isVoucherSelectable(record, selectedSeats)
                 }),
                 onChange: (selectedRowKeys) => {
                   const nextKey = selectedRowKeys[0];
@@ -592,12 +661,14 @@ const VipCardDialog = ({
               }}
               onRow={(record) => ({
                 onClick: () => {
-                  if (!record.vouchers?.length) return;
+                  if (!isVoucherSelectable(record, selectedSeats)) return;
                   setSelectedBatchId(record.batchId);
                 }
               })}
               rowClassName={(record) =>
-                record.vouchers?.length ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                isVoucherSelectable(record, selectedSeats)
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed opacity-60"
               }
             />
           )}

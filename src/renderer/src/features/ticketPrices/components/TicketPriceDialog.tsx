@@ -11,13 +11,14 @@ import { DatePicker, Form, Input, InputNumber, Modal, Select } from "antd";
 import { useMemo } from "react";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 
 type FieldType = {
   versionCode: string;
   daypartId: number;
   positionId: number;
   price: number;
-  date?: Dayjs;
+  pricingDate?: Dayjs;
 };
 
 interface TicketPriceDialogProps {
@@ -98,7 +99,10 @@ const TicketPriceDialog = ({ open, onOpenChange, editingTicketPrice }: TicketPri
       versionCode: editingTicketPrice.versionCode,
       daypartId: editingTicketPrice.daypartId,
       positionId: editingTicketPrice.positionId,
-      price: editingTicketPrice.price
+      price: editingTicketPrice.price,
+      pricingDate: editingTicketPrice.pricingDate
+        ? dayjs(editingTicketPrice.pricingDate)
+        : undefined
     };
   };
 
@@ -197,7 +201,7 @@ const TicketPriceDialog = ({ open, onOpenChange, editingTicketPrice }: TicketPri
             }}
           />
         </Form.Item>
-        <Form.Item<FieldType> name="date" label="Ngày áp dụng">
+        <Form.Item<FieldType> name="pricingDate" label="Ngày áp dụng">
           <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày áp dụng" />
         </Form.Item>
         <Form.Item<FieldType>

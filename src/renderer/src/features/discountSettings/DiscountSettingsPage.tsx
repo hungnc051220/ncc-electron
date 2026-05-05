@@ -12,6 +12,7 @@ import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteDiscountDialog from "./components/DeleteDiscountDialog";
 import DiscountSettingsDialog from "./components/DiscountSettingsDialog";
+import dayjs from "dayjs";
 
 const DiscountSettingsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -106,6 +107,18 @@ const DiscountSettingsPage = () => {
       dataIndex: "discountRate",
       render: (value: number) => (value ? `${formatNumber(value)}%` : ""),
       align: "right"
+    },
+    {
+      title: "Thòi gian bắt đầu",
+      key: "startDate",
+      dataIndex: "startDate",
+      render: (value: string) => value && dayjs(value).format("DD/MM/YYYY")
+    },
+    {
+      title: "Thòi gian kết thúc",
+      key: "endDate",
+      dataIndex: "endDate",
+      render: (value: string) => value && dayjs(value).format("DD/MM/YYYY")
     },
     ...(actionItems.length
       ? [

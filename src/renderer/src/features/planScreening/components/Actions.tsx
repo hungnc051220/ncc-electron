@@ -154,7 +154,7 @@ const Actions = ({
   const canCreate = can("showtimes", "create");
   const canUpdate = can("showtimes", "update");
   const canPrint = can("showtimes", "print");
-  const { data: discounts } = useDiscounts({ current: 1, pageSize: 20 });
+  const { data: discounts } = useDiscounts({ current: 1, pageSize: 20, onlyApplicable: true });
   const discountsById = useMemo(
     () => new Map((discounts?.data || []).map((discount) => [discount.id, discount])),
     [discounts]

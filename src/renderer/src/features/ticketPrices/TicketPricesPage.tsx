@@ -12,11 +12,15 @@ import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteTicketPriceDialog from "./components/DeleteTicketPriceDialog";
 import TicketPriceDialog from "./components/TicketPriceDialog";
+import dayjs from "dayjs";
 
 const compareText = (left?: string | null, right?: string | null) =>
   (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
 const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
+
+const compareDate = (left?: string | null, right?: string | null) =>
+  dayjs(left).valueOf() - dayjs(right).valueOf();
 
 const TicketPricesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,6 +115,13 @@ const TicketPricesPage = () => {
       render: (price) => formatMoney(price),
       align: "right",
       width: 200
+    },
+    {
+      title: "Ngày áp dụng",
+      key: "pricingDate",
+      dataIndex: "pricingDate",
+      sorter: (a, b) => compareDate(a.pricingDate, b.pricingDate),
+      render: (pricingDate) => pricingDate && dayjs(pricingDate).format("DD/MM/YYYY")
     },
     ...(actionItems.length
       ? [

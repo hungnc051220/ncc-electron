@@ -11,6 +11,7 @@ import { DatePicker, Form, Image, Input, InputNumber, Modal, Select, Upload } fr
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { rangePresets } from "@renderer/lib/dateRangePresets";
 import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 
 const { RangePicker } = DatePicker;
 
@@ -61,23 +62,43 @@ const DiscountSettingsDialog = ({
         discountType: "amount"
       };
     }
-    return editingDiscount;
+    return {
+      ...editingDiscount,
+      dateRange:
+        editingDiscount.startDate && editingDiscount.endDate
+          ? [dayjs(editingDiscount.startDate), dayjs(editingDiscount.endDate)]
+          : undefined
+    };
   };
 
   const onFinish: FormProps<FormValues>["onFinish"] = (values: FormValues) => {
     if (!isEdit) {
-      createDiscount.mutate(values, {
-        onSuccess: () => {
-          message.success("Thêm giảm giá thành công");
-          onCancel();
+      createDiscount.mutate(
+        {
+          ...values,
+          startDate: values.dateRange?.[0].startOf("day").format(),
+          endDate: values.dateRange?.[1].endOf("day").format()
         },
-        onError: (error: unknown) => {
-          message.error(getApiErrorMessage(error, "Thêm giảm giá thất bại"));
+        {
+          onSuccess: () => {
+            message.success("Thêm giảm giá thành công");
+            onCancel();
+          },
+          onError: (error: unknown) => {
+            message.error(getApiErrorMessage(error, "Thêm giảm giá thất bại"));
+          }
         }
-      });
+      );
     } else {
       updateDiscount.mutate(
-        { id: editingDiscount.id, dto: values },
+        {
+          id: editingDiscount.id,
+          dto: {
+            ...values,
+            startDate: values.dateRange?.[0].startOf("day").format(),
+            endDate: values.dateRange?.[1].endOf("day").format()
+          }
+        },
         {
           onSuccess: () => {
             message.success("Cập nhật giảm giá thành công");

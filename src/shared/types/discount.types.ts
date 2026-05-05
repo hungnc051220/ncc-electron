@@ -10,4 +10,6 @@ export interface DiscountProps {
   createdUser: string;
   updatedOnUtc: string;
   updatedUser: string;
+  startDate?: string;
+  endDate?: string;
 }
