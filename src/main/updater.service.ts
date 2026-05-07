@@ -58,7 +58,6 @@ function normalizePolicy(value: unknown): UpdatePolicy {
     minSupportedVersion:
       typeof raw.minSupportedVersion === "string" ? raw.minSupportedVersion : undefined,
     mode: normalizeUpdateMode(raw.mode),
-    message: typeof raw.message === "string" ? raw.message : undefined,
     messages: Array.isArray(raw.messages)
       ? raw.messages.filter((message): message is string => typeof message === "string")
       : undefined,
@@ -99,10 +98,6 @@ async function fetchUpdatePolicy(): Promise<UpdatePolicy> {
       latestVersion: mockUpdateVersion,
       minSupportedVersion: mockUpdateMode === "force" ? mockUpdateVersion : "0.0.0",
       mode: mockUpdateMode,
-      message:
-        mockUpdateMode === "force"
-          ? "Phiên bản hiện tại cần cập nhật để tiếp tục sử dụng hệ thống."
-          : "Có bản cập nhật mới sẵn sàng.",
       messages: [
         "Cải thiện độ ổn định của luồng cập nhật ứng dụng.",
         "Bổ sung chính sách cập nhật theo từng phiên bản."
@@ -136,7 +131,6 @@ function createMockUpdateInfo() {
   return {
     version: mockUpdateVersion,
     mode: latestMode,
-    message: latestPolicy?.message,
     messages: latestPolicy?.messages,
     policy: latestPolicy ?? undefined
   };
@@ -146,7 +140,6 @@ function createUpdatePayload(info: ElectronUpdateInfo | { version: string }) {
   return {
     version: info.version,
     mode: latestMode,
-    message: latestPolicy?.message,
     messages: latestPolicy?.messages,
     policy: latestPolicy ?? undefined
   };

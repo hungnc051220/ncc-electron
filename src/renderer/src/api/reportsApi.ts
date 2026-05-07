@@ -1,9 +1,11 @@
 import { api } from "@renderer/api/client";
 import {
+  DiscountOfflineUsageReportResponse,
   ExamineTicketByPlanProps,
   MonthlyReportPlanProps,
   MonthlyReportRoomProps,
   MonthlyReportTicketProps,
+  PaymentMethodRevenueReportResponse,
   ReportMonthlyRevenueTicketByStaffProps,
   ReportRevenueFilmByStaffProps,
   ReportRevenueFilmProps,
@@ -49,6 +51,19 @@ export interface ReportRevenueSharingDetailDto {
   manufacturerId: number;
   fromDate?: string;
   toDate?: string;
+}
+
+export interface PaymentMethodRevenueReportDto {
+  storeId: number;
+  fromDate: string;
+  toDate: string;
+}
+
+export interface DiscountOfflineUsageReportDto {
+  storeId: number;
+  fromDate: string;
+  toDate: string;
+  discountName?: string;
 }
 
 export const reportsApi = {
@@ -114,6 +129,18 @@ export const reportsApi = {
     dto: ReportRevenueSharingDetailDto
   ): Promise<ReportRevenueSharingDetailResponse> => {
     const res = await api.post("/api/reports/revenue-sharing-details", dto);
+    return res.data;
+  },
+  getPaymentMethodRevenueReport: async (
+    dto: PaymentMethodRevenueReportDto
+  ): Promise<PaymentMethodRevenueReportResponse> => {
+    const res = await api.post("/api/reports/payment-method-revenue", dto);
+    return res.data;
+  },
+  getDiscountOfflineUsageReport: async (
+    dto: DiscountOfflineUsageReportDto
+  ): Promise<DiscountOfflineUsageReportResponse> => {
+    const res = await api.post("/api/reports/discount-offline-usage", dto);
     return res.data;
   }
 };

@@ -492,3 +492,54 @@ export interface ReportRevenueSharingDetailResponse {
   revenueSharingPeriods?: RevenueSharingPeriodItem[] | null;
   revenueSharingWeeks?: RevenueSharingPeriodItem[] | null;
 }
+
+export interface PaymentMethodRevenueReportItem {
+  paymentMethodSystemName?: string | null;
+  sourceName?: string | null;
+  isOnline?: boolean | null;
+  terminalId?: number | null;
+  name?: string | null;
+  countOrder?: number | null;
+  totalPrice?: number | null;
+  totalChair?: number | null;
+  exportedTicketCount?: number | null;
+  totalElectronicTicket?: number | null;
+  totalElectronicTickets?: number | null;
+}
+
+export interface PaymentMethodRevenueReportResponse {
+  data: PaymentMethodRevenueReportItem[];
+}
+
+export interface DiscountOfflineUsageReportResponse {
+  data: DiscountOfflineUsageReportItem[];
+}
+
+export interface DiscountOfflineUsageReportItem {
+  discountId: number;
+  discountName: string;
+  discountType: string;
+  discountRate: number;
+  startDate: string;
+  endDate: string;
+  totalOrders: number;
+  totalQuantity: number;
+  totalDiscountAmount: number;
+  totalPriceInclTax: number;
+  orders: DiscountOfflineOrderProps[];
+}
+
+export interface DiscountOfflineOrderProps {
+  orderId: number;
+  orderGuid: string;
+  printedOnUtc: string;
+  paidDateUtc: string;
+  paymentMethodSystemName: string;
+  isOnline: boolean;
+  customerPhone: string;
+  sellerUsername: string;
+  totalQuantity: number;
+  discountAmount: number;
+  priceInclTax: number;
+  orderTotal: number;
+}

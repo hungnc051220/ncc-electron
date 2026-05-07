@@ -1,4 +1,6 @@
 import {
+  DiscountOfflineUsageReportDto,
+  PaymentMethodRevenueReportDto,
   ReportQuarterlyDto,
   ReportRevenueByFilmDto,
   ReportRevenueSharingDto,
@@ -18,5 +20,9 @@ export const reportsKeys = {
   getReportYearly: (dto: ReportYearlyDto) => ["report-yearly", dto] as const,
   getReportTicketSalesRevenue: (dto: ReportRevenueByFilmDto) =>
     ["report-ticket-sales-revenue", dto] as const,
-  getReportRevenueSharing: (dto?: ReportRevenueSharingDto) => ["report-sharing", dto] as const
+  getReportRevenueSharing: (dto?: ReportRevenueSharingDto) => ["report-sharing", dto] as const,
+  getPaymentMethodRevenueReport: (dto: PaymentMethodRevenueReportDto) =>
+    ["payment-method-revenue-report", dto] as const,
+  getDiscountOfflineUsageReport: (dto: DiscountOfflineUsageReportDto) =>
+    ["discount-offline-usage-report", dto] as const
 };

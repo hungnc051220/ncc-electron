@@ -232,6 +232,12 @@ export const navConfig: NavConfigItem[] = [
         permissionKey: "order_history",
         to: "/order-history",
         matchPaths: ["/order-history", "/order-history/swap-seats/:id"]
+      },
+      {
+        label: "Danh sách vé bán",
+        key: "sold-tickets",
+        permissionKey: "sold_tickets",
+        to: "/sold-tickets"
       }
     ]
   },
@@ -244,6 +250,12 @@ export const navConfig: NavConfigItem[] = [
         key: "staff-revenue-report",
         permissionKey: "staff_revenue_report",
         to: "/staff-revenue-report"
+      },
+      {
+        label: "Báo cáo doanh thu các chương trình khuyến mãi",
+        key: "discount-offline-usage",
+        permissionKey: "discount_offline_usage",
+        to: "/discount-offline-usage"
       },
       {
         label: "Báo cáo tháng",

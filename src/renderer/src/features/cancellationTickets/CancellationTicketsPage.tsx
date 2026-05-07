@@ -349,6 +349,13 @@ const CancellationTicketsPage = () => {
       }
     },
     {
+      title: "Mã VĐT",
+      key: "invNo",
+      dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.invNo, b.order?.invNo),
+      render: (order) => order?.invNo
+    },
+    {
       title: "Người hủy",
       key: "userName",
       dataIndex: "userName",

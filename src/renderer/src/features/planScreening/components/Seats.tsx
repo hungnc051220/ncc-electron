@@ -882,7 +882,7 @@ const Seats = ({
         className="relative m-2 pt-1 gap-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
-          <legend className="mx-auto px-3 text-xs xl:text-sm text-trunks font-bold">
+          <legend className="mx-auto px-3 text-xs xl:text-sm text-trunks dark:text-gray-200 font-bold">
             Màn hình
           </legend>
         </fieldset>
@@ -911,7 +911,9 @@ const Seats = ({
                 className="size-3 xl:size-4 rounded-sm border border-app-border"
                 style={{ backgroundColor: item.color || "#8f8f8f" }}
               />
-              <span className="font-bold text-zeno text-[11px] xl:text-xs">{item.name}</span>
+              <span className="font-bold text-zeno dark:text-gray-200 text-[11px] xl:text-xs">
+                {item.name}
+              </span>
             </div>
           ))}
           {!isCustomerView && (

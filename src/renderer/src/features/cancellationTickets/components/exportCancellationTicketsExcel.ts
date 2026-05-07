@@ -58,7 +58,7 @@ export const exportCancellationTicketsExcel = async ({
 }: ExportCancellationTicketsExcelParams): Promise<SaveFileResult> => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Quan ly huy ve");
-  const totalColumns = 11;
+  const totalColumns = 12;
   const hasDateRange =
     Boolean(fromDate) && Boolean(toDate) && dayjs(fromDate).isValid() && dayjs(toDate).isValid();
   const formattedFromDate = hasDateRange ? dayjs(fromDate) : null;
@@ -95,6 +95,7 @@ export const exportCancellationTicketsExcel = async ({
     "Giờ chiếu",
     "Số vé",
     "Vị trí ghế",
+    "Mã VĐT",
     "Người hủy",
     "Lý do hủy"
   ];
@@ -122,6 +123,7 @@ export const exportCancellationTicketsExcel = async ({
       item.projectTime ? dayjs(item.projectTime).format("HH:mm") : "",
       Number(item.quantity || 0),
       formatSeatValues(item),
+      item.order?.invNo ?? "",
       item.userName ?? "",
       item.reason ?? ""
     ]);
@@ -136,10 +138,8 @@ export const exportCancellationTicketsExcel = async ({
     "",
     "",
     "",
-    "",
-    "",
-    "",
     data.reduce((total, item) => total + Number(item.quantity || 0), 0),
+    "",
     "",
     "",
     ""
@@ -156,6 +156,7 @@ export const exportCancellationTicketsExcel = async ({
     { width: 12 },
     { width: 10 },
     { width: 26 },
+    { width: 18 },
     { width: 20 },
     { width: 36 }
   ];
@@ -175,7 +176,8 @@ export const exportCancellationTicketsExcel = async ({
       wrapText: true
     };
     worksheet.getCell(row, 10).alignment = { horizontal: "left", vertical: "middle" };
-    worksheet.getCell(row, 11).alignment = {
+    worksheet.getCell(row, 11).alignment = { horizontal: "left", vertical: "middle" };
+    worksheet.getCell(row, 12).alignment = {
       horizontal: "left",
       vertical: "middle",
       wrapText: true

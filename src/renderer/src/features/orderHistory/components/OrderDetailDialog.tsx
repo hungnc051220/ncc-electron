@@ -1,4 +1,4 @@
-import { ReloadOutlined, SyncOutlined } from "@ant-design/icons";
+import { ExportOutlined, ReloadOutlined, SyncOutlined } from "@ant-design/icons";
 import { ordersApi } from "@renderer/api/orders.api";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
@@ -43,6 +43,7 @@ const OrderDetailDialog = ({
   const queryClient = useQueryClient();
   const [isChangingToSuccess, setIsChangingToSuccess] = useState(false);
   const [isCheckingTransaction, setIsCheckingTransaction] = useState(false);
+  const [isExportingETicket, setIsExportingETicket] = useState(false);
   const updateOrder = useUpdateOrder();
   const {
     data: orderDetail,
@@ -82,6 +83,7 @@ const OrderDetailDialog = ({
     !currentOrder.isContract &&
     !isRefundOrder &&
     !isPastProjectDate;
+  const canExportETicket = currentOrder?.orderStatusId === OrderStatus.COMPLETED;
   const isVietQrOrder =
     resolvePaymentType(currentOrder?.paymentMethodSystemName) === PaymentType.VIETQR;
 
@@ -415,6 +417,26 @@ const OrderDetailDialog = ({
     }
   };
 
+  const onExportETicket = async () => {
+    if (!currentOrder) return;
+
+    if (!canExportETicket) {
+      message.warning("Chỉ được xuất vé điện tử khi đơn hàng đã hoàn thành");
+      return;
+    }
+
+    try {
+      setIsExportingETicket(true);
+      await ordersApi.exportETicket({ orderId: currentOrder.id });
+      await refreshOrderDetail();
+      message.success("Xuất vé điện tử thành công");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Xuất vé điện tử thất bại"));
+    } finally {
+      setIsExportingETicket(false);
+    }
+  };
+
   return (
     <Modal
       title="Thông tin vé bán"
@@ -426,6 +448,15 @@ const OrderDetailDialog = ({
       footer={(_, { CancelBtn }) => (
         <>
           <CancelBtn />
+          {canExportETicket && (
+            <Button
+              icon={<ExportOutlined />}
+              onClick={() => void onExportETicket()}
+              loading={isExportingETicket}
+            >
+              Xuất vé điện tử
+            </Button>
+          )}
           {canShowSwapSeatsButton && (
             <Button onClick={() => void onChangeStatusOrder()} disabled={isChangingToSuccess}>
               Đổi ghế

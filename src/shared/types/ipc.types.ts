@@ -30,7 +30,6 @@ export interface UpdatePolicy {
   latestVersion?: string;
   minSupportedVersion?: string;
   mode: UpdateMode;
-  message?: string;
   messages?: string[];
   releaseNotesUrl?: string;
 }
@@ -38,7 +37,6 @@ export interface UpdatePolicy {
 export interface UpdateInfo {
   version: string;
   mode?: UpdateMode;
-  message?: string;
   messages?: string[];
   policy?: UpdatePolicy;
 }

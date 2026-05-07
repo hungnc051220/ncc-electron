@@ -132,6 +132,10 @@ export interface CheckTransactionResponse {
   message?: string;
 }
 
+export interface ExportETicketDto {
+  orderId: number;
+}
+
 export interface OrderPrintedQuery {
   orderId: number;
   posShortName?: string;
@@ -269,6 +273,10 @@ export const ordersApi = {
   },
   checkTransaction: async (dto: CheckTransactionDto): Promise<CheckTransactionResponse> => {
     const res = await api.post("/api/pos/payment/check-transaction", dto);
+    return res.data;
+  },
+  exportETicket: async (dto: ExportETicketDto) => {
+    const res = await api.post("/api/pos/order/export-eticket", dto);
     return res.data;
   },
   create: async (dto: OrderDto) => {

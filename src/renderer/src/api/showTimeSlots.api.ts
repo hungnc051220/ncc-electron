@@ -19,6 +19,7 @@ export const showTimeSlotsApi = {
     const { current, pageSize } = params;
 
     const filter: Record<string, unknown> = {};
+    filter.deleted = false;
 
     const queryObject: Record<string, unknown> = {
       current,

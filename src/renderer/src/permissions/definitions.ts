@@ -259,10 +259,24 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     actions: ["access", "list", "view", "export", "print"]
   },
   {
+    key: "sold_tickets",
+    module: "Tra cứu",
+    label: "Danh sách vé bán",
+    route: "/sold-tickets",
+    actions: ["access", "list", "view", "export"]
+  },
+  {
     key: "staff_revenue_report",
     module: "Thống kê, báo cáo",
-    label: "Doanh thu theo nhân viên",
+    label: "Báo cáo vé bán, doanh thu theo nhân viên",
     route: "/staff-revenue-report",
+    actions: ["access", "list", "view", "export"]
+  },
+  {
+    key: "discount_offline_usage",
+    module: "Thống kê, báo cáo",
+    label: "Báo cáo doanh thu các chương trình khuyến mãi",
+    route: "/discount-offline-usage",
     actions: ["access", "list", "view", "export"]
   },
   {

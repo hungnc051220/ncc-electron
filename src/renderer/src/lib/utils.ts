@@ -9,6 +9,9 @@ import { twMerge } from "tailwind-merge";
 import dayjs from "dayjs";
 import QRCode from "qrcode";
 
+const U22_TICKET_VOUCHER_CODE = "U22Ticket";
+const U22_TICKET_IMAGE_URL = new URL("../assets/images/u22-ticket.png", import.meta.url).href;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -274,6 +277,8 @@ export const buildTicketsFromOrder = async (
   const branchCinemaName = cinemaName || DEFAULT_BRANCH_SETTINGS.cinemaName;
   const branchAddress = address || DEFAULT_BRANCH_SETTINGS.address;
   const printedTicketPrice = data.order.isContract ? formatMoney(0) : undefined;
+  const discountImage =
+    data.order.voucherCode === U22_TICKET_VOUCHER_CODE ? U22_TICKET_IMAGE_URL : undefined;
 
   const ticketGroups = data.planDetails?.length ? data.planDetails : [data];
 
@@ -321,7 +326,7 @@ export const buildTicketsFromOrder = async (
         price: printedTicketPrice ?? formatMoney(item.unitPriceInclTax),
         ticketCode: data.order.barCode,
         qrData: qrBase64,
-        discountImage: item.discount?.image,
+        discountImage: discountImage ?? item.discount?.image,
         posName,
         staffName,
         paymentMethod: formatPaymentMethod(data.order.paymentMethodSystemName)

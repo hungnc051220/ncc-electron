@@ -36,6 +36,7 @@ import SettingPage from "./features/settings/SettingPage";
 import ShowtimesPage from "./features/showtimes/ShowtimesPage";
 import ShowtimeSchedulePage from "./features/showtimeSchedule/ShowtimeSchedulePage";
 import ShowTimeSlotsPage from "./features/showTimeSlots/ShowTimeSlotsPage";
+import SoldTicketsPage from "./features/soldTickets/SoldTicketsPage";
 import StaffRevenueReportPage from "./features/staffRevenueReport/StaffRevenueReportPage";
 import TicketPricesPage from "./features/ticketPrices/TicketPricesPage";
 import TicketSalesDiagramPage from "./features/TicketSalesDiagramPage";
@@ -48,6 +49,7 @@ import VouchersPage from "./features/vouchers/VouchersPage";
 import YearlyReportPage from "./features/yearlyReport/YearlyReportPage";
 import PermissionGuard from "./permissions/PermissionGuard";
 import RouteErrorPage from "./components/RouteErrorPage";
+import DiscountOfflineUsagePage from "./features/discountOfflineUsage/DiscountOfflineUsagePage";
 
 const withAccess = (permissionKey: string, element: React.ReactNode) => (
   <PermissionGuard permissionKey={permissionKey} fallbackPath="/403">
@@ -185,6 +187,14 @@ export const router = createHashRouter([
           {
             path: "/order-history",
             element: withAccess("order_history", <OrderHistoryPage />)
+          },
+          {
+            path: "/sold-tickets",
+            element: withAccess("sold_tickets", <SoldTicketsPage />)
+          },
+          {
+            path: "/discount-offline-usage",
+            element: withAccess("discount_offline_usage", <DiscountOfflineUsagePage />)
           },
           {
             path: "/staff-revenue-report",
