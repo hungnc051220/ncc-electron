@@ -4,9 +4,11 @@ import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
+import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import {
   cn,
   extractSeatValues,
@@ -15,7 +17,14 @@ import {
   resolvePaymentType,
   formatSeatValues
 } from "@renderer/lib/utils";
-import { OrderDetailProps, OrderStatus, PaymentStatus, PaymentType } from "@shared/types";
+import {
+  OrderDetailProps,
+  OrderItem,
+  OrderResponseProps,
+  OrderStatus,
+  PaymentStatus,
+  PaymentType
+} from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Checkbox, Modal, Tag } from "antd";
 import dayjs from "dayjs";
@@ -30,6 +39,67 @@ interface OrderDialogProps {
   selectedItem?: OrderDetailProps | null;
 }
 
+type SeatAvailability = {
+  isApplicable: boolean;
+  conflictingSeats: string[];
+};
+
+type SeatKeyCollection = {
+  indexKeys: Set<string>;
+  valueKeys: Set<string>;
+  labels: Set<string>;
+};
+
+const splitSeatList = (value?: string | null) =>
+  (value ?? "")
+    .split(",")
+    .map((seat) => seat.trim())
+    .filter(Boolean);
+
+const getSeatKeysFromItems = (items?: OrderItem[] | null, planScreenId?: number | null) =>
+  (items ?? []).reduce<SeatKeyCollection>(
+    (acc, item) => {
+      if (planScreenId && item.planScreenId !== planScreenId) {
+        return acc;
+      }
+
+      ([1, 2, 3] as const).forEach((floor) => {
+        const indexKey = `listChairIndexF${floor}` as const;
+        const valueKey = `listChairValueF${floor}` as const;
+        const seatIndexes = splitSeatList(item[indexKey]);
+        const seatValues = splitSeatList(item[valueKey]);
+
+        seatIndexes.forEach((seatIndex) => {
+          acc.indexKeys.add(`${floor}-${seatIndex}`);
+        });
+
+        seatValues.forEach((seatValue) => {
+          acc.valueKeys.add(`${floor}-${seatValue}`);
+          acc.labels.add(seatValue);
+        });
+
+        if (seatValues.length === 0) {
+          seatIndexes.forEach((seatIndex) => {
+            acc.labels.add(`Tầng ${floor} - ${seatIndex}`);
+          });
+        }
+      });
+
+      return acc;
+    },
+    {
+      indexKeys: new Set(),
+      valueKeys: new Set(),
+      labels: new Set()
+    }
+  );
+
+const isReleasedOrder = (order: OrderResponseProps) =>
+  order.orderStatusId === OrderStatus.FAIL ||
+  order.orderStatusId === OrderStatus.CANCELLED ||
+  order.paymentStatusId === PaymentStatus.FAIL ||
+  order.paymentStatusId === PaymentStatus.VOIDED;
+
 const OrderDetailDialog = ({
   open,
   onOpenChange,
@@ -41,6 +111,7 @@ const OrderDetailDialog = ({
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { posName } = useSettingPosStore();
   const [isChangingToSuccess, setIsChangingToSuccess] = useState(false);
   const [isCheckingTransaction, setIsCheckingTransaction] = useState(false);
   const [isExportingETicket, setIsExportingETicket] = useState(false);
@@ -53,6 +124,9 @@ const OrderDetailDialog = ({
 
   const currentDetail = orderDetail ?? selectedItem ?? null;
   const currentOrder = currentDetail?.order;
+  const currentPlanScreeningId =
+    currentDetail?.planScreening?.id ?? currentOrder?.planScreenId ?? 0;
+  const { refetch: refetchOrdersByScreening } = useOrdersByScreening(currentPlanScreeningId);
   const currentItems = useMemo(() => currentOrder?.items ?? [], [currentOrder?.items]);
   const customerName = [currentOrder?.customerFirstName, currentOrder?.customerLastName]
     .filter(Boolean)
@@ -77,7 +151,7 @@ const OrderDetailDialog = ({
 
   const canShowChangeSuccessButton =
     !!currentOrder &&
-    !isCancelOrder &&
+    // !isCancelOrder &&
     currentOrder.orderStatusId !== OrderStatus.COMPLETED &&
     !isInvitationOrder &&
     !currentOrder.isContract &&
@@ -323,6 +397,75 @@ const OrderDetailDialog = ({
     });
   };
 
+  const checkCurrentSeatsAvailability = async (): Promise<SeatAvailability> => {
+    if (!currentOrder || !currentPlanScreeningId) {
+      return {
+        isApplicable: false,
+        conflictingSeats: []
+      };
+    }
+
+    const currentSeatKeys = getSeatKeysFromItems(currentOrder.items, currentPlanScreeningId);
+
+    if (currentSeatKeys.indexKeys.size === 0 && currentSeatKeys.valueKeys.size === 0) {
+      return {
+        isApplicable: false,
+        conflictingSeats: []
+      };
+    }
+
+    const [ordersResult, selectingSnapshots] = await Promise.all([
+      refetchOrdersByScreening(),
+      ordersApi.getSelectingChairs(currentPlanScreeningId)
+    ]);
+    const conflictingSeats = new Set<string>();
+
+    (ordersResult.data ?? []).forEach((order) => {
+      if (order.id === currentOrder.id || isReleasedOrder(order)) {
+        return;
+      }
+
+      const otherSeatKeys = getSeatKeysFromItems(order.items, currentPlanScreeningId);
+      const hasConflict =
+        Array.from(currentSeatKeys.indexKeys).some((seatKey) =>
+          otherSeatKeys.indexKeys.has(seatKey)
+        ) ||
+        Array.from(currentSeatKeys.valueKeys).some((seatKey) =>
+          otherSeatKeys.valueKeys.has(seatKey)
+        );
+
+      if (!hasConflict) {
+        return;
+      }
+
+      currentSeatKeys.labels.forEach((seatLabel) => {
+        conflictingSeats.add(seatLabel);
+      });
+    });
+
+    selectingSnapshots
+      .filter(
+        (snapshot) =>
+          snapshot.planScreenId === currentPlanScreeningId &&
+          (!posName || snapshot.posName !== posName)
+      )
+      .forEach((snapshot) => {
+        ([1, 2, 3] as const).forEach((floor) => {
+          const key = `selectingChairIndexF${floor}` as const;
+          splitSeatList(snapshot[key]).forEach((seatIndex) => {
+            if (currentSeatKeys.indexKeys.has(`${floor}-${seatIndex}`)) {
+              conflictingSeats.add(`Tầng ${floor} - ${seatIndex}`);
+            }
+          });
+        });
+      });
+
+    return {
+      isApplicable: conflictingSeats.size === 0,
+      conflictingSeats: Array.from(conflictingSeats)
+    };
+  };
+
   const refreshOrderDetail = async () => {
     if (!currentOrder) return;
 
@@ -384,6 +527,27 @@ const OrderDetailDialog = ({
       onOk: async () => {
         try {
           setIsChangingToSuccess(true);
+          const seatAvailability = await checkCurrentSeatsAvailability();
+
+          if (!seatAvailability.isApplicable) {
+            modal.confirm({
+              title: "Ghế hiện tại không còn khả dụng",
+              content: (
+                <span>
+                  Một hoặc nhiều ghế của đơn hàng đang bị đặt hoặc giữ chỗ bởi giao dịch khác
+                  {seatAvailability.conflictingSeats.length > 0
+                    ? `: ${seatAvailability.conflictingSeats.join(", ")}`
+                    : ""}
+                  . Vui lòng đổi ghế để hoàn tất đơn hàng.
+                </span>
+              ),
+              okText: "Đổi ghế",
+              cancelText: "Hủy",
+              onOk: goToSwapSeats
+            });
+            return;
+          }
+
           await completeOrder(currentOrder, PaymentStatus.PAID);
           message.success("Chuyển trạng thái đơn hàng thành công");
         } catch (error: unknown) {
