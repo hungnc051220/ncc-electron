@@ -1,13 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.73",
+  "latestVersion": "1.0.74",
   "minSupportedVersion": "1.0.72",
   "mode": "optional",
   "messages": [
-    "Bổ sung danh sách vé bán theo cổng thanh toán, loại vé, số vé điện tử đã xuất và doanh thu.",
-    "Bổ sung báo cáo doanh thu các chương trình khuyến mãi kèm tổng số đơn, số vé, tiền khuyến mại và doanh thu.",
-    "Thêm chức năng xuất vé điện tử trong chi tiết đơn hàng đã hoàn thành.",
-    "Cập nhật báo cáo hủy vé với mã vé điện tử trong bảng và file Excel."
+    "Kiểm tra trạng thái ghế trước khi chuyển đơn hàng sang thành công.",
+    "Nếu ghế đã bị đơn khác đặt hoặc POS khác giữ chỗ, hệ thống yêu cầu đổi ghế trước khi hoàn tất đơn.",
+    "Giữ nguyên luồng đổi ghế hiện tại và tự chuyển đơn sang thành công sau khi đổi ghế xong."
   ],
   "releaseNotesUrl": ""
 }
