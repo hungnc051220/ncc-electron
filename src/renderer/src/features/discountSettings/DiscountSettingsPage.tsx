@@ -20,6 +20,7 @@ const DiscountSettingsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountProps | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const params = useMemo(
     () => ({
@@ -92,7 +93,17 @@ const DiscountSettingsPage = () => {
       title: "Ảnh",
       key: "image",
       dataIndex: "image",
-      render: (value: string) => value && <Image src={value} alt="discount" width={40} />
+      render: (value: string) =>
+        value && (
+          <Image
+            src={value}
+            alt="discount"
+            width={40}
+            preview={false}
+            className="cursor-pointer"
+            onClick={() => setPreviewImage(value)}
+          />
+        )
     },
     {
       title: "Số tiền",
@@ -207,6 +218,22 @@ const DiscountSettingsPage = () => {
           onOpenChange={handleDeleteDialogClose}
           id={selectedDiscount.id}
           name={selectedDiscount.discountName}
+        />
+      )}
+      {previewImage && (
+        <Image
+          src={previewImage}
+          alt="discount preview"
+          style={{ display: "none" }}
+          preview={{
+            open: Boolean(previewImage),
+            src: previewImage,
+            onOpenChange: (open) => {
+              if (!open) {
+                setPreviewImage(null);
+              }
+            }
+          }}
         />
       )}
     </div>
