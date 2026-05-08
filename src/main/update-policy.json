@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.74",
+  "latestVersion": "1.0.75",
   "minSupportedVersion": "1.0.72",
   "mode": "optional",
   "messages": [
-    "Kiểm tra trạng thái ghế trước khi chuyển đơn hàng sang thành công.",
-    "Nếu ghế đã bị đơn khác đặt hoặc POS khác giữ chỗ, hệ thống yêu cầu đổi ghế trước khi hoàn tất đơn.",
-    "Giữ nguyên luồng đổi ghế hiện tại và tự chuyển đơn sang thành công sau khi đổi ghế xong."
+    "Bổ sung chức năng đổi điểm tích lũy khi sử dụng CTKM cho thành viên.",
+    "Cải thiện modal thông tin phiên bản.",
+    "Sửa lỗi ảnh vé U22 không hiển thị."
   ],
   "releaseNotesUrl": ""
 }
