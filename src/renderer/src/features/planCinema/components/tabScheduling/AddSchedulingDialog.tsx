@@ -500,7 +500,6 @@ const AddSchedulingDialog = ({
               <Select
                 options={roomOptions}
                 placeholder="Chọn phòng chiếu"
-                virtual={false}
                 loading={roomOptionsLoading}
               />
             </Form.Item>

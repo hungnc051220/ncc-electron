@@ -612,6 +612,7 @@ const OrderHistoryPage = () => {
         cancelButtonProps={{
           disabled: cancelOrder.isPending
         }}
+        forceRender
         modalRender={(dom) => (
           <Form<CancelOrderFormValues>
             form={cancelForm}

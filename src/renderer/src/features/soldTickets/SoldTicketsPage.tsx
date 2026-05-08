@@ -19,15 +19,8 @@ export const getDefaultFilterValues = (): FilterValues => ({
   dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
 });
 
-const getElectronicTicketCount = (record: PaymentMethodRevenueReportItem) =>
-  record.exportedTicketCount ??
-  record.totalElectronicTicket ??
-  record.totalElectronicTickets ??
-  record.countOrder ??
-  0;
-
 type SummaryTotals = {
-  electronicTicketCount: number;
+  countEticket: number;
   countOrder: number;
   totalChair: number;
   totalPrice: number;
@@ -52,13 +45,13 @@ const SoldTicketsPage = () => {
     () =>
       tableData.reduce<SummaryTotals>(
         (total, item) => ({
-          electronicTicketCount: total.electronicTicketCount + getElectronicTicketCount(item),
+          countEticket: total.countEticket + (item.countEticket || 0),
           countOrder: total.countOrder + (item.countOrder || 0),
           totalChair: total.totalChair + (item.totalChair || 0),
           totalPrice: total.totalPrice + (item.totalPrice || 0)
         }),
         {
-          electronicTicketCount: 0,
+          countEticket: 0,
           countOrder: 0,
           totalChair: 0,
           totalPrice: 0
@@ -90,10 +83,11 @@ const SoldTicketsPage = () => {
     },
     {
       title: "Số lượng vé điện tử đã xuất",
-      key: "electronicTicketCount",
+      key: "countEticket",
+      dataIndex: "countEticket",
       align: "right",
       width: 220,
-      render: (_, record) => formatNumber(getElectronicTicketCount(record))
+      render: (value) => formatNumber(value || 0)
     },
     {
       title: "Số lượng vé đã bán",
@@ -138,11 +132,7 @@ const SoldTicketsPage = () => {
       />
 
       <AutoHeightTable
-        rowKey={(record, index) =>
-          `${record.paymentMethodSystemName || record.sourceName || record.name || "payment"}-${
-            record.terminalId ?? index
-          }-${index}`
-        }
+        rowKey="sourceName"
         dataSource={tableData}
         columns={columns}
         bordered
@@ -158,7 +148,7 @@ const SoldTicketsPage = () => {
                       Tổng
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={3} align="right" className="font-bold">
-                      {formatNumber(summary.electronicTicketCount)}
+                      {formatNumber(summary.countEticket)}
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={4} align="right" className="font-bold">
                       {formatNumber(summary.countOrder)}

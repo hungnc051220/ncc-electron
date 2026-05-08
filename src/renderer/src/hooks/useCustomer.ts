@@ -1,10 +1,10 @@
-import { customerApi, CustomerQuery } from "@renderer/api/customer.api";
+import { customerApi } from "@renderer/api/customer.api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-export const useCustomer = (params: CustomerQuery) =>
+export const useCustomer = (cardCode?: string) =>
   useQuery({
-    queryKey: ["customers", params],
-    queryFn: () => customerApi.getAll(params),
+    queryKey: ["customer", cardCode],
+    queryFn: () => customerApi.getDetail(cardCode),
     placeholderData: keepPreviousData,
-    enabled: false
+    enabled: !!cardCode
   });

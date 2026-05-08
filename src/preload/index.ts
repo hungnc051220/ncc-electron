@@ -68,10 +68,6 @@ const api: PreloadAPI = {
   getUpdatePolicy: (): Promise<UpdatePolicy> => ipcRenderer.invoke("app:get-update-policy"),
   checkUpdate: () => ipcRenderer.invoke("app:check-update"),
   startDownload: (): Promise<void> => ipcRenderer.invoke("app:start-download"),
-  pauseMockUpdateDownload: (): Promise<void> =>
-    ipcRenderer.invoke("app:pause-mock-update-download"),
-  resumeMockUpdateDownload: (): Promise<void> =>
-    ipcRenderer.invoke("app:resume-mock-update-download"),
   install: (options?: { isSilent?: boolean }): Promise<void> =>
     ipcRenderer.invoke("app:install-update", options),
   onAvailable: (cb) => {

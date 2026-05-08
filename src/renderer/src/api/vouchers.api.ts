@@ -1,5 +1,10 @@
 import { api } from "@renderer/api/client";
-import { BatchProps, BatchVoucherProps, MediasoftApiResponse } from "@shared/types";
+import {
+  BatchProps,
+  BatchVoucherProps,
+  ConfigExchangePointsProps,
+  MediasoftApiResponse
+} from "@shared/types";
 
 export interface VoucherDto {
   url: string;
@@ -9,6 +14,11 @@ export interface VoucherDto {
     pageSize: number;
     status: number;
   };
+}
+
+export interface ConfigExchangePointsDto {
+  url: string;
+  method: string;
 }
 
 export interface AvailableForPosDto {
@@ -24,6 +34,12 @@ export interface AvailableForPosDto {
 
 export const vouchersApi = {
   getAll: async (dto: VoucherDto): Promise<MediasoftApiResponse<BatchVoucherProps>> => {
+    const res = await api.post("/api/v1/proxy/to-mediasoft", dto);
+    return res.data;
+  },
+  getConfigExchangePoints: async (
+    dto: ConfigExchangePointsDto
+  ): Promise<{ data: ConfigExchangePointsProps }> => {
     const res = await api.post("/api/v1/proxy/to-mediasoft", dto);
     return res.data;
   },

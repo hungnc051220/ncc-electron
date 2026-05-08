@@ -8,7 +8,6 @@ import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 const UPDATE_PROGRESS_NOTIFICATION_KEY = "update-progress-notification";
 const UPDATE_PROGRESS_DOCK_KEY = "update-progress-dock";
-const ENABLE_MOCK_UPDATE_CONTROLS = process.env.APP_MOCK_UPDATE_PROGRESS === "true";
 const INITIAL_PROGRESS: UpdateDownloadProgress = {
   percent: 0,
   transferred: 0,
@@ -35,9 +34,7 @@ export function useAutoUpdater() {
   const latestModeRef = useRef<UpdateMode>(DEFAULT_UPDATE_MODE);
   const versionRef = useRef<string>("");
   const latestProgressRef = useRef<UpdateDownloadProgress>(INITIAL_PROGRESS);
-  const isMockDownloadPausedRef = useRef<boolean>(false);
   const isDownloadingRef = useRef<boolean>(false);
-  const toggleMockDownloadPauseRef = useRef<() => Promise<void>>(async () => undefined);
   const openProgressDockRef = useRef<() => void>(() => undefined);
   const openProgressNotificationRef = useRef<(progressInfo: UpdateDownloadProgress) => void>(
     () => undefined
@@ -101,11 +98,6 @@ export function useAutoUpdater() {
       description: createElement(UpdateProgressDock, {
         percent: latestProgressRef.current.percent,
         latestVersion: latestUpdateRef.current?.version,
-        isPaused: isMockDownloadPausedRef.current,
-        onTogglePause: () => {
-          void toggleMockDownloadPauseRef.current();
-        },
-        showMockControls: ENABLE_MOCK_UPDATE_CONTROLS,
         onExpand: () => {
           hiddenProgressRef.current = false;
           closeProgressDock();
@@ -136,11 +128,6 @@ export function useAutoUpdater() {
         description: createElement(UpdateProgressNotification, {
           progress: progressInfo,
           latestVersion: latestUpdateRef.current?.version,
-          isPaused: isMockDownloadPausedRef.current,
-          onTogglePause: () => {
-            void toggleMockDownloadPauseRef.current();
-          },
-          showMockControls: ENABLE_MOCK_UPDATE_CONTROLS,
           onHide: () => {
             hiddenProgressRef.current = true;
             notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
@@ -153,27 +140,6 @@ export function useAutoUpdater() {
     [closeProgressDock, notification]
   );
 
-  const toggleMockDownloadPause = useCallback(async () => {
-    if (!ENABLE_MOCK_UPDATE_CONTROLS || !isDownloadingRef.current) {
-      return;
-    }
-
-    if (isMockDownloadPausedRef.current) {
-      await window.api?.resumeMockUpdateDownload();
-      isMockDownloadPausedRef.current = false;
-    } else {
-      await window.api?.pauseMockUpdateDownload();
-      isMockDownloadPausedRef.current = true;
-    }
-
-    if (hiddenProgressRef.current) {
-      openProgressDockRef.current();
-      return;
-    }
-
-    openProgressNotificationRef.current(latestProgressRef.current);
-  }, []);
-
   useEffect(() => {
     openProgressDockRef.current = openProgressDock;
   }, [openProgressDock]);
@@ -181,10 +147,6 @@ export function useAutoUpdater() {
   useEffect(() => {
     openProgressNotificationRef.current = openProgressNotification;
   }, [openProgressNotification]);
-
-  useEffect(() => {
-    toggleMockDownloadPauseRef.current = toggleMockDownloadPause;
-  }, [toggleMockDownloadPause]);
 
   const beginDownload = useCallback(
     async (mode: UpdateMode = latestModeRef.current) => {
@@ -198,7 +160,6 @@ export function useAutoUpdater() {
       }
       setIsDownloading(true);
       isDownloadingRef.current = true;
-      isMockDownloadPausedRef.current = false;
       closeProgressDock();
       openProgressNotification(INITIAL_PROGRESS);
       await window.api?.startDownload();
@@ -223,9 +184,11 @@ export function useAutoUpdater() {
         footer: null,
         width: 560,
         className: "version-info-modal",
+        rootClassName: "version-info-modal-root",
+        centered: true,
         closable: !isForceUpdate,
         keyboard: !isForceUpdate,
-        maskClosable: !isForceUpdate,
+        mask: { closable: !isForceUpdate },
         styles: {
           body: {
             padding: 0
@@ -281,7 +244,6 @@ export function useAutoUpdater() {
       setProgress(progressInfo.percent);
       setIsDownloading(true);
       isDownloadingRef.current = true;
-      isMockDownloadPausedRef.current = false;
       openProgressNotification(progressInfo);
     };
 
@@ -295,7 +257,6 @@ export function useAutoUpdater() {
 
       setIsDownloading(false);
       isDownloadingRef.current = false;
-      isMockDownloadPausedRef.current = false;
       setProgress(100);
       hiddenProgressRef.current = false;
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
@@ -309,7 +270,7 @@ export function useAutoUpdater() {
         cancelText: isForceUpdate ? "Thoát chương trình" : "Để sau",
         closable: !isForceUpdate,
         keyboard: !isForceUpdate,
-        maskClosable: !isForceUpdate,
+        mask: { closable: !isForceUpdate },
         cancelButtonProps: isForceUpdate
           ? {
               danger: true
@@ -326,7 +287,6 @@ export function useAutoUpdater() {
     const onError = (msg: string) => {
       setIsDownloading(false);
       isDownloadingRef.current = false;
-      isMockDownloadPausedRef.current = false;
       hiddenProgressRef.current = false;
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
       closeProgressDock();
@@ -377,5 +337,5 @@ export function useAutoUpdater() {
     await openVersionInfoModal(latestUpdateRef.current ?? availableUpdate);
   };
 
-  return { version, progress, policy, manualCheck, showVersionInfo, toggleMockDownloadPause };
+  return { version, progress, policy, manualCheck, showVersionInfo };
 }

@@ -46,6 +46,8 @@ export interface OrderDto {
   memberCardCode?: string;
   discountGroups?: DiscountGroup[];
   voucherCode?: string;
+  pointCard?: number;
+  pointReward?: number;
   note?: string;
   customerId?: number;
   hasManualInvoice?: boolean;

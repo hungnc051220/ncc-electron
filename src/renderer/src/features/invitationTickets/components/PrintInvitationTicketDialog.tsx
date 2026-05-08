@@ -243,6 +243,7 @@ const PrintInvitationTicketDialog = ({
           disabled: createInvitationTicket.isPending || uploadImage.isPending || loading
         }}
         onCancel={() => onOpenChange(false)}
+        forceRender
         modalRender={(dom) => (
           <Form layout="vertical" form={form} onFinish={handleExport}>
             {dom}

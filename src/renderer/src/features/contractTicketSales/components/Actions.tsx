@@ -413,6 +413,7 @@ const Actions = ({
         cancelButtonProps={{
           disabled: cancelContractTicketSale.isPending
         }}
+        forceRender
         modalRender={(dom) => (
           <Form<FieldType>
             form={form}

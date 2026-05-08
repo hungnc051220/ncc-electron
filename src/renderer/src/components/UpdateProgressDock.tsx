@@ -1,28 +1,13 @@
 import { Button, theme as antdTheme } from "antd";
-import {
-  CloudDownloadOutlined,
-  EyeOutlined,
-  PauseOutlined,
-  CaretRightOutlined
-} from "@ant-design/icons";
+import { CloudDownloadOutlined, EyeOutlined } from "@ant-design/icons";
 
 type UpdateProgressDockProps = {
   percent: number;
   latestVersion?: string | null;
   onExpand: () => void;
-  isPaused?: boolean;
-  onTogglePause?: () => void;
-  showMockControls?: boolean;
 };
 
-const UpdateProgressDock = ({
-  percent,
-  latestVersion,
-  onExpand,
-  isPaused = false,
-  onTogglePause,
-  showMockControls = false
-}: UpdateProgressDockProps) => {
+const UpdateProgressDock = ({ percent, latestVersion, onExpand }: UpdateProgressDockProps) => {
   const { token } = antdTheme.useToken();
 
   return (
@@ -54,17 +39,6 @@ const UpdateProgressDock = ({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        {showMockControls && onTogglePause && (
-          <Button
-            type="text"
-            size="small"
-            icon={isPaused ? <CaretRightOutlined /> : <PauseOutlined />}
-            className="h-8 rounded-xl px-2"
-            onClick={onTogglePause}
-          >
-            {isPaused ? "Tiếp tục" : "Tạm dừng"}
-          </Button>
-        )}
         <Button
           type="text"
           size="small"

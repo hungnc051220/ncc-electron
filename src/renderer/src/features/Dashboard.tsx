@@ -7,7 +7,7 @@ import mainIcon2 from "@renderer/assets/icons/redeem.svg";
 import secondaryIcon3 from "@renderer/assets/icons/summarize.svg";
 import MainCard from "@renderer/components/cards/MainCard";
 import bgDashboard from "@renderer/assets/images/bg-dashboard.png";
-import spidermanVideo from "@renderer/assets/videos/spiderman.mp4";
+import backgroundVideo from "@renderer/assets/videos/background-video.mp4";
 import SecondaryCard from "@renderer/components/cards/SecondaryCard";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -40,7 +40,7 @@ const Dashboard = () => {
         {isDarkTheme && (
           <video
             className="absolute inset-0 size-full object-cover"
-            src={spidermanVideo}
+            src={backgroundVideo}
             autoPlay
             muted={isVideoMuted}
             loop

@@ -346,13 +346,40 @@ body,
     font-family: "Inter", system-ui, sans-serif !important;
   }
 
-  .version-info-modal .ant-modal-container {
+  .version-info-modal {
+    max-height: calc(100vh - 48px);
+    margin: 24px auto !important;
+    padding-bottom: 0 !important;
+  }
+
+  .version-info-modal-root .ant-modal-wrap {
+    overflow: hidden !important;
+  }
+
+  .version-info-modal .ant-modal-container,
+  .version-info-modal .ant-modal-content,
+  .version-info-modal .ant-modal-body {
     padding: 0 !important;
+    max-height: calc(100vh - 48px);
+    overflow: hidden;
   }
 
   .version-info-modal .ant-modal-content,
   .version-info-modal .ant-modal-content * {
     font-family: "Inter", system-ui, sans-serif !important;
+  }
+
+  .version-info-modal .version-message-collapse {
+    overflow: hidden;
+    border-radius: 18px;
+  }
+
+  .version-info-modal .version-message-collapse .ant-collapse-header {
+    align-items: center !important;
+  }
+
+  .version-info-modal .version-message-collapse .ant-collapse-content {
+    background: transparent !important;
   }
 
   .version-info-modal .ant-modal-close {

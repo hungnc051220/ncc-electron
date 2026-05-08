@@ -48,3 +48,14 @@ export interface DistributionRuleProps {
   memberTierName: string;
   percent: number;
 }
+
+export interface ConfigExchangePointsProps {
+  id: number;
+  baseAmount: number;
+  basePoint: number;
+  pointLifetimeMonths: number;
+  isRoundPoint: boolean;
+  isAutoAccumulate: boolean;
+  minPointsForRedemption: number;
+  createdAt: string;
+}

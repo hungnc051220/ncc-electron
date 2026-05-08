@@ -1,4 +1,4 @@
-import { Button, theme as antdTheme } from "antd";
+import { Button, Collapse, theme as antdTheme } from "antd";
 import {
   CheckCircleFilled,
   CloudSyncOutlined,
@@ -98,10 +98,42 @@ const VersionInfoModalContent = ({
     borderColor: isDark ? `${token.colorWarning}55` : token.colorWarningBorder,
     background: isDark ? `${token.colorWarning}16` : token.colorWarningBg
   };
+  const messageCollapseItems = messages.length
+    ? [
+        {
+          key: "messages",
+          label: (
+            <span className="text-[13px] font-semibold">Nội dung cập nhật ({messages.length})</span>
+          ),
+          children: (
+            <ul
+              className="list-disc space-y-1 pl-4 text-[13px] leading-5"
+              style={{ color: token.colorText }}
+            >
+              {messages.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ),
+          styles: {
+            header: {
+              color: token.colorText,
+              padding: "10px 16px"
+            },
+            body: {
+              padding: "10px 16px 12px"
+            }
+          }
+        }
+      ]
+    : [];
 
   return (
-    <div className="overflow-hidden rounded-[20px]">
-      <div className="relative overflow-hidden rounded-[20px]" style={shellStyle}>
+    <div className="max-h-[calc(100vh-48px)] overflow-hidden rounded-[20px]">
+      <div
+        className="relative flex max-h-[calc(100vh-48px)] flex-col overflow-hidden rounded-[20px]"
+        style={shellStyle}
+      >
         <div
           className="pointer-events-none absolute -top-16 left-2 h-32 w-32 rounded-full blur-3xl"
           style={{
@@ -114,7 +146,10 @@ const VersionInfoModalContent = ({
             background: isDark ? "rgba(125, 211, 252, 0.10)" : "rgba(96, 165, 250, 0.16)"
           }}
         />
-        <div className="relative overflow-hidden px-5 py-5 sm:px-6 sm:py-6" style={headerStyle}>
+        <div
+          className="relative shrink-0 overflow-hidden px-5 py-4 sm:px-6 sm:py-5"
+          style={headerStyle}
+        >
           <div
             className="pointer-events-none absolute inset-y-0 right-0 w-[72%] opacity-80"
             style={headerPatternStyle}
@@ -160,9 +195,9 @@ const VersionInfoModalContent = ({
           </div>
         </div>
 
-        <div className="relative px-5 py-5 sm:px-6" style={surfaceStyle}>
-          <div className="grid gap-4">
-            <div className="rounded-[18px] border px-4 py-4 sm:px-5" style={panelStyle}>
+        <div className="relative flex min-h-0 flex-1 flex-col" style={surfaceStyle}>
+          <div className="shrink-0 px-5 pt-4 sm:px-6">
+            <div className="rounded-[18px] border px-4 py-3 sm:px-5" style={panelStyle}>
               <div className="flex items-start gap-3">
                 <div
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
@@ -194,23 +229,23 @@ const VersionInfoModalContent = ({
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="grid gap-4">
+          <div className="version-info-scroll min-h-0 flex-1 overflow-y-auto px-5 py-3 sm:px-6">
+            <div className="grid content-start gap-3">
               {messages.length > 0 && (
-                <div className="rounded-[18px] border px-4 py-3 sm:px-5" style={warningPanelStyle}>
-                  <ul
-                    className="list-disc space-y-1 pl-4 text-[13px] leading-5"
-                    style={{ color: token.colorText }}
-                  >
-                    {messages.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
+                <Collapse
+                  className="version-message-collapse"
+                  bordered
+                  size="small"
+                  items={messageCollapseItems}
+                  defaultActiveKey={messages.length <= 3 ? ["messages"] : undefined}
+                  style={warningPanelStyle}
+                />
               )}
 
               {hasUpdate && (
-                <div className="rounded-[18px] border px-4 py-4 sm:px-5" style={panelStyle}>
+                <div className="rounded-[18px] border px-4 py-3 sm:px-5" style={panelStyle}>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div
@@ -237,14 +272,14 @@ const VersionInfoModalContent = ({
                 </div>
               )}
 
-              <div className="rounded-[18px] border px-4 py-4 sm:px-5" style={panelStyle}>
+              <div className="rounded-[18px] border px-4 py-3 sm:px-5" style={panelStyle}>
                 <div
                   className="text-[13px] font-semibold uppercase tracking-[0.14em]"
                   style={softTextStyle}
                 >
                   Liên hệ phát triển
                 </div>
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 space-y-2">
                   <div>
                     <div className="text-[12px] uppercase tracking-[0.12em]" style={softTextStyle}>
                       Tác giả
@@ -271,30 +306,36 @@ const VersionInfoModalContent = ({
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">
-              {isForceUpdate ? (
-                <Button size="middle" danger className="h-9 rounded-xl px-4" onClick={onQuitApp}>
-                  Thoát chương trình
-                </Button>
-              ) : (
-                <Button size="middle" className="h-9 rounded-xl px-4" onClick={onClose}>
-                  Đóng
-                </Button>
-              )}
-              {hasUpdate && (
-                <Button
-                  type="primary"
-                  size="middle"
-                  icon={<CloudDownloadOutlined />}
-                  className="h-9 rounded-xl px-4 text-[14px] font-medium shadow-sm"
-                  loading={isChecking || isDownloading}
-                  onClick={onUpdateNow}
-                >
-                  {isDownloading ? "Đang tải cập nhật" : "Cập nhật ngay"}
-                </Button>
-              )}
-            </div>
+          <div
+            className="sticky bottom-0 z-10 flex shrink-0 flex-col-reverse gap-3 border-t px-5 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+            style={{
+              borderColor: isDark ? "rgba(255,255,255,0.08)" : token.colorBorderSecondary,
+              background: isDark ? "rgba(9, 18, 34, 0.98)" : "rgba(248,250,252,0.98)"
+            }}
+          >
+            {isForceUpdate ? (
+              <Button size="middle" danger className="h-9 rounded-xl px-4" onClick={onQuitApp}>
+                Thoát chương trình
+              </Button>
+            ) : (
+              <Button size="middle" className="h-9 rounded-xl px-4" onClick={onClose}>
+                Đóng
+              </Button>
+            )}
+            {hasUpdate && (
+              <Button
+                type="primary"
+                size="middle"
+                icon={<CloudDownloadOutlined />}
+                className="h-9 rounded-xl px-4 text-[14px] font-medium shadow-sm"
+                loading={isChecking || isDownloading}
+                onClick={onUpdateNow}
+              >
+                {isDownloading ? "Đang tải cập nhật" : "Cập nhật ngay"}
+              </Button>
+            )}
           </div>
         </div>
       </div>

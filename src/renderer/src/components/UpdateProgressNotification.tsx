@@ -1,19 +1,11 @@
 import { Button, Progress, theme as antdTheme } from "antd";
-import {
-  CloudDownloadOutlined,
-  EyeInvisibleOutlined,
-  PauseOutlined,
-  CaretRightOutlined
-} from "@ant-design/icons";
+import { CloudDownloadOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import type { UpdateDownloadProgress } from "@shared/types";
 
 type UpdateProgressNotificationProps = {
   progress: UpdateDownloadProgress;
   latestVersion?: string | null;
   onHide: () => void;
-  isPaused?: boolean;
-  onTogglePause?: () => void;
-  showMockControls?: boolean;
 };
 
 const formatBytes = (value: number) => {
@@ -31,10 +23,7 @@ const formatSpeed = (value: number) => `${formatBytes(value)}/s`;
 const UpdateProgressNotification = ({
   progress,
   latestVersion,
-  onHide,
-  isPaused = false,
-  onTogglePause,
-  showMockControls = false
+  onHide
 }: UpdateProgressNotificationProps) => {
   const { token } = antdTheme.useToken();
 
@@ -72,17 +61,6 @@ const UpdateProgressNotification = ({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {showMockControls && onTogglePause && (
-            <Button
-              type="text"
-              size="small"
-              icon={isPaused ? <CaretRightOutlined /> : <PauseOutlined />}
-              className="h-8 rounded-xl px-2"
-              onClick={onTogglePause}
-            >
-              {isPaused ? "Tiếp tục" : "Tạm dừng"}
-            </Button>
-          )}
           <Button
             type="text"
             size="small"

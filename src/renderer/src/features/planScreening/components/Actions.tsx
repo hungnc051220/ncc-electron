@@ -355,6 +355,8 @@ const Actions = ({
     customerId?: number;
     memberCardCode?: string;
     voucherCode?: string;
+    pointCard?: number;
+    pointReward?: number;
   }) => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
@@ -378,6 +380,8 @@ const Actions = ({
       customerId: params?.customerId,
       memberCardCode: params?.memberCardCode,
       voucherCode: params?.voucherCode,
+      pointCard: params?.pointCard,
+      pointReward: params?.pointReward,
       discountGroups: discountGroupsPayload,
       hasManualInvoice: exportInvoice ? true : false,
       ...buildSeatFieldsByFloor(selectedSeats)
@@ -767,6 +771,7 @@ const Actions = ({
             cancelButtonProps={{
               disabled: cancelOrder.isPending
             }}
+            forceRender
             modalRender={(dom) => (
               <Form<FieldType>
                 form={form}
@@ -857,18 +862,12 @@ const Actions = ({
               Quẹt thẻ VIP
             </Checkbox>
             <Checkbox.Group
+              className="flex flex-col"
               value={paymentMethod}
               disabled={disableNonCancelActions || !canCreate}
               onChange={onChange}
-            >
-              <div className="flex flex-col">
-                {paymentTypes.map((paymentType) => (
-                  <Checkbox key={paymentType.value} value={paymentType.value}>
-                    {paymentType.label}
-                  </Checkbox>
-                ))}
-              </div>
-            </Checkbox.Group>
+              options={paymentTypes}
+            />
           </div>
           <div>
             <Button

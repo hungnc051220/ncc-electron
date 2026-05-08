@@ -11,6 +11,7 @@ import QRCode from "qrcode";
 
 const U22_TICKET_VOUCHER_CODE = "U22Ticket";
 const U22_TICKET_IMAGE_URL = new URL("../assets/images/u22-ticket.png", import.meta.url).href;
+let u22TicketImageDataUrlPromise: Promise<string | undefined> | undefined;
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -284,6 +285,33 @@ export const extractSeatValues = (
 export const formatSeatValues = (items?: SeatSource[] | null, listSeats?: ListSeat[][] | null) =>
   extractSeatValues(items, listSeats).join(", ");
 
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+const getU22TicketImageDataUrl = () => {
+  u22TicketImageDataUrlPromise ??= fetch(U22_TICKET_IMAGE_URL)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Cannot load U22 ticket image: ${response.status}`);
+      }
+
+      return response.blob();
+    })
+    .then(blobToDataUrl)
+    .catch((error) => {
+      console.error("[print] failed to inline U22 ticket image", error);
+      return undefined;
+    });
+
+  return u22TicketImageDataUrlPromise;
+};
+
 export const buildTicketsFromOrder = async (
   data: OrderDetailProps,
   staffName?: string,
@@ -296,7 +324,9 @@ export const buildTicketsFromOrder = async (
   const branchAddress = address || DEFAULT_BRANCH_SETTINGS.address;
   const printedTicketPrice = data.order.isContract ? formatMoney(0) : undefined;
   const discountImage =
-    data.order.voucherCode === U22_TICKET_VOUCHER_CODE ? U22_TICKET_IMAGE_URL : undefined;
+    data.order.voucherCode === U22_TICKET_VOUCHER_CODE
+      ? await getU22TicketImageDataUrl()
+      : undefined;
 
   const ticketGroups = data.planDetails?.length ? data.planDetails : [data];
 

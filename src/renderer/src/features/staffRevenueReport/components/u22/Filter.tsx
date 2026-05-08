@@ -38,6 +38,10 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   });
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
     form.setFieldsValue({
       ...filterValues,
       dateRange:
@@ -45,7 +49,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           ? [dayjs(filterValues.dateRange[0]), dayjs(filterValues.dateRange[1])]
           : undefined
     });
-  }, [filterValues, form]);
+  }, [filterValues, form, open]);
 
   const onClear = () => {
     setOpen(false);
@@ -79,6 +83,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         okText="Tìm kiếm"
         okButtonProps={{ htmlType: "submit", autoFocus: true }}
         onCancel={() => setOpen(false)}
+        forceRender
         modalRender={(dom) => (
           <Form
             layout="vertical"

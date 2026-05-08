@@ -45,6 +45,7 @@ const Filter = ({ onSearch, filterValues, setCurrent, customerRoles }: FilterPro
         okText="Tìm kiếm"
         okButtonProps={{ htmlType: "submit", autoFocus: true }}
         onCancel={() => setOpen(false)}
+        forceRender
         modalRender={(dom) => (
           <Form
             layout="vertical"

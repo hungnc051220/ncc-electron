@@ -65,8 +65,6 @@ export interface PreloadAPI {
   getUpdatePolicy(): Promise<UpdatePolicy>;
   checkUpdate(): Promise<UpdateInfo | null>;
   startDownload(): Promise<void>;
-  pauseMockUpdateDownload(): Promise<void>;
-  resumeMockUpdateDownload(): Promise<void>;
   install(options?: { isSilent?: boolean }): Promise<void>;
   onAvailable(cb: (info: UpdateInfo) => void): () => void;
   onUpdatePolicy(cb: (policy: UpdatePolicy) => void): () => void;

@@ -742,6 +742,7 @@ const ContractTicketSalesPage = () => {
         cancelButtonProps={{
           disabled: cancelContractTicketSale.isPending
         }}
+        forceRender
         modalRender={(dom) => (
           <Form<DeleteContractFormValues>
             form={deleteForm}

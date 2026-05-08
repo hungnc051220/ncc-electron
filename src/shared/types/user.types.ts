@@ -86,4 +86,17 @@ export interface CustomerPosProps {
   userType: string;
   registerType: string;
   studentIdCard: string;
+  cardLevel: CardLevelProps;
+}
+
+export interface CardLevelProps {
+  currentTierName: string;
+  currentTierThreshold: number;
+  nextTierName: string;
+  nextTierThreshold: number;
+  totalSpendingThisYear: number;
+  remainingToNextTier: number;
+  currentPointBalance: number;
+  pendingPoints: number;
+  expiredPoints: number;
 }

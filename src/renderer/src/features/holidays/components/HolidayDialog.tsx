@@ -1,6 +1,6 @@
 import { useCreateHoliday } from "@renderer/hooks/holidays/useCreateHoliday";
 import type { FormProps } from "antd";
-import { Checkbox, Col, DatePicker, Form, Modal, Row } from "antd";
+import { Checkbox, DatePicker, Form, Modal } from "antd";
 import dayjs from "dayjs";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
@@ -88,26 +88,10 @@ const HolidayDialog = ({ open, onOpenChange, dateTypeId, year }: HolidayDialogPr
         }}
       >
         <Form.Item<FieldType> name="daysInWeek" label="Ngày trong tuần">
-          <Checkbox.Group style={{ width: "100%" }}>
-            <Row>
-              {DAYS_OF_WEEK.map((day) => (
-                <Col span={8} key={day.value}>
-                  <Checkbox value={day.value}>{day.label}</Checkbox>
-                </Col>
-              ))}
-            </Row>
-          </Checkbox.Group>
+          <Checkbox.Group className="grid w-full grid-cols-3 gap-y-2" options={DAYS_OF_WEEK} />
         </Form.Item>
         <Form.Item<FieldType> name="specialDates" label="Ngày đặc biệt">
-          <Checkbox.Group style={{ width: "100%" }}>
-            <Row>
-              {SPECIAL_DAYS.map((day) => (
-                <Col span={8} key={day.value}>
-                  <Checkbox value={day.value}>{day.label}</Checkbox>
-                </Col>
-              ))}
-            </Row>
-          </Checkbox.Group>
+          <Checkbox.Group className="grid w-full grid-cols-3 gap-y-2" options={SPECIAL_DAYS} />
         </Form.Item>
 
         <Form.Item<FieldType> name="specificDate" label="Ngày cụ thể khác">

@@ -499,6 +499,7 @@ export interface PaymentMethodRevenueReportItem {
   isOnline?: boolean | null;
   terminalId?: number | null;
   name?: string | null;
+  countEticket?: number | null;
   countOrder?: number | null;
   totalPrice?: number | null;
   totalChair?: number | null;

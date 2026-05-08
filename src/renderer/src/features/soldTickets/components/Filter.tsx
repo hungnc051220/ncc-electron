@@ -21,21 +21,22 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
     form.setFieldsValue({
       dateRange:
         filterValues.dateRange?.length === 2
           ? [dayjs(filterValues.dateRange[0]), dayjs(filterValues.dateRange[1])]
           : undefined
     });
-  }, [filterValues, form]);
+  }, [filterValues, form, open]);
 
   const onClear = () => {
     const defaultValues = getDefaultFilterValues();
     setOpen(false);
     startTransition(() => {
-      form.setFieldsValue({
-        dateRange: defaultValues.dateRange?.map((value) => dayjs(value)) as [Dayjs, Dayjs]
-      });
       onSearch(defaultValues);
     });
   };
@@ -64,6 +65,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         okButtonProps={{ htmlType: "submit", autoFocus: true }}
         onCancel={() => setOpen(false)}
         width={420}
+        forceRender
         modalRender={(dom) => (
           <Form
             layout="vertical"

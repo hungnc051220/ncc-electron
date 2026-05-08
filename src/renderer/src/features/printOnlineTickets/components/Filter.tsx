@@ -41,6 +41,7 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
         okButtonProps={{ htmlType: "submit", autoFocus: true }}
         onCancel={() => setOpen(false)}
         width={400}
+        forceRender
         modalRender={(dom) => (
           <Form
             layout="vertical"

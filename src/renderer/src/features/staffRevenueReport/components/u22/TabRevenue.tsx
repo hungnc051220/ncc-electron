@@ -21,6 +21,7 @@ const TabRevenue = ({
 }: TabRevenueProps) => {
   return (
     <AutoHeightTable
+      rowKey={(_record, index) => `u22-usage-${index}`}
       dataSource={tableData}
       columns={columns}
       bordered

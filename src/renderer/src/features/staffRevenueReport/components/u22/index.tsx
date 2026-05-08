@@ -58,7 +58,7 @@ const U22Usage = () => {
       title: "Thời gian mua",
       key: "paidDate",
       dataIndex: "paidDate",
-      render: (value) => dayjs(value).format("HH:mm DD/MM/YYYY")
+      render: (value) => (value ? dayjs(value).format("HH:mm DD/MM/YYYY") : "")
     },
     {
       title: "Mức chi tiêu",

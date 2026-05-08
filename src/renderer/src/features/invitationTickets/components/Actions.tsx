@@ -318,6 +318,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
         cancelButtonProps={{
           disabled: cancelOrder.isPending
         }}
+        forceRender
         modalRender={(dom) => (
           <Form<FieldType>
             form={cancelForm}
