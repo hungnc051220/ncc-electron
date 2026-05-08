@@ -7,7 +7,11 @@ import {
   filterEmptyValues,
   formatMoney,
   formatNumber,
-  formatSeatValues
+  formatSeatValues,
+  compareText,
+  compareNumber,
+  compareNaturalText,
+  compareDate
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, RefundStatus } from "@shared/types";
@@ -28,17 +32,6 @@ export interface ValuesProps {
   email?: string;
   dateRange?: [string, string];
 }
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
-
-const compareNaturalText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
-
-const compareDate = (left?: string | null, right?: string | null) =>
-  dayjs(left).valueOf() - dayjs(right).valueOf();
 
 const RefundsPage = () => {
   const [current, setCurrent] = useState(1);

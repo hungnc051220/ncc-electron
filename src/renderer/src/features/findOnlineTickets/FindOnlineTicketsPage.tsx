@@ -6,7 +6,13 @@ import { Dropdown } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { OrderDetailProps } from "@shared/types";
-import { filterEmptyValues, formatNumber, formatSeatValues } from "@renderer/lib/utils";
+import {
+  filterEmptyValues,
+  formatNumber,
+  formatSeatValues,
+  compareText,
+  compareNumber
+} from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -26,11 +32,6 @@ export interface ValuesProps {
 export const getDefaultFilterValues = (): ValuesProps => ({
   dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
 });
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const FindOnlineTicketsPage = () => {
   const [current, setCurrent] = useState(1);

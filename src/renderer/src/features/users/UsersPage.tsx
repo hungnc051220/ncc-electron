@@ -6,7 +6,7 @@ import UserDialog from "@renderer/features/users/components/UserDialog";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useUsers } from "@renderer/hooks/users/useUsers";
-import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { filterEmptyValues, formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
@@ -20,11 +20,6 @@ export interface ValuesProps {
   roleId?: number;
   keyword?: string;
 }
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const UsersPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

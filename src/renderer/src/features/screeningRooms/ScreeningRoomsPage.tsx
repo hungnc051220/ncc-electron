@@ -4,7 +4,7 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRooms";
-import { formatNumber } from "@renderer/lib/utils";
+import { formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { RoomProps } from "@shared/types";
 import type { MenuProps, PaginationProps, TableProps } from "antd";
 import { Button, Dropdown } from "antd";
@@ -14,11 +14,6 @@ import DeleteScreeningRoomDialog from "./components/DeleteScreeningRoomDialog";
 import ScreeningRoomsDialog from "./components/ScreeningRoomsDialog";
 import { useNavigate } from "react-router";
 import ChangeHiddenScreeningRoomDialog from "./components/ChangeHiddenScreeningRoomDialog";
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const ScreeningRoomsPage = () => {
   const navigate = useNavigate();

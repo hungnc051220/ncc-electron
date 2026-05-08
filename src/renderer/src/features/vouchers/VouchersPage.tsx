@@ -2,7 +2,7 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { useVouchers } from "@renderer/hooks/vouchers/useVouchers";
-import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { formatMoney, formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { BatchVoucherProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import dayjs from "dayjs";
@@ -14,11 +14,6 @@ const VOUCHER_TYPE_ID = {
   ticket: 3,
   text: 4
 } as const;
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const getVoucherValueLabel = (voucher: BatchVoucherProps) => {
   switch (voucher.valueType) {

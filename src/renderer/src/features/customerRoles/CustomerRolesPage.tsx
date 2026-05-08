@@ -3,7 +3,7 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
-import { formatNumber } from "@renderer/lib/utils";
+import { formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { CustomerRoleProps } from "@shared/types";
 import { Button, Dropdown } from "antd";
@@ -12,11 +12,6 @@ import { Check, PlusIcon, SquarePen, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import CustomerRoleDialog from "./components/CustomerRoleDialog";
 import DeleteCustomerRoleDialog from "./components/DeleteCustomerRoleDialog";
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const CustomerRolesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -14,7 +14,10 @@ import {
   filterEmptyValues,
   formatSeatValues,
   formatMoney,
-  formatNumber
+  formatNumber,
+  compareText,
+  compareNumber,
+  compareNaturalText
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
@@ -57,14 +60,6 @@ type CancelOrderFormValues = {
   cancelReasonId: number;
   isRefund: boolean;
 };
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNaturalText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const getSellerName = (orderDetail: OrderDetailProps) =>
   [orderDetail.order?.seller?.customerFirstName, orderDetail.order?.seller?.customerLastName]

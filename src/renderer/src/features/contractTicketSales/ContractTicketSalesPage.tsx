@@ -13,7 +13,10 @@ import {
   buildTicketsFromOrder,
   filterEmptyValues,
   formatMoney,
-  formatNumber
+  formatNumber,
+  compareText,
+  compareNumber,
+  compareDate
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -48,14 +51,6 @@ export interface ValuesProps {
 }
 
 type PlanDetail = OrderDetailProps["planDetails"][number];
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
-
-const compareDate = (left?: string | null, right?: string | null) =>
-  dayjs(left).valueOf() - dayjs(right).valueOf();
 
 interface ContractTicketSaleRow {
   key: string;

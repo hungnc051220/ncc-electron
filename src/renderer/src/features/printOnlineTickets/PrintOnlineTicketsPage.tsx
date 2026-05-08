@@ -8,7 +8,14 @@ import { useMarkPrintedOrder } from "@renderer/hooks/orders/useMarkPrintedOrder"
 import { useUnmarkPrintedOrder } from "@renderer/hooks/orders/useUnmarkPrintedOrder";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getPrintErrorMessage } from "@renderer/lib/print";
-import { buildTicketsFromOrder, formatNumber, formatSeatValues } from "@renderer/lib/utils";
+import {
+  buildTicketsFromOrder,
+  formatNumber,
+  formatSeatValues,
+  compareText,
+  compareNumber,
+  compareNullableText
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
@@ -33,17 +40,6 @@ export const getDefaultFilterValues = (): ValuesProps => ({
   projectDate: dayjs()
 });
 
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNullableText = (left?: string | null, right?: string | null) => {
-  return (left ?? "").localeCompare(right ?? "", undefined, {
-    numeric: true,
-    sensitivity: "base"
-  });
-};
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 const PRINT_ONLINE_TICKETS_PAGE_SIZE = 300;
 type TableFilterState = Record<string, (Key | boolean)[] | null>;
 type TableSorterState = {

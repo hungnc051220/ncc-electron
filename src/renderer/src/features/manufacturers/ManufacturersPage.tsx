@@ -11,11 +11,8 @@ import { Check, Eye, EyeOff, PlusIcon, SquarePen, Trash2, X } from "lucide-react
 import { useCallback, useMemo, useState } from "react";
 import DeleteManufacturerDialog from "./components/DeleteManufacturerDialog";
 import ManufacturerDialog from "./components/ManufacturerDialog";
-import { formatNumber } from "@renderer/lib/utils";
+import { formatNumber, compareText } from "@renderer/lib/utils";
 import ChangeHiddenManufacturerDialog from "./components/ChangeHiddenManufacturerDialog";
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
 const ManufacturersPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

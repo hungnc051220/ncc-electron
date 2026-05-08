@@ -4,7 +4,7 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
-import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import { filterEmptyValues, formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { CancellationTicketProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -25,10 +25,6 @@ export const getDefaultFilterValues = (): ValuesProps => ({
   dateRange: [dayjs().startOf("day").toISOString(), dayjs().endOf("day").toISOString()]
 });
 
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 const CANCEL_TICKETS_PAGE_SIZE = 200;
 type TableFilterState = Record<string, (Key | boolean)[] | null>;
 type TableSorterState = {

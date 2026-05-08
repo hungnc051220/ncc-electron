@@ -5,7 +5,13 @@ import PageHeader from "@renderer/components/PageHeader";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { formatNumber, getPlanScreeningDateTime, isPlanScreeningLocked } from "@renderer/lib/utils";
+import {
+  formatNumber,
+  getPlanScreeningDateTime,
+  isPlanScreeningLocked,
+  compareText,
+  compareNumber
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import type { MenuProps, PaginationProps, TableProps } from "antd";
@@ -15,11 +21,6 @@ import { Check, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import Filter, { OnlineShowtimeBookingFilterValues } from "./Filter";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareDate = (left?: number, right?: number) => (left || 0) - (right || 0);
 
 const OnlineShowtimeBookingPage = () => {
   const { message } = useAntdApp();
@@ -118,7 +119,7 @@ const OnlineShowtimeBookingPage = () => {
       title: "Ngày chiếu",
       key: "projectDate",
       dataIndex: "projectDate",
-      sorter: (a, b) => compareDate(getScreeningDateTime(a), getScreeningDateTime(b)),
+      sorter: (a, b) => compareNumber(getScreeningDateTime(a), getScreeningDateTime(b)),
       render: (value: string) => dayjs(value).format("DD/MM/YYYY"),
       width: 150
     },
@@ -126,7 +127,7 @@ const OnlineShowtimeBookingPage = () => {
       title: "Giờ chiếu",
       key: "projectTime",
       dataIndex: "projectTime",
-      sorter: (a, b) => compareDate(getScreeningDateTime(a), getScreeningDateTime(b)),
+      sorter: (a, b) => compareNumber(getScreeningDateTime(a), getScreeningDateTime(b)),
       render: (value: string) => dayjs(value).format("HH:mm"),
       width: 150
     },

@@ -8,7 +8,16 @@ import { MoreOutlined } from "@ant-design/icons";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { cn, extractSeatValues, filterEmptyValues, formatNumber } from "@renderer/lib/utils";
+import {
+  cn,
+  extractSeatValues,
+  filterEmptyValues,
+  formatNumber,
+  compareText,
+  compareNumber,
+  compareNaturalText,
+  compareDate
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -29,17 +38,6 @@ export interface ValuesProps {
 type CancelOrderFormValues = {
   cancelReasonId: number;
 };
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
-
-const compareNaturalText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
-
-const compareDate = (left?: string | null, right?: string | null) =>
-  dayjs(left).valueOf() - dayjs(right).valueOf();
 
 const renderInvitationTicketStatus = (status?: string | null) => {
   const normalizedStatus = status?.toLowerCase();

@@ -12,7 +12,15 @@ import FilmDialog from "./components/FilmDialog";
 import Filter from "./components/Filter";
 import type { Dayjs } from "dayjs";
 import { FilmProps } from "@shared/types";
-import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
+import {
+  filterEmptyValues,
+  formatMoney,
+  formatNumber,
+  compareText,
+  compareNumber,
+  compareNaturalText,
+  compareDate
+} from "@renderer/lib/utils";
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -37,17 +45,6 @@ export interface ValuesProps {
   manufacturerId?: number;
   premieredDay?: Dayjs | null;
 }
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
-
-const compareNaturalText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
-
-const compareDate = (left?: string | null, right?: string | null) =>
-  dayjs(left).valueOf() - dayjs(right).valueOf();
 
 const FilmsPage = () => {
   const [activeKey, setActiveKey] = useState("ALL");

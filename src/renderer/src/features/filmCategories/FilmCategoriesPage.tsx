@@ -3,7 +3,7 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { useFilmCategories } from "@renderer/hooks/filmCategories/useFilmCategories";
-import { formatNumber } from "@renderer/lib/utils";
+import { formatNumber, compareText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { FilmCategoryProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
@@ -13,9 +13,6 @@ import { useCallback, useMemo, useState } from "react";
 import DeleteFilmCategoryDialog from "./components/DeleteFilmCategoryDialog";
 import FilmCategoryDialog from "./components/FilmCategoryDialog";
 import dayjs from "dayjs";
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
 const FilmCategoriesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

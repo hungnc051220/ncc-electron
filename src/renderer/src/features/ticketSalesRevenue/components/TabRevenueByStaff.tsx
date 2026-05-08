@@ -1,7 +1,7 @@
 import { useReportTicketSalesRevenue } from "@renderer/hooks/reports/useReportTicketSalesRevenue";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
-import { formatMoney, formatNumber } from "@renderer/lib/utils";
+import { formatMoney, formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { ReportRevenueStaffProps, RevenueByEmployeeProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
 import { Table, Typography } from "antd";
@@ -14,11 +14,6 @@ interface TabRevenueByStaffProps {
   fromDate?: Dayjs;
   toDate?: Dayjs;
 }
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const TabRevenueByStaff = ({ fromDate, toDate }: TabRevenueByStaffProps) => {
   const [current, setCurrent] = useState(1);

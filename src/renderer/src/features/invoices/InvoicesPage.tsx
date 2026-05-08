@@ -3,7 +3,7 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
-import { formatNumber } from "@renderer/lib/utils";
+import { formatNumber, compareText, compareDate } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
@@ -15,12 +15,6 @@ import { InvoiceStatusBadge } from "./components/InvoiceStatusBadge";
 import UpdateStatusInvoiceDialog from "./components/UpdateStatusInvoiceDialog";
 import dayjs from "dayjs";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareDate = (left?: string | null, right?: string | null) =>
-  dayjs(left).valueOf() - dayjs(right).valueOf();
 
 const InvoicesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

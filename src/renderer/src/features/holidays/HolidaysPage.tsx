@@ -3,7 +3,7 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { MoreOutlined } from "@ant-design/icons";
 import { useHolidays } from "@renderer/hooks/holidays/useHolidays";
-import { formatNumber } from "@renderer/lib/utils";
+import { formatNumber, compareText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { HolidayProps } from "@shared/types";
 import type { PaginationProps, TableProps, TabsProps } from "antd";
@@ -30,9 +30,6 @@ const formatWeekday = (date: string) => {
   const text = dayjs(date).format("dddd");
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
 const HolidaysPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

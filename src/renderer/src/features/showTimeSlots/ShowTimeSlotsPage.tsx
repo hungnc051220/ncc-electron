@@ -3,7 +3,7 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { useShowTimeSlots } from "@renderer/hooks/showTimeSlots/useShowTimeSlots";
-import { formatNumber } from "@renderer/lib/utils";
+import { formatNumber, compareText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { DayPartProps } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
@@ -12,9 +12,6 @@ import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import ShowTimeSlotDialog from "./components/ShowTimeSlotDialog";
 import DeleteShowTimeSlotDialog from "./components/DeleteShowTimeSlotDialog";
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
 
 const ShowTimeSlotsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

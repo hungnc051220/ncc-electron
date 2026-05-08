@@ -4,7 +4,13 @@ import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useReportRevenueSharing } from "@renderer/hooks/reports/useReportRevenueSharing";
-import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
+import {
+  filterEmptyValues,
+  formatMoney,
+  formatNumber,
+  compareText,
+  compareNumber
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ReportRevenueSharingProps } from "@shared/types";
 import type { TableProps } from "antd";
@@ -23,11 +29,6 @@ export interface ValuesProps {
   filmId?: number;
   dateRange?: [string, string];
 }
-
-const compareText = (left?: string | null, right?: string | null) =>
-  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
-
-const compareNumber = (left?: number | null, right?: number | null) => (left || 0) - (right || 0);
 
 const RevenueSharingPage = () => {
   const { message } = useAntdApp();

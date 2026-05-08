@@ -5,6 +5,7 @@ import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDelete
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { compareNullableText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -63,13 +64,6 @@ const formatTicketPriceDisplay = (value?: string) => {
 
   const formattedAmount = amount.toLocaleString("en-US");
   return seatType ? `${seatType}: ${formattedAmount}` : formattedAmount;
-};
-
-const compareNullableText = (left?: string | null, right?: string | null) => {
-  return (left ?? "").localeCompare(right ?? "", undefined, {
-    numeric: true,
-    sensitivity: "base"
-  });
 };
 
 const formatScreeningDate = (value?: string) => dayjs(value).format("DD/MM/YYYY");

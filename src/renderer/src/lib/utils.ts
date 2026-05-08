@@ -16,6 +16,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const compareText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { sensitivity: "base" });
+
+export const compareNaturalText = (left?: string | null, right?: string | null) =>
+  (left || "").localeCompare(right || "", "vi", { numeric: true, sensitivity: "base" });
+
+export const compareNullableText = (left?: string | null, right?: string | null) =>
+  (left ?? "").localeCompare(right ?? "", undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
+
+export const compareNumber = (left?: number | null, right?: number | null) =>
+  (left || 0) - (right || 0);
+
+export const compareDate = (left?: string | number | null, right?: string | number | null) =>
+  dayjs(left).valueOf() - dayjs(right).valueOf();
+
 export const decodeToken = (token: string) => {
   try {
     const base64Url = token.split(".")[1];
