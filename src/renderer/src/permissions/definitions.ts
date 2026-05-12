@@ -88,7 +88,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     module: "Quản lý danh sách",
     label: "Hóa đơn điện tử",
     route: "/invoices",
-    actions: ["access", "list", "view", "create", "update", "print"]
+    actions: ["access", "list", "view", "create", "update", "print", "export"]
   },
   {
     key: "revenue_sharing",

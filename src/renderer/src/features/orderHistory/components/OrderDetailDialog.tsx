@@ -31,6 +31,7 @@ import dayjs from "dayjs";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { usePermission } from "@renderer/permissions/usePermission";
 
 interface OrderDialogProps {
   open: boolean;
@@ -111,6 +112,7 @@ const OrderDetailDialog = ({
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { can } = usePermission();
   const { posName } = useSettingPosStore();
   const [isChangingToSuccess, setIsChangingToSuccess] = useState(false);
   const [isCheckingTransaction, setIsCheckingTransaction] = useState(false);
@@ -157,7 +159,11 @@ const OrderDetailDialog = ({
     !currentOrder.isContract &&
     !isRefundOrder &&
     !isPastProjectDate;
-  const canExportETicket = currentOrder?.orderStatusId === OrderStatus.COMPLETED;
+
+  const canExport = can("invoices", "export");
+  const canExportETicket =
+    currentOrder?.orderStatusId === OrderStatus.COMPLETED && canExport && !currentOrder.eTicketUrl;
+
   const isVietQrOrder =
     resolvePaymentType(currentOrder?.paymentMethodSystemName) === PaymentType.VIETQR;
 

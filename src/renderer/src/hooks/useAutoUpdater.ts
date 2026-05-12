@@ -186,7 +186,7 @@ export function useAutoUpdater() {
         className: "version-info-modal",
         rootClassName: "version-info-modal-root",
         centered: true,
-        closable: !isForceUpdate,
+        closable: false,
         keyboard: !isForceUpdate,
         mask: { closable: !isForceUpdate },
         styles: {

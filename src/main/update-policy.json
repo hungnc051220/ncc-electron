@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.75",
+  "latestVersion": "1.0.76",
   "minSupportedVersion": "1.0.72",
   "mode": "optional",
   "messages": [
-    "Bổ sung chức năng đổi điểm tích lũy khi sử dụng CTKM cho thành viên.",
-    "Cải thiện modal thông tin phiên bản.",
-    "Sửa lỗi ảnh vé U22 không hiển thị."
+    "Bổ sung quyền xuất dữ liệu cho hóa đơn điện tử.",
+    "Ẩn nút đóng nhanh trên modal thông tin phiên bản.",
+    "Cập nhật điều kiện xuất vé điện tử theo quyền người dùng và trạng thái vé."
   ],
   "releaseNotesUrl": ""
 }
