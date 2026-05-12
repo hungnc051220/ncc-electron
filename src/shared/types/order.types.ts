@@ -83,7 +83,8 @@ export interface OrderResponseProps {
   customerEmail: string;
   customerPhone: string;
   isAutoBuy: string;
-  pointReward: string;
+  pointReward: number;
+  pointRewardBase: number;
   pointCard: string;
   voucherCode: string;
   campaignId: string;

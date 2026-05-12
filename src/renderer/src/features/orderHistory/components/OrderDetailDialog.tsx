@@ -216,6 +216,8 @@ const OrderDetailDialog = ({
 
   const isU22Voucher = currentOrder?.voucherCode === "U22Ticket";
 
+  const pricePointReward = (currentOrder?.pointReward || 0) * (currentOrder?.pointRewardBase || 0);
+
   const promotionMode =
     isU22Voucher || currentOrder?.campaign
       ? "campaign"
@@ -1000,7 +1002,7 @@ const OrderDetailDialog = ({
                   })}
                   {renderInfoRow(
                     "Giá trị khuyến mãi",
-                    formatMoney(currentOrder.orderDiscount || 0)
+                    formatMoney((currentOrder.orderDiscount || 0) - pricePointReward)
                   )}
                 </div>
               ) : null}
@@ -1058,11 +1060,14 @@ const OrderDetailDialog = ({
                 )}
                 {renderInfoRow(
                   "Khuyến mãi đã áp dụng",
-                  `-${formatMoney(currentOrder?.orderDiscount || 0)}`,
+                  `-${formatMoney((currentOrder?.orderDiscount || 0) - pricePointReward)}`,
                   {
                     valueClassName: "text-rose-600"
                   }
                 )}
+                {renderInfoRow("Điểm thưởng đã áp dụng", `-${formatMoney(pricePointReward)}`, {
+                  valueClassName: "text-rose-600"
+                })}
                 {renderInfoRow("Khách cần thanh toán", formatMoney(currentOrder?.orderTotal || 0), {
                   valueClassName: "text-emerald-700 text-base font-semibold"
                 })}
