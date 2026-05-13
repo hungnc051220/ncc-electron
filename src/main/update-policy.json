@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.76",
+  "latestVersion": "1.0.77",
   "minSupportedVersion": "1.0.72",
   "mode": "optional",
   "messages": [
-    "Bổ sung quyền xuất dữ liệu cho hóa đơn điện tử.",
-    "Ẩn nút đóng nhanh trên modal thông tin phiên bản.",
-    "Cập nhật điều kiện xuất vé điện tử theo quyền người dùng và trạng thái vé."
+    "Bổ sung tab tiến độ thanh toán trong phân chia doanh thu.",
+    "Thêm chức năng quản lý lịch sử thanh toán và xuất Excel tiến độ thanh toán.",
+    "Bổ sung báo cáo chi tiết bán vé theo phim và quyền truy cập tương ứng."
   ],
   "releaseNotesUrl": ""
 }
