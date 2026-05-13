@@ -4,7 +4,7 @@ import { UpdateMode, UpdatePolicy } from "@shared/types";
 
 const appReleaseChannel = process.env.APP_RELEASE_CHANNEL ?? "latest";
 const defaultUpdatePolicyUrl =
-  "https://raw.githubusercontent.com/hungnc051220/ncc-electron/refs/heads/main/src/main/update-policy.json";
+  "https://raw.githubusercontent.com/hungnc051220/ncc-electron/main/src/main/update-policy.json";
 const updatePolicyUrl = process.env.APP_UPDATE_POLICY_URL || defaultUpdatePolicyUrl;
 
 let latestPolicy: UpdatePolicy | null = null;
