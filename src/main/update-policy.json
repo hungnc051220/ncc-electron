@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.77",
-  "minSupportedVersion": "1.0.72",
+  "latestVersion": "1.0.78",
+  "minSupportedVersion": "1.0.78",
   "mode": "optional",
   "messages": [
-    "Bổ sung tab tiến độ thanh toán trong phân chia doanh thu.",
-    "Thêm chức năng quản lý lịch sử thanh toán và xuất Excel tiến độ thanh toán.",
-    "Bổ sung báo cáo chi tiết bán vé theo phim và quyền truy cập tương ứng."
+    "Cập nhật tên báo cáo doanh thu các chương trình khuyến mãi, giảm giá.",
+    "Điều chỉnh tiêu đề cột tổng tiền khuyến mại, giảm giá trên bảng báo cáo.",
+    "Cập nhật nội dung xuất Excel và quyền truy cập tương ứng cho báo cáo."
   ],
   "releaseNotesUrl": ""
 }
