@@ -1,8 +1,10 @@
 import {
   BarController,
   BarElement,
+  ArcElement,
   CategoryScale,
   Chart as ChartJS,
+  DoughnutController,
   Filler,
   Legend,
   LineController,
@@ -15,7 +17,9 @@ import {
 ChartJS.register(
   BarController,
   BarElement,
+  ArcElement,
   CategoryScale,
+  DoughnutController,
   Filler,
   Legend,
   LineController,

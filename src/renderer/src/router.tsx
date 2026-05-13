@@ -8,6 +8,7 @@ import CustomerRolesPage from "./features/customerRoles/CustomerRolesPage";
 import Dashboard from "./features/Dashboard";
 import DiscountSettingsPage from "./features/discountSettings/DiscountSettingsPage";
 import FilmCategoriesPage from "./features/filmCategories/FilmCategoriesPage";
+import FilmTicketDetailReportPage from "./features/filmTicketDetailReport/FilmTicketDetailReportPage";
 import FilmsPage from "./features/films/FilmsPage";
 import FindOnlineTicketsPage from "./features/findOnlineTickets/FindOnlineTicketsPage";
 import ForbiddenPage from "./features/ForbiddenPage";
@@ -195,6 +196,10 @@ export const router = createHashRouter([
           {
             path: "/discount-offline-usage",
             element: withAccess("discount_offline_usage", <DiscountOfflineUsagePage />)
+          },
+          {
+            path: "/film-ticket-detail-report",
+            element: withAccess("film_ticket_detail_report", <FilmTicketDetailReportPage />)
           },
           {
             path: "/staff-revenue-report",

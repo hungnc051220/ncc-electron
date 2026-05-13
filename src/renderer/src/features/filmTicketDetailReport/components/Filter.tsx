@@ -5,23 +5,22 @@ import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptio
 import { rangePresets } from "@renderer/lib/dateRangePresets";
 import { useQuery } from "@tanstack/react-query";
 import { Button, DatePicker, Form, Modal, Select } from "antd";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { RevenueSharingFilterValues } from "../types";
-import type { Dayjs } from "dayjs";
+import type { FilterValues } from "../FilmTicketDetailReportPage";
 
 const { RangePicker } = DatePicker;
 
-interface FilterProps {
-  onSearch: (values: RevenueSharingFilterValues) => void;
-  filterValues: RevenueSharingFilterValues;
-}
-
-type FormValues = Omit<RevenueSharingFilterValues, "dateRange"> & {
+type FormValues = Omit<FilterValues, "dateRange"> & {
   dateRange?: [Dayjs, Dayjs];
 };
 
-const mapFilterValuesToFormValues = (values: RevenueSharingFilterValues): FormValues => ({
+interface FilterProps {
+  filterValues: FilterValues;
+  onSearch: (values: FilterValues) => void;
+}
+
+const mapFilterValuesToFormValues = (values: FilterValues): FormValues => ({
   ...values,
   dateRange:
     values.dateRange?.length === 2
@@ -29,7 +28,7 @@ const mapFilterValuesToFormValues = (values: RevenueSharingFilterValues): FormVa
       : undefined
 });
 
-const mapFormValuesToFilterValues = (values: FormValues): RevenueSharingFilterValues => ({
+const mapFormValuesToFilterValues = (values: FormValues): FilterValues => ({
   ...values,
   dateRange:
     values.dateRange && values.dateRange.length === 2
@@ -37,7 +36,7 @@ const mapFormValuesToFilterValues = (values: FormValues): RevenueSharingFilterVa
       : undefined
 });
 
-const Filter = ({ onSearch, filterValues }: FilterProps) => {
+const Filter = ({ filterValues, onSearch }: FilterProps) => {
   const [form] = Form.useForm<FormValues>();
   const [open, setOpen] = useState(false);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | undefined>(
@@ -47,11 +46,10 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
 
   const manufacturerSelect = useInfiniteSelectOptions({
     queryKey: ["manufacturers"],
-    queryFn: ({ pageParam, searchText }) =>
+    queryFn: ({ pageParam }) =>
       manufacturersApi.getAll({
         current: pageParam,
-        pageSize: 20,
-        name: searchText,
+        pageSize: 100,
         isHidden: false
       }),
     mapOption: (item) => ({
@@ -77,7 +75,7 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   });
 
   const { data: selectedFilmDetail } = useQuery({
-    queryKey: ["filter-film-detail", selectedFilmId],
+    queryKey: ["film-ticket-detail-report-film-detail", selectedFilmId],
     queryFn: () => filmsApi.getDetail(selectedFilmId!),
     enabled: open && !!selectedFilmId
   });
@@ -125,28 +123,21 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       setSelectedManufacturerId(selectedFilmDetail.manufacturerId);
       form.setFieldValue("manufacturerId", selectedFilmDetail.manufacturerId);
     }
-  }, [open, selectedFilmDetail, selectedManufacturerId, form]);
+  }, [form, open, selectedFilmDetail, selectedManufacturerId]);
 
   const handleManufacturerChange = (value: number | undefined) => {
     setSelectedManufacturerId(value);
-    manufacturerSelect.onClear();
     filmSelect.resetSearch();
 
     if (!value) {
       setSelectedFilmId(undefined);
-      form.setFieldsValue({
-        manufacturerId: undefined,
-        filmId: undefined
-      });
+      form.setFieldsValue({ manufacturerId: undefined, filmId: undefined });
       return;
     }
 
     if (selectedFilmDetail?.manufacturerId && selectedFilmDetail.manufacturerId !== value) {
       setSelectedFilmId(undefined);
-      form.setFieldsValue({
-        manufacturerId: value,
-        filmId: undefined
-      });
+      form.setFieldsValue({ manufacturerId: value, filmId: undefined });
       return;
     }
 
@@ -154,8 +145,15 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
   };
 
   const handleFilmChange = (value: number | undefined) => {
-    setSelectedFilmId(value);
     filmSelect.onClear();
+
+    if (!value) {
+      setSelectedFilmId(undefined);
+      form.setFieldValue("filmId", undefined);
+      return;
+    }
+
+    setSelectedFilmId(value);
     form.setFieldValue("filmId", value);
   };
 
@@ -165,25 +163,26 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
       form.resetFields();
       setSelectedManufacturerId(undefined);
       setSelectedFilmId(undefined);
-      manufacturerSelect.resetSearch();
       filmSelect.resetSearch();
-      onSearch({});
+      onSearch({
+        dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
+      });
     });
   };
 
-  const isEmptyFilter = Object.keys(filterValues).length === 0;
+  const hasActiveFilter = !!filterValues.filmId || !!filterValues.manufacturerId;
 
   return (
     <>
-      <div className="relative">
+      <div className="relative mb-1">
         <Button variant="outlined" icon={<FilterOutlined />} onClick={() => setOpen(true)}>
           Bộ lọc
         </Button>
-        {!isEmptyFilter && (
-          <div className="absolute size-3 -right-1 -top-1">
+        {hasActiveFilter && (
+          <div className="absolute right-0 top-0 z-10 size-3 translate-x-1/3 -translate-y-1/3">
             <span className="relative flex size-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex size-3 rounded-full bg-primary"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex size-3 rounded-full bg-primary" />
             </span>
           </div>
         )}
@@ -201,10 +200,24 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
             form={form}
             onFinish={(values) => {
               setOpen(false);
-              onSearch(mapFormValuesToFilterValues(values));
-            }}
-            initialValues={{
-              dateRange: [dayjs(), dayjs()]
+              const selectedManufacturerOption = manufacturerOptions.find(
+                (option) => option.value === values.manufacturerId
+              );
+              const selectedFilmOption = filmOptions.find(
+                (option) => option.value === values.filmId
+              );
+
+              onSearch({
+                ...mapFormValuesToFilterValues(values),
+                manufacturerName:
+                  typeof selectedManufacturerOption?.label === "string"
+                    ? selectedManufacturerOption.label
+                    : undefined,
+                filmName:
+                  typeof selectedFilmOption?.label === "string"
+                    ? selectedFilmOption.label
+                    : undefined
+              });
             }}
           >
             {dom}
@@ -221,8 +234,8 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
         <Form.Item name="manufacturerId" label="Hãng phim">
           <Select
             showSearch={{
-              filterOption: false,
-              onSearch: manufacturerSelect.onSearch
+              filterOption: (input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }}
             loading={manufacturerSelect.loading}
             options={manufacturerOptions}
@@ -234,7 +247,11 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           />
         </Form.Item>
 
-        <Form.Item name="filmId" label="Phim">
+        <Form.Item
+          name="filmId"
+          label="Phim"
+          rules={[{ required: true, message: "Vui lòng chọn phim" }]}
+        >
           <Select
             showSearch={{
               filterOption: false,
@@ -250,7 +267,11 @@ const Filter = ({ onSearch, filterValues }: FilterProps) => {
           />
         </Form.Item>
 
-        <Form.Item name="dateRange" label="Khoảng thời gian">
+        <Form.Item
+          name="dateRange"
+          label="Khoảng thời gian"
+          rules={[{ required: true, message: "Vui lòng chọn khoảng thời gian" }]}
+        >
           <RangePicker className="w-full" presets={rangePresets} format="DD/MM/YYYY" />
         </Form.Item>
       </Modal>

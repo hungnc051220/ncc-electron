@@ -140,7 +140,7 @@ const Seat = ({
           "bg-trunks dark:bg-gray-700 text-white",
         seat.isContract && "bg-raditz text-white",
         (seat.isHold || isPendingPayment) && "bg-roshi text-white",
-        seat.isInvitation && "bg-teal-500 text-white",
+        seat.isInvitation && "bg-red-500 text-white",
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white",
         isSelectingByOther && !isSelected && "ring-1 ring-primary/70 dark:ring-white",

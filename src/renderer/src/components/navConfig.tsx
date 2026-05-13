@@ -258,6 +258,12 @@ export const navConfig: NavConfigItem[] = [
         to: "/discount-offline-usage"
       },
       {
+        label: "Báo cáo chi tiết bán vé theo phim",
+        key: "film-ticket-detail-report",
+        permissionKey: "film_ticket_detail_report",
+        to: "/film-ticket-detail-report"
+      },
+      {
         label: "Báo cáo tháng",
         key: "monthly-report",
         permissionKey: "monthly_report",

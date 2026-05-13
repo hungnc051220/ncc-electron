@@ -457,7 +457,7 @@ const Seats = ({
         label: "Ghế mời",
         value: seatSummary.invitationSeats,
         className:
-          "border-teal-200/90 bg-teal-50/80 text-teal-700 dark:border-teal-400/20 dark:bg-teal-500/10 dark:text-teal-200"
+          "border-red-200/90 bg-red-50/80 text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-200"
       }
     ],
     [seatSummary.contractSeats, seatSummary.invitationSeats, seatSummary.soldSeats]
@@ -920,7 +920,7 @@ const Seats = ({
             <>
               <Legend color="bg-roshi" label="Đang giữ chỗ" />
               <Legend color="bg-raditz" label="Ghế hợp đồng" />
-              <Legend color="bg-teal-500" label="Vé mời" />
+              <Legend color="bg-red-500" label="Ghế mời" />
               <Legend color="bg-trunks/50 dark:bg-gray-500" label="Không bán online" />
             </>
           )}

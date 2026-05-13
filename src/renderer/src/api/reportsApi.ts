@@ -25,6 +25,7 @@ export interface ReportRevenueByFilmDto {
   manufacturerId?: number;
   filmId?: number;
   dayType?: number; //1: theo lịch chiếu, 2: theo ngày bán
+  dateType?: number; //1: theo lịch chiếu, 2: theo ngày bán
   reportType?: string;
 }
 

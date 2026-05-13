@@ -11,3 +11,19 @@ export interface SharingRateProps {
   updatedBy: string;
   deleted: boolean;
 }
+
+export interface SharingRatePaymentHistoryProps {
+  id: number;
+  manufacturerId: number;
+  manufacturerName: string;
+  filmId: number;
+  filmName: string;
+  paymentDate: string;
+  paidAmount: number;
+  note?: string;
+  createdOnUtc: string;
+  createdBy: number;
+  updatedOnUtc: string;
+  updatedBy: number;
+  premieredDay: string;
+}

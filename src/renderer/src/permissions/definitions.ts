@@ -280,6 +280,13 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     actions: ["access", "list", "view", "export"]
   },
   {
+    key: "film_ticket_detail_report",
+    module: "Thống kê, báo cáo",
+    label: "Báo cáo chi tiết bán vé theo phim",
+    route: "/film-ticket-detail-report",
+    actions: ["access", "list", "view", "export"]
+  },
+  {
     key: "monthly_report",
     module: "Thống kê, báo cáo",
     label: "Báo cáo tháng",
