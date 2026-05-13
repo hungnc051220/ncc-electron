@@ -22,7 +22,7 @@ type SummaryTotals = {
   countPriceInclTax: number;
 };
 
-const REPORT_TITLE = "Báo cáo doanh thu các chương trình khuyến mãi";
+const REPORT_TITLE = "Báo cáo doanh thu các chương trình khuyến mãi, giảm giá";
 const numberFormat = "#,##0";
 const invalidFileNameChars = new Set(["<", ">", ":", '"', "/", "\\", "|", "?", "*"]);
 
@@ -98,7 +98,7 @@ const ExportExcelButton = ({ tableData, dateRange, loading }: ExportExcelProps) 
         "Khuyến mại, giảm giá",
         "Số đơn áp dụng",
         "Số vé áp dụng",
-        "Tổng tiền khuyến mại",
+        "Tổng tiền khuyến mại, giảm giá",
         "Tổng doanh thu"
       ];
       const totalColumns = headers.length;

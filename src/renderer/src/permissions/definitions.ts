@@ -275,7 +275,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   {
     key: "discount_offline_usage",
     module: "Thống kê, báo cáo",
-    label: "Báo cáo doanh thu các chương trình khuyến mãi",
+    label: "Báo cáo doanh thu các chương trình khuyến mãi, giảm giá",
     route: "/discount-offline-usage",
     actions: ["access", "list", "view", "export"]
   },

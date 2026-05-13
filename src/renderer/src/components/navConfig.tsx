@@ -252,7 +252,7 @@ export const navConfig: NavConfigItem[] = [
         to: "/staff-revenue-report"
       },
       {
-        label: "Báo cáo doanh thu các chương trình khuyến mãi",
+        label: "Báo cáo doanh thu các chương trình khuyến mãi, giảm giá",
         key: "discount-offline-usage",
         permissionKey: "discount_offline_usage",
         to: "/discount-offline-usage"

@@ -89,11 +89,11 @@ const DiscountOfflineUsagePage = () => {
       render: (value) => formatNumber(value || 0)
     },
     {
-      title: "Tổng tiền khuyến mại",
+      title: "Tổng tiền khuyến mại, giảm giá",
       dataIndex: "totalDiscountAmount",
       key: "totalDiscountAmount",
       align: "right",
-      width: 180,
+      width: 250,
       render: (value) => formatMoney(value || 0)
     },
     {
