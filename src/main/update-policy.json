@@ -1,12 +1,13 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.78",
+  "latestVersion": "1.0.79",
   "minSupportedVersion": "1.0.78",
   "mode": "optional",
   "messages": [
-    "Cập nhật tên báo cáo doanh thu các chương trình khuyến mãi, giảm giá.",
-    "Điều chỉnh tiêu đề cột tổng tiền khuyến mại, giảm giá trên bảng báo cáo.",
-    "Cập nhật nội dung xuất Excel và quyền truy cập tương ứng cho báo cáo."
+    "Sửa lỗi sai Tổng doanh thu ở Báo cáo doanh thu theo nhân viên",
+    "Thêm tính năng Báo cáo chi tiết bán vé theo phim",
+    "Thêm các chương trình khuyến mãi bên CRM vào Báo cáo doanh thu các chương trình khuyến mãi, giảm giá",
+    "Thêm tab Tiến độ thanh toán trong Quản lý phân chia doanh thu"
   ],
   "releaseNotesUrl": ""
 }
