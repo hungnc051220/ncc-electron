@@ -65,9 +65,13 @@ export const getRevenueColumnMode = (filterValues: ValuesProps): RevenueColumnMo
   return "default";
 };
 
-export const getActualRemittance = (
-  row: Pick<Row, "actualSale" | "discountTotal" | "saleVietQr" | "saleVnPayQr">
-) => row.actualSale - row.discountTotal - row.saleVietQr - row.saleVnPayQr;
+export const getActualRemittance = (row: Pick<Row, "actualSale" | "saleVietQr" | "saleVnPayQr">) =>
+  row.actualSale - row.saleVietQr - row.saleVnPayQr;
+
+export const getTotalRevenue = (row: Pick<Row, "actualSale" | "discountTotal">) =>
+  row.actualSale + row.discountTotal;
+
+export const getTotalRevenueAfterDiscount = (row: Pick<Row, "actualSale">) => row.actualSale;
 
 export const getTotalTicketAndContract = (
   row: Pick<Row, "totalQuantity" | "totalContractQuantity">
@@ -266,9 +270,8 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     },
     {
       title: "Tổng doanh thu",
-      key: "actualSale",
-      dataIndex: "actualSale",
-      render: (value: number) => formatMoney(value),
+      key: "totalRevenue",
+      render: (_: number, row: Row) => formatMoney(getTotalRevenue(row)),
       align: "right",
       width: 150
     },
@@ -323,7 +326,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
                   key: "totalRevenueAfterDiscount",
                   width: 180,
                   align: "right" as const,
-                  render: (_: number, row: Row) => formatMoney(row.actualSale - row.discountTotal)
+                  render: (_: number, row: Row) => formatMoney(getTotalRevenueAfterDiscount(row))
                 }
               ])
         ])

@@ -6,6 +6,8 @@ import {
   SummaryGroup,
   RevenueColumnMode,
   getActualRemittance,
+  getTotalRevenue,
+  getTotalRevenueAfterDiscount,
   getTotalTicketAndContract
 } from ".";
 import type { TableProps } from "antd";
@@ -210,9 +212,8 @@ const TabSummary = ({
     },
     {
       title: "Tổng doanh thu",
-      key: "actualSale",
-      dataIndex: "actualSale",
-      render: (value: number) => formatMoney(value),
+      key: "totalRevenue",
+      render: (_: number, row: SummaryRow) => formatMoney(getTotalRevenue(row)),
       align: "right",
       width: 150
     },
@@ -268,7 +269,7 @@ const TabSummary = ({
                   width: 200,
                   align: "right" as const,
                   render: (_: number, row: SummaryRow) =>
-                    formatMoney(row.actualSale - row.discountTotal)
+                    formatMoney(getTotalRevenueAfterDiscount(row))
                 }
               ])
         ])
@@ -305,12 +306,14 @@ const TabSummary = ({
                     label === "Tổng cộng"
                       ? formatNumber((value as TotalRevenueProps | undefined)?.totalPlanCount || 0)
                       : "";
-                  const totalRevenueAfterDiscount = (value?.actualSale || 0) - crmDiscountTotal;
+                  const actualSale = value?.actualSale || 0;
+                  const totalRevenue = getTotalRevenue({
+                    actualSale,
+                    discountTotal: crmDiscountTotal
+                  });
+                  const totalRevenueAfterDiscount = getTotalRevenueAfterDiscount({ actualSale });
                   const actualRemittance =
-                    (value?.actualSale || 0) -
-                    crmDiscountTotal -
-                    (value?.saleVietQr || 0) -
-                    (value?.saleVnPayQr || 0);
+                    actualSale - (value?.saleVietQr || 0) - (value?.saleVnPayQr || 0);
 
                   return (
                     <>
@@ -337,7 +340,7 @@ const TabSummary = ({
                         </strong>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={7} align="right">
-                        <strong>{formatMoney(value?.actualSale || 0)}</strong>
+                        <strong>{formatMoney(totalRevenue)}</strong>
                       </Table.Summary.Cell>
                       {columnMode !== "manufacturer" && (
                         <>

@@ -6,7 +6,13 @@ import { Button } from "antd";
 import ExcelJS from "exceljs";
 import { DownloadIcon } from "lucide-react";
 import dayjs from "dayjs";
-import { RevenueColumnMode, getActualRemittance, getTotalTicketAndContract } from ".";
+import {
+  RevenueColumnMode,
+  getActualRemittance,
+  getTotalRevenue,
+  getTotalRevenueAfterDiscount,
+  getTotalTicketAndContract
+} from ".";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
 type Row = {
@@ -527,13 +533,15 @@ const ExportRevenueExcelButton = ({
           sum.totalInvitationQuantity,
           sum.totalContractQuantity,
           getTotalTicketAndContract(sum),
-          sum.actualSale,
+          getTotalRevenue(sum),
           ...(showDiscountColumns
             ? [
                 sum.discountTotal,
                 sum.internalDiscountTotal,
                 ...(showActualRemittance ? [sum.saleVnPayQr, sum.saleVietQr] : []),
-                showActualRemittance ? getActualRemittance(sum) : sum.actualSale - sum.discountTotal
+                showActualRemittance
+                  ? getActualRemittance(sum)
+                  : getTotalRevenueAfterDiscount(sum)
               ]
             : [])
         ]);
@@ -562,7 +570,7 @@ const ExportRevenueExcelButton = ({
           film.totalInvitationQuantity,
           film.totalContractQuantity,
           getTotalTicketAndContract(film),
-          film.actualSale,
+          getTotalRevenue(film),
           ...(showDiscountColumns
             ? [
                 film.discountTotal,
@@ -570,7 +578,7 @@ const ExportRevenueExcelButton = ({
                 ...(showActualRemittance ? [film.saleVnPayQr, film.saleVietQr] : []),
                 showActualRemittance
                   ? getActualRemittance(film)
-                  : film.actualSale - film.discountTotal
+                  : getTotalRevenueAfterDiscount(film)
               ]
             : [])
         ]);
@@ -602,13 +610,13 @@ const ExportRevenueExcelButton = ({
             r.totalInvitationQuantity,
             r.totalContractQuantity,
             getTotalTicketAndContract(r),
-            r.actualSale,
+            getTotalRevenue(r),
             ...(showDiscountColumns
               ? [
                   r.discountTotal,
                   r.internalDiscountTotal,
                   ...(showActualRemittance ? [r.saleVnPayQr, r.saleVietQr] : []),
-                  showActualRemittance ? getActualRemittance(r) : r.actualSale - r.discountTotal
+                  showActualRemittance ? getActualRemittance(r) : getTotalRevenueAfterDiscount(r)
                 ]
               : [])
           ]);
@@ -743,7 +751,7 @@ const ExportRevenueExcelButton = ({
           offSum.totalInvitationQuantity,
           offSum.totalContractQuantity,
           getTotalTicketAndContract(offSum),
-          offSum.actualSale,
+          getTotalRevenue(offSum),
           ...(showDiscountColumns
             ? [
                 offSum.discountTotal,
@@ -751,7 +759,7 @@ const ExportRevenueExcelButton = ({
                 ...(showActualRemittance ? [offSum.saleVnPayQr, offSum.saleVietQr] : []),
                 showActualRemittance
                   ? getActualRemittance(offSum)
-                  : offSum.actualSale - offSum.discountTotal
+                  : getTotalRevenueAfterDiscount(offSum)
               ]
             : [])
         ]);
@@ -765,7 +773,7 @@ const ExportRevenueExcelButton = ({
           onSum.totalInvitationQuantity,
           onSum.totalContractQuantity,
           getTotalTicketAndContract(onSum),
-          onSum.actualSale,
+          getTotalRevenue(onSum),
           ...(showDiscountColumns
             ? [
                 onSum.discountTotal,
@@ -773,7 +781,7 @@ const ExportRevenueExcelButton = ({
                 ...(showActualRemittance ? [onSum.saleVnPayQr, onSum.saleVietQr] : []),
                 showActualRemittance
                   ? getActualRemittance(onSum)
-                  : onSum.actualSale - onSum.discountTotal
+                  : getTotalRevenueAfterDiscount(onSum)
               ]
             : [])
         ]);
@@ -795,13 +803,15 @@ const ExportRevenueExcelButton = ({
           sum.totalInvitationQuantity,
           sum.totalContractQuantity,
           getTotalTicketAndContract(sum),
-          sum.actualSale,
+          getTotalRevenue(sum),
           ...(showDiscountColumns
             ? [
                 sum.discountTotal,
                 sum.internalDiscountTotal,
                 ...(showActualRemittance ? [sum.saleVnPayQr, sum.saleVietQr] : []),
-                showActualRemittance ? getActualRemittance(sum) : sum.actualSale - sum.discountTotal
+                showActualRemittance
+                  ? getActualRemittance(sum)
+                  : getTotalRevenueAfterDiscount(sum)
               ]
             : [])
         ]);
