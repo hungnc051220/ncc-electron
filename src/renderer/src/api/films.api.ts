@@ -43,7 +43,7 @@ export interface FilmDto {
   trailerOnHomePage?: boolean;
   isHot?: boolean;
   showOnHomePage?: boolean;
-  ageAbove?: number;
+  ageAbove?: number | null;
   orderNo?: number;
   sellOnlineBefore?: number;
   isFree?: boolean;

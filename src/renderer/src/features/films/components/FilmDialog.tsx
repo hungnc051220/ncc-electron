@@ -86,7 +86,7 @@ export interface FieldValues {
   trailerOnHomePage?: boolean;
   isHot?: boolean;
   showOnHomePage?: boolean;
-  ageAbove?: number;
+  ageAbove?: number | null;
   orderNo?: number;
   sellOnlineBefore?: number;
   isFree?: boolean;
@@ -250,7 +250,12 @@ const FilmDialog = ({
   const onFinish: FormProps<FieldValues>["onFinish"] = (values: FieldValues) => {
     if (!isEdit) {
       createFilm.mutate(
-        { ...values, premieredDay: values["premieredDay"].format("YYYY-MM-DD"), orderNo: 0 },
+        {
+          ...values,
+          premieredDay: values["premieredDay"].format("YYYY-MM-DD"),
+          orderNo: 0,
+          ageAbove: values.ageAbove ? values.ageAbove : null
+        },
         {
           onSuccess: () => {
             message.success("Thêm phim thành công");
@@ -267,7 +272,8 @@ const FilmDialog = ({
           dto: {
             id: editingFilm.id,
             ...values,
-            premieredDay: values["premieredDay"].format("YYYY-MM-DD")
+            premieredDay: values["premieredDay"].format("YYYY-MM-DD"),
+            ageAbove: values.ageAbove ? values.ageAbove : null
           }
         },
         {
@@ -367,7 +373,7 @@ const FilmDialog = ({
                 </Form.Item>
 
                 <Form.Item<FieldValues> name="ageAbove" label="Độ tuổi">
-                  <Select placeholder="Chọn tuổi yêu cầu từ" options={ageAboveOptions} />
+                  <Select placeholder="Chọn tuổi yêu cầu từ" options={ageAboveOptions} allowClear />
                 </Form.Item>
                 <Form.Item<FieldValues> name="premieredDay" label="Ngày khởi chiếu">
                   <DatePicker className="w-full" format="DD/MM/YYYY" />
