@@ -1,13 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.79",
+  "latestVersion": "1.0.80",
   "minSupportedVersion": "1.0.78",
   "mode": "optional",
   "messages": [
-    "Sửa lỗi sai Tổng doanh thu ở Báo cáo doanh thu theo nhân viên",
-    "Thêm tính năng Báo cáo chi tiết bán vé theo phim",
-    "Thêm các chương trình khuyến mãi bên CRM vào Báo cáo doanh thu các chương trình khuyến mãi, giảm giá",
-    "Thêm tab Tiến độ thanh toán trong Quản lý phân chia doanh thu"
+    "Cho phép bỏ chọn độ tuổi khi tạo hoặc cập nhật phim"
   ],
   "releaseNotesUrl": ""
 }
