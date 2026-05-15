@@ -7,7 +7,7 @@ import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { formatMoney } from "@renderer/lib/utils";
+import { formatMoney, resolveOrderPaymentStatus } from "@renderer/lib/utils";
 import { ListSeat, OrderStatus } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps } from "antd";
@@ -142,7 +142,8 @@ const OrderHistorySwapSeatsPage = () => {
         id: orderDetail.order.id,
         dto: {
           orderStatusId: OrderStatus.COMPLETED,
-          paymentStatusId: orderDetail.order.paymentStatusId,
+          paymentStatusId:
+            resolveOrderPaymentStatus(orderDetail.order) ?? orderDetail.order.paymentStatusId,
           shippingStatusId: orderDetail.order.shippingStatusId
         }
       });

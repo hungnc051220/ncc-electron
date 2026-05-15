@@ -1,4 +1,4 @@
-import { formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
+import { formatMoney, formatPaymentMethod, resolveOrderPaymentStatus } from "@renderer/lib/utils";
 import {
   ListSeat,
   OrderResponseProps,
@@ -171,7 +171,7 @@ const TooltipFloating = ({
   const isPendingPaymentSeat =
     isPendingPayment ||
     (order?.orderStatusId === OrderStatus.PENDING &&
-      order?.paymentStatusId === PaymentStatus.PENDING);
+      resolveOrderPaymentStatus(order) === PaymentStatus.PENDING);
   const isHoldSeat = seat.isHold === 1 || isPendingPaymentSeat;
   const isSoldSeat = seat.status === 1;
 

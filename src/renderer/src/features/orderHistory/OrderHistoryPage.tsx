@@ -17,7 +17,8 @@ import {
   formatNumber,
   compareText,
   compareNumber,
-  compareNaturalText
+  compareNaturalText,
+  resolveOrderPaymentStatus
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { OrderDetailProps, OrderStatus, PaymentStatus } from "@shared/types";
@@ -447,9 +448,10 @@ const OrderHistoryPage = () => {
       title: "Trạng thái thanh toán",
       key: "paymentStatusId",
       dataIndex: "paymentStatusId",
-      sorter: (a, b) => compareNumber(a.order.paymentStatusId, b.order.paymentStatusId),
+      sorter: (a, b) =>
+        compareNumber(resolveOrderPaymentStatus(a.order), resolveOrderPaymentStatus(b.order)),
       render: (_, record) => (
-        <OrderStatusBadge status={record.order.paymentStatusId} type="payment" />
+        <OrderStatusBadge status={resolveOrderPaymentStatus(record.order)} type="payment" />
       ),
       fixed: "right"
     },
@@ -467,9 +469,10 @@ const OrderHistoryPage = () => {
       key: "operation",
       width: 50,
       render: (_: unknown, record: OrderDetailProps) => {
+        const paymentStatusId = resolveOrderPaymentStatus(record.order);
         const canEndOrder =
           record.order.orderStatusId === OrderStatus.PENDING &&
-          record.order.paymentStatusId === PaymentStatus.PENDING;
+          paymentStatusId === PaymentStatus.PENDING;
         const canCancel =
           !canEndOrder &&
           record.order.orderStatusId !== OrderStatus.CANCELLED &&
@@ -477,7 +480,7 @@ const OrderHistoryPage = () => {
         const canPrintTicket =
           canPrint &&
           record.order.orderStatusId === OrderStatus.COMPLETED &&
-          record.order.paymentStatusId === PaymentStatus.PAID;
+          paymentStatusId === PaymentStatus.PAID;
         const menuItems = [
           ...(canView ? [{ key: "1", icon: <Eye size={16} />, label: "Xem chi tiết" }] : []),
           ...(canPrintTicket ? [{ key: "2", icon: <Printer size={16} />, label: "In vé" }] : []),

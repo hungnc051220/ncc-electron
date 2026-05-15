@@ -15,7 +15,8 @@ import {
   formatMoney,
   formatPaymentMethod,
   resolvePaymentType,
-  formatSeatValues
+  formatSeatValues,
+  resolveOrderPaymentStatus
 } from "@renderer/lib/utils";
 import {
   OrderDetailProps,
@@ -95,11 +96,16 @@ const getSeatKeysFromItems = (items?: OrderItem[] | null, planScreenId?: number 
     }
   );
 
-const isReleasedOrder = (order: OrderResponseProps) =>
-  order.orderStatusId === OrderStatus.FAIL ||
-  order.orderStatusId === OrderStatus.CANCELLED ||
-  order.paymentStatusId === PaymentStatus.FAIL ||
-  order.paymentStatusId === PaymentStatus.VOIDED;
+const isReleasedOrder = (order: OrderResponseProps) => {
+  const paymentStatusId = resolveOrderPaymentStatus(order);
+
+  return (
+    order.orderStatusId === OrderStatus.FAIL ||
+    order.orderStatusId === OrderStatus.CANCELLED ||
+    paymentStatusId === PaymentStatus.FAIL ||
+    paymentStatusId === PaymentStatus.VOIDED
+  );
+};
 
 const OrderDetailDialog = ({
   open,
@@ -166,6 +172,7 @@ const OrderDetailDialog = ({
 
   const isVietQrOrder =
     resolvePaymentType(currentOrder?.paymentMethodSystemName) === PaymentType.VIETQR;
+  const resolvedPaymentStatusId = resolveOrderPaymentStatus(currentOrder);
 
   const invitationTicket = currentOrder?.invitationTickets;
 
@@ -491,7 +498,7 @@ const OrderDetailDialog = ({
 
     try {
       setIsChangingToSuccess(true);
-      if (currentOrder.paymentStatusId === PaymentStatus.PAID) {
+      if (resolvedPaymentStatusId === PaymentStatus.PAID) {
         goToSwapSeats();
         return;
       }
@@ -576,7 +583,7 @@ const OrderDetailDialog = ({
 
       const latestOrderDetail = await refreshOrderDetail();
 
-      if (latestOrderDetail?.order.paymentStatusId === PaymentStatus.PAID) {
+      if (resolveOrderPaymentStatus(latestOrderDetail?.order) === PaymentStatus.PAID) {
         message.success("Giao dịch đã được ghi nhận thành công");
         return;
       }
@@ -848,8 +855,8 @@ const OrderDetailDialog = ({
                             />
                           )}
                         </div>
-                        {currentOrder?.paymentStatusId && (
-                          <OrderStatusBadge status={currentOrder.paymentStatusId} type="payment" />
+                        {resolvedPaymentStatusId && (
+                          <OrderStatusBadge status={resolvedPaymentStatusId} type="payment" />
                         )}
                       </div>
                     </div>
@@ -932,7 +939,12 @@ const OrderDetailDialog = ({
             <div className="grid gap-x-6 md:grid-cols-2">
               <div>
                 {renderInfoRow("Tên phim", currentDetail?.film?.filmName)}
-                {renderInfoRow("Phòng chiếu", currentDetail?.room?.name)}
+                {renderInfoRow(
+                  "Giờ chiếu",
+                  currentDetail?.planScreening?.projectTime
+                    ? dayjs(currentDetail.planScreening.projectTime).format("HH:mm")
+                    : "-"
+                )}
                 {renderInfoRow(
                   "Ngày chiếu",
                   currentDetail?.planScreening?.projectDate
@@ -941,12 +953,8 @@ const OrderDetailDialog = ({
                 )}
               </div>
               <div>
-                {renderInfoRow(
-                  "Giờ chiếu",
-                  currentDetail?.planScreening?.projectTime
-                    ? dayjs(currentDetail.planScreening.projectTime).format("HH:mm")
-                    : "-"
-                )}
+                {renderInfoRow("Phòng chiếu", currentDetail?.room?.name)}
+
                 {renderInfoRow("Số lượng vé", totalTickets)}
                 {renderInfoRow("Vị trí ghế", getChairs() || "-")}
               </div>

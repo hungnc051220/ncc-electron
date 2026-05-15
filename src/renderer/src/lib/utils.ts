@@ -1,4 +1,10 @@
-import { ListSeat, OrderDetailProps, PaymentType, PrintTicketPayload } from "@shared/types";
+import {
+  ListSeat,
+  OrderDetailProps,
+  PaymentStatus,
+  PaymentType,
+  PrintTicketPayload
+} from "@shared/types";
 import {
   DEFAULT_BRANCH_SETTINGS,
   useSettingBranchStore
@@ -99,6 +105,16 @@ export const formatPaymentMethod = (value?: string | null) => {
       return normalizedValue || "--";
   }
 };
+
+type OrderPaymentStatusSource = {
+  paymentStatusId?: number | null;
+  orderPaymentTransactions?: Array<{ status?: string | null }> | null;
+};
+
+export const resolveOrderPaymentStatus = (order?: OrderPaymentStatusSource | null) =>
+  order?.orderPaymentTransactions?.[0]?.status?.trim().toLowerCase() === "success"
+    ? PaymentStatus.PAID
+    : (order?.paymentStatusId ?? undefined);
 
 const extractTimePart = (projectTime?: string) => {
   if (!projectTime) return undefined;

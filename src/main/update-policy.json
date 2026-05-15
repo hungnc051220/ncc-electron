@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.80",
+  "latestVersion": "1.0.81",
   "minSupportedVersion": "1.0.78",
   "mode": "optional",
   "messages": [
-    "Cho phép bỏ chọn độ tuổi khi tạo hoặc cập nhật phim"
+    "Ưu tiên trạng thái giao dịch thanh toán thành công khi hiển thị và xử lý đơn hàng"
   ],
   "releaseNotesUrl": ""
 }

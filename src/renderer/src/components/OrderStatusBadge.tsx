@@ -2,7 +2,7 @@ import { OrderStatus, PaymentStatus } from "@shared/types";
 import { Tag } from "antd";
 
 interface OrderStatusBadgeProps {
-  status: OrderStatus | PaymentStatus;
+  status?: OrderStatus | PaymentStatus;
   type?: "order" | "payment";
 }
 
@@ -61,6 +61,10 @@ const paymentStatusConfig = {
 };
 
 export function OrderStatusBadge({ status, type = "order" }: OrderStatusBadgeProps) {
+  if (!status) {
+    return null;
+  }
+
   const config =
     type === "order"
       ? orderStatusConfig[status as OrderStatus]

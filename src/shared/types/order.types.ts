@@ -104,6 +104,7 @@ export interface OrderResponseProps {
   printer?: SellerProps;
   invitationTickets: InvitationTicketProps;
   campaign?: CampaignProps;
+  orderPaymentTransactions: OrderPaymentTransactionProps[];
 }
 
 export interface CampaignProps {
@@ -427,4 +428,33 @@ export interface ContractTicketSaleSummaryProps {
   plansCount: number;
   itemsCount: number;
   ordersTotal: number;
+}
+
+export interface OrderPaymentTransactionProps {
+  id: string;
+  orderId: number;
+  terminalId: string;
+  billNumber: string;
+  transactionAmount: number;
+  notice: string;
+  description: string;
+  respCode: string;
+  respDesc: string;
+  payDate: string;
+  traceTransfer: string;
+  ftCode: string;
+  status: string;
+  feeAmount: number;
+  qrFee: string;
+  createdAt: string;
+  paymentId: string;
+  refundAmount: string;
+  refundStatus: string;
+  refundBy: string;
+  refundRespCode: string;
+  refundRespDesc: string;
+  refundDate: string;
+  paymentType: string;
+  qrcode: string;
+  qrImage: string;
 }

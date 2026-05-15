@@ -7,7 +7,13 @@ import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
 import { useCreateQrOrder } from "@renderer/hooks/orders/useCreateQrOrder";
 import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
-import { buildTicketsFromOrder, cn, formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
+import {
+  buildTicketsFromOrder,
+  cn,
+  formatMoney,
+  isPlanScreeningLocked,
+  resolveOrderPaymentStatus
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
@@ -618,7 +624,7 @@ const Actions = ({
         })
       ]);
 
-      if (orderDetail.order.paymentStatusId === PaymentStatus.PAID) {
+      if (resolveOrderPaymentStatus(orderDetail.order) === PaymentStatus.PAID) {
         await handleQrPaymentSuccess(qrData.orderId, qrData.orderTotal);
         return;
       }

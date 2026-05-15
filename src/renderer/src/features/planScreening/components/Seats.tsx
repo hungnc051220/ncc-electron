@@ -1,6 +1,6 @@
 import Legend from "@renderer/components/Legend";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
-import { cn } from "@renderer/lib/utils";
+import { cn, resolveOrderPaymentStatus } from "@renderer/lib/utils";
 import {
   ListSeat,
   OrderResponseProps,
@@ -329,11 +329,12 @@ const Seats = ({
     const releasedSeatKeys = new Set<string>();
 
     Object.entries(seatOrderMap).forEach(([seatKey, order]) => {
+      const paymentStatusId = resolveOrderPaymentStatus(order);
       const isReleasedOrder =
         order.orderStatusId === OrderStatus.FAIL ||
         order.orderStatusId === OrderStatus.CANCELLED ||
-        order.paymentStatusId === PaymentStatus.FAIL ||
-        order.paymentStatusId === PaymentStatus.VOIDED;
+        paymentStatusId === PaymentStatus.FAIL ||
+        paymentStatusId === PaymentStatus.VOIDED;
 
       if (!isReleasedOrder) return;
 
@@ -353,9 +354,9 @@ const Seats = ({
         .filter(Boolean);
 
     orders?.forEach((order) => {
+      const paymentStatusId = resolveOrderPaymentStatus(order);
       const isPendingPaymentOrder =
-        order.orderStatusId === OrderStatus.PENDING &&
-        order.paymentStatusId === PaymentStatus.PENDING;
+        order.orderStatusId === OrderStatus.PENDING && paymentStatusId === PaymentStatus.PENDING;
 
       if (!isPendingPaymentOrder) return;
 

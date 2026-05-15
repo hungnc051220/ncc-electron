@@ -11,7 +11,8 @@ import {
   formatNumber,
   formatSeatValues,
   compareText,
-  compareNumber
+  compareNumber,
+  resolveOrderPaymentStatus
 } from "@renderer/lib/utils";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
@@ -180,9 +181,10 @@ const FindOnlineTicketsPage = () => {
       title: "Trạng thái thanh toán",
       key: "paymentStatus",
       dataIndex: "order",
-      sorter: (a, b) => compareNumber(a.order.paymentStatusId, b.order.paymentStatusId),
+      sorter: (a, b) =>
+        compareNumber(resolveOrderPaymentStatus(a.order), resolveOrderPaymentStatus(b.order)),
       render: (_, record) => (
-        <OrderStatusBadge status={record.order.paymentStatusId} type="payment" />
+        <OrderStatusBadge status={resolveOrderPaymentStatus(record.order)} type="payment" />
       ),
       fixed: "right"
     },
