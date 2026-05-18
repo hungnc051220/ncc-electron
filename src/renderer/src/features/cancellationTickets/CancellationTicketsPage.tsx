@@ -33,6 +33,12 @@ type TableSorterState = {
   order?: "ascend" | "descend" | null;
 } | null;
 
+const splitSeatList = (value?: string | null) =>
+  (value ?? "")
+    .split(",")
+    .map((seat) => seat.trim())
+    .filter(Boolean);
+
 const CancellationTicketsPage = () => {
   const { message } = useAntdApp();
   const [filterValues, setFilterValues] = useState<ValuesProps>(() => getDefaultFilterValues());
@@ -335,7 +341,7 @@ const CancellationTicketsPage = () => {
           record.cancelChairValueF2,
           record.cancelChairValueF3
         ]
-          .filter((i) => i.trim() !== "")
+          .flatMap((value) => splitSeatList(value))
           .join(", ");
         return (
           <div className="flex-1 overflow-hidden">
@@ -479,10 +485,7 @@ const CancellationTicketsPage = () => {
               Xuất Excel
             </Button>
             <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={() => undefined} />
-            <RefreshButton
-              loading={isFetching || isFetchingNextPage}
-              onRefresh={() => refetch()}
-            />
+            <RefreshButton loading={isFetching || isFetchingNextPage} onRefresh={() => refetch()} />
           </>
         }
       />

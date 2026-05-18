@@ -1,4 +1,5 @@
 import { ExportOutlined, ReloadOutlined, SyncOutlined } from "@ant-design/icons";
+import { cancelTicketsApi } from "@renderer/api/cancelTickets.api";
 import { ordersApi } from "@renderer/api/orders.api";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
@@ -24,10 +25,12 @@ import {
   OrderResponseProps,
   OrderStatus,
   PaymentStatus,
-  PaymentType
+  PaymentType,
+  CancellationTicketProps
 } from "@shared/types";
-import { useQueryClient } from "@tanstack/react-query";
-import { Button, Checkbox, Modal, Tag } from "antd";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Checkbox, Modal, Popover, Table, Tag, Typography } from "antd";
+import type { PopoverProps, TableColumnsType } from "antd";
 import dayjs from "dayjs";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -57,6 +60,68 @@ const splitSeatList = (value?: string | null) =>
     .split(",")
     .map((seat) => seat.trim())
     .filter(Boolean);
+
+const ellipsisPopoverProps: Pick<
+  PopoverProps,
+  "mouseEnterDelay" | "mouseLeaveDelay" | "placement" | "styles" | "trigger"
+> = {
+  trigger: "hover",
+  placement: "topRight",
+  mouseEnterDelay: 0.15,
+  mouseLeaveDelay: 0.2,
+  styles: {
+    root: {
+      maxWidth: 640
+    },
+    content: {
+      maxHeight: 220,
+      overflowY: "auto",
+      whiteSpace: "normal",
+      wordBreak: "break-word"
+    }
+  }
+};
+
+const renderEllipsisPopover = (content: string, children: ReactNode) => {
+  if (!content) {
+    return children;
+  }
+
+  return (
+    <Popover {...ellipsisPopoverProps} content={content}>
+      <div className="block min-w-0 cursor-help">{children}</div>
+    </Popover>
+  );
+};
+
+const renderEllipsisText = (value?: string | null) => {
+  const text = value || "-";
+
+  return (
+    <div className="min-w-0 overflow-hidden">
+      {renderEllipsisPopover(
+        value || "",
+        <Typography.Text className="max-w-60" ellipsis>
+          {text}
+        </Typography.Text>
+      )}
+    </div>
+  );
+};
+
+const renderMultilineEllipsisText = (value?: string | null) => {
+  const text = value || "-";
+
+  return renderEllipsisPopover(
+    value || "",
+    <Typography.Paragraph
+      className="mb-0! w-full max-w-full text-right text-sm! font-medium! text-slate-900! dark:text-slate-100!"
+      ellipsis={true}
+    >
+      {text}
+    </Typography.Paragraph>
+  );
+};
 
 const getSeatKeysFromItems = (items?: OrderItem[] | null, planScreenId?: number | null) =>
   (items ?? []).reduce<SeatKeyCollection>(
@@ -132,6 +197,7 @@ const OrderDetailDialog = ({
 
   const currentDetail = orderDetail ?? selectedItem ?? null;
   const currentOrder = currentDetail?.order;
+  const currentOrderId = currentOrder?.id ?? 0;
   const currentPlanScreeningId =
     currentDetail?.planScreening?.id ?? currentOrder?.planScreenId ?? 0;
   const { refetch: refetchOrdersByScreening } = useOrdersByScreening(currentPlanScreeningId);
@@ -140,11 +206,30 @@ const OrderDetailDialog = ({
     .filter(Boolean)
     .join(" ");
   const totalTickets = currentItems.reduce((sum, item) => sum + item.quantity, 0);
-  const isRefundOrder = currentOrder?.refundStatusId !== null;
+  const isRefundOrder = currentOrder?.refundStatusId != null;
   const isCancelOrder =
-    (currentOrder?.orderStatusId === OrderStatus.CANCELLED ||
-      currentOrder?.orderStatusId === OrderStatus.FAIL) &&
-    currentOrder?.cancelTicket !== null;
+    currentOrder?.orderStatusId === OrderStatus.CANCELLED ||
+    currentOrder?.orderStatusId === OrderStatus.FAIL;
+  const { data: cancelTicketsResponse, isFetching: isFetchingCancelTickets } = useQuery({
+    queryKey: ["order-detail-cancel-tickets", currentOrderId],
+    queryFn: () =>
+      cancelTicketsApi.getAll({
+        current: 1,
+        pageSize: 100,
+        orderId: currentOrderId
+      }),
+    enabled: open && !!currentOrderId
+  });
+  const cancelTickets = useMemo<CancellationTicketProps[]>(
+    () => cancelTicketsResponse?.data ?? [],
+    [cancelTicketsResponse?.data]
+  );
+  const totalCancelledTickets = useMemo(
+    () => cancelTickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0),
+    [cancelTickets]
+  );
+
+  const hasCancelTickets = cancelTickets.length > 0;
   const isInvitationOrder = !!currentOrder?.isInvitation;
   const isPastProjectDate = currentDetail?.planScreening?.projectDate
     ? dayjs().isAfter(dayjs(currentDetail.planScreening.projectDate).endOf("day"))
@@ -235,6 +320,59 @@ const OrderDetailDialog = ({
   const getChairs = () => {
     return formatSeatValues(currentItems);
   };
+
+  const getCancelTicketChairs = (ticket: CancellationTicketProps) =>
+    [ticket.cancelChairValueF1, ticket.cancelChairValueF2, ticket.cancelChairValueF3]
+      .flatMap((value) => splitSeatList(value))
+      .join(", ");
+
+  const cancelTicketColumns = useMemo<TableColumnsType<CancellationTicketProps>>(
+    () => [
+      {
+        title: "Lần",
+        key: "index",
+        width: 64,
+        align: "center",
+        render: (_value, _record, index) => cancelTickets.length - index
+      },
+      {
+        title: "Thời gian",
+        dataIndex: "createdOnUtc",
+        key: "createdOnUtc",
+        width: 150,
+        render: (value?: string) => (value ? dayjs(value).format("HH:mm DD/MM/YYYY") : "-")
+      },
+      {
+        title: "Người hủy",
+        dataIndex: "userName",
+        key: "userName",
+        width: 140,
+        render: (value?: string) => value || "-"
+      },
+      {
+        title: "SL",
+        dataIndex: "quantity",
+        key: "quantity",
+        width: 70,
+        align: "right",
+        render: (value?: number) => value || 0
+      },
+      {
+        title: "Ghế hủy",
+        key: "chairs",
+        width: 180,
+        render: (_value, record) => renderEllipsisText(getCancelTicketChairs(record))
+      },
+      {
+        title: "Lý do",
+        dataIndex: "reason",
+        key: "reason",
+        width: 220,
+        render: (value?: string) => renderEllipsisText(value)
+      }
+    ],
+    [cancelTickets.length]
+  );
 
   const getPromotionValue = (type: string, rate: number, amount: number) => {
     if (rate > 0) {
@@ -865,7 +1003,7 @@ const OrderDetailDialog = ({
               </>
             )}
 
-            {(currentOrder?.cancelTicket || isRefundOrder) && (
+            {(hasCancelTickets || isFetchingCancelTickets || isRefundOrder) && (
               <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-500/20 dark:bg-rose-500/5">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -881,28 +1019,38 @@ const OrderDetailDialog = ({
                 <div className="grid gap-x-6 md:grid-cols-2">
                   <div>
                     {renderInfoRow(
-                      "Thời gian hủy",
-                      currentOrder?.cancelTicket?.createdOnUtc
-                        ? dayjs(currentOrder.cancelTicket.createdOnUtc).format("HH:mm DD/MM/YYYY")
-                        : "-",
+                      "Số lần hủy",
+                      isFetchingCancelTickets
+                        ? "Đang tải..."
+                        : hasCancelTickets
+                          ? cancelTickets.length
+                          : "-",
                       {
                         borderClassName: "border-rose-100 dark:border-rose-500/10"
                       }
                     )}
-                    {renderInfoRow("Người hủy", currentOrder?.cancelTicket?.userName, {
-                      borderClassName: "border-rose-100 dark:border-rose-500/10"
-                    })}
+                    {renderInfoRow(
+                      "Số lượng vé hủy",
+                      isFetchingCancelTickets
+                        ? "Đang tải..."
+                        : hasCancelTickets
+                          ? totalCancelledTickets
+                          : "-",
+                      {
+                        borderClassName: "border-rose-100 dark:border-rose-500/10"
+                      }
+                    )}
                   </div>
                   <div>
                     <div className="flex items-start justify-between gap-4 border-b border-rose-100 py-2 dark:border-rose-500/10">
                       <span className="text-sm text-slate-500 dark:text-slate-400">
                         Trạng thái hoàn tiền
                       </span>
-                      <div className="text-right">
+                      <div className="flex justify-end text-right [&_.ant-tag]:m-0">
                         {isRefundOrder ? (
                           <RefundStatusBadge status={currentOrder?.refundStatusId} />
                         ) : (
-                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:border-slate-600/40 dark:bg-slate-700/30 dark:text-slate-200">
                             Chưa hoàn tiền
                           </span>
                         )}
@@ -918,11 +1066,26 @@ const OrderDetailDialog = ({
                   </div>
                 </div>
 
-                <div className="border-t border-rose-100 pt-2 dark:border-rose-500/10">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Lý do hủy</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">
-                    {currentOrder?.cancelTicket?.reason || "-"}
-                  </p>
+                <div className="pt-2 dark:border-rose-500/10">
+                  <Table<CancellationTicketProps>
+                    className={cn(
+                      "mt-2 overflow-hidden rounded-xl border border-rose-100 bg-white shadow-sm dark:border-rose-500/10 dark:bg-white/3",
+                      "[&_.ant-table]:bg-transparent [&_.ant-table]:text-slate-700 dark:[&_.ant-table]:text-slate-200",
+                      "[&_.ant-table-container]:rounded-xl [&_.ant-table-container]:border-0",
+                      "[&_.ant-table-thead>tr>th]:border-rose-100 [&_.ant-table-thead>tr>th]:bg-rose-100 [&_.ant-table-thead>tr>th]:text-xs [&_.ant-table-thead>tr>th]:font-semibold [&_.ant-table-thead>tr>th]:text-slate-600 dark:[&_.ant-table-thead>tr>th]:border-rose-500/10 dark:[&_.ant-table-thead>tr>th]:bg-rose-500/10 dark:[&_.ant-table-thead>tr>th]:text-slate-200",
+                      "[&_.ant-table-tbody>tr>td]:border-rose-100 [&_.ant-table-tbody>tr>td]:text-sm dark:[&_.ant-table-tbody>tr>td]:border-rose-500/10",
+                      "[&_.ant-table-tbody>tr:hover>td]:bg-rose-50/70 dark:[&_.ant-table-tbody>tr:hover>td]:bg-rose-500/10",
+                      "[&_.ant-empty-description]:text-slate-500 dark:[&_.ant-empty-description]:text-slate-400"
+                    )}
+                    columns={cancelTicketColumns}
+                    dataSource={cancelTickets}
+                    rowKey="id"
+                    size="small"
+                    loading={isFetchingCancelTickets}
+                    pagination={false}
+                    scroll={{ x: 760 }}
+                    locale={{ emptyText: "Không có phiếu hủy" }}
+                  />
                 </div>
               </div>
             )}
@@ -956,7 +1119,7 @@ const OrderDetailDialog = ({
                 {renderInfoRow("Phòng chiếu", currentDetail?.room?.name)}
 
                 {renderInfoRow("Số lượng vé", totalTickets)}
-                {renderInfoRow("Vị trí ghế", getChairs() || "-")}
+                {renderInfoRow("Vị trí ghế", renderMultilineEllipsisText(getChairs()))}
               </div>
             </div>
           </section>

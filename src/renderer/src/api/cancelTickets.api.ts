@@ -9,13 +9,18 @@ export interface CancelTicketsQuery {
   userId?: number;
   fromDate?: string;
   toDate?: string;
+  orderId?: number;
 }
 
 export const cancelTicketsApi = {
   getAll: async (params: CancelTicketsQuery): Promise<ApiResponse<CancellationTicketProps>> => {
-    const { current, pageSize, filmId, userId, fromDate, toDate } = params;
+    const { current, pageSize, filmId, userId, fromDate, toDate, orderId } = params;
 
     const filter: Record<string, unknown> = {};
+
+    if (orderId) {
+      filter.orderId = orderId;
+    }
 
     if (filmId) {
       filter.filmId = filmId;
