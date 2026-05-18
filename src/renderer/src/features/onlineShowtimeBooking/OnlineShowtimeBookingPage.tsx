@@ -2,6 +2,7 @@ import { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { usePlanScreenings } from "@renderer/hooks/planScreenings/usePlanScreenings";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
@@ -41,7 +42,7 @@ const OnlineShowtimeBookingPage = () => {
     [current, pageSize, filterValues]
   );
 
-  const { data, isFetching } = usePlanScreenings(params);
+  const { data, isFetching, refetch } = usePlanScreenings(params);
   const { can } = usePermission();
   const canUpdate = can("online_showtime_booking", "update");
   const updatePlanScreening = useUpdatePlanScreening();
@@ -198,7 +199,12 @@ const OnlineShowtimeBookingPage = () => {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
       <PageHeader
         left={<AppBreadcrumb />}
-        right={<Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />}
+        right={
+          <>
+            <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+          </>
+        }
       />
 
       <AutoHeightTable

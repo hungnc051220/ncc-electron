@@ -3,6 +3,7 @@ import { cancelTicketsApi } from "@renderer/api/cancelTickets.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { filterEmptyValues, formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -59,7 +60,8 @@ const CancellationTicketsPage = () => {
     fetchNextPage,
     hasNextPage,
     isFetching,
-    isFetchingNextPage
+    isFetchingNextPage,
+    refetch
   } = useInfiniteQuery({
     queryKey: ["cancel-tickets", params],
     queryFn: ({ pageParam = 1 }) =>
@@ -477,6 +479,10 @@ const CancellationTicketsPage = () => {
               Xuất Excel
             </Button>
             <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={() => undefined} />
+            <RefreshButton
+              loading={isFetching || isFetchingNextPage}
+              onRefresh={() => refetch()}
+            />
           </>
         }
       />

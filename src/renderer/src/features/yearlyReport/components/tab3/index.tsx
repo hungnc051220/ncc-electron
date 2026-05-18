@@ -1,4 +1,5 @@
 import { useReportYearly } from "@renderer/hooks/reports/useReportYearly";
+import RefreshButton from "@renderer/components/RefreshButton";
 import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import { formatMoney } from "@renderer/lib/utils";
 import { YearlyReportFilmDetail, YearlyReportManufacturerDetail } from "@shared/types";
@@ -23,13 +24,6 @@ export interface TreeRow {
   children?: TreeRow[];
   [key: string]: string | number | boolean | TreeRow[] | undefined;
 }
-
-// const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
-//   1: "Quý I",
-//   2: "Quý II",
-//   3: "Quý III",
-//   4: "Quý IV"
-// };
 
 const renderMoney = (value: number | undefined) => {
   if (!value) return "";
@@ -102,7 +96,7 @@ const Tab3 = () => {
     [filterValues.fromDate]
   );
 
-  const { data, isFetching } = useReportYearly(params, hasFromDate);
+  const { data, isFetching, refetch } = useReportYearly(params, hasFromDate);
 
   const treeData = useMemo(
     () =>
@@ -121,27 +115,6 @@ const Tab3 = () => {
         fixed: "left",
         width: 360
       },
-      // ...QUARTERS.map((quarter) => ({
-      //   title: quarterTitleMap[quarter],
-      //   children: [
-      //     {
-      //       title: "DT đối tác",
-      //       dataIndex: `q${quarter}PartnerRevenue`,
-      //       key: `q${quarter}PartnerRevenue`,
-      //       align: "right" as const,
-      //       width: 150,
-      //       render: (value: number | undefined) => renderMoney(value)
-      //     },
-      //     {
-      //       title: "Tổng doanh thu",
-      //       dataIndex: `q${quarter}Revenue`,
-      //       key: `q${quarter}Revenue`,
-      //       align: "right" as const,
-      //       width: 150,
-      //       render: (value: number | undefined) => renderMoney(value)
-      //     }
-      //   ]
-      // })),
       {
         title: "Cả năm",
         children: [
@@ -194,8 +167,13 @@ const Tab3 = () => {
         defaultActiveKey="1"
         className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="mb-2 flex justify-end gap-3">
+          <div className="flex justify-end gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasFromDate}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.fromDate && (
               <ExportRevenueExcelButton treeData={treeData} year={params.year} />
             )}

@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { usePaymentMethodRevenueReport } from "@renderer/hooks/reports/usePaymentMethodRevenueReport";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import type { PaymentMethodRevenueReportItem } from "@shared/types";
@@ -38,7 +39,7 @@ const SoldTicketsPage = () => {
     [filterValues.dateRange]
   );
 
-  const { data, isFetching } = usePaymentMethodRevenueReport(dto);
+  const { data, isFetching, refetch } = usePaymentMethodRevenueReport(dto);
   const tableData = useMemo(() => data?.data || [], [data?.data]);
 
   const summary = useMemo(
@@ -127,6 +128,7 @@ const SoldTicketsPage = () => {
               loading={isFetching}
             />
             <Filter filterValues={filterValues} onSearch={setFilterValues} />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
           </>
         }
       />

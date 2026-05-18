@@ -1,4 +1,5 @@
 import { useReportRevenueByFilm } from "@renderer/hooks/reports/useReportRevenueByFilm";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import type { TabsProps } from "antd";
 import { Tabs } from "antd";
@@ -104,7 +105,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   }, [filterValues, dateType]);
 
   const hasDateRange = filterValues.dateRange?.length === 2;
-  const { data, isFetching } = useReportRevenueByFilm(params, hasDateRange);
+  const { data, isFetching, refetch } = useReportRevenueByFilm(params, hasDateRange);
   const reportData = hasDateRange ? data : undefined;
 
   const allPrices = Array.from(
@@ -380,6 +381,11 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
         tabBarExtraContent={
           <div className="flex justify-end gap-3 mr-2">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasDateRange}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.dateRange?.length === 2 && (
               <ExportRevenueExcelButton
                 tableData={detailRows}

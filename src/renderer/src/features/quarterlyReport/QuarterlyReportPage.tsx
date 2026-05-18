@@ -1,7 +1,9 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import type { TabsProps } from "antd";
 import { Tabs, Typography } from "antd";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import Filter from "./components/Filter";
 import Tab2 from "./components/tab2";
@@ -11,6 +13,8 @@ import { QuarterlyReportFilterValues } from "./types";
 import { formatQuarterLabel } from "./utils";
 
 const QuarterlyReportPage = () => {
+  const queryClient = useQueryClient();
+  const isFetchingQuarterly = useIsFetching({ queryKey: ["report-quarterly"] }) > 0;
   const [filterValues, setFilterValues] = useState<QuarterlyReportFilterValues>({});
 
   const onSearch = (values: QuarterlyReportFilterValues) => {
@@ -81,6 +85,11 @@ const QuarterlyReportPage = () => {
               </Typography.Text>
             )}
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!filterValues.fromDate}
+              loading={isFetchingQuarterly}
+              onRefresh={() => queryClient.invalidateQueries({ queryKey: ["report-quarterly"] })}
+            />
           </div>
         }
       />

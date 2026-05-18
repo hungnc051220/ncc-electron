@@ -11,6 +11,7 @@ import type { Dayjs } from "dayjs";
 
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { usePlanScreeningsAvailableDates } from "@renderer/hooks/planScreenings/usePlanScreeningsAvailableDates";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { cn, isPlanScreeningLocked } from "@renderer/lib/utils";
 
 dayjs.extend(customParseFormat);
@@ -129,7 +130,7 @@ const ShowtimesPage = () => {
   const fromDate = dayjs(date, "YYYY-MM-DD").startOf("month").format("DD-MM-YYYY");
   const toDate = dayjs(date, "YYYY-MM-DD").add(1, "month").endOf("month").format("DD-MM-YYYY");
 
-  const { data, isFetching } = usePlanScreeningsByDate(date);
+  const { data, isFetching, refetch } = usePlanScreeningsByDate(date);
   const { data: showDates } = usePlanScreeningsAvailableDates(fromDate, toDate);
 
   const showDateSet = new Set(showDates?.map((d) => dayjs(d, "DD-MM-YYYY").format("YYYY-MM-DD")));
@@ -310,6 +311,7 @@ const ShowtimesPage = () => {
           >
             Hiển thị lịch đã chiếu
           </Checkbox>
+          <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
         </div>
         <Button
           onClick={() => {

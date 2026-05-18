@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { MoreOutlined } from "@ant-design/icons";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
 import { formatNumber, compareText, compareDate } from "@renderer/lib/utils";
@@ -33,7 +34,7 @@ const InvoicesPage = () => {
     [current, pageSize]
   );
 
-  const { data: invoices, isFetching } = useInvoices(params);
+  const { data: invoices, isFetching, refetch } = useInvoices(params);
   const { can } = usePermission();
   const canView = can("invoices", "view");
   const canUpdate = can("invoices", "update");
@@ -240,7 +241,10 @@ const InvoicesPage = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
-      <PageHeader left={<AppBreadcrumb />} />
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<RefreshButton loading={isFetching} onRefresh={() => refetch()} />}
+      />
 
       <AutoHeightTable
         rowKey={(record) => record.id}

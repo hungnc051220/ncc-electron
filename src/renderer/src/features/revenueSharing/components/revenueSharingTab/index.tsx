@@ -1,5 +1,6 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useReportRevenueSharing } from "@renderer/hooks/reports/useReportRevenueSharing";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
@@ -62,7 +63,7 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
     return filtered;
   }, [filterValues]);
 
-  const { data: revenueSharings, isFetching } = useReportRevenueSharing(params);
+  const { data: revenueSharings, isFetching, refetch } = useReportRevenueSharing(params);
 
   const groupedRevenueSharings = useMemo(() => {
     if (!revenueSharings) {
@@ -305,6 +306,7 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
     () => (
       <div className="flex items-center justify-end gap-2 mb-1">
         <Filter filterValues={filterValues} onSearch={setFilterValues} />
+        <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
         {canExport && (
           <Button
             variant="solid"
@@ -323,7 +325,16 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
         )}
       </div>
     ),
-    [canCreate, canExport, filterValues, handleAdd, handleExportList, hasRevenueSharingData]
+    [
+      canCreate,
+      canExport,
+      filterValues,
+      handleAdd,
+      handleExportList,
+      hasRevenueSharingData,
+      isFetching,
+      refetch
+    ]
   );
 
   useEffect(() => {
@@ -348,7 +359,7 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
           showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
         }}
         summary={() => {
-          return (
+          return revenueSharings && revenueSharings.length > 0 ? (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={4} align="center" className="font-bold">
                 Tổng
@@ -363,7 +374,7 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
                 {formatMoney(revenueSummary.allRevenue)}
               </Table.Summary.Cell>
             </Table.Summary.Row>
-          );
+          ) : null;
         }}
       />
 

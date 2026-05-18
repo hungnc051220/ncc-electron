@@ -10,6 +10,7 @@ import { filterEmptyValues, formatNumber, compareText, compareNumber } from "@re
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { UserProps } from "@shared/types";
 import type { MenuProps, PaginationProps, TableProps } from "antd";
 import { Button, Dropdown } from "antd";
@@ -39,7 +40,7 @@ const UsersPage = () => {
     [current, pageSize, filterValues]
   );
 
-  const { data: users, isFetching } = useUsers(params);
+  const { data: users, isFetching, refetch } = useUsers(params);
   const { data: customerRoles, isFetching: isFetchingCustomerRoles } = useCustomerRoles();
   const { can } = usePermission();
   const canCreate = can("users", "create");
@@ -249,6 +250,7 @@ const UsersPage = () => {
               setCurrent={setCurrent}
               customerRoles={customerRoles || []}
             />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
             {canCreate && (
               <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
                 Thêm người dùng

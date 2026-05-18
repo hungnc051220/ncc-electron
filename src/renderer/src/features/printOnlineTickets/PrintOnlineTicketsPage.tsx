@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { MoreOutlined } from "@ant-design/icons";
 import { ordersApi } from "@renderer/api/orders.api";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
@@ -79,7 +80,8 @@ const PrintOnlineTicketsPage = () => {
     fetchNextPage,
     hasNextPage,
     isFetching,
-    isFetchingNextPage
+    isFetchingNextPage,
+    refetch
   } = useInfiniteQuery({
     queryKey: ["print-online-orders", params],
     queryFn: ({ pageParam = 1 }) =>
@@ -577,7 +579,13 @@ const PrintOnlineTicketsPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={() => undefined} />
+          <>
+            <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={() => undefined} />
+            <RefreshButton
+              loading={isFetching || isFetchingNextPage}
+              onRefresh={() => refetch()}
+            />
+          </>
         }
       />
 

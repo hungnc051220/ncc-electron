@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { MoreOutlined } from "@ant-design/icons";
 import { usePlanCinemas } from "@renderer/hooks/planCinemas/usePlanCinemas";
 import { rangePresets } from "@renderer/lib/dateRangePresets";
@@ -40,7 +41,7 @@ const ShowtimeSchedulePage = () => {
     [current, pageSize, fromDate, toDate]
   );
 
-  const { data, isFetching } = usePlanCinemas(params);
+  const { data, isFetching, refetch } = usePlanCinemas(params);
 
   const handleViewDetail = useCallback((item: PlanCinemaProps) => {
     setSelectedItem(item);
@@ -127,7 +128,10 @@ const ShowtimeSchedulePage = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
-      <PageHeader left={<AppBreadcrumb />} />
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<RefreshButton loading={isFetching} onRefresh={() => refetch()} />}
+      />
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 z-20">

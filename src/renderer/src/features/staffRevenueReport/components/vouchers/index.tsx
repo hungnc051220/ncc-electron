@@ -1,4 +1,5 @@
 import { useReportVoucherUsage } from "@renderer/hooks/reports/useReportVoucherUsage";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { filterEmptyValues } from "@renderer/lib/utils";
 import { VoucherUsageProps } from "@shared/types";
 import type { TabsProps } from "antd";
@@ -32,7 +33,7 @@ const Vouchers = () => {
   }, [filterValues]);
 
   const hasDateRange = filterValues.dateRange?.length === 2;
-  const { data, isFetching } = useReportVoucherUsage(params, hasDateRange);
+  const { data, isFetching, refetch } = useReportVoucherUsage(params, hasDateRange);
   const reportData = hasDateRange ? data : undefined;
 
   const columns: ColumnsType<VoucherUsageProps> = [
@@ -95,6 +96,11 @@ const Vouchers = () => {
         tabBarExtraContent={
           <div className="flex justify-end gap-3 mr-2">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasDateRange}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.dateRange?.length === 2 && (
               <ExportRevenueExcelButton
                 tableData={reportData?.voucherUsages || []}

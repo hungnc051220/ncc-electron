@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { planFilmsApi } from "@renderer/api/planFilm.api";
 import { useDeletePlanFilm } from "@renderer/hooks/planFilms/useDeletePlanFilm";
 import { planFilmsKeys } from "@renderer/hooks/planFilms/keys";
@@ -54,7 +55,8 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
     isFetching,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage
+    isFetchingNextPage,
+    refetch
   } = useInfiniteQuery({
     queryKey: [...planFilmsKeys.all, "all-pages", params],
     queryFn: ({ pageParam = 1 }) =>
@@ -228,13 +230,16 @@ const TabFilm = ({ planCinemaId }: TabFilmProps) => {
             Xóa
           </Button>
         </div>
-        {canUpdate && (
-          <AddMovies
-            planCinemaId={planCinemaId!}
-            selectedFilmIds={films.map((item) => item.filmId)}
-            planFilms={films}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          <RefreshButton loading={isFetching || isFetchingNextPage} onRefresh={() => refetch()} />
+          {canUpdate && (
+            <AddMovies
+              planCinemaId={planCinemaId!}
+              selectedFilmIds={films.map((item) => item.filmId)}
+              planFilms={films}
+            />
+          )}
+        </div>
       </div>
 
       <div className="z-0 flex min-h-0 min-w-0 flex-1 flex-col pt-2">

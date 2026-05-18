@@ -1,4 +1,5 @@
 import { useReportExamineTicketByPlan } from "@renderer/hooks/reports/useReportExamineTicketByPlan";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { ExamineTicketsByFilmProps } from "@shared/types";
 import type { TabsProps } from "antd";
@@ -58,7 +59,7 @@ const ExamineTicketByPlan = () => {
   }, [filterValues]);
 
   const hasDateRange = filterValues.dateRange?.length === 2;
-  const { data, isFetching } = useReportExamineTicketByPlan(params, hasDateRange);
+  const { data, isFetching, refetch } = useReportExamineTicketByPlan(params, hasDateRange);
   const reportData = hasDateRange ? data : undefined;
 
   const buildTreeTable = (films: ExamineTicketsByFilmProps[]): TableRow[] => {
@@ -247,6 +248,11 @@ const ExamineTicketByPlan = () => {
         tabBarExtraContent={
           <div className="flex justify-end gap-3 mr-2">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasDateRange}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.dateRange?.length === 2 && (
               <ExportRevenueExcelButton
                 tableData={tableData}

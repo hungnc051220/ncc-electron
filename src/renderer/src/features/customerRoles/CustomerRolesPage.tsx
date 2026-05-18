@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -20,7 +21,7 @@ const CustomerRolesPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const { data: customerRoles, isFetching } = useCustomerRoles();
+  const { data: customerRoles, isFetching, refetch } = useCustomerRoles();
   const { can } = usePermission();
   const canCreate = can("user_roles", "update");
   const canUpdate = can("user_roles", "update");
@@ -160,11 +161,14 @@ const CustomerRolesPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm nhóm người dùng
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm nhóm người dùng
+              </Button>
+            )}
+          </>
         }
       />
 

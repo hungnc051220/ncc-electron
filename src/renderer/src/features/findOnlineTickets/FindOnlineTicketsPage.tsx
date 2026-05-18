@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import type { PaginationProps, TableProps } from "antd";
 import { Dropdown } from "antd";
 import { useCallback, useMemo, useState } from "react";
@@ -59,7 +60,7 @@ const FindOnlineTicketsPage = () => {
     };
   }, [current, pageSize, filterValues]);
 
-  const { data: orders, isFetching } = useOrders(params);
+  const { data: orders, isFetching, refetch } = useOrders(params);
   const { can } = usePermission();
   const canView = can("find_online_tickets", "view");
 
@@ -242,7 +243,12 @@ const FindOnlineTicketsPage = () => {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
       <PageHeader
         left={<AppBreadcrumb />}
-        right={<Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />}
+        right={
+          <>
+            <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+          </>
+        }
       />
 
       <AutoHeightTable

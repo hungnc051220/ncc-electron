@@ -4,6 +4,7 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
@@ -116,7 +117,7 @@ const OrderHistoryPage = () => {
     };
   }, [current, pageSize, filterValues, activeKey]);
 
-  const { data: orders, isFetching } = useOrders(params);
+  const { data: orders, isFetching, refetch } = useOrders(params);
   const {
     data: cancellationReasons,
     fetchNextPage,
@@ -559,7 +560,12 @@ const OrderHistoryPage = () => {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
       <PageHeader
         left={<AppBreadcrumb />}
-        right={<Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />}
+        right={
+          <>
+            <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+          </>
+        }
       />
 
       <Tabs

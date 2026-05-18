@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useDiscountOfflineUsageReport } from "@renderer/hooks/reports/useDiscountOfflineUsageReport";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import type { DiscountOfflineUsageReportItem } from "@shared/types";
@@ -37,7 +38,7 @@ const DiscountOfflineUsagePage = () => {
     [filterValues.dateRange]
   );
 
-  const { data, isFetching } = useDiscountOfflineUsageReport(dto);
+  const { data, isFetching, refetch } = useDiscountOfflineUsageReport(dto);
   const tableData = useMemo(() => data?.data || [], [data?.data]);
 
   const summary = useMemo(
@@ -118,6 +119,7 @@ const DiscountOfflineUsagePage = () => {
               loading={isFetching}
             />
             <Filter filterValues={filterValues} onSearch={setFilterValues} />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
           </>
         }
       />

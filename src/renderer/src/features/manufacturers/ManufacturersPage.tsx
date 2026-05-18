@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useManufacturers } from "@renderer/hooks/manufacturers/useManufacturers";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ManufacturerProps } from "@shared/types";
@@ -30,7 +31,7 @@ const ManufacturersPage = () => {
     [current, pageSize]
   );
 
-  const { data: manufacturers, isFetching } = useManufacturers(params);
+  const { data: manufacturers, isFetching, refetch } = useManufacturers(params);
   const { can } = usePermission();
   const canCreate = can("manufacturers", "create");
   const canUpdate = can("manufacturers", "update");
@@ -188,11 +189,14 @@ const ManufacturersPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm hãng phim
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm hãng phim
+              </Button>
+            )}
+          </>
         }
       />
 

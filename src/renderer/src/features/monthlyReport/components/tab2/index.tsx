@@ -7,6 +7,7 @@ import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
+import RefreshButton from "@renderer/components/RefreshButton";
 import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
@@ -38,7 +39,7 @@ const Tab2 = () => {
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
 
   const hasFromDate = !!filterValues.fromDate;
-  const { data, isFetching } = useReportMonthly(
+  const { data, isFetching, refetch } = useReportMonthly(
     { ...filterValues, reportType: "TICKET" },
     hasFromDate
   );
@@ -134,54 +135,6 @@ const Tab2 = () => {
     }
   ];
 
-  // function buildPriceColumns(prices: number[]): ColumnsType<TreeRow> {
-  //   return prices.map((price) => ({
-  //     title: (price / 1000).toString(),
-  //     children: [
-  //       {
-  //         title: "Online",
-  //         children: [
-  //           {
-  //             title: "Số vé",
-  //             align: "right",
-  //             width: 100,
-  //             render: (_, row) => row[`price_${price}_online`]?.tickets || ""
-  //           },
-  //           {
-  //             title: "Thành tiền",
-  //             align: "right",
-  //             width: 100,
-  //             render: (_, row) =>
-  //               row[`price_${price}_online`]?.revenue
-  //                 ? formatMoney(row[`price_${price}_online`]?.revenue)
-  //                 : ""
-  //           }
-  //         ]
-  //       },
-  //       {
-  //         title: "Offline",
-  //         children: [
-  //           {
-  //             title: "Số vé",
-  //             align: "right",
-  //             width: 100,
-  //             render: (_, row) => row[`price_${price}_offline`]?.tickets || ""
-  //           },
-  //           {
-  //             title: "Thành tiền",
-  //             align: "right",
-  //             width: 100,
-  //             render: (_, row) =>
-  //               row[`price_${price}_offline`]?.revenue
-  //                 ? formatMoney(row[`price_${price}_offline`]?.revenue)
-  //                 : ""
-  //           }
-  //         ]
-  //       }
-  //     ]
-  //   }));
-  // }
-
   const totalColumns: ColumnsType<TreeRow> = [
     {
       title: "Tổng vé",
@@ -256,14 +209,7 @@ const Tab2 = () => {
   }, [data, allPrices]);
 
   const columns = useMemo(
-    () => [
-      ...baseColumns,
-      // {
-      //   title: "Loại giá vé (Đơn vị tính 1.000 đồng)",
-      //   children: buildPriceColumns(allPrices)
-      // },
-      ...totalColumns
-    ],
+    () => [...baseColumns, ...totalColumns],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allPrices]
   );
@@ -294,8 +240,13 @@ const Tab2 = () => {
         defaultActiveKey="1"
         className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="flex justify-end mb-2 gap-3">
+          <div className="flex justify-end gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasFromDate}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.fromDate && (
               <ExportRevenueExcelButton
                 treeData={treeData}

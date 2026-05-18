@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useMachineSerials } from "@renderer/hooks/useMachineSerials";
 import { filterEmptyValues, formatNumber } from "@renderer/lib/utils";
 import { MachineSerialProps } from "@shared/types";
@@ -61,7 +62,7 @@ const MachineSerialsPage = () => {
     [current, pageSize, filterValues]
   );
 
-  const { data: machineSerials, isFetching } = useMachineSerials(params);
+  const { data: machineSerials, isFetching, refetch } = useMachineSerials(params);
 
   const onSearch = (values: ValuesProps) => {
     setFilterValues(values);
@@ -81,12 +82,15 @@ const MachineSerialsPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          <Filter
-            isFetching={isFetching}
-            onSearch={onSearch}
-            setCurrent={setCurrent}
-            year={filterValues.year}
-          />
+          <>
+            <Filter
+              isFetching={isFetching}
+              onSearch={onSearch}
+              setCurrent={setCurrent}
+              year={filterValues.year}
+            />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+          </>
         }
       />
 

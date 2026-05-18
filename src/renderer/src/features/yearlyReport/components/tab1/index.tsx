@@ -1,4 +1,5 @@
 import { useReportYearly } from "@renderer/hooks/reports/useReportYearly";
+import RefreshButton from "@renderer/components/RefreshButton";
 import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { YearlyReportFilmDetail, YearlyReportManufacturerDetail } from "@shared/types";
@@ -23,13 +24,6 @@ export interface TreeRow {
   children?: TreeRow[];
   [key: string]: string | number | boolean | TreeRow[] | undefined;
 }
-
-// const quarterTitleMap: Record<(typeof QUARTERS)[number], string> = {
-//   1: "Quý I",
-//   2: "Quý II",
-//   3: "Quý III",
-//   4: "Quý IV"
-// };
 
 const renderValue = (value: number | undefined, isMoney = false) => {
   if (!value) return "";
@@ -107,7 +101,7 @@ const Tab1 = () => {
     [filterValues.fromDate]
   );
 
-  const { data, isFetching } = useReportYearly(params, hasFromDate);
+  const { data, isFetching, refetch } = useReportYearly(params, hasFromDate);
 
   const treeData = useMemo(
     () =>
@@ -126,35 +120,6 @@ const Tab1 = () => {
         fixed: "left",
         width: 360
       },
-      // ...QUARTERS.map((quarter) => ({
-      //   title: quarterTitleMap[quarter],
-      //   children: [
-      //     {
-      //       title: "Buổi chiếu",
-      //       dataIndex: `q${quarter}Screenings`,
-      //       key: `q${quarter}Screenings`,
-      //       align: "right" as const,
-      //       width: 110,
-      //       render: (value: number | undefined) => renderValue(value)
-      //     },
-      //     {
-      //       title: "Khán giả",
-      //       dataIndex: `q${quarter}Tickets`,
-      //       key: `q${quarter}Tickets`,
-      //       align: "right" as const,
-      //       width: 110,
-      //       render: (value: number | undefined) => renderValue(value)
-      //     },
-      //     {
-      //       title: "Doanh thu",
-      //       dataIndex: `q${quarter}Revenue`,
-      //       key: `q${quarter}Revenue`,
-      //       align: "right" as const,
-      //       width: 140,
-      //       render: (value: number | undefined) => renderValue(value, true)
-      //     }
-      //   ]
-      // })),
       {
         title: "Cả năm",
         children: [
@@ -215,8 +180,13 @@ const Tab1 = () => {
         defaultActiveKey="1"
         className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="mb-2 flex justify-end gap-3">
+          <div className="flex justify-end gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasFromDate}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.fromDate && (
               <ExportRevenueExcelButton treeData={treeData} year={params.year} />
             )}

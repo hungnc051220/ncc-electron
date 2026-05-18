@@ -1,5 +1,6 @@
 import { MoreOutlined } from "@ant-design/icons";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useSharingRatePaymentsHistory } from "@renderer/hooks/sharingRatePaymentsHistory/useSharingRatePaymentsHistory";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
@@ -68,7 +69,7 @@ const PaymentScheduleTab = ({ onActionsChange }: PaymentScheduleTabProps) => {
     };
   }, [filterValues]);
 
-  const { data: paymentSchedules, isFetching } = useSharingRatePaymentsHistory(params);
+  const { data: paymentSchedules, isFetching, refetch } = useSharingRatePaymentsHistory(params);
 
   const groupedPaymentSchedules = useMemo(() => {
     const data = paymentSchedules?.data ?? [];
@@ -246,6 +247,7 @@ const PaymentScheduleTab = ({ onActionsChange }: PaymentScheduleTabProps) => {
     () => (
       <div className="mb-1 flex items-center justify-end gap-2">
         <Filter filterValues={filterValues} onSearch={setFilterValues} />
+        <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
         {canExport && (
           <Button
             variant="solid"
@@ -270,7 +272,9 @@ const PaymentScheduleTab = ({ onActionsChange }: PaymentScheduleTabProps) => {
       filterValues,
       groupedPaymentSchedules.length,
       handleAdd,
-      handleExportList
+      handleExportList,
+      isFetching,
+      refetch
     ]
   );
 

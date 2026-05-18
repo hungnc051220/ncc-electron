@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -30,7 +31,7 @@ const DiscountSettingsPage = () => {
     [current, pageSize]
   );
 
-  const { data: discounts, isFetching } = useDiscounts(params);
+  const { data: discounts, isFetching, refetch } = useDiscounts(params);
   const { can } = usePermission();
   const canCreate = can("discount_settings", "create");
   const canUpdate = can("discount_settings", "update");
@@ -177,11 +178,14 @@ const DiscountSettingsPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm giảm giá
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm giảm giá
+              </Button>
+            )}
+          </>
         }
       />
 

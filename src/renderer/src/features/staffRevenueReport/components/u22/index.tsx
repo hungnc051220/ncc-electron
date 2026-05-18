@@ -8,6 +8,7 @@ import ExportRevenueExcelButton from "./ExportExcel";
 import Filter from "./Filter";
 import TabRevenue from "./TabRevenue";
 import { U22UsageProps } from "@shared/types";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { filterEmptyValues, formatMoney } from "@renderer/lib/utils";
 import { useReportU22Usage } from "@renderer/hooks/reports/useReportU22Usage";
 
@@ -32,7 +33,7 @@ const U22Usage = () => {
   }, [filterValues]);
 
   const hasDateRange = filterValues.dateRange?.length === 2;
-  const { data, isFetching } = useReportU22Usage(params, hasDateRange);
+  const { data, isFetching, refetch } = useReportU22Usage(params, hasDateRange);
   const reportData = hasDateRange ? data : undefined;
 
   const columns: ColumnsType<U22UsageProps> = [
@@ -116,6 +117,11 @@ const U22Usage = () => {
         tabBarExtraContent={
           <div className="flex justify-end gap-3 mr-2">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasDateRange}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.dateRange?.length === 2 && (
               <ExportRevenueExcelButton
                 tableData={reportData?.data || []}

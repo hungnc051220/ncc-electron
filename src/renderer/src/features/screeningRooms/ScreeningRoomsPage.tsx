@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { useScreeningRooms } from "@renderer/hooks/screeningRooms/useScreeningRooms";
 import { formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
@@ -32,7 +33,7 @@ const ScreeningRoomsPage = () => {
     [current, pageSize]
   );
 
-  const { data: screeningRooms, isFetching } = useScreeningRooms(params);
+  const { data: screeningRooms, isFetching, refetch } = useScreeningRooms(params);
   const { can } = usePermission();
   const canCreate = can("screening_rooms", "create");
   const canUpdate = can("screening_rooms", "update");
@@ -237,11 +238,14 @@ const ScreeningRoomsPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm phòng chiếu
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm phòng chiếu
+              </Button>
+            )}
+          </>
         }
       />
 

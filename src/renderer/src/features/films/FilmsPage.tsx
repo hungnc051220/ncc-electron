@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import type { TableProps, TabsProps, PaginationProps } from "antd";
 import { Button, Dropdown, Tabs } from "antd";
 import dayjs from "dayjs";
@@ -70,7 +71,7 @@ const FilmsPage = () => {
     };
   }, [current, pageSize, activeKey, filterValues]);
 
-  const { data: films, isFetching } = useFilms(params);
+  const { data: films, isFetching, refetch } = useFilms(params);
   const { data: generalData } = useGeneralData();
 
   const { can } = usePermission();
@@ -259,6 +260,7 @@ const FilmsPage = () => {
         right={
           <>
             <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
             {canCreate && (
               <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
                 Thêm phim

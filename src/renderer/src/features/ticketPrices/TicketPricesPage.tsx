@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useTicketPrices } from "@renderer/hooks/ticketPrices/useTicketPrices";
 import {
   formatMoney,
@@ -35,7 +36,7 @@ const TicketPricesPage = () => {
     [current, pageSize]
   );
 
-  const { data: ticketPrices, isFetching } = useTicketPrices(params);
+  const { data: ticketPrices, isFetching, refetch } = useTicketPrices(params);
   const { can } = usePermission();
   const canCreate = can("ticket_prices", "create");
   const canUpdate = can("ticket_prices", "update");
@@ -167,11 +168,14 @@ const TicketPricesPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm giá vé
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm giá vé
+              </Button>
+            )}
+          </>
         }
       />
 

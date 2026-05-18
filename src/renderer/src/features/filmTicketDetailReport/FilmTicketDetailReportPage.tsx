@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import type { ReportRevenueByFilmDto } from "@renderer/api/reportsApi";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import {
   getActualRemittance,
   getRevenueColumnMode,
@@ -54,7 +55,7 @@ const FilmTicketDetailReportPage = () => {
   }, [filterValues]);
 
   const hasRequiredFilter = !!filterValues.filmId && filterValues.dateRange?.length === 2;
-  const { data, isFetching } = useReportRevenueByFilm(params, hasRequiredFilter);
+  const { data, isFetching, refetch } = useReportRevenueByFilm(params, hasRequiredFilter);
   const reportData = hasRequiredFilter ? data : undefined;
 
   const tableData = useMemo<Row[]>(
@@ -343,7 +344,16 @@ const FilmTicketDetailReportPage = () => {
         type="card"
         items={items}
         className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
-        tabBarExtraContent={<Filter filterValues={filterValues} onSearch={setFilterValues} />}
+        tabBarExtraContent={
+          <div className="mb-1 flex items-center justify-end gap-2">
+            <Filter filterValues={filterValues} onSearch={setFilterValues} />
+            <RefreshButton
+              disabled={!hasRequiredFilter}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
+          </div>
+        }
       />
     </div>
   );

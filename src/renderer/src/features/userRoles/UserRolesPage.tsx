@@ -1,5 +1,6 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useCustomerRoles } from "@renderer/hooks/customerRoles/useCustomerRoles";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { useRolePermissions } from "@renderer/hooks/permissions/useRolePermissions";
@@ -152,8 +153,12 @@ const UserRolesPage = () => {
   const [bodyData, setBodyData] = useState<PermissionMatrixRow[]>(buildPermissionMatrix());
   const queryClient = useQueryClient();
 
-  const { data } = useCustomerRoles();
-  const { data: rolePermissions } = useRolePermissions(
+  const { data, isFetching: isFetchingRoles, refetch: refetchRoles } = useCustomerRoles();
+  const {
+    data: rolePermissions,
+    isFetching: isFetchingRolePermissions,
+    refetch: refetchRolePermissions
+  } = useRolePermissions(
     selectedKey ? { roleIds: [Number(selectedKey)] } : undefined
   );
   const updateRolePermissions = useUpdateRolePermissions();
@@ -350,7 +355,15 @@ const UserRolesPage = () => {
   return (
     <>
       <div className="space-y-4 flex-1 h-full p-4 pb-0 flex flex-col">
-        <PageHeader left={<AppBreadcrumb />} />
+        <PageHeader
+          left={<AppBreadcrumb />}
+          right={
+            <RefreshButton
+              loading={isFetchingRoles || isFetchingRolePermissions}
+              onRefresh={() => Promise.all([refetchRoles(), refetchRolePermissions()])}
+            />
+          }
+        />
 
         <div className="flex-1">
           <Layout hasSider className="flex-1 h-full">

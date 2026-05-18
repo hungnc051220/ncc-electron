@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { MoreOutlined } from "@ant-design/icons";
 import { useHolidays } from "@renderer/hooks/holidays/useHolidays";
 import { formatNumber, compareText } from "@renderer/lib/utils";
@@ -50,7 +51,7 @@ const HolidaysPage = () => {
     [current, pageSize, activeKey, year]
   );
 
-  const { data: holidays, isFetching } = useHolidays(params);
+  const { data: holidays, isFetching, refetch } = useHolidays(params);
   const { can } = usePermission();
   const canUpdate = can("holidays", "update");
   const canDelete = can("holidays", "delete");
@@ -158,6 +159,7 @@ const HolidaysPage = () => {
               onChange={(date) => setYear(date!)}
               allowClear={false}
             />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
             {canUpdate && (
               <Button type="primary" onClick={() => setDialogOpen(true)}>
                 Cập nhật lại ngày

@@ -1,6 +1,7 @@
 import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { screeningRoomsApi } from "@renderer/api/screeningRooms.api";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useDeletePlanScreening } from "@renderer/hooks/planScreenings/useDeletePlanScreening";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
@@ -94,7 +95,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     isFetching: isFetchingScreenings,
     fetchNextPage: fetchNextScreeningsPage,
     hasNextPage: hasNextScreeningsPage,
-    isFetchingNextPage: isFetchingNextScreeningsPage
+    isFetchingNextPage: isFetchingNextScreeningsPage,
+    refetch
   } = useInfiniteQuery({
     queryKey: [...planScreeningsKeys.all, "all-pages", params],
     queryFn: ({ pageParam = 1 }) =>
@@ -233,7 +235,8 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       key: "filmName",
       dataIndex: "filmName",
       render: (_, record) => record.filmInfo?.filmName,
-      sorter: (a, b) => compareNullableText(a.filmInfo?.filmName, b.filmInfo?.filmName)
+      sorter: (a, b) => compareNullableText(a.filmInfo?.filmName, b.filmInfo?.filmName),
+      width: 300
     },
     {
       title: "Kết thúc",
@@ -301,6 +304,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           </Button>
         </div>
         <div className="flex items-center gap-3">
+          <RefreshButton
+            loading={isFetchingScreenings || isFetchingNextScreeningsPage}
+            onRefresh={() => refetch()}
+          />
           <DatePicker
             value={date}
             onChange={(nextDate) => setDate(nextDate)}

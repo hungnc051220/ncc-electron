@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { formatNumber, compareText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -28,7 +29,7 @@ const SeatTypesPage = () => {
     [current, pageSize]
   );
 
-  const { data: seatTypes, isFetching } = useSeatTypes(params);
+  const { data: seatTypes, isFetching, refetch } = useSeatTypes(params);
   const { can } = usePermission();
   const canCreate = can("seat_types", "create");
   const canUpdate = can("seat_types", "update");
@@ -166,11 +167,14 @@ const SeatTypesPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm loại ghế, vị trí
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm loại ghế, vị trí
+              </Button>
+            )}
+          </>
         }
       />
 

@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useFilmCategories } from "@renderer/hooks/filmCategories/useFilmCategories";
 import { formatNumber, compareText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -29,7 +30,7 @@ const FilmCategoriesPage = () => {
     [current, pageSize]
   );
 
-  const { data: filmCategories, isFetching } = useFilmCategories(params);
+  const { data: filmCategories, isFetching, refetch } = useFilmCategories(params);
   const { can } = usePermission();
   const canCreate = can("films", "create");
   const canUpdate = can("films", "update");
@@ -145,11 +146,14 @@ const FilmCategoriesPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm thể loại phim
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm thể loại phim
+              </Button>
+            )}
+          </>
         }
       />
 

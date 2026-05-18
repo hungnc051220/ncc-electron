@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useShowTimeSlots } from "@renderer/hooks/showTimeSlots/useShowTimeSlots";
 import { formatNumber, compareText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -28,7 +29,7 @@ const ShowTimeSlotsPage = () => {
     [current, pageSize]
   );
 
-  const { data: showTimeSlots, isFetching } = useShowTimeSlots(params);
+  const { data: showTimeSlots, isFetching, refetch } = useShowTimeSlots(params);
   const { can } = usePermission();
   const canCreate = can("showtime_slots", "create");
   const canUpdate = can("showtime_slots", "update");
@@ -148,11 +149,14 @@ const ShowTimeSlotsPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm khung giờ chiếu
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm khung giờ chiếu
+              </Button>
+            )}
+          </>
         }
       />
 

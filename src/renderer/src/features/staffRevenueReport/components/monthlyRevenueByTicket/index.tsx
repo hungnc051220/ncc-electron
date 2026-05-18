@@ -1,4 +1,5 @@
 import { useReportRevenueDayInMonth } from "@renderer/hooks/reports/useReportRevenueDayInMonth";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { filterEmptyValues } from "@renderer/lib/utils";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { RevenuesByDayProps } from "@shared/types";
@@ -47,7 +48,7 @@ const MonthlyRevenueByTicket = () => {
   };
 
   const hasDateRange = filterValues.dateRange?.length === 2;
-  const { data, isFetching } = useReportRevenueDayInMonth(params, hasDateRange);
+  const { data, isFetching, refetch } = useReportRevenueDayInMonth(params, hasDateRange);
   const reportData = hasDateRange ? data : undefined;
 
   const buildColumns = (): ColumnsType<Row> => {
@@ -139,6 +140,11 @@ const MonthlyRevenueByTicket = () => {
         tabBarExtraContent={
           <div className="flex justify-end gap-3 mr-2">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasDateRange}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.dateRange?.length === 2 && (
               <ExportRevenueExcelButton
                 tableData={dataSource}

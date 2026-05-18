@@ -174,7 +174,7 @@ const Filter = ({ filterValues, onSearch }: FilterProps) => {
 
   return (
     <>
-      <div className="relative mb-1">
+      <div className="relative">
         <Button variant="outlined" icon={<FilterOutlined />} onClick={() => setOpen(true)}>
           Bộ lọc
         </Button>

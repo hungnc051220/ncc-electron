@@ -82,7 +82,7 @@ const SettingPrinter = () => {
               onClick={() => void fetchPrinters()}
               className="w-full sm:w-auto sm:self-start"
             >
-              Tải lại
+              Làm mới
             </Button>
           </div>
 

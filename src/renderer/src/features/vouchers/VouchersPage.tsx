@@ -1,6 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useVouchers } from "@renderer/hooks/vouchers/useVouchers";
 import { formatMoney, formatNumber, compareText, compareNumber } from "@renderer/lib/utils";
 import { BatchVoucherProps } from "@shared/types";
@@ -61,7 +62,7 @@ const VouchersPage = () => {
     [current, pageSize]
   );
 
-  const { data: vouchers, isFetching } = useVouchers(params);
+  const { data: vouchers, isFetching, refetch } = useVouchers(params);
 
   const columns: TableProps<BatchVoucherProps>["columns"] = [
     {
@@ -235,7 +236,10 @@ const VouchersPage = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
-      <PageHeader left={<AppBreadcrumb />} />
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={<RefreshButton loading={isFetching} onRefresh={() => refetch()} />}
+      />
 
       <AutoHeightTable
         rowKey="id"

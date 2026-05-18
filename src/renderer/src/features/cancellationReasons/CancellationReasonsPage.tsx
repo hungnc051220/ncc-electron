@@ -2,6 +2,7 @@ import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useCancellationReasons } from "@renderer/hooks/cancellationReasons/useCancellationReasons";
 import { formatNumber, compareText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -29,7 +30,7 @@ const CancellationReasonsPage = () => {
     [current, pageSize]
   );
 
-  const { data: cancellationReasons, isFetching } = useCancellationReasons(params);
+  const { data: cancellationReasons, isFetching, refetch } = useCancellationReasons(params);
   const { can } = usePermission();
   const canCreate = can("cancellation_reasons", "create");
   const canUpdate = can("cancellation_reasons", "update");
@@ -130,11 +131,14 @@ const CancellationReasonsPage = () => {
       <PageHeader
         left={<AppBreadcrumb />}
         right={
-          canCreate ? (
-            <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
-              Thêm lý do hủy vé
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            {canCreate && (
+              <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
+                Thêm lý do hủy vé
+              </Button>
+            )}
+          </>
         }
       />
 

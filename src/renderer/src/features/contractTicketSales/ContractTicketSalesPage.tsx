@@ -4,6 +4,7 @@ import { CancelContactTicketSaleDto } from "@renderer/api/contractTicketSales.ap
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { useCancelContractTicketSale } from "@renderer/hooks/contractTicketSales/useCancelContractTicketSale";
 import { useContractTicketSales } from "@renderer/hooks/contractTicketSales/useContractTicketSales";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
@@ -109,8 +110,8 @@ const ContractTicketSalesPage = () => {
     };
   }, [current, pageSize, filterValues]);
 
-  const { data: tickets, isFetching } = useContractTicketSales(params);
-  const { data: summary } = useSummaryContractTicketSales(params);
+  const { data: tickets, isFetching, refetch: refetchTickets } = useContractTicketSales(params);
+  const { data: summary, refetch: refetchSummary } = useSummaryContractTicketSales(params);
   const {
     data: cancellationReasons,
     fetchNextPage,
@@ -566,7 +567,8 @@ const ContractTicketSalesPage = () => {
       key: "note",
       sorter: (a, b) => compareText(a.orderDetail.order?.note, b.orderDetail.order?.note),
       render: (_, record) =>
-        renderMergedCell(record.isFirstRow, record.rowSpan, record.orderDetail.order?.note)
+        renderMergedCell(record.isFirstRow, record.rowSpan, record.orderDetail.order?.note),
+      width: 300
     },
     {
       title: "Thời gian tạo",
@@ -656,6 +658,10 @@ const ContractTicketSalesPage = () => {
         right={
           <>
             <Filter filterValues={filterValues} setCurrent={setCurrent} onSearch={onSearch} />
+            <RefreshButton
+              loading={isFetching}
+              onRefresh={() => Promise.all([refetchTickets(), refetchSummary()])}
+            />
             {canCreate && (
               <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
                 Thêm hợp đồng

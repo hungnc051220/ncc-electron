@@ -4,6 +4,7 @@ import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
+import RefreshButton from "@renderer/components/RefreshButton";
 import { MoreOutlined } from "@ant-design/icons";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useOrders } from "@renderer/hooks/orders/useOrders";
@@ -114,7 +115,7 @@ const InvitationTicketsPage = () => {
     };
   }, [current, pageSize, filterValues]);
 
-  const { data: invitationTickets, isFetching } = useOrders(params);
+  const { data: invitationTickets, isFetching, refetch } = useOrders(params);
   const {
     data: cancellationReasons,
     fetchNextPage,
@@ -458,6 +459,7 @@ const InvitationTicketsPage = () => {
         right={
           <>
             <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
             {canCreate && (
               <Button type="primary" onClick={handleViewShowtimes}>
                 Xem sơ đồ vé

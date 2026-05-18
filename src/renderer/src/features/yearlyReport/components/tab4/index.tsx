@@ -1,4 +1,5 @@
 import { useReportYearly } from "@renderer/hooks/reports/useReportYearly";
+import RefreshButton from "@renderer/components/RefreshButton";
 import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { YearlyReportSummaryItem } from "@shared/types";
@@ -78,7 +79,7 @@ const Tab4 = () => {
     [filterValues.fromDate]
   );
 
-  const { data, isFetching } = useReportYearly(params, hasFromDate);
+  const { data, isFetching, refetch } = useReportYearly(params, hasFromDate);
   const tableData = useMemo(
     () => normalizeYearlySummaryData(hasFromDate ? data : undefined),
     [data, hasFromDate]
@@ -110,8 +111,13 @@ const Tab4 = () => {
         defaultActiveKey="1"
         className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
-          <div className="mb-2 flex justify-end gap-3">
+          <div className="flex justify-end gap-3">
             <Filter filterValues={filterValues} onSearch={onSearch} />
+            <RefreshButton
+              disabled={!hasFromDate}
+              loading={isFetching}
+              onRefresh={() => refetch()}
+            />
             {filterValues.fromDate && (
               <ExportRevenueExcelButton tableData={tableData} year={params.year} />
             )}
