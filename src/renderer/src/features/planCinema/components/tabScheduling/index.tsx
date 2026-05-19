@@ -287,7 +287,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between pb-2">
+      <div className="flex shrink-0 items-center justify-between pb-2 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <p className="text-sm">
             Đã chọn <b>{selectedRowKeys.length}</b> ca chiếu
@@ -303,7 +303,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
             Xóa
           </Button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <RefreshButton
             loading={isFetchingScreenings || isFetchingNextScreeningsPage}
             onRefresh={() => refetch()}
@@ -319,7 +319,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
             value={roomId}
             onChange={(value) => setRoomId(value)}
             allowClear
-            className="w-50"
+            className="w-42"
             options={roomOptions}
             placeholder="Chọn phòng chiếu"
             virtual={false}

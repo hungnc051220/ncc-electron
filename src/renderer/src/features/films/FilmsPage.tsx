@@ -13,15 +13,7 @@ import FilmDialog from "./components/FilmDialog";
 import Filter from "./components/Filter";
 import type { Dayjs } from "dayjs";
 import { FilmProps } from "@shared/types";
-import {
-  filterEmptyValues,
-  formatMoney,
-  formatNumber,
-  compareText,
-  compareNumber,
-  compareNaturalText,
-  compareDate
-} from "@renderer/lib/utils";
+import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import { useFilms } from "@renderer/hooks/films/useFilms";
 import { useGeneralData } from "@renderer/hooks/useGeneralData";
 import { usePermission } from "@renderer/permissions/usePermission";
@@ -45,7 +37,20 @@ export interface ValuesProps {
   filmName?: string;
   manufacturerId?: number;
   premieredDay?: Dayjs | null;
+  premieredYear?: Dayjs | null;
+  countryId?: number;
 }
+
+type ServerSortField = "filmName" | "proposedPrice";
+type ServerSortState = {
+  field: ServerSortField;
+  order: "ascend" | "descend";
+} | null;
+
+const serverSortFields: ServerSortField[] = ["filmName", "proposedPrice"];
+
+const isServerSortField = (columnKey: React.Key | undefined): columnKey is ServerSortField =>
+  typeof columnKey === "string" && serverSortFields.includes(columnKey as ServerSortField);
 
 const FilmsPage = () => {
   const [activeKey, setActiveKey] = useState("ALL");
@@ -55,6 +60,7 @@ const FilmsPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterValues, setFilterValues] = useState<ValuesProps>({});
+  const [serverSort, setServerSort] = useState<ServerSortState>(null);
 
   const params = useMemo(() => {
     const filtered = filterEmptyValues(filterValues as Record<string, unknown>);
@@ -63,13 +69,20 @@ const FilmsPage = () => {
       filtered.premieredDay = dayjs(filtered.premieredDay as Dayjs).format("YYYY-MM-DD");
     }
 
+    if (filtered.premieredYear) {
+      filtered.premieredYear = dayjs(filtered.premieredYear as Dayjs).format("YYYY");
+    }
+
     return {
       current,
       pageSize,
       tabCode: activeKey,
+      sortBy: serverSort
+        ? `${serverSort.field}.${serverSort.order === "ascend" ? "asc" : "desc"}`
+        : undefined,
       ...filtered
     };
-  }, [current, pageSize, activeKey, filterValues]);
+  }, [current, pageSize, activeKey, filterValues, serverSort]);
 
   const { data: films, isFetching, refetch } = useFilms(params);
   const { data: generalData } = useGeneralData();
@@ -140,7 +153,8 @@ const FilmsPage = () => {
       title: "Tên phim",
       key: "filmName",
       dataIndex: "filmName",
-      sorter: (a, b) => compareText(a.filmName, b.filmName),
+      sorter: true,
+      sortOrder: serverSort?.field === "filmName" ? serverSort.order : null,
       fixed: "left",
       width: 400
     },
@@ -148,7 +162,6 @@ const FilmsPage = () => {
       title: "Phiên bản",
       key: "versionCode",
       dataIndex: "versionCode",
-      sorter: (a, b) => compareNaturalText(a.versionCode, b.versionCode),
       width: 100,
       align: "center"
     },
@@ -156,8 +169,6 @@ const FilmsPage = () => {
       title: "Hãng phát hành",
       key: "manufacturerId",
       dataIndex: "manufacturerId",
-      sorter: (a, b) =>
-        compareText(manufacturerMap.get(a.manufacturerId), manufacturerMap.get(b.manufacturerId)),
       render: (value: number) => manufacturerMap.get(value) || "",
       width: 200
     },
@@ -165,15 +176,14 @@ const FilmsPage = () => {
       title: "Ngày khởi chiếu",
       key: "premieredDay",
       dataIndex: "premieredDay",
-      sorter: (a, b) => compareDate(a.premieredDay, b.premieredDay),
       render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
-      width: 150
+      width: 150,
+      align: "center"
     },
     {
       title: "Thời lượng",
       key: "duration",
       dataIndex: "duration",
-      sorter: (a, b) => compareNumber(a.duration, b.duration),
       render: (value: number) => `${value} phút`,
       align: "right",
       width: 150
@@ -182,7 +192,6 @@ const FilmsPage = () => {
       title: "Nước sản xuất",
       key: "countryName",
       dataIndex: "countryName",
-      sorter: (a, b) => compareText(a.country?.name, b.country?.name),
       render: (_, record) => record.country?.name,
       width: 150
     },
@@ -190,7 +199,8 @@ const FilmsPage = () => {
       title: "Giá cộng thêm",
       key: "proposedPrice",
       dataIndex: "proposedPrice",
-      sorter: (a, b) => compareNumber(a.proposedPrice, b.proposedPrice),
+      sorter: true,
+      sortOrder: serverSort?.field === "proposedPrice" ? serverSort.order : null,
       render: (value: number) => formatMoney(value || 0),
       align: "right",
       width: 150
@@ -199,7 +209,6 @@ const FilmsPage = () => {
       title: "Bán online",
       key: "sellOnline",
       dataIndex: "sellOnline",
-      sorter: (a, b) => Number(a.sellOnline) - Number(b.sellOnline),
       render: (value: boolean) => (
         <div className="flex items-center justify-center">
           {value ? (
@@ -253,13 +262,36 @@ const FilmsPage = () => {
     setPageSize(pageSize);
   };
 
+  const handleTableChange: TableProps<FilmProps>["onChange"] = (_, __, sorter, extra) => {
+    if (extra.action !== "sort") {
+      return;
+    }
+
+    const currentSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+    const nextServerSort =
+      isServerSortField(currentSorter?.columnKey) && currentSorter.order
+        ? {
+            field: currentSorter.columnKey,
+            order: currentSorter.order
+          }
+        : null;
+
+    setServerSort(nextServerSort);
+    setCurrent(1);
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
       <PageHeader
         left={<AppBreadcrumb />}
         right={
           <>
-            <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={setCurrent} />
+            <Filter
+              onSearch={onSearch}
+              filterValues={filterValues}
+              setCurrent={setCurrent}
+              countries={generalData?.countries || []}
+            />
             <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
             {canCreate && (
               <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
@@ -288,6 +320,7 @@ const FilmsPage = () => {
         bordered
         size="small"
         loading={isFetching}
+        onChange={handleTableChange}
         pagination={{
           current,
           onChange,

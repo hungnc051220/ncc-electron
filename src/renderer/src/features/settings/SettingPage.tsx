@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { MenuProps } from "antd";
 import { Layout, Menu } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import ChangePassword from "./components/ChangePassword";
 import SettingBranch from "./components/SettingBranch";
 import SettingEndpoint from "./components/SettingEndpoint";
@@ -24,7 +25,9 @@ type SettingsSection = {
 
 const SettingPage = () => {
   const { can } = usePermission();
-  const [selectedKey, setSelectedKey] = useState<string>("change-password");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sectionParam = searchParams.get("section");
+  const [selectedKey, setSelectedKey] = useState<string>(sectionParam || "change-password");
 
   const sections = useMemo<SettingsSection[]>(
     () => [
@@ -69,10 +72,15 @@ const SettingPage = () => {
   );
 
   useEffect(() => {
+    if (sectionParam && visibleSections.some((section) => section.key === sectionParam)) {
+      setSelectedKey(sectionParam);
+      return;
+    }
+
     if (!visibleSections.some((section) => section.key === selectedKey)) {
       setSelectedKey(visibleSections[0]?.key ?? "change-password");
     }
-  }, [selectedKey, visibleSections]);
+  }, [sectionParam, selectedKey, visibleSections]);
 
   const items: MenuItem[] = visibleSections.map((section) => ({
     key: section.key,
@@ -83,6 +91,9 @@ const SettingPage = () => {
 
   const onClick: MenuProps["onClick"] = (e) => {
     setSelectedKey(e.key);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set("section", e.key);
+    setSearchParams(nextSearchParams, { replace: true });
   };
 
   return (

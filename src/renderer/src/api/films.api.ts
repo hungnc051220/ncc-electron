@@ -8,6 +8,8 @@ export interface FilmsQuery {
   filmName?: string;
   manufacturerId?: number;
   premieredDay?: string;
+  premieredYear?: string;
+  countryId?: number;
   tabCode?: string;
   sortBy?: string;
 }
@@ -52,7 +54,17 @@ export interface FilmDto {
 
 export const filmsApi = {
   getAll: async (params: FilmsQuery): Promise<ApiResponse<FilmProps>> => {
-    const { current, pageSize, tabCode, filmName, manufacturerId, premieredDay, sortBy } = params;
+    const {
+      current,
+      pageSize,
+      tabCode,
+      filmName,
+      manufacturerId,
+      premieredDay,
+      premieredYear,
+      countryId,
+      sortBy
+    } = params;
 
     const filter: Record<string, unknown> = {};
 
@@ -66,6 +78,14 @@ export const filmsApi = {
 
     if (premieredDay) {
       filter.premieredDay = premieredDay;
+    } else if (premieredYear) {
+      filter.premieredDay = {
+        between: [`${premieredYear}-01-01`, `${premieredYear}-12-31`]
+      };
+    }
+
+    if (countryId) {
+      filter.countryId = countryId;
     }
 
     const queryObject: Record<string, unknown> = {

@@ -1,6 +1,6 @@
 {
   "name": "ncc-system",
-  "version": "1.0.82",
+  "version": "1.0.83",
   "description": "Hệ thống quản lý Rạp Chiếu Phim Quốc Gia - NCC System",
   "main": "./out/main/index.js",
   "author": "HungNC",
@@ -38,7 +38,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.20",
     "@tanstack/react-query-devtools": "^5.91.3",
-    "antd": "^6.3.7",
+    "antd": "^6.4.3",
     "axios": "^1.13.4",
     "chart.js": "^4.5.1",
     "dayjs": "^1.11.19",

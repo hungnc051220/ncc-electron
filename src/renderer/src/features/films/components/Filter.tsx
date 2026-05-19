@@ -1,20 +1,31 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
-import { Button, DatePicker, Form, Input, Modal, Select } from "antd";
+import { Button, DatePicker, Form, Input, Modal, Segmented, Select } from "antd";
 import { useState } from "react";
 import { ValuesProps } from "../FilmsPage";
 import { filterEmptyValues } from "@renderer/lib/utils";
+import { CountryProps } from "@shared/types";
+import type { Dayjs } from "dayjs";
+
+type PremieredPickerType = "day" | "year";
+
+type FilterFormValues = Omit<ValuesProps, "premieredDay" | "premieredYear"> & {
+  premieredType?: PremieredPickerType;
+  premieredValue?: Dayjs | null;
+};
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
   filterValues: ValuesProps;
   setCurrent: (page: number) => void;
+  countries: CountryProps[];
 }
 
-const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
+const Filter = ({ onSearch, filterValues, setCurrent, countries }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
+  const [premieredType, setPremieredType] = useState<PremieredPickerType>("day");
 
   const manufacturerSelect = useInfiniteSelectOptions({
     queryKey: ["manufacturers"],
@@ -35,8 +46,26 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
     setOpen(false);
     setCurrent(1);
     form.resetFields();
+    setPremieredType("day");
     manufacturerSelect.onClear();
     onSearch({});
+  };
+
+  const handleSearch = (values: FilterFormValues) => {
+    const { premieredType = "day", premieredValue, ...restValues } = values;
+    const nextValues: ValuesProps = { ...restValues };
+
+    if (premieredValue) {
+      if (premieredType === "year") {
+        nextValues.premieredYear = premieredValue;
+      } else {
+        nextValues.premieredDay = premieredValue;
+      }
+    }
+
+    setOpen(false);
+    setCurrent(1);
+    onSearch(nextValues);
   };
 
   const isEmptyFilter =
@@ -68,11 +97,8 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
           <Form
             layout="vertical"
             form={form}
-            onFinish={(values) => {
-              setOpen(false);
-              setCurrent(1);
-              onSearch(values);
-            }}
+            initialValues={{ premieredType: "day" }}
+            onFinish={handleSearch}
           >
             {dom}
           </Form>
@@ -102,8 +128,52 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
             allowClear
           />
         </Form.Item>
-        <Form.Item name="premieredDay" label="Ngày khởi chiếu">
-          <DatePicker className="w-full" format="DD/MM/YYYY" />
+        <Form.Item name="countryId" label="Nước sản xuất">
+          <Select
+            placeholder="Chọn nước sản xuất"
+            showSearch={{
+              optionFilterProp: "label",
+              filterSort: (optionA, optionB) =>
+                (optionA?.label ?? "")
+                  .toLowerCase()
+                  .localeCompare((optionB?.label ?? "").toLowerCase())
+            }}
+            options={countries?.map((item) => ({
+              value: item.id,
+              label: item.name
+            }))}
+            allowClear
+          />
+        </Form.Item>
+        <Form.Item label="Khởi chiếu">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Form.Item name="premieredType" noStyle>
+              <Segmented
+                options={[
+                  { label: "Ngày", value: "day" },
+                  { label: "Năm", value: "year" }
+                ]}
+                className="bg-gray-200/80"
+                onChange={(value) => {
+                  const nextType = value as PremieredPickerType;
+
+                  setPremieredType(nextType);
+                  form.setFieldsValue({
+                    premieredType: nextType,
+                    premieredValue: null
+                  });
+                }}
+              />
+            </Form.Item>
+            <Form.Item name="premieredValue" noStyle>
+              <DatePicker
+                className="w-full"
+                format={premieredType === "year" ? "YYYY" : "DD/MM/YYYY"}
+                picker={premieredType === "year" ? "year" : "date"}
+                placeholder={premieredType === "year" ? "Chọn năm" : "Chọn ngày"}
+              />
+            </Form.Item>
+          </div>
         </Form.Item>
       </Modal>
     </>

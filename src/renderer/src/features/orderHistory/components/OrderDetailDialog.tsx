@@ -231,6 +231,19 @@ const OrderDetailDialog = ({
 
   const hasCancelTickets = cancelTickets.length > 0;
   const isInvitationOrder = !!currentOrder?.isInvitation;
+  const orderTypeBadge = isInvitationOrder
+    ? {
+        label: "Giấy mời",
+        className:
+          "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
+      }
+    : currentOrder?.isContract
+      ? {
+          label: "Hợp đồng",
+          className:
+            "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+        }
+      : null;
   const isPastProjectDate = currentDetail?.planScreening?.projectDate
     ? dayjs().isAfter(dayjs(currentDetail.planScreening.projectDate).endOf("day"))
     : false;
@@ -799,6 +812,16 @@ const OrderDetailDialog = ({
               <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                 Đơn hàng{" "}
                 <span className="text-black dark:text-white">#{currentOrder?.id ?? "-"}</span>
+                {orderTypeBadge && (
+                  <span
+                    className={cn(
+                      "ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal",
+                      orderTypeBadge.className
+                    )}
+                  >
+                    {orderTypeBadge.label}
+                  </span>
+                )}
               </p>
               <h3 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
                 Mã đặt vé: {currentOrder?.barCode ?? "-"}
