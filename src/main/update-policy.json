@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.83",
+  "latestVersion": "1.0.84",
   "minSupportedVersion": "1.0.78",
   "mode": "silent",
   "messages": [
-    "Cập nhật bộ lọc danh sách phim: thêm nước sản xuất và chọn ngày hoặc năm khởi chiếu.",
-    "Chuyển sắp xếp tên phim và giá cộng thêm sang xử lý từ máy chủ.",
-    "Cải thiện giao diện tổng quan, cấu hình máy POS và chi tiết đơn hàng."
+    "Sửa lỗi khi tạo Phân chia doanh thu.",
+    "Bổ sung nút Xoá Phân chia doanh thu ngoài doanh sách",
+    "Bổ sung thông tin người hủy vào chi tiết đơn hàng và danh sách trong Quản lý vé huỷ"
   ],
   "releaseNotesUrl": ""
 }
