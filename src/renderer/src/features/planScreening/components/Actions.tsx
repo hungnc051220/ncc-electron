@@ -36,7 +36,7 @@ import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getPrintErrorMessage } from "@renderer/lib/print";
 import { onOrderPaymentUpdated } from "@renderer/socket/socket";
 import { useAuthStore } from "@renderer/store/auth.store";
-import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import DiscountPopup from "./DiscountPopup";
 import InvoiceDialog from "../../invoices/components/InvoiceDialog";
@@ -148,6 +148,7 @@ const Actions = ({
   const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
   const [invoiceOrderId, setInvoiceOrderId] = useState<number | undefined>(undefined);
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
+  const qrDataRef = useRef<QrDialogData | undefined>(undefined);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
   const [lastSaleTotal, setLastSaleTotal] = useState(
     () => Number(sessionStorage.getItem("lastTotal")) || 0
@@ -294,23 +295,40 @@ const Actions = ({
       setSelectedSeats([]);
       setSelectedDiscountGroups({});
       setOpenQrDialog(false);
+      qrDataRef.current = undefined;
       window.api?.sendQrClose();
+
+      if (exportInvoice && canUpdate) {
+        setInvoiceOrderId(orderId);
+        setOpenInvoiceDialog(true);
+      }
     },
-    [canPrint, handlePrint, message, planScreenId, queryClient, setSelectedSeats, syncLastSaleTotal]
+    [
+      canPrint,
+      canUpdate,
+      exportInvoice,
+      handlePrint,
+      message,
+      planScreenId,
+      queryClient,
+      setSelectedSeats,
+      syncLastSaleTotal
+    ]
   );
 
   useEffect(() => {
     const cleanup = onOrderPaymentUpdated((data) => {
       if (data.paymentStatus !== 30) return;
 
-      if (qrData && String(qrData.orderId) === String(data.orderId)) {
-        void handleQrPaymentSuccess(Number(data.orderId), qrData.orderTotal);
+      const currentQrData = qrDataRef.current;
+      if (currentQrData && String(currentQrData.orderId) === String(data.orderId)) {
+        void handleQrPaymentSuccess(Number(data.orderId), currentQrData.orderTotal);
         return;
       }
     });
 
     return cleanup;
-  }, [handleQrPaymentSuccess, qrData, queryClient]);
+  }, [handleQrPaymentSuccess]);
 
   const totalPrice = useMemo(
     () => selectedSeats.reduce((acc, cur) => acc + cur.price, 0),
@@ -422,6 +440,7 @@ const Actions = ({
               seats: selectedSeats.map((seat) => seat.code).join(", ")
             };
 
+            qrDataRef.current = body;
             setQrData(body);
             setOpenQrDialog(true);
             window.api.sendQrOpen(body);
@@ -926,6 +945,7 @@ const Actions = ({
               "PAYMENT_FAILED"
             );
             setOpenQrDialog(false);
+            qrDataRef.current = undefined;
             window.api?.sendQrClose();
           }}
           onCheckTransaction={() => void onCheckQrTransaction()}

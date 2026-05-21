@@ -207,7 +207,8 @@ vi.mock("./VipCardDialog", () => ({
 }));
 
 vi.mock("../../invoices/components/InvoiceDialog", () => ({
-  default: () => null
+  default: ({ open, orderId }: { open: boolean; orderId: number }) =>
+    open ? <div data-testid="invoice-dialog">Invoice order {orderId}</div> : null
 }));
 
 vi.mock("@renderer/api/orders.api", () => ({
@@ -680,6 +681,64 @@ describe("Actions", () => {
       expect(mocks.invalidateQueries).toHaveBeenCalledWith({
         queryKey: ["plan-screening", 33]
       });
+    });
+  });
+
+  it("opens the invoice dialog after a QR payment succeeds when invoice export is selected", async () => {
+    mocks.createOrderMutate.mockImplementation(
+      (
+        _body: unknown,
+        options: {
+          onSuccess: (order: {
+            id: number;
+            orderTotal: number;
+            orderDiscount: number;
+            createdOnUtc: string;
+          }) => Promise<void>;
+        }
+      ) => {
+        void options.onSuccess({
+          id: 102,
+          orderTotal: 100000,
+          orderDiscount: 0,
+          createdOnUtc: "2026-03-16T10:00:00.000Z"
+        });
+      }
+    );
+    mocks.createQrMutateAsync.mockResolvedValue({
+      qrcode: "vietqr://payload",
+      referenceLabelCode: "REF-102",
+      accountName: "NCC",
+      accountNumber: "123456789",
+      accountBankName: "VietinBank"
+    });
+
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={33}
+        selectedSeats={[createSeat()]}
+        setSelectedSeats={vi.fn()}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText("Xuất hóa đơn"));
+    fireEvent.click(screen.getByLabelText("Quét VietQR"));
+    fireEvent.click(screen.getByRole("button", { name: /in vé/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-dialog")).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      paymentUpdatedHandler?.({ paymentStatus: 30, orderId: "102" });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("qr-dialog")).not.toBeInTheDocument();
+      expect(screen.getByTestId("invoice-dialog")).toHaveTextContent("Invoice order 102");
     });
   });
 
