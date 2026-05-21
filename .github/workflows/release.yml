@@ -14,9 +14,70 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  build-and-release:
-    runs-on: windows-latest
+  prepare-release:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.release_check.outputs.should_release }}
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      channel: ${{ steps.meta.outputs.channel }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      enable_devtools: ${{ steps.meta.outputs.enable_devtools }}
+      is_prerelease: ${{ steps.meta.outputs.is_prerelease }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Compute release metadata
+        id: meta
+        shell: bash
+        run: |
+          base_version=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" = "dev" ]; then
+            channel="dev"
+            version="${base_version}-dev.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+            enable_devtools="true"
+            is_prerelease="true"
+          else
+            channel="latest"
+            version="${base_version}"
+            enable_devtools="false"
+            is_prerelease="false"
+          fi
+
+          {
+            echo "version=${version}"
+            echo "tag=v${version}"
+            echo "channel=${channel}"
+            echo "release_name=Desktop ${GITHUB_REF_NAME} ${version}"
+            echo "enable_devtools=${enable_devtools}"
+            echo "is_prerelease=${is_prerelease}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check existing release version
+        id: release_check
+        shell: bash
+        run: |
+          tag="${{ steps.meta.outputs.tag }}"
+          existing_tag=$(git ls-remote --tags origin "refs/tags/${tag}")
+
+          if [ -n "${existing_tag}" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "Release skipped because tag ${tag} already exists on origin." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Release will continue for new tag ${tag}." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  build-windows:
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_release == 'true'
+    runs-on: windows-2025
 
     steps:
       - name: Checkout source
@@ -34,71 +95,95 @@ jobs:
       - name: Install dependencies
         run: yarn --frozen-lockfile
 
-      - name: Compute release metadata
-        id: meta
-        shell: pwsh
-        run: |
-          $package = Get-Content package.json | ConvertFrom-Json
-          $baseVersion = $package.version
-          $isDevBranch = $env:GITHUB_REF_NAME -eq "dev"
-          $channel = if ($isDevBranch) { "dev" } else { "latest" }
-          $version = if ($isDevBranch) {
-            "$baseVersion-dev.$($env:GITHUB_RUN_NUMBER).$($env:GITHUB_RUN_ATTEMPT)"
-          } else {
-            $baseVersion
-          }
-          $tag = "v$version"
-          $releaseName = "Desktop $($env:GITHUB_REF_NAME) $version"
-          $enableDevTools = if ($isDevBranch) { "true" } else { "false" }
-          $isPrerelease = if ($isDevBranch) { "true" } else { "false" }
-
-          "version=$version" >> $env:GITHUB_OUTPUT
-          "tag=$tag" >> $env:GITHUB_OUTPUT
-          "channel=$channel" >> $env:GITHUB_OUTPUT
-          "release_name=$releaseName" >> $env:GITHUB_OUTPUT
-          "enable_devtools=$enableDevTools" >> $env:GITHUB_OUTPUT
-          "is_prerelease=$isPrerelease" >> $env:GITHUB_OUTPUT
-
-      - name: Check existing release version
-        id: release_check
-        shell: pwsh
-        run: |
-          $tag = "${{ steps.meta.outputs.tag }}"
-          $existingTag = git ls-remote --tags origin "refs/tags/$tag"
-
-          if ($existingTag) {
-            "should_release=false" >> $env:GITHUB_OUTPUT
-            "Release skipped because tag $tag already exists on origin." >> $env:GITHUB_STEP_SUMMARY
-          } else {
-            "should_release=true" >> $env:GITHUB_OUTPUT
-            "Release will continue for new tag $tag." >> $env:GITHUB_STEP_SUMMARY
-          }
-
-      - name: Build app
-        if: steps.release_check.outputs.should_release == 'true'
+      - name: Build Windows app
         shell: pwsh
         env:
-          APP_RELEASE_CHANNEL: ${{ steps.meta.outputs.channel }}
-          APP_ENABLE_DEVTOOLS: ${{ steps.meta.outputs.enable_devtools }}
+          APP_RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
+          APP_ENABLE_DEVTOOLS: ${{ needs.prepare-release.outputs.enable_devtools }}
         run: |
           yarn build
           npx electron-builder --win --publish never `
-            --config.extraMetadata.version=${{ steps.meta.outputs.version }} `
-            --config.extraMetadata.releaseChannel=${{ steps.meta.outputs.channel }} `
-            --config.publish.channel=${{ steps.meta.outputs.channel }}
+            --config.extraMetadata.version=${{ needs.prepare-release.outputs.version }} `
+            --config.extraMetadata.releaseChannel=${{ needs.prepare-release.outputs.channel }} `
+            --config.publish.channel=${{ needs.prepare-release.outputs.channel }}
 
-      - name: Publish GitHub release
-        if: steps.release_check.outputs.should_release == 'true'
-        uses: softprops/action-gh-release@v2
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: ${{ steps.meta.outputs.release_name }}
-          target_commitish: ${{ github.sha }}
-          prerelease: ${{ steps.meta.outputs.is_prerelease }}
-          generate_release_notes: true
-          files: |
+          name: windows-release
+          if-no-files-found: error
+          path: |
             dist/*.exe
             dist/*.blockmap
             dist/*.yml
+
+  build-linux:
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Build Linux AppImage and DEB
+        env:
+          APP_RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
+          APP_ENABLE_DEVTOOLS: ${{ needs.prepare-release.outputs.enable_devtools }}
+        run: |
+          yarn build
+          npx electron-builder --linux AppImage deb --publish never \
+            --config.extraMetadata.version=${{ needs.prepare-release.outputs.version }} \
+            --config.extraMetadata.releaseChannel=${{ needs.prepare-release.outputs.channel }} \
+            --config.publish.channel=${{ needs.prepare-release.outputs.channel }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          if-no-files-found: error
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.blockmap
+            dist/*.yml
+
+  publish-release:
+    needs:
+      - prepare-release
+      - build-windows
+      - build-linux
+    if: needs.prepare-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ needs.prepare-release.outputs.is_prerelease }}
+          generate_release_notes: true
+          files: |
+            dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
