@@ -1,12 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.84",
+  "latestVersion": "1.0.85",
   "minSupportedVersion": "1.0.78",
   "mode": "silent",
   "messages": [
-    "Sửa lỗi khi tạo Phân chia doanh thu.",
-    "Bổ sung nút Xoá Phân chia doanh thu ngoài doanh sách",
-    "Bổ sung thông tin người hủy vào chi tiết đơn hàng và danh sách trong Quản lý vé huỷ"
+    "Lỗi không hiển thị popup nhập thông tin xuất hoá đơn sau khi thanh toán QR.."
   ],
   "releaseNotesUrl": ""
 }
