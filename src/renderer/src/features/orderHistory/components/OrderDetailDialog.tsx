@@ -357,13 +357,14 @@ const OrderDetailDialog = ({
       },
       {
         title: "Người hủy",
-        dataIndex: "userName",
-        key: "userName",
+        dataIndex: "canceller",
+        key: "fullName",
         width: 140,
-        render: (value?: string) => value || "-"
+        render: (canceller) =>
+          [canceller?.customerFirstName, canceller?.customerLastName].filter(Boolean).join(" ")
       },
       {
-        title: "SL",
+        title: "Số vé",
         dataIndex: "quantity",
         key: "quantity",
         width: 70,

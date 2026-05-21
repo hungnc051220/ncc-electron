@@ -45,10 +45,27 @@ const applyThinBorder = (
   }
 };
 
+const getCustomerName = (record: CancellationTicketProps) =>
+  [record.order?.customerFirstName, record.order?.customerLastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+const getCancellerName = (record: CancellationTicketProps) =>
+  [record.canceller?.customerFirstName, record.canceller?.customerLastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+const splitSeatList = (value?: string | null) =>
+  (value ?? "")
+    .split(",")
+    .map((seat) => seat.trim())
+    .filter(Boolean);
+
 const formatSeatValues = (record: CancellationTicketProps) =>
   [record.cancelChairValueF1, record.cancelChairValueF2, record.cancelChairValueF3]
-    .map((value) => value.trim())
-    .filter(Boolean)
+    .flatMap((value) => splitSeatList(value))
     .join(", ");
 
 export const exportCancellationTicketsExcel = async ({
@@ -58,7 +75,7 @@ export const exportCancellationTicketsExcel = async ({
 }: ExportCancellationTicketsExcelParams): Promise<SaveFileResult> => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Quan ly huy ve");
-  const totalColumns = 12;
+  const totalColumns = 15;
   const hasDateRange =
     Boolean(fromDate) && Boolean(toDate) && dayjs(fromDate).isValid() && dayjs(toDate).isValid();
   const formattedFromDate = hasDateRange ? dayjs(fromDate) : null;
@@ -89,6 +106,9 @@ export const exportCancellationTicketsExcel = async ({
     "STT",
     "Mã đơn huỷ",
     "Thời gian hủy",
+    "Tên khách hàng",
+    "Số điện thoại",
+    "Email",
     "Phim",
     "Phòng",
     "Ngày chiếu",
@@ -117,6 +137,9 @@ export const exportCancellationTicketsExcel = async ({
       index + 1,
       item.order?.id ?? "",
       item.createdOnUtc ? dayjs(item.createdOnUtc).format("HH:mm DD/MM/YYYY") : "",
+      getCustomerName(item),
+      item.order?.customerPhone ?? "",
+      item.order?.customerEmail ?? "",
       item.filmName ?? "",
       item.roomName ?? "",
       item.projectDate ? dayjs(item.projectDate, "YYYY-MM-DD").format("DD/MM/YYYY") : "",
@@ -124,7 +147,7 @@ export const exportCancellationTicketsExcel = async ({
       Number(item.quantity || 0),
       formatSeatValues(item),
       item.order?.invNo ?? "",
-      item.userName ?? "",
+      getCancellerName(item),
       item.reason ?? ""
     ]);
   });
@@ -132,6 +155,9 @@ export const exportCancellationTicketsExcel = async ({
   const bodyStartRow = headerRow + 1;
   const summaryRow = worksheet.addRow([
     `Tổng ${data.length} đơn huỷ`,
+    "",
+    "",
+    "",
     "",
     "",
     "",
@@ -150,6 +176,9 @@ export const exportCancellationTicketsExcel = async ({
     { width: 8 },
     { width: 12 },
     { width: 20 },
+    { width: 24 },
+    { width: 16 },
+    { width: 28 },
     { width: 32 },
     { width: 16 },
     { width: 14 },
@@ -162,36 +191,33 @@ export const exportCancellationTicketsExcel = async ({
   ];
 
   for (let row = bodyStartRow; row <= summaryRowNumber; row++) {
-    worksheet.getCell(row, 1).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 2).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 3).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 4).alignment = { horizontal: "left", vertical: "middle" };
-    worksheet.getCell(row, 5).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 6).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 7).alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getCell(row, 8).alignment = { horizontal: "right", vertical: "middle" };
-    worksheet.getCell(row, 9).alignment = {
+    [1, 2, 3, 8, 9, 10].forEach((col) => {
+      worksheet.getCell(row, col).alignment = { horizontal: "center", vertical: "middle" };
+    });
+    [4, 5, 6, 7, 13, 14].forEach((col) => {
+      worksheet.getCell(row, col).alignment = { horizontal: "left", vertical: "middle" };
+    });
+    worksheet.getCell(row, 11).alignment = { horizontal: "right", vertical: "middle" };
+    worksheet.getCell(row, 12).alignment = {
       horizontal: "left",
       vertical: "middle",
       wrapText: true
     };
-    worksheet.getCell(row, 10).alignment = { horizontal: "left", vertical: "middle" };
-    worksheet.getCell(row, 11).alignment = { horizontal: "left", vertical: "middle" };
-    worksheet.getCell(row, 12).alignment = {
+    worksheet.getCell(row, 15).alignment = {
       horizontal: "left",
       vertical: "middle",
       wrapText: true
     };
   }
 
-  worksheet.mergeCells(summaryRowNumber, 1, summaryRowNumber, 7);
+  worksheet.mergeCells(summaryRowNumber, 1, summaryRowNumber, 10);
   worksheet.getCell(summaryRowNumber, 1).font = { bold: true };
   worksheet.getCell(summaryRowNumber, 1).alignment = {
     horizontal: "center",
     vertical: "middle"
   };
-  worksheet.getCell(summaryRowNumber, 8).font = { bold: true };
-  worksheet.getCell(summaryRowNumber, 8).alignment = {
+  worksheet.getCell(summaryRowNumber, 11).font = { bold: true };
+  worksheet.getCell(summaryRowNumber, 11).alignment = {
     horizontal: "right",
     vertical: "middle"
   };

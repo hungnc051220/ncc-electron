@@ -39,6 +39,12 @@ const splitSeatList = (value?: string | null) =>
     .map((seat) => seat.trim())
     .filter(Boolean);
 
+const getCancellerName = (record: CancellationTicketProps) =>
+  [record.canceller?.customerFirstName, record.canceller?.customerLastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
 const CancellationTicketsPage = () => {
   const { message } = useAntdApp();
   const [filterValues, setFilterValues] = useState<ValuesProps>(() => getDefaultFilterValues());
@@ -100,20 +106,20 @@ const CancellationTicketsPage = () => {
   const displayedRows = useMemo(() => {
     const filteredRows = cancellationTicketRows.filter((record) => {
       const filmValues = columnFilters.filmName;
-      const userNameValues = columnFilters.userName;
+      const cancellerNameValues = columnFilters.fullName;
 
       const matchFilm =
         !filmValues?.length ||
         filmValues.some((value) =>
           (record.filmName || "").toLowerCase().includes(String(value).toLowerCase())
         );
-      const matchUserName =
-        !userNameValues?.length ||
-        userNameValues.some((value) =>
-          (record.userName || "").toLowerCase().includes(String(value).toLowerCase())
+      const matchCancellerName =
+        !cancellerNameValues?.length ||
+        cancellerNameValues.some((value) =>
+          getCancellerName(record).toLowerCase().includes(String(value).toLowerCase())
         );
 
-      return matchFilm && matchUserName;
+      return matchFilm && matchCancellerName;
     });
 
     if (!sorterState?.order) {
@@ -164,8 +170,8 @@ const CancellationTicketsPage = () => {
         case "quantity":
           result = compareNumber(left.quantity, right.quantity);
           break;
-        case "userName":
-          result = compareText(left.userName, right.userName);
+        case "fullName":
+          result = compareText(getCancellerName(left), getCancellerName(right));
           break;
         case "reason":
           result = compareText(left.reason, right.reason);
@@ -204,29 +210,29 @@ const CancellationTicketsPage = () => {
         })),
     [cancellationTicketRows]
   );
-  const userNameColumnFilters = useMemo(
+  const fullNameColumnFilters = useMemo(
     () =>
       Array.from(
         new Set(
           cancellationTicketRows
-            .map((record) => record.userName?.trim())
+            .map(getCancellerName)
             .filter((value): value is string => Boolean(value))
         )
       )
         .sort((left, right) => compareText(left, right))
-        .map((userName) => ({
-          text: userName,
-          value: userName
+        .map((fullName) => ({
+          text: fullName,
+          value: fullName
         })),
     [cancellationTicketRows]
   );
 
   const handleViewDetail = useCallback((record: CancellationTicketProps) => {
-    if (!record.order?.id) {
+    if (!record?.orderId) {
       return;
     }
 
-    setSelectedOrderId(record.order.id);
+    setSelectedOrderId(Number(record.orderId));
     setDialogOpen(true);
   }, []);
 
@@ -247,13 +253,20 @@ const CancellationTicketsPage = () => {
       fixed: "left"
     },
     {
-      title: "Mã đơn huỷ",
+      title: "Mã huỷ",
       key: "id",
       dataIndex: "id",
-      sorter: (a, b) => compareNumber(a.order?.id, b.order?.id),
-      render: (_, record) => record.order?.id,
+      sorter: (a, b) => compareNumber(a.id, b.id),
       fixed: "left",
-      width: 120
+      width: 100
+    },
+    {
+      title: "Mã đơn",
+      key: "orderId",
+      dataIndex: "orderId",
+      sorter: (a, b) => compareNumber(Number(a.orderId), Number(b.orderId)),
+      fixed: "left",
+      width: 100
     },
     {
       title: "Thời gian hủy",
@@ -273,7 +286,8 @@ const CancellationTicketsPage = () => {
           [b.order?.customerFirstName, b.order?.customerLastName].filter(Boolean).join(" ")
         ),
       render: (order) =>
-        [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" ")
+        [order?.customerFirstName, order?.customerLastName].filter(Boolean).join(" "),
+      width: 250
     },
     {
       title: "Số điện thoại",
@@ -288,7 +302,7 @@ const CancellationTicketsPage = () => {
       dataIndex: "order",
       sorter: (a, b) => compareText(a.order?.customerEmail, b.order?.customerEmail),
       render: (order) => order?.customerEmail,
-      width: 200
+      width: 100
     },
     {
       title: "Phim",
@@ -306,7 +320,18 @@ const CancellationTicketsPage = () => {
       key: "roomName",
       dataIndex: "roomName",
       sorter: (a, b) => compareText(a.roomName, b.roomName),
-      width: 80
+      width: 80,
+      align: "center"
+    },
+
+    {
+      title: "Giờ chiếu",
+      key: "projectTime",
+      dataIndex: "projectTime",
+      sorter: (a, b) => dayjs(a.projectTime).valueOf() - dayjs(b.projectTime).valueOf(),
+      render: (value: string) => dayjs(value).format("HH:mm"),
+      align: "center",
+      width: 110
     },
     {
       title: "Ngày chiếu",
@@ -314,22 +339,17 @@ const CancellationTicketsPage = () => {
       dataIndex: "projectDate",
       sorter: (a, b) =>
         dayjs(a.projectDate, "YYYY-MM-DD").valueOf() - dayjs(b.projectDate, "YYYY-MM-DD").valueOf(),
-      render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY")
-    },
-    {
-      title: "Giờ chiếu",
-      key: "projectTime",
-      dataIndex: "projectTime",
-      sorter: (a, b) => dayjs(a.projectTime).valueOf() - dayjs(b.projectTime).valueOf(),
-      render: (value: string) => dayjs(value).format("HH:mm")
+      render: (value: string) => dayjs(value, "YYYY-MM-DD").format("DD/MM/YYYY"),
+      align: "center",
+      width: 110
     },
     {
       title: "Số vé",
       key: "quantity",
       dataIndex: "quantity",
       sorter: (a, b) => compareNumber(a.quantity, b.quantity),
-      width: 120,
-      align: "right"
+      width: 80,
+      align: "center"
     },
     {
       title: "Vị trí ghế",
@@ -361,13 +381,14 @@ const CancellationTicketsPage = () => {
     },
     {
       title: "Người hủy",
-      key: "userName",
-      dataIndex: "userName",
-      sorter: (a, b) => compareText(a.userName, b.userName),
+      key: "fullName",
+      dataIndex: "canceller",
+      sorter: (a, b) => compareText(getCancellerName(a), getCancellerName(b)),
       filterSearch: true,
       onFilter: (value, record) =>
-        (record.userName || "").toLowerCase().includes(String(value).toLowerCase()),
-      filters: userNameColumnFilters
+        getCancellerName(record).toLowerCase().includes(String(value).toLowerCase()),
+      filters: fullNameColumnFilters,
+      render: (_, record) => getCancellerName(record)
     },
     {
       title: "Lý do hủy",
@@ -387,7 +408,7 @@ const CancellationTicketsPage = () => {
                 menu={{
                   items: [{ key: "view", icon: <Eye size={16} />, label: "Xem chi tiết" }],
                   onClick: (e) => {
-                    if (e.key === "view" && record.order?.id) {
+                    if (e.key === "view" && record?.orderId) {
                       handleViewDetail(record);
                     }
                   }

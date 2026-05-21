@@ -1,6 +1,8 @@
 import { MoreOutlined } from "@ant-design/icons";
+import { sharingRatePaymentsHistoryApi } from "@renderer/api/sharingRatePaymentsHistory.api";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import RefreshButton from "@renderer/components/RefreshButton";
+import { sharingRatePaymentsHistoryKeys } from "@renderer/hooks/sharingRatePaymentsHistory/keys";
 import { useSharingRatePaymentsHistory } from "@renderer/hooks/sharingRatePaymentsHistory/useSharingRatePaymentsHistory";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
@@ -15,8 +17,9 @@ import { usePermission } from "@renderer/permissions/usePermission";
 import { SharingRatePaymentHistoryProps } from "@shared/types";
 import type { TableProps } from "antd";
 import { Button, Dropdown, Table } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { DownloadIcon, PlusIcon, SquarePen } from "lucide-react";
+import { DownloadIcon, PlusIcon, SquarePen, Trash2Icon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RevenueSharingFilterValues } from "../../types";
@@ -32,6 +35,7 @@ export interface PaymentScheduleSummaryItem {
   premieredDay?: string;
   paymentCount: number;
   totalPaidAmount: number;
+  itemId: number;
 }
 
 interface PaymentScheduleTabProps {
@@ -39,10 +43,12 @@ interface PaymentScheduleTabProps {
 }
 
 const PaymentScheduleTab = ({ onActionsChange }: PaymentScheduleTabProps) => {
-  const { message } = useAntdApp();
+  const { message, modal } = useAntdApp();
+  const queryClient = useQueryClient();
   const { can } = usePermission();
   const canCreate = can("revenue_sharing", "create");
   const canUpdate = can("revenue_sharing", "update");
+  const canDelete = can("revenue_sharing", "delete");
   const canExport = can("revenue_sharing", "export");
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -80,6 +86,7 @@ const PaymentScheduleTab = ({ onActionsChange }: PaymentScheduleTabProps) => {
 
       if (!existing) {
         grouped.set(item.filmId, {
+          itemId: item.itemId,
           manufacturerId: item.manufacturerId,
           filmId: item.filmId,
           manufacturerName: item.manufacturerName,
@@ -165,8 +172,52 @@ const PaymentScheduleTab = ({ onActionsChange }: PaymentScheduleTabProps) => {
     }
   }, [filterValues.dateRange, groupedPaymentSchedules, message, totalPaidAmount]);
 
+  const handleDelete = useCallback(
+    (item: PaymentScheduleSummaryItem) => {
+      modal.confirm({
+        title: "Xóa tiến độ thanh toán",
+        content: `Bạn có chắc chắn muốn xóa tất cả ${item.paymentCount} lần thanh toán của phim "${item.filmName ?? item.filmId}" không?`,
+        okText: "Xóa",
+        okButtonProps: {
+          danger: true
+        },
+        cancelText: "Hủy",
+        async onOk() {
+          try {
+            const response = await sharingRatePaymentsHistoryApi.getAll({
+              current: 1,
+              pageSize: 1000,
+              filmId: item.filmId
+            });
+            const itemIds = response.data.map((paymentItem) => paymentItem.itemId);
+
+            if (!itemIds.length) {
+              message.warning("Không tìm thấy lần thanh toán để xóa");
+              return;
+            }
+
+            await Promise.all(
+              itemIds.map((itemId) => sharingRatePaymentsHistoryApi.delete(itemId))
+            );
+            await queryClient.invalidateQueries({
+              queryKey: sharingRatePaymentsHistoryKeys.all
+            });
+            message.success("Xóa tiến độ thanh toán thành công");
+          } catch (error) {
+            message.error(getApiErrorMessage(error, "Xóa tiến độ thanh toán thất bại"));
+            throw error;
+          }
+        }
+      });
+    },
+    [message, modal, queryClient]
+  );
+
   const actionItems = [
-    ...(canUpdate ? [{ key: "1", icon: <SquarePen size={16} />, label: "Cập nhật" }] : [])
+    ...(canUpdate ? [{ key: "update", icon: <SquarePen size={16} />, label: "Cập nhật" }] : []),
+    ...(canDelete
+      ? [{ key: "delete", danger: true, icon: <Trash2Icon size={16} />, label: "Xóa" }]
+      : [])
   ];
 
   const columns: TableProps<PaymentScheduleSummaryItem>["columns"] = [
@@ -225,8 +276,13 @@ const PaymentScheduleTab = ({ onActionsChange }: PaymentScheduleTabProps) => {
                 menu={{
                   items: actionItems,
                   onClick: (e) => {
-                    if (e.key === "1") {
+                    if (e.key === "update") {
                       handleEdit(record);
+                      return;
+                    }
+
+                    if (e.key === "delete") {
+                      handleDelete(record);
                     }
                   }
                 }}

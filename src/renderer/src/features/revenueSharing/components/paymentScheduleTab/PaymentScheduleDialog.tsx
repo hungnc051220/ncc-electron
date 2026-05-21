@@ -1,26 +1,31 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import { SharingRatePaymentHistoryDto } from "@renderer/api/sharingRatePaymentsHistory.api";
+import {
+  SharingRatePaymentHistoryDto,
+  sharingRatePaymentsHistoryApi
+} from "@renderer/api/sharingRatePaymentsHistory.api";
 import { filmsApi } from "@renderer/api/films.api";
 import { manufacturersApi } from "@renderer/api/manufacturers.api";
-import { useCreateSharingRatePaymentHistory } from "@renderer/hooks/sharingRatePaymentsHistory/useCreateSharingRatePaymentHistory";
-import { useDeleteSharingRatePaymentHistory } from "@renderer/hooks/sharingRatePaymentsHistory/useDeleteSharingRatePaymentHistory";
+import { sharingRatePaymentsHistoryKeys } from "@renderer/hooks/sharingRatePaymentsHistory/keys";
 import { useSharingRatePaymentsHistory } from "@renderer/hooks/sharingRatePaymentsHistory/useSharingRatePaymentsHistory";
-import { useUpdateSharingRatePaymentHistory } from "@renderer/hooks/sharingRatePaymentsHistory/useUpdateSharingRatePaymentHistory";
 import { useInfiniteSelectOptions } from "@renderer/hooks/useInfiniteSelectOptions";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FormProps } from "antd";
 import { Button, DatePicker, Form, InputNumber, Modal, Select, Spin } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PaymentScheduleSummaryItem } from ".";
 
 type PaymentScheduleFormItem = {
   id?: number;
   paymentDate?: Dayjs;
   amount?: number;
+};
+
+type PaymentScheduleRowMeta = {
+  id?: number;
 };
 
 type SelectOption = {
@@ -51,6 +56,7 @@ const PaymentScheduleDialog = ({
   editingPaymentSchedule
 }: PaymentScheduleDialogProps) => {
   const { message } = useAntdApp();
+  const queryClient = useQueryClient();
   const [form] = Form.useForm<FieldType>();
   const isEdit = !!editingPaymentSchedule;
   const [selectedFilmId, setSelectedFilmId] = useState<number | undefined>(
@@ -59,6 +65,20 @@ const PaymentScheduleDialog = ({
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | undefined>(
     editingPaymentSchedule?.manufacturerId
   );
+  const [originalPaymentSchedules, setOriginalPaymentSchedules] = useState<
+    PaymentScheduleFormItem[]
+  >([]);
+  const [paymentScheduleRowMeta, setPaymentScheduleRowMeta] = useState<PaymentScheduleRowMeta[]>([
+    {}
+  ]);
+  const [deletedPaymentScheduleIds, setDeletedPaymentScheduleIds] = useState<number[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const deletedPaymentScheduleIdsRef = useRef<number[]>([]);
+
+  const resetDeletedPaymentScheduleIds = useCallback(() => {
+    deletedPaymentScheduleIdsRef.current = [];
+    setDeletedPaymentScheduleIds([]);
+  }, []);
 
   const manufacturerSelect = useInfiniteSelectOptions({
     queryKey: ["manufacturers"],
@@ -97,18 +117,15 @@ const PaymentScheduleDialog = ({
     enabled: open && !!selectedFilmId
   });
 
-  const {
-    data: paymentHistoryResponse,
-    isFetching: isFetchingPaymentHistory,
-    refetch: refetchPaymentHistory
-  } = useSharingRatePaymentsHistory(
-    {
-      current: 1,
-      pageSize: 100,
-      filmId: selectedFilmId
-    },
-    open && !!selectedFilmId
-  );
+  const { data: paymentHistoryResponse, isFetching: isFetchingPaymentHistory } =
+    useSharingRatePaymentsHistory(
+      {
+        current: 1,
+        pageSize: 100,
+        filmId: selectedFilmId
+      },
+      open && !!selectedFilmId
+    );
 
   const manufacturerOptions = useMemo(() => {
     const editingOption =
@@ -153,26 +170,28 @@ const PaymentScheduleDialog = ({
     );
   }, [editingPaymentSchedule, filmSelect.options, selectedFilmDetail, selectedFilmId]);
 
-  const createPaymentHistory = useCreateSharingRatePaymentHistory();
-  const updatePaymentHistory = useUpdateSharingRatePaymentHistory();
-  const deletePaymentHistory = useDeleteSharingRatePaymentHistory();
-
   useEffect(() => {
     if (!open) {
       form.resetFields();
+      setOriginalPaymentSchedules([]);
+      setPaymentScheduleRowMeta([{}]);
+      resetDeletedPaymentScheduleIds();
       return;
     }
 
     if (!isEdit) {
       setSelectedManufacturerId(undefined);
       setSelectedFilmId(undefined);
+      setOriginalPaymentSchedules([]);
+      setPaymentScheduleRowMeta([{}]);
+      resetDeletedPaymentScheduleIds();
       form.setFieldsValue({
         manufacturerId: undefined,
         filmId: undefined,
         paymentSchedules: [emptyRow]
       });
     }
-  }, [open, isEdit, form]);
+  }, [open, isEdit, form, resetDeletedPaymentScheduleIds]);
 
   useEffect(() => {
     if (!open || !editingPaymentSchedule) {
@@ -196,13 +215,18 @@ const PaymentScheduleDialog = ({
     const paymentSchedules = [...paymentHistoryResponse.data]
       .sort((a, b) => dayjs(a.paymentDate).valueOf() - dayjs(b.paymentDate).valueOf())
       .map((item) => ({
-        id: item.id,
+        id: item.itemId,
         paymentDate: dayjs(item.paymentDate),
         amount: item.paidAmount
       }));
 
+    setOriginalPaymentSchedules(paymentSchedules);
+    setPaymentScheduleRowMeta(
+      paymentSchedules.length ? paymentSchedules.map((item) => ({ id: item.id })) : [{}]
+    );
+    resetDeletedPaymentScheduleIds();
     form.setFieldValue("paymentSchedules", paymentSchedules.length ? paymentSchedules : [emptyRow]);
-  }, [open, selectedFilmId, paymentHistoryResponse, form]);
+  }, [open, selectedFilmId, paymentHistoryResponse, form, resetDeletedPaymentScheduleIds]);
 
   useEffect(() => {
     if (!open || !selectedFilmDetail?.manufacturerId) {
@@ -227,6 +251,9 @@ const PaymentScheduleDialog = ({
         filmId: undefined,
         paymentSchedules: [emptyRow]
       });
+      setOriginalPaymentSchedules([]);
+      setPaymentScheduleRowMeta([{}]);
+      resetDeletedPaymentScheduleIds();
       return;
     }
 
@@ -237,6 +264,9 @@ const PaymentScheduleDialog = ({
         filmId: undefined,
         paymentSchedules: [emptyRow]
       });
+      setOriginalPaymentSchedules([]);
+      setPaymentScheduleRowMeta([{}]);
+      resetDeletedPaymentScheduleIds();
       return;
     }
 
@@ -247,6 +277,9 @@ const PaymentScheduleDialog = ({
     setSelectedFilmId(value);
     filmSelect.onClear();
     form.setFieldValue("filmId", value);
+    setOriginalPaymentSchedules([]);
+    setPaymentScheduleRowMeta([{}]);
+    resetDeletedPaymentScheduleIds();
 
     if (!value) {
       form.setFieldValue("paymentSchedules", [emptyRow]);
@@ -259,6 +292,9 @@ const PaymentScheduleDialog = ({
     setSelectedFilmId(undefined);
     manufacturerSelect.resetSearch();
     filmSelect.resetSearch();
+    setOriginalPaymentSchedules([]);
+    setPaymentScheduleRowMeta([{}]);
+    resetDeletedPaymentScheduleIds();
     onOpenChange(false);
   };
 
@@ -279,26 +315,48 @@ const PaymentScheduleDialog = ({
     };
   };
 
-  const handleRemove = (index: number, remove: (index: number | number[]) => void) => {
-    const item = form.getFieldValue(["paymentSchedules", index]) as
+  const handleRemove = (
+    fieldName: number,
+    rowIndex: number,
+    remove: (index: number | number[]) => void
+  ) => {
+    const item = form.getFieldValue(["paymentSchedules", fieldName]) as
       | PaymentScheduleFormItem
       | undefined;
+    const deletedId =
+      item?.id ?? paymentScheduleRowMeta[rowIndex]?.id ?? originalPaymentSchedules[rowIndex]?.id;
 
-    if (!item?.id) {
-      remove(index);
-      return;
+    if (deletedId) {
+      deletedPaymentScheduleIdsRef.current = Array.from(
+        new Set([...deletedPaymentScheduleIdsRef.current, deletedId])
+      );
+      setDeletedPaymentScheduleIds(deletedPaymentScheduleIdsRef.current);
     }
 
-    deletePaymentHistory.mutate(item.id, {
-      onSuccess: async () => {
-        message.success("Xóa lần thanh toán thành công");
-        remove(index);
-        await refetchPaymentHistory();
-      },
-      onError: (error: unknown) => {
-        message.error(getApiErrorMessage(error, "Xóa lần thanh toán thất bại"));
-      }
-    });
+    remove(fieldName);
+    setPaymentScheduleRowMeta((prev) => prev.filter((_, itemIndex) => itemIndex !== rowIndex));
+  };
+
+  const handleAdd = (add: (defaultValue?: PaymentScheduleFormItem) => void) => {
+    add(emptyRow);
+    setPaymentScheduleRowMeta((prev) => [...prev, {}]);
+  };
+
+  const isSamePaymentSchedule = (
+    currentItem: PaymentScheduleFormItem,
+    originalItem?: PaymentScheduleFormItem
+  ) => {
+    if (!originalItem) {
+      return false;
+    }
+
+    const currentPaymentDate = currentItem.paymentDate?.format("YYYY-MM-DD");
+    const originalPaymentDate = originalItem.paymentDate?.format("YYYY-MM-DD");
+
+    return (
+      currentPaymentDate === originalPaymentDate &&
+      Number(currentItem.amount || 0) === Number(originalItem.amount || 0)
+    );
   };
 
   const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
@@ -310,34 +368,61 @@ const PaymentScheduleDialog = ({
       return;
     }
 
-    const paymentSchedules = values.paymentSchedules ?? [];
-    const existingItems = paymentSchedules.filter((item) => item.id);
+    const paymentSchedules = (values.paymentSchedules ?? []).map((item, index) => ({
+      ...item,
+      id: item.id ?? paymentScheduleRowMeta[index]?.id
+    }));
+    const originalItemsById = new Map(
+      originalPaymentSchedules
+        .filter((item): item is PaymentScheduleFormItem & { id: number } => !!item.id)
+        .map((item) => [item.id, item])
+    );
+    const currentIds = new Set(
+      paymentSchedules.map((item) => item.id).filter((id): id is number => !!id)
+    );
+    const existingItems = paymentSchedules
+      .filter((item) => item.id)
+      .filter((item) => !isSamePaymentSchedule(item, originalItemsById.get(item.id!)));
     const newItems = paymentSchedules.filter((item) => !item.id);
+    const deletedIds = Array.from(
+      new Set([
+        ...deletedPaymentScheduleIdsRef.current,
+        ...deletedPaymentScheduleIds,
+        ...originalPaymentSchedules
+          .map((item) => item.id)
+          .filter((id): id is number => !!id && !currentIds.has(id))
+      ])
+    );
 
-    if (!existingItems.length && !newItems.length) {
+    if (!paymentSchedules.length && !originalPaymentSchedules.length) {
       message.error("Vui lòng thêm ít nhất một lần thanh toán");
       return;
     }
 
     try {
+      setIsSubmitting(true);
       await Promise.all(
         existingItems.map((item) =>
-          updatePaymentHistory.mutateAsync({
-            id: item.id!,
-            dto: toDto(manufacturerId, filmId, item)
-          })
+          sharingRatePaymentsHistoryApi.update(item.id!, toDto(manufacturerId, filmId, item))
         )
       );
 
       if (newItems.length) {
-        await createPaymentHistory.mutateAsync(
+        await sharingRatePaymentsHistoryApi.create(
           newItems.map((item) => toDto(manufacturerId, filmId, item))
         );
       }
 
+      await Promise.all(deletedIds.map((id) => sharingRatePaymentsHistoryApi.delete(id)));
+
+      await queryClient.invalidateQueries({
+        queryKey: sharingRatePaymentsHistoryKeys.all
+      });
+
       message.success(
         isEdit ? "Cập nhật tiến độ thanh toán thành công" : "Thêm tiến độ thanh toán thành công"
       );
+      setIsSubmitting(false);
       onCancel();
     } catch (error) {
       message.error(
@@ -346,13 +431,9 @@ const PaymentScheduleDialog = ({
           isEdit ? "Cập nhật tiến độ thanh toán thất bại" : "Thêm tiến độ thanh toán thất bại"
         )
       );
+      setIsSubmitting(false);
     }
   };
-
-  const isSubmitting =
-    createPaymentHistory.isPending ||
-    updatePaymentHistory.isPending ||
-    deletePaymentHistory.isPending;
 
   return (
     <Modal
@@ -461,13 +542,18 @@ const PaymentScheduleDialog = ({
                       danger
                       icon={<MinusCircleOutlined />}
                       className="mt-8"
-                      onClick={() => handleRemove(name, remove)}
+                      onClick={() => handleRemove(name, index, remove)}
                     />
                   </div>
                 ))}
 
                 <Form.Item noStyle>
-                  <Button type="dashed" onClick={() => add(emptyRow)} block icon={<PlusOutlined />}>
+                  <Button
+                    type="dashed"
+                    onClick={() => handleAdd(add)}
+                    block
+                    icon={<PlusOutlined />}
+                  >
                     Thêm lần thanh toán
                   </Button>
                 </Form.Item>

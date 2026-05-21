@@ -13,7 +13,7 @@ export interface SharingRateProps {
 }
 
 export interface SharingRatePaymentHistoryProps {
-  id: number;
+  itemId: number;
   manufacturerId: number;
   manufacturerName: string;
   filmId: number;

@@ -195,6 +195,15 @@ export interface CancellationTicketProps {
   userName: string;
   reason: string;
   order: OrderResponseProps | null;
+  canceller: CancellerProps;
+  orderId?: string;
+}
+
+export interface CancellerProps {
+  customerFirstName: string;
+  customerLastName: string;
+  customerEmail: string;
+  customerPhone: string;
 }
 
 export interface Item {
