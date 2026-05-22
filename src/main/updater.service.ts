@@ -86,10 +86,16 @@ async function fetchUpdatePolicy(): Promise<UpdatePolicy> {
   }
 
   try {
-    const response = await fetch(updatePolicyUrl, {
+    const policyUrl = new URL(updatePolicyUrl);
+    policyUrl.searchParams.set("_", Date.now().toString());
+
+    const response = await fetch(policyUrl.toString(), {
       headers: {
-        accept: "application/json"
-      }
+        accept: "application/json",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        pragma: "no-cache"
+      },
+      cache: "no-store"
     });
 
     if (!response.ok) {
@@ -161,7 +167,9 @@ export function setupUpdater(win: BrowserWindow) {
   });
 
   ipcMain.handle("app:start-download", () => {
-    if (!isDev) autoUpdater.downloadUpdate();
+    if (isDev) return;
+
+    autoUpdater.downloadUpdate();
   });
 
   ipcMain.handle("app:install-update", (_, options?: { isSilent?: boolean }) => {

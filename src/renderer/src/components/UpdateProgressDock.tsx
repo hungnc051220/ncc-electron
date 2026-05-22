@@ -43,10 +43,10 @@ const UpdateProgressDock = ({ percent, latestVersion, onExpand }: UpdateProgress
           type="text"
           size="small"
           icon={<EyeOutlined />}
-          className="h-8 rounded-xl px-2"
+          className="h-8 rounded-xl px-2 text-xs"
           onClick={onExpand}
         >
-          Mở lại
+          Mở rộng
         </Button>
       </div>
     </div>

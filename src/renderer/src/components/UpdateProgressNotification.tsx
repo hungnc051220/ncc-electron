@@ -15,7 +15,7 @@ const formatBytes = (value: number) => {
   const exponent = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
   const amount = value / 1024 ** exponent;
 
-  return `${amount.toFixed(amount >= 100 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+  return `${amount.toFixed(amount >= 100 || exponent === 0 ? 0 : 1)}${units[exponent]}`;
 };
 
 const formatSpeed = (value: number) => `${formatBytes(value)}/s`;
@@ -29,7 +29,7 @@ const UpdateProgressNotification = ({
 
   return (
     <div
-      className="w-115 rounded-[20px] border px-4 py-4 shadow-[0_20px_48px_rgba(15,23,42,0.16)]"
+      className="w-full rounded-[20px] border px-4 py-4 shadow-[0_20px_48px_rgba(15,23,42,0.16)]"
       style={{
         background: token.colorBgElevated,
         borderColor: token.colorBorderSecondary
@@ -65,7 +65,7 @@ const UpdateProgressNotification = ({
             type="text"
             size="small"
             icon={<EyeInvisibleOutlined />}
-            className="h-8 rounded-xl px-2"
+            className="h-8 rounded-xl px-2 text-xs"
             onClick={onHide}
           >
             Ẩn xuống
@@ -91,7 +91,7 @@ const UpdateProgressNotification = ({
           </span>
         </div>
         <div className="rounded-2xl px-3 py-2" style={{ background: token.colorFillAlter }}>
-          Tổng dung lượng:{" "}
+          Dung lượng:{" "}
           <span className="font-medium" style={{ color: token.colorTextHeading }}>
             {formatBytes(progress.total)}
           </span>

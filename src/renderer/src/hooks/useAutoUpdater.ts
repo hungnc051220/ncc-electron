@@ -28,7 +28,7 @@ export function useAutoUpdater() {
     destroy: () => void;
     update: (configUpdate: Record<string, unknown>) => void;
   } | null>(null);
-  const hiddenProgressRef = useRef<boolean>(false);
+  const hiddenProgressRef = useRef<boolean>(true);
   const latestUpdateRef = useRef<UpdateInfo | null>(null);
   const latestPolicyRef = useRef<UpdatePolicy | null>(null);
   const latestModeRef = useRef<UpdateMode>(DEFAULT_UPDATE_MODE);
@@ -73,6 +73,10 @@ export function useAutoUpdater() {
     }
 
     return mode;
+  }, []);
+
+  const getEffectiveLatestVersion = useCallback((info?: UpdateInfo | null): string | null => {
+    return info?.version ?? latestPolicyRef.current?.latestVersion ?? null;
   }, []);
 
   const closeVersionModal = useCallback(() => {
@@ -154,7 +158,7 @@ export function useAutoUpdater() {
         return;
       }
 
-      hiddenProgressRef.current = false;
+      hiddenProgressRef.current = true;
       if (mode !== "force") {
         closeVersionModal();
       }
@@ -171,7 +175,8 @@ export function useAutoUpdater() {
     async (nextUpdate: UpdateInfo | null) => {
       const currentVersion = await ensureVersion();
       const updateMode = getEffectiveMode(nextUpdate);
-      const hasUpdate = Boolean(nextUpdate?.version && nextUpdate.version !== currentVersion);
+      const latestVersion = getEffectiveLatestVersion(nextUpdate);
+      const hasUpdate = Boolean(latestVersion && latestVersion !== currentVersion);
       const isForceUpdate = updateMode === "force" && hasUpdate;
 
       if (!isForceUpdate) {
@@ -196,9 +201,9 @@ export function useAutoUpdater() {
         },
         content: createElement(VersionInfoModalContent, {
           currentVersion: currentVersion,
-          latestVersion: nextUpdate?.version,
+          latestVersion,
           updateMode,
-          messages: nextUpdate?.messages ?? latestPolicyRef.current?.messages,
+          messages: latestPolicyRef.current?.messages ?? nextUpdate?.messages,
           isDownloading,
           onClose: closeVersionModal,
           onQuitApp: () => window.api?.quitApp(),
@@ -208,7 +213,45 @@ export function useAutoUpdater() {
         })
       });
     },
-    [beginDownload, closeVersionModal, ensureVersion, getEffectiveMode, isDownloading, modal]
+    [
+      beginDownload,
+      closeVersionModal,
+      ensureVersion,
+      getEffectiveLatestVersion,
+      getEffectiveMode,
+      isDownloading,
+      modal
+    ]
+  );
+
+  const updateVersionInfoModal = useCallback(
+    async (nextUpdate: UpdateInfo | null) => {
+      if (!modalRef.current) {
+        return;
+      }
+
+      const currentVersion = await ensureVersion();
+      const updateMode = getEffectiveMode(nextUpdate);
+      const latestVersion = getEffectiveLatestVersion(nextUpdate);
+
+      modalRef.current.update({
+        keyboard: updateMode !== "force",
+        mask: { closable: updateMode !== "force" },
+        content: createElement(VersionInfoModalContent, {
+          currentVersion,
+          latestVersion,
+          updateMode,
+          messages: latestPolicyRef.current?.messages ?? nextUpdate?.messages,
+          isDownloading: isDownloadingRef.current,
+          onClose: closeVersionModal,
+          onQuitApp: () => window.api?.quitApp(),
+          onUpdateNow: () => {
+            void beginDownload(updateMode);
+          }
+        })
+      });
+    },
+    [beginDownload, closeVersionModal, ensureVersion, getEffectiveLatestVersion, getEffectiveMode]
   );
 
   useEffect(() => {
@@ -238,6 +281,7 @@ export function useAutoUpdater() {
 
     const onUpdatePolicy = (nextPolicy: UpdatePolicy) => {
       setLatestPolicy(nextPolicy);
+      void updateVersionInfoModal(latestUpdateRef.current);
     };
 
     const onProgress = (progressInfo: UpdateDownloadProgress) => {
@@ -258,7 +302,7 @@ export function useAutoUpdater() {
       setIsDownloading(false);
       isDownloadingRef.current = false;
       setProgress(100);
-      hiddenProgressRef.current = false;
+      hiddenProgressRef.current = true;
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
       closeProgressDock();
       modal.confirm({
@@ -287,7 +331,7 @@ export function useAutoUpdater() {
     const onError = (msg: string) => {
       setIsDownloading(false);
       isDownloadingRef.current = false;
-      hiddenProgressRef.current = false;
+      hiddenProgressRef.current = true;
       notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
       closeProgressDock();
       message.error("Lỗi cập nhật: " + msg);
@@ -316,7 +360,8 @@ export function useAutoUpdater() {
     notification,
     openProgressNotification,
     openVersionInfoModal,
-    setLatestPolicy
+    setLatestPolicy,
+    updateVersionInfoModal
   ]);
 
   const manualCheck = async (): Promise<void> => {
