@@ -10,6 +10,14 @@ const updatePolicyUrl = process.env.APP_UPDATE_POLICY_URL || defaultUpdatePolicy
 let latestPolicy: UpdatePolicy | null = null;
 let latestMode: UpdateMode = "optional";
 
+function safeSend(win: BrowserWindow, channel: string, ...args: unknown[]) {
+  if (win.isDestroyed() || win.webContents.isDestroyed()) {
+    return;
+  }
+
+  win.webContents.send(channel, ...args);
+}
+
 function normalizeUpdateMode(value?: string | null): UpdateMode {
   if (value === "silent" || value === "force" || value === "optional") {
     return value;
@@ -119,14 +127,28 @@ function createUpdatePayload(info: ElectronUpdateInfo | { version: string }) {
 }
 
 function emitPolicy(win: BrowserWindow, policy: UpdatePolicy) {
-  if (win.isDestroyed()) {
-    return;
-  }
-
-  win.webContents.send("update:policy", {
+  safeSend(win, "update:policy", {
     ...policy,
     mode: latestMode
   });
+}
+
+function getLinuxManualInstallMessage() {
+  return [
+    "Không thể cài cập nhật tự động cho gói Linux hiện tại.",
+    "Nếu đang dùng AppImage, hãy mở ứng dụng trực tiếp từ file .AppImage để hệ thống nhận biến APPIMAGE.",
+    "Nếu đang dùng bản .deb, vui lòng tải và cài file .deb hoặc .AppImage mới từ trang phát hành."
+  ].join(" ");
+}
+
+function getUpdateErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (process.platform === "linux" && /pkexec|polkit|error code 127/i.test(message)) {
+    return `${message}. Máy Linux không chạy được trình nâng quyền pkexec/Polkit, vui lòng cài thủ công bản mới.`;
+  }
+
+  return message;
 }
 
 async function refreshPolicy(win?: BrowserWindow) {
@@ -173,7 +195,20 @@ export function setupUpdater(win: BrowserWindow) {
   });
 
   ipcMain.handle("app:install-update", (_, options?: { isSilent?: boolean }) => {
-    if (!isDev) autoUpdater.quitAndInstall(Boolean(options?.isSilent), true);
+    if (isDev) {
+      return;
+    }
+
+    if (process.platform === "linux" && !process.env.APPIMAGE) {
+      safeSend(win, "update:error", getLinuxManualInstallMessage());
+      return;
+    }
+
+    try {
+      autoUpdater.quitAndInstall(Boolean(options?.isSilent), true);
+    } catch (error) {
+      safeSend(win, "update:error", getUpdateErrorMessage(error));
+    }
   });
 
   if (isDev) return;
@@ -183,11 +218,11 @@ export function setupUpdater(win: BrowserWindow) {
   autoUpdater.autoDownload = false;
 
   autoUpdater.on("update-available", (info) => {
-    win.webContents.send("update:available", createUpdatePayload(info));
+    safeSend(win, "update:available", createUpdatePayload(info));
   });
 
   autoUpdater.on("download-progress", (p) => {
-    win.webContents.send("update:progress", {
+    safeSend(win, "update:progress", {
       percent: Math.round(p.percent),
       transferred: p.transferred,
       total: p.total,
@@ -196,14 +231,14 @@ export function setupUpdater(win: BrowserWindow) {
   });
 
   autoUpdater.on("update-downloaded", () => {
-    win.webContents.send("update:ready", {
+    safeSend(win, "update:ready", {
       mode: latestMode,
       policy: latestPolicy ?? undefined
     });
   });
 
   autoUpdater.on("error", (err) => {
-    win.webContents.send("update:error", err.message);
+    safeSend(win, "update:error", getUpdateErrorMessage(err));
   });
 
   void refreshPolicy(win).then((policy) => {

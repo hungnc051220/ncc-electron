@@ -24,7 +24,7 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { OrderDetailProps, OrderStatus } from "@shared/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { TableProps } from "antd";
-import { Dropdown, Typography } from "antd";
+import { Dropdown, Spin, Typography } from "antd";
 import dayjs from "dayjs";
 import { Check, Eye, Printer, RotateCcw, X } from "lucide-react";
 import { type Key, useCallback, useEffect, useMemo, useState } from "react";
@@ -79,6 +79,7 @@ const PrintOnlineTicketsPage = () => {
     data: orders,
     fetchNextPage,
     hasNextPage,
+    isLoading,
     isFetching,
     isFetchingNextPage,
     refetch
@@ -581,10 +582,7 @@ const PrintOnlineTicketsPage = () => {
         right={
           <>
             <Filter onSearch={onSearch} filterValues={filterValues} setCurrent={() => undefined} />
-            <RefreshButton
-              loading={isFetching || isFetchingNextPage}
-              onRefresh={() => refetch()}
-            />
+            <RefreshButton loading={isFetching || isFetchingNextPage} onRefresh={() => refetch()} />
           </>
         }
       />
@@ -598,9 +596,21 @@ const PrintOnlineTicketsPage = () => {
         size="small"
         virtual
         scroll={{ x: 2000 }}
-        loading={isFetching || isFetchingNextPage}
+        loading={isLoading}
         pagination={false}
-        footer={() => `Tổng ${formatNumber(displayedRows.length)} bản ghi`}
+        //@ts-ignore // This property is not exported, but it can be passed through to the internal virtual scrolling
+        listItemHeight={54}
+        footer={() => (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>Tổng {formatNumber(displayedRows.length)} bản ghi</span>
+            {isFetchingNextPage && (
+              <span className="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <Spin size="small" />
+                Đang tải thêm dữ liệu...
+              </span>
+            )}
+          </div>
+        )}
       />
 
       {dialogViewDetailOpen && selectedItem && (
