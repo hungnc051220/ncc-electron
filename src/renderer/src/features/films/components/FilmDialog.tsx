@@ -166,10 +166,10 @@ const FilmDialog = ({
   });
 
   useEffect(() => {
-    if (!sellOnline) {
+    if (sellOnline === false && open) {
       form.setFieldValue("sellOnlineBefore", 0);
     }
-  }, [form, sellOnline]);
+  }, [form, sellOnline, open]);
 
   const onOk = () => form.submit();
 

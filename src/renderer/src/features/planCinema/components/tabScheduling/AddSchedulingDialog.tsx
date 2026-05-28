@@ -194,7 +194,11 @@ const AddSchedulingDialog = ({
     );
   }, [projectDate, projectTime]);
 
-  const { data: planPricing } = useTicketPricesByPlan({
+  const {
+    data: planPricing,
+    error: planPricingError,
+    isError: isPlanPricingError
+  } = useTicketPricesByPlan({
     roomId,
     versionCode: selectedFilm?.film.versionCode ?? "",
     date: planPricingDateTime?.format(),
@@ -269,6 +273,14 @@ const AddSchedulingDialog = ({
     }
     setSavedIndividualPrices(pricingFormValues);
   }, [mappedPlanPricing, form, open]);
+
+  useEffect(() => {
+    if (!open || !isPlanPricingError) {
+      return;
+    }
+
+    message.error(getApiErrorMessage(planPricingError, "Lấy giá vé theo kế hoạch thất bại"));
+  }, [isPlanPricingError, message, open, planPricingError]);
 
   const applyUniformPriceToPositions = (uniformPrice: number) => {
     const uniformValues = positionFields.reduce(
