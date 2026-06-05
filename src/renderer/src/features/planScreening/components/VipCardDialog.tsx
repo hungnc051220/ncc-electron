@@ -309,8 +309,13 @@ const VipCardDialog = ({
             type="primary"
             ghost
             className="h-6 rounded-full px-2.5 text-[12px] font-semibold shadow-none"
-            disabled={!isCurrentCustomerSearched || currentPointBalance <= 0}
+            disabled={!isCurrentCustomerSearched || currentPointBalance <= 0 || hasSeatTypeDiscount}
             onClick={() => {
+              if (hasSeatTypeDiscount) {
+                message.warning("Đã áp dụng giảm giá bên ngoài, không thể đổi điểm");
+                return;
+              }
+
               setDraftExchangePoints(defaultExchangePoints);
               setIsExchangePointModalOpen(true);
             }}
@@ -364,6 +369,9 @@ const VipCardDialog = ({
     if (hasSeatTypeDiscount) {
       setVoucherType("none");
       setSelectedBatchId(null);
+      setExchangePoints(0);
+      setDraftExchangePoints(0);
+      setIsExchangePointModalOpen(false);
     }
   }, [hasSeatTypeDiscount]);
 
@@ -669,7 +677,7 @@ const VipCardDialog = ({
           : voucherType === "u22"
             ? "U22Ticket"
             : selectedVoucherCode,
-      pointReward: exchangePoints > 0 ? exchangePoints : undefined
+      pointReward: !hasSeatTypeDiscount && exchangePoints > 0 ? exchangePoints : undefined
     });
     onCancel();
   };
@@ -706,6 +714,14 @@ const VipCardDialog = ({
   const onConfirmExchangePoints = () => {
     if (!hasPointExchangeConfig) {
       message.error("Chưa có cấu hình quy đổi điểm");
+      return;
+    }
+
+    if (hasSeatTypeDiscount) {
+      message.error("Đã áp dụng giảm giá bên ngoài, không thể đổi điểm");
+      setExchangePoints(0);
+      setDraftExchangePoints(0);
+      setIsExchangePointModalOpen(false);
       return;
     }
 
@@ -856,8 +872,8 @@ const VipCardDialog = ({
 
           {isCustomerSearched && hasSeatTypeDiscount && (
             <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
-              Đã áp dụng giảm giá theo loại vé ở ngoài. Chỉ được áp mã khách hàng, không thể dùng
-              thêm voucher hoặc ưu đãi U22.
+              Đã áp dụng giảm giá theo loại vé. Chỉ được áp mã khách hàng, không thể dùng thêm
+              voucher, ưu đãi U22 hoặc đổi điểm.
             </NoticeCard>
           )}
 
