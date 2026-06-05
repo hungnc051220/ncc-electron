@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.89",
-  "minSupportedVersion": "1.0.87",
+  "latestVersion": "1.0.90",
+  "minSupportedVersion": "1.0.90",
   "mode": "optional",
   "messages": [
-    "Sửa lỗi hiển thị ngày bán online trong khi thêm/sửa phim."
+    "Thay đổi lại luồng giảm giá, áp mã voucher và đổi điểm."
   ],
   "releaseNotesUrl": ""
 }
