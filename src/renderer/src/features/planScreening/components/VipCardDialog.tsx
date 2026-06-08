@@ -920,9 +920,7 @@ const VipCardDialog = ({
             <div className="space-y-1">
               <div className="flex justify-between">
                 <p>Tiền mua vé:</p>
-                <p className="font-semibold text-primary">
-                  {formatMoney(voucherType === "u22" && is2DVersion ? 55000 : totalPrice || 0)}
-                </p>
+                <p className="font-semibold text-primary">{formatMoney(totalPrice || 0)}</p>
               </div>
               <div className="flex justify-between">
                 <p>Tiền khuyến mãi:</p>

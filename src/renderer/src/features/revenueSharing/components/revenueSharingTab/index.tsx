@@ -13,7 +13,7 @@ import {
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { ReportRevenueSharingProps } from "@shared/types";
-import type { TableProps } from "antd";
+import type { PaginationProps, TableProps } from "antd";
 import { Button, Dropdown, Table } from "antd";
 import dayjs from "dayjs";
 import { DownloadIcon, FileSpreadsheet, PlusIcon, SquarePen } from "lucide-react";
@@ -40,6 +40,8 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
   const [selectedRevenueSharing, setSelectedRevenueSharing] =
     useState<ReportRevenueSharingProps | null>(null);
   const [filterValues, setFilterValues] = useState<RevenueSharingFilterValues>({});
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const params = useMemo(() => {
     const { dateRange, ...rest } = filterValues;
@@ -112,6 +114,11 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
   const handleAdd = useCallback(() => {
     setSelectedRevenueSharing(null);
     setDialogOpen(true);
+  }, []);
+
+  const handleSearch = useCallback((values: RevenueSharingFilterValues) => {
+    setCurrent(1);
+    setFilterValues(values);
   }, []);
 
   const handleEdit = useCallback((item: ReportRevenueSharingProps) => {
@@ -222,7 +229,7 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
       title: "STT",
       key: "no",
       align: "center",
-      render: (_, __, index) => index + 1,
+      render: (_, __, index) => (current - 1) * pageSize + index + 1,
       width: 50,
       fixed: "left"
     },
@@ -305,7 +312,7 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
   const tabBarActions = useMemo(
     () => (
       <div className="flex items-center justify-end gap-2 mb-1">
-        <Filter filterValues={filterValues} onSearch={setFilterValues} />
+        <Filter filterValues={filterValues} onSearch={handleSearch} />
         <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
         {canExport && (
           <Button
@@ -331,6 +338,7 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
       filterValues,
       handleAdd,
       handleExportList,
+      handleSearch,
       hasRevenueSharingData,
       isFetching,
       refetch
@@ -340,6 +348,22 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
   useEffect(() => {
     onActionsChange?.(tabBarActions);
   }, [onActionsChange, tabBarActions]);
+
+  const handlePaginationChange = useCallback<NonNullable<PaginationProps["onChange"]>>(
+    (page, nextPageSize) => {
+      setCurrent(page);
+      setPageSize(nextPageSize);
+    },
+    []
+  );
+
+  const handlePageSizeChange = useCallback<NonNullable<PaginationProps["onShowSizeChange"]>>(
+    (page, nextPageSize) => {
+      setCurrent(page);
+      setPageSize(nextPageSize);
+    },
+    []
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -351,7 +375,10 @@ const RevenueSharingTab = ({ onActionsChange }: RevenueSharingTabProps) => {
         size="small"
         loading={isFetching}
         pagination={{
-          pageSize: 20,
+          current,
+          pageSize,
+          onChange: handlePaginationChange,
+          onShowSizeChange: handlePageSizeChange,
           total: groupedRevenueSharings.length,
           size: "middle",
           pageSizeOptions: [20, 50, 100],
