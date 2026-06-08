@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.90",
-  "minSupportedVersion": "1.0.90",
+  "latestVersion": "1.0.91",
+  "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Thay đổi lại luồng giảm giá, áp mã voucher và đổi điểm."
+    "Sửa lỗi hiển thị tiền mua giá vé U22."
   ],
   "releaseNotesUrl": ""
 }
