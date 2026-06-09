@@ -150,6 +150,9 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
         }}
         width={600}
         style={{ top: 20 }}
+        mask={{
+          closable: false
+        }}
       >
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={getInitialValues()}>
           {invoiceData && (
