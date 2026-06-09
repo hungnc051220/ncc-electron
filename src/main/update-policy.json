@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.91",
+  "latestVersion": "1.0.93",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Sửa lỗi hiển thị tiền mua giá vé U22."
+    "Sửa lỗi bộ lọc Thời gian mua hiển thị ngày cũ khi ứng dụng chạy qua ngày mới."
   ],
   "releaseNotesUrl": ""
 }

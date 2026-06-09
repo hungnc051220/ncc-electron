@@ -5,16 +5,22 @@ import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { ValuesProps } from "../OrderHistoryPage";
 import { filterEmptyValues } from "@renderer/lib/utils";
+import type { Dayjs } from "dayjs";
 
 const { RangePicker } = DatePicker;
 
 interface FilterProps {
   onSearch: (values: ValuesProps) => void;
+  onOpen: () => void;
   filterValues: ValuesProps;
   setCurrent: (page: number) => void;
 }
 
-const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
+type FormValues = Omit<ValuesProps, "dateRange"> & {
+  dateRange?: [Dayjs, Dayjs];
+};
+
+const Filter = ({ onSearch, onOpen, filterValues, setCurrent }: FilterProps) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
 
@@ -31,7 +37,14 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
   return (
     <>
       <div className="relative">
-        <Button variant="outlined" icon={<FilterOutlined />} onClick={() => setOpen(true)}>
+        <Button
+          variant="outlined"
+          icon={<FilterOutlined />}
+          onClick={() => {
+            onOpen();
+            setOpen(true);
+          }}
+        >
           Bộ lọc
         </Button>
         {!isEmptyFilter && (
@@ -51,13 +64,18 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
         onCancel={() => setOpen(false)}
         forceRender
         modalRender={(dom) => (
-          <Form
+          <Form<FormValues>
             layout="vertical"
             form={form}
             onFinish={(values) => {
               setOpen(false);
               setCurrent(1);
-              onSearch(values);
+              onSearch({
+                ...values,
+                dateRange: values.dateRange?.map((value) => value.format()) as
+                  | [string, string]
+                  | undefined
+              });
             }}
           >
             {dom}

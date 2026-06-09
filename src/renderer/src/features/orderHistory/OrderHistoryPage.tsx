@@ -38,6 +38,7 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
+import { getCurrentDayDateRange, isCurrentDayDateRange } from "./dateFilter";
 
 const items: TabsProps["items"] = [
   {
@@ -68,10 +69,6 @@ const getSellerName = (orderDetail: OrderDetailProps) =>
     .filter(Boolean)
     .join(" ") || orderDetail.order?.seller?.username;
 
-const defaultFilterValues: ValuesProps = {
-  dateRange: [dayjs().startOf("day").format(), dayjs().endOf("day").format()]
-};
-
 const OrderHistoryPage = () => {
   const { message } = useAntdApp();
   const queryClient = useQueryClient();
@@ -79,7 +76,10 @@ const OrderHistoryPage = () => {
   const [cancelForm] = Form.useForm<CancelOrderFormValues>();
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [filterValues, setFilterValues] = useState<ValuesProps>(defaultFilterValues);
+  const [filterValues, setFilterValues] = useState<ValuesProps>(() => ({
+    dateRange: getCurrentDayDateRange()
+  }));
+  const [followsCurrentDay, setFollowsCurrentDay] = useState(true);
   const [activeKey, setActiveKey] = useState("1");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -530,7 +530,19 @@ const OrderHistoryPage = () => {
   ];
 
   const onSearch = (values: ValuesProps) => {
+    setFollowsCurrentDay(isCurrentDayDateRange(values.dateRange));
     setFilterValues(values);
+  };
+
+  const handleOpenFilter = () => {
+    if (!followsCurrentDay) {
+      return;
+    }
+
+    setFilterValues((values) => ({
+      ...values,
+      dateRange: getCurrentDayDateRange()
+    }));
   };
 
   const handleViewDetail = useCallback((item: OrderDetailProps) => {
@@ -562,7 +574,12 @@ const OrderHistoryPage = () => {
         left={<AppBreadcrumb />}
         right={
           <>
-            <Filter filterValues={filterValues} onSearch={onSearch} setCurrent={setCurrent} />
+            <Filter
+              filterValues={filterValues}
+              onOpen={handleOpenFilter}
+              onSearch={onSearch}
+              setCurrent={setCurrent}
+            />
             <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
           </>
         }
