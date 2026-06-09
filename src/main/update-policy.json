@@ -1,10 +1,11 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.93",
+  "latestVersion": "1.0.94",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Sửa lỗi bộ lọc Thời gian mua hiển thị ngày cũ khi ứng dụng chạy qua ngày mới."
+    "Sửa lỗi bộ lọc Thời gian mua hiển thị ngày cũ khi ứng dụng chạy qua ngày mới.",
+    "Ẩn những đơn hàng giữ chỗ trong danh sách bán vé"
   ],
   "releaseNotesUrl": ""
 }
