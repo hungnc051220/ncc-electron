@@ -67,6 +67,7 @@ const Filter = ({ onSearch, filterValues, setCurrent }: FilterProps) => {
             <OkBtn />
           </>
         )}
+        width={400}
       >
         <Form.Item name="dateRange" label="Ngày tạo">
           <RangePicker format="DD/MM/YYYY" presets={rangePresets} className="w-full" />

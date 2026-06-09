@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { api } from "@renderer/api/client";
-import { RefundStatus } from "@shared/types";
+import { PaymentStatus, RefundStatus } from "@shared/types";
 import { ordersApi } from "./orders.api";
 
 describe("ordersApi", () => {
@@ -37,7 +37,8 @@ describe("ordersApi", () => {
             keyword: "ve-thang-3",
             createdOnUtc: {
               between: ["2026-03-01", "2026-03-31"]
-            }
+            },
+            paymentStatusId: { ne: PaymentStatus.AUTHORIZED }
           })
         )
       )
@@ -73,13 +74,14 @@ describe("ordersApi", () => {
           id: "ORD-22",
           customerPhone: "0987654321",
           customerEmail: "ncc@example.com",
-          isInvitation: false
+          isInvitation: false,
+          paymentStatusId: { ne: PaymentStatus.AUTHORIZED }
         })
       )}`
     );
   });
 
-  it("skips the filter param when getAll has no filters", async () => {
+  it("always excludes authorized payments from getAll", async () => {
     const getSpy = vi.spyOn(api, "get").mockResolvedValue({
       data: {
         data: [],
@@ -93,7 +95,13 @@ describe("ordersApi", () => {
       pageSize: 50
     });
 
-    expect(getSpy).toHaveBeenCalledWith("/api/pos/order?current=1&pageSize=50");
+    expect(getSpy).toHaveBeenCalledWith(
+      `/api/pos/order?current=1&filter=${encodeURIComponent(
+        JSON.stringify({
+          paymentStatusId: { ne: PaymentStatus.AUTHORIZED }
+        })
+      )}&pageSize=50`
+    );
   });
 
   it("omits empty optional params when marking orders as printed", async () => {

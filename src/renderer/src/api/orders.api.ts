@@ -22,7 +22,6 @@ export interface OrdersQuery {
   toDate?: string;
   isInvitation?: boolean;
   orderStatusId?: number;
-  paymentStatusId?: PaymentStatus;
   refundStatusId?: RefundStatus;
   isRefund?: boolean;
   projectDate?: string;
@@ -185,7 +184,6 @@ export const ordersApi = {
       toDate,
       isInvitation,
       orderStatusId,
-      paymentStatusId,
       isRefund,
       projectDate
     } = params;
@@ -239,9 +237,7 @@ export const ordersApi = {
       filter.orderStatusId = orderStatusId;
     }
 
-    if (paymentStatusId) {
-      filter.paymentStatusId = paymentStatusId;
-    }
+    filter.paymentStatusId = { ne: PaymentStatus.AUTHORIZED };
 
     const queryObject: Record<string, unknown> = {
       current,
