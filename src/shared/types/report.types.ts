@@ -528,6 +528,7 @@ export interface DiscountOfflineUsageReportItem {
   totalDiscountAmount: number;
   totalPriceInclTax: number;
   orders: DiscountOfflineOrderProps[];
+  promotionType: number; //1: giảm giá, 2: khuyến mãi
 }
 
 export interface DiscountOfflineOrderProps {

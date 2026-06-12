@@ -445,17 +445,17 @@ const OrderHistoryPage = () => {
       sorter: (a, b) => compareText(a.order.invNo, b.order.invNo),
       render: (_, record) => record.order.invNo
     },
-    {
-      title: "Trạng thái thanh toán",
-      key: "paymentStatusId",
-      dataIndex: "paymentStatusId",
-      sorter: (a, b) =>
-        compareNumber(resolveOrderPaymentStatus(a.order), resolveOrderPaymentStatus(b.order)),
-      render: (_, record) => (
-        <OrderStatusBadge status={resolveOrderPaymentStatus(record.order)} type="payment" />
-      ),
-      fixed: "right"
-    },
+    // {
+    //   title: "Trạng thái thanh toán",
+    //   key: "paymentStatusId",
+    //   dataIndex: "paymentStatusId",
+    //   sorter: (a, b) =>
+    //     compareNumber(resolveOrderPaymentStatus(a.order), resolveOrderPaymentStatus(b.order)),
+    //   render: (_, record) => (
+    //     <OrderStatusBadge status={resolveOrderPaymentStatus(record.order)} type="payment" />
+    //   ),
+    //   fixed: "right"
+    // },
     {
       title: "Trạng thái đơn",
       key: "orderStatusId",

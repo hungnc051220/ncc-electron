@@ -202,6 +202,41 @@ describe("Seats", () => {
     expect(screen.getByText("A1").closest("div")).toHaveClass("cursor-not-allowed");
   });
 
+  it("shows the seat type color as a border after the seat is sold", () => {
+    const soldSeat = createSeat({ status: 1 });
+
+    render(
+      <MemoryRouter>
+        <Seats
+          data={createPlanScreening(soldSeat)}
+          orders={[]}
+          seatTypes={[
+            {
+              id: 1,
+              positionCode: "VIP",
+              name: "Ghế VIP",
+              color: "#ff69b4",
+              pictureId: 0,
+              isSeat: true,
+              isDefault: false,
+              deleted: false,
+              createdOnUtc: "",
+              updatedOnUtc: ""
+            }
+          ]}
+          selectedSeats={[]}
+          setSelectedSeats={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("A1").closest("[data-seat-code='A1']")).toHaveStyle({
+      borderColor: "#ff69b4",
+      borderStyle: "solid",
+      borderWidth: "3px"
+    });
+  });
+
   it("allows only sold seats, not reserved seats, to be selected in cancel mode", () => {
     const setSelectedSeats = vi.fn();
     const soldSeat = createSeat({ status: 1 });

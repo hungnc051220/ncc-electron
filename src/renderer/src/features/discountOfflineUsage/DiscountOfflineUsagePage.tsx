@@ -5,7 +5,7 @@ import RefreshButton from "@renderer/components/RefreshButton";
 import { useDiscountOfflineUsageReport } from "@renderer/hooks/reports/useDiscountOfflineUsageReport";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import type { DiscountOfflineUsageReportItem } from "@shared/types";
-import { Table, type TableProps } from "antd";
+import { Table, Tabs, type TableProps, type TabsProps } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import ExportExcelButton from "./components/ExportExcel";
@@ -26,8 +26,27 @@ type SummaryTotals = {
   countPriceInclTax: number;
 };
 
+type ReportType = "promotion" | "discount";
+
+const buildSummary = (tableData: DiscountOfflineUsageReportItem[]) =>
+  tableData.reduce<SummaryTotals>(
+    (total, item) => ({
+      countOrder: total.countOrder + (item.totalOrders || 0),
+      countQuantity: total.countQuantity + (item.totalQuantity || 0),
+      countDiscountAmount: total.countDiscountAmount + (item.totalDiscountAmount || 0),
+      countPriceInclTax: total.countPriceInclTax + (item.totalPriceInclTax || 0)
+    }),
+    {
+      countOrder: 0,
+      countQuantity: 0,
+      countDiscountAmount: 0,
+      countPriceInclTax: 0
+    }
+  );
+
 const DiscountOfflineUsagePage = () => {
   const [filterValues, setFilterValues] = useState<FilterValues>(() => getDefaultFilterValues());
+  const [activeReportType, setActiveReportType] = useState<ReportType>("promotion");
 
   const dto = useMemo(
     () => ({
@@ -41,69 +60,127 @@ const DiscountOfflineUsagePage = () => {
   const { data, isFetching, refetch } = useDiscountOfflineUsageReport(dto);
   const tableData = useMemo(() => data?.data || [], [data?.data]);
 
-  const summary = useMemo(
-    () =>
-      tableData.reduce<SummaryTotals>(
-        (total, item) => ({
-          countOrder: total.countOrder + (item.totalOrders || 0),
-          countQuantity: total.countQuantity + (item.totalQuantity || 0),
-          countDiscountAmount: total.countDiscountAmount + (item.totalDiscountAmount || 0),
-          countPriceInclTax: total.countPriceInclTax + (item.totalPriceInclTax || 0)
-        }),
-        {
-          countOrder: 0,
-          countQuantity: 0,
-          countDiscountAmount: 0,
-          countPriceInclTax: 0
-        }
-      ),
+  const reportData = useMemo<Record<ReportType, DiscountOfflineUsageReportItem[]>>(
+    () => ({
+      promotion: tableData.filter((item) => item.promotionType === 2),
+      discount: tableData.filter((item) => item.promotionType === 1)
+    }),
     [tableData]
   );
 
-  const columns: TableProps<DiscountOfflineUsageReportItem>["columns"] = [
+  const summaries = useMemo<Record<ReportType, SummaryTotals>>(
+    () => ({
+      promotion: buildSummary(reportData.promotion),
+      discount: buildSummary(reportData.discount)
+    }),
+    [reportData]
+  );
+
+  const getColumns = (
+    reportType: ReportType
+  ): TableProps<DiscountOfflineUsageReportItem>["columns"] => {
+    const reportLabel = reportType === "promotion" ? "khuyến mãi" : "giảm giá";
+
+    return [
+      {
+        title: "STT",
+        key: "index",
+        align: "left",
+        width: 50,
+        render: (_, __, index) => index + 1
+      },
+      {
+        title: `Chương trình ${reportLabel}`,
+        dataIndex: "discountName",
+        key: "discountName"
+      },
+      {
+        title: "Số đơn áp dụng",
+        dataIndex: "totalOrders",
+        key: "totalOrders",
+        align: "right",
+        width: 180,
+        render: (value) => formatNumber(value || 0)
+      },
+      {
+        title: "Số vé áp dụng",
+        dataIndex: "totalQuantity",
+        key: "totalQuantity",
+        align: "right",
+        width: 180,
+        render: (value) => formatNumber(value || 0)
+      },
+      {
+        title: `Tổng tiền ${reportLabel}`,
+        dataIndex: "totalDiscountAmount",
+        key: "totalDiscountAmount",
+        align: "right",
+        width: 250,
+        render: (value) => formatMoney(value || 0)
+      },
+      {
+        title: "Tổng doanh thu",
+        dataIndex: "totalPriceInclTax",
+        key: "totalPriceInclTax",
+        align: "right",
+        width: 180,
+        render: (value) => formatMoney(value || 0)
+      }
+    ];
+  };
+
+  const renderReportTable = (reportType: ReportType) => {
+    const currentTableData = reportData[reportType];
+    const currentSummary = summaries[reportType];
+
+    return (
+      <AutoHeightTable
+        rowKey="discountId"
+        dataSource={currentTableData}
+        columns={getColumns(reportType)}
+        bordered
+        loading={isFetching}
+        pagination={false}
+        size="small"
+        summary={
+          currentTableData.length > 0
+            ? () => (
+                <Table.Summary fixed>
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell index={0} colSpan={2} align="center" className="font-bold">
+                      Tổng
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={2} align="right" className="font-bold">
+                      {formatNumber(currentSummary.countOrder)}
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={3} align="right" className="font-bold">
+                      {formatNumber(currentSummary.countQuantity)}
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={4} align="right" className="font-bold">
+                      {formatMoney(currentSummary.countDiscountAmount)}
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={5} align="right" className="font-bold">
+                      {formatMoney(currentSummary.countPriceInclTax)}
+                    </Table.Summary.Cell>
+                  </Table.Summary.Row>
+                </Table.Summary>
+              )
+            : undefined
+        }
+      />
+    );
+  };
+
+  const tabItems: TabsProps["items"] = [
     {
-      title: "STT",
-      key: "index",
-      align: "left",
-      width: 50,
-      render: (_, __, index) => index + 1
+      key: "promotion",
+      label: "Doanh thu theo chương trình khuyến mãi",
+      children: <div className="flex h-full min-h-0 flex-col">{renderReportTable("promotion")}</div>
     },
     {
-      title: "Khuyến mại, giảm giá",
-      dataIndex: "discountName",
-      key: "discountName"
-    },
-    {
-      title: "Số đơn áp dụng",
-      dataIndex: "totalOrders",
-      key: "totalOrders",
-      align: "right",
-      width: 180,
-      render: (value) => formatNumber(value || 0)
-    },
-    {
-      title: "Số vé áp dụng",
-      dataIndex: "totalQuantity",
-      key: "totalQuantity",
-      align: "right",
-      width: 180,
-      render: (value) => formatNumber(value || 0)
-    },
-    {
-      title: "Tổng tiền khuyến mại, giảm giá",
-      dataIndex: "totalDiscountAmount",
-      key: "totalDiscountAmount",
-      align: "right",
-      width: 250,
-      render: (value) => formatMoney(value || 0)
-    },
-    {
-      title: "Tổng doanh thu",
-      dataIndex: "totalPriceInclTax",
-      key: "totalPriceInclTax",
-      align: "right",
-      width: 180,
-      render: (value) => formatMoney(value || 0)
+      key: "discount",
+      label: "Doanh thu theo chương trình giảm giá",
+      children: <div className="flex h-full min-h-0 flex-col">{renderReportTable("discount")}</div>
     }
   ];
 
@@ -114,7 +191,7 @@ const DiscountOfflineUsagePage = () => {
         right={
           <>
             <ExportExcelButton
-              tableData={tableData}
+              tableData={reportData[activeReportType]}
               dateRange={filterValues.dateRange}
               loading={isFetching}
             />
@@ -124,39 +201,12 @@ const DiscountOfflineUsagePage = () => {
         }
       />
 
-      <AutoHeightTable
-        rowKey="discountId"
-        dataSource={tableData}
-        columns={columns}
-        bordered
-        loading={isFetching}
-        pagination={false}
-        size="small"
-        summary={
-          tableData.length > 0
-            ? () => (
-                <Table.Summary fixed>
-                  <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={2} align="center" className="font-bold">
-                      Tổng
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={2} align="right" className="font-bold">
-                      {formatNumber(summary.countOrder)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={3} align="right" className="font-bold">
-                      {formatNumber(summary.countQuantity)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={4} align="right" className="font-bold">
-                      {formatMoney(summary.countDiscountAmount)}
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={5} align="right" className="font-bold">
-                      {formatMoney(summary.countPriceInclTax)}
-                    </Table.Summary.Cell>
-                  </Table.Summary.Row>
-                </Table.Summary>
-              )
-            : undefined
-        }
+      <Tabs
+        type="card"
+        activeKey={activeReportType}
+        onChange={(key) => setActiveReportType(key as ReportType)}
+        items={tabItems}
+        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
       />
     </div>
   );

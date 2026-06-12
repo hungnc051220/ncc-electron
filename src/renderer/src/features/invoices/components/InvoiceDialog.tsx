@@ -33,6 +33,7 @@ type KeyboardField =
   | "citizenId"
   | "representative"
   | "position"
+  | "note"
   | "contractCode";
 
 interface InvoiceDialogProps {
@@ -74,7 +75,7 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
   const getInitialValues = (): FieldType | undefined => {
     if (!editingItem) {
       return {
-        invoiceType: "personal"
+        invoiceType: "business"
       };
     }
 
@@ -201,8 +202,8 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
               </Form.Item>
             )}
             {invoiceType === "business" && (
-              <Form.Item<FieldType> name="representative" label="Đại diện">
-                <Input {...inputProps("representative", "Nhập dại diện")} />
+              <Form.Item<FieldType> name="representative" label="Khách hàng đại diện">
+                <Input {...inputProps("representative", "Nhập khách hàng đại diện")} />
               </Form.Item>
             )}
             {invoiceType === "business" && (
@@ -212,6 +213,9 @@ const InvoiceDialog = ({ open, onOpenChange, orderId, editingItem }: InvoiceDial
             )}
             <Form.Item<FieldType> name="contractCode" label="Hợp đồng số">
               <Input {...inputProps("contractCode", "Nhập hợp đồng số")} />
+            </Form.Item>
+            <Form.Item<FieldType> name="note" label="Ghi chú">
+              <Input {...inputProps("note", "Nhập ghi chú")} />
             </Form.Item>
           </div>
         </Form>

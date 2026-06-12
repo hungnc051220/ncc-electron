@@ -35,6 +35,11 @@ const AntdProvider = ({ children }: { children: React.ReactNode }) => {
               colorBgContainer: "#141414"
             })
           },
+          components: {
+            Table: {
+              rowHoverBg: isDark ? "#252640" : "#EEEEF8"
+            }
+          },
           algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm
         }}
       >

@@ -42,6 +42,9 @@ export const getDefaultFilterValues = (): ValuesProps => ({
 });
 
 const PRINT_ONLINE_TICKETS_PAGE_SIZE = 300;
+const getPrintedOnUtcTimestamp = (printedOnUtc?: string | null) =>
+  printedOnUtc ? dayjs(printedOnUtc).valueOf() : 0;
+
 type TableFilterState = Record<string, (Key | boolean)[] | null>;
 type TableSorterState = {
   columnKey?: Key;
@@ -269,6 +272,12 @@ const PrintOnlineTicketsPage = () => {
         case "barCode":
           result = compareText(left.order.barCode, right.order.barCode);
           break;
+        case "printedOnUtc":
+          result = compareNumber(
+            getPrintedOnUtcTimestamp(left.order.printedOnUtc),
+            getPrintedOnUtcTimestamp(right.order.printedOnUtc)
+          );
+          break;
         case "paymentId":
           result = compareNumber(left.order.id, right.order.id);
           break;
@@ -283,6 +292,9 @@ const PrintOnlineTicketsPage = () => {
           break;
         case "roomName":
           result = compareNullableText(left.room?.name, right.room?.name);
+          break;
+        case "isPrinted":
+          result = Number(!!left.order.printedOnUtc) - Number(!!right.order.printedOnUtc);
           break;
         default:
           result = 0;
@@ -366,7 +378,6 @@ const PrintOnlineTicketsPage = () => {
       width: 50,
       fixed: "left"
     },
-
     {
       title: "Mã đặt vé",
       key: "barCode",
@@ -379,6 +390,20 @@ const PrintOnlineTicketsPage = () => {
       render: (order) => order.barCode,
       fixed: "left",
       width: 150
+    },
+    {
+      title: "Thời gian in vé",
+      key: "printedOnUtc",
+      dataIndex: "order",
+      sorter: (a, b) =>
+        compareNumber(
+          getPrintedOnUtcTimestamp(a.order.printedOnUtc),
+          getPrintedOnUtcTimestamp(b.order.printedOnUtc)
+        ),
+      render: (order) =>
+        order.printedOnUtc ? dayjs(order.printedOnUtc).format("HH:mm DD/MM/YYYY") : "",
+      width: 150,
+      align: "center"
     },
     {
       title: "Mã thanh toán",
@@ -443,7 +468,9 @@ const PrintOnlineTicketsPage = () => {
       sorter: (a, b) =>
         dayjs(a.planScreening?.projectDate).valueOf() -
         dayjs(b.planScreening?.projectDate).valueOf(),
-      render: (planScreening) => dayjs(planScreening?.projectDate).format("DD/MM/YYYY")
+      render: (planScreening) => dayjs(planScreening?.projectDate).format("DD/MM/YYYY"),
+      width: 130,
+      align: "center"
     },
     {
       title: "Giờ chiếu",
@@ -452,7 +479,9 @@ const PrintOnlineTicketsPage = () => {
       sorter: (a, b) =>
         dayjs(a.planScreening?.projectTime).valueOf() -
         dayjs(b.planScreening?.projectTime).valueOf(),
-      render: (planScreening) => dayjs(planScreening?.projectTime).format("HH:mm")
+      render: (planScreening) => dayjs(planScreening?.projectTime).format("HH:mm"),
+      width: 120,
+      align: "center"
     },
     {
       title: "Phòng",
@@ -464,7 +493,8 @@ const PrintOnlineTicketsPage = () => {
         (record.room?.name || "").toLowerCase().includes(String(value).toLowerCase()),
       filters: roomNameColumnFilters,
       render: (room) => room?.name,
-      width: 120
+      width: 100,
+      align: "center"
     },
     {
       title: "Số vé",
@@ -497,7 +527,7 @@ const PrintOnlineTicketsPage = () => {
     {
       title: "Đã in",
       dataIndex: "order",
-      key: "printedOnUtc",
+      key: "isPrinted",
       width: 100,
       sorter: (a, b) => Number(!!a.order.printedOnUtc) - Number(!!b.order.printedOnUtc),
       render: (order) => (

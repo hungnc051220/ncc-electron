@@ -4,7 +4,13 @@ import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import { MoreOutlined } from "@ant-design/icons";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
-import { formatNumber, compareText, compareDate } from "@renderer/lib/utils";
+import {
+  formatNumber,
+  compareText,
+  compareDate,
+  compareNumber,
+  formatMoney
+} from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
@@ -101,23 +107,25 @@ const InvoicesPage = () => {
       fixed: "left"
     },
     {
-      title: "Loại hóa đơn",
-      key: "invoiceType",
-      dataIndex: "invoiceType",
-      sorter: (a, b) =>
-        compareText(
-          a.invoiceType === "personal" ? "Cá nhân" : "Đơn vị",
-          b.invoiceType === "personal" ? "Cá nhân" : "Đơn vị"
-        ),
-      render: (value: string) => (value === "personal" ? "Cá nhân" : "Đơn vị"),
-      fixed: "left"
+      title: "Thời gian tạo",
+      key: "createdAt",
+      dataIndex: "createdAt",
+      sorter: (a, b) => compareDate(a.createdAt, b.createdAt),
+      render: (value: string) => dayjs(value).format("HH:mm DD/MM/YYYY")
     },
     {
-      title: "Mã vé",
-      key: "barCode",
+      title: "Tổng số tiền",
+      key: "orderTotal",
       dataIndex: "order",
-      sorter: (a, b) => compareText(a.order?.barCode, b.order?.barCode),
-      render: (order) => order?.barCode
+      sorter: (a, b) => compareNumber(a.order?.orderTotal, b.order?.orderTotal),
+      render: (order) => formatMoney(order?.orderTotal),
+      align: "right"
+    },
+    {
+      title: "Mã số thuế",
+      key: "taxCode",
+      dataIndex: "taxCode",
+      sorter: (a, b) => compareText(a.taxCode, b.taxCode)
     },
     {
       title: "Tên người mua/đơn vị",
@@ -126,29 +134,45 @@ const InvoicesPage = () => {
       sorter: (a, b) => compareText(a.partyA, b.partyA)
     },
     {
-      title: "Địa chỉ",
-      key: "address",
-      dataIndex: "address",
-      sorter: (a, b) => compareText(a.address, b.address)
-    },
-    {
       title: "Email",
       key: "email",
       dataIndex: "email",
       sorter: (a, b) => compareText(a.email, b.email)
     },
     {
+      title: "Loại hóa đơn",
+      key: "invoiceType",
+      dataIndex: "invoiceType",
+      sorter: (a, b) =>
+        compareText(
+          a.invoiceType === "personal" ? "Cá nhân" : "Đơn vị",
+          b.invoiceType === "personal" ? "Cá nhân" : "Đơn vị"
+        ),
+      render: (value: string) => (value === "personal" ? "Cá nhân" : "Đơn vị")
+    },
+    {
+      title: "Mã vé",
+      key: "barCode",
+      dataIndex: "order",
+      sorter: (a, b) => compareText(a.order?.barCode, b.order?.barCode),
+      render: (order) => order?.barCode
+    },
+
+    {
+      title: "Địa chỉ",
+      key: "address",
+      dataIndex: "address",
+      sorter: (a, b) => compareText(a.address, b.address),
+      width: 300
+    },
+
+    {
       title: "Số điện thoại",
       key: "phoneNumber",
       dataIndex: "phoneNumber",
       sorter: (a, b) => compareText(a.phoneNumber, b.phoneNumber)
     },
-    {
-      title: "Mã số thuế",
-      key: "taxCode",
-      dataIndex: "taxCode",
-      sorter: (a, b) => compareText(a.taxCode, b.taxCode)
-    },
+
     {
       title: "Căn cước công dân",
       key: "citizenId",
@@ -173,13 +197,7 @@ const InvoicesPage = () => {
       dataIndex: "contractCode",
       sorter: (a, b) => compareText(a.contractCode, b.contractCode)
     },
-    {
-      title: "Thời gian tạo",
-      key: "createdAt",
-      dataIndex: "createdAt",
-      sorter: (a, b) => compareDate(a.createdAt, b.createdAt),
-      render: (value: string) => dayjs(value).format("HH:mm DD/MM/YYYY")
-    },
+
     {
       title: "Thời gian sửa",
       key: "updatedAt",

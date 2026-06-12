@@ -126,6 +126,17 @@ const Seat = ({
     seat.status !== 1 &&
     seat.type !== 12;
 
+  const shouldShowSoldSeatTypeBorder =
+    !!seatColor &&
+    seat.status === 1 &&
+    !isSelected &&
+    !seat.isHold &&
+    !isPendingPayment &&
+    !isReleasedFromOrder &&
+    !seat.isContract &&
+    !seat.isInvitation &&
+    seat.type !== 12;
+
   return (
     <div
       className={cn(
@@ -151,6 +162,9 @@ const Seat = ({
       style={{
         backgroundColor: shouldShowPositionColor ? seatColor : undefined,
         color: shouldShowPositionColor ? getContrastTextColor(seatColor) : undefined,
+        borderColor: shouldShowSoldSeatTypeBorder ? seatColor : undefined,
+        borderStyle: shouldShowSoldSeatTypeBorder ? "solid" : undefined,
+        borderWidth: shouldShowSoldSeatTypeBorder ? "3px" : undefined,
         width: `${size}px`,
         height: `${size}px`
       }}

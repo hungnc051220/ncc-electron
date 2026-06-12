@@ -3,6 +3,20 @@ import dayjs from "dayjs";
 
 export const rangePresets: RangePickerProps["presets"] = [
   { label: "Hôm nay", value: () => [dayjs().startOf("day"), dayjs().endOf("day")] },
+  {
+    label: "Hôm qua",
+    value: () => [
+      dayjs().subtract(1, "day").startOf("day"),
+      dayjs().subtract(1, "day").endOf("day")
+    ]
+  },
+  {
+    label: "Tháng trước",
+    value: () => [
+      dayjs().subtract(1, "month").startOf("month"),
+      dayjs().subtract(1, "month").endOf("month")
+    ]
+  },
   { label: "7 ngày trước", value: () => [dayjs().subtract(7, "day"), dayjs()] },
   { label: "14 ngày trước", value: () => [dayjs().subtract(14, "day"), dayjs()] },
   { label: "30 ngày trước", value: () => [dayjs().subtract(30, "day"), dayjs()] },
