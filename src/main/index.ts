@@ -45,6 +45,62 @@ let currentQrState: QrState = {
 };
 
 const printService = createPrintService();
+let hasConfirmedAppQuit = false;
+let isQuitConfirmationOpen = false;
+
+async function confirmAppQuit(parentWindow?: BrowserWindow | null) {
+  if (hasConfirmedAppQuit) {
+    return true;
+  }
+
+  if (isQuitConfirmationOpen) {
+    return false;
+  }
+
+  isQuitConfirmationOpen = true;
+
+  const options = {
+    type: "warning" as const,
+    title: "Xác nhận thoát chương trình",
+    message: "Bạn có chắc chắn muốn thoát chương trình?",
+    detail: "Các thao tác đang thực hiện có thể chưa được lưu.",
+    buttons: ["Thoát chương trình", "Ở lại"],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true
+  };
+
+  try {
+    const result =
+      parentWindow && !parentWindow.isDestroyed()
+        ? await dialog.showMessageBox(parentWindow, options)
+        : await dialog.showMessageBox(options);
+
+    return result.response === 0;
+  } finally {
+    isQuitConfirmationOpen = false;
+  }
+}
+
+async function requestAppQuit(parentWindow?: BrowserWindow | null) {
+  const shouldQuit = await confirmAppQuit(parentWindow ?? mainWindow);
+
+  if (!shouldQuit) {
+    return;
+  }
+
+  hasConfirmedAppQuit = true;
+
+  if (customerWindow && !customerWindow.isDestroyed()) {
+    customerWindow.close();
+  }
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.close();
+  }
+
+  app.quit();
+}
 
 function configureDebugTools(win: BrowserWindow, openOnStart = false) {
   if (!shouldEnableDevTools) {
@@ -223,6 +279,19 @@ function createWindow(): void {
 
   mainWindow.on("ready-to-show", () => {
     mainWindow?.show();
+  });
+
+  mainWindow.on("close", (event) => {
+    if (hasConfirmedAppQuit) {
+      return;
+    }
+
+    event.preventDefault();
+    void requestAppQuit(mainWindow);
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -562,7 +631,7 @@ if (!gotTheLock) {
     });
 
     ipcMain.on("app:quit", () => {
-      app.quit();
+      void requestAppQuit(mainWindow);
     });
 
     createWindow();
@@ -580,8 +649,17 @@ if (!gotTheLock) {
 // explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    app.quit();
+    void requestAppQuit(mainWindow);
   }
+});
+
+app.on("before-quit", (event) => {
+  if (hasConfirmedAppQuit) {
+    return;
+  }
+
+  event.preventDefault();
+  void requestAppQuit(mainWindow);
 });
 
 // In this file you can include the rest of your app's specific main process

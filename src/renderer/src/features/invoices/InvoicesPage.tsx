@@ -197,7 +197,13 @@ const InvoicesPage = () => {
       dataIndex: "contractCode",
       sorter: (a, b) => compareText(a.contractCode, b.contractCode)
     },
-
+    {
+      title: "Ghi chú",
+      key: "note",
+      dataIndex: "note",
+      sorter: (a, b) => compareText(a.note, b.note),
+      width: 200
+    },
     {
       title: "Thời gian sửa",
       key: "updatedAt",
