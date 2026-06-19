@@ -1,11 +1,11 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.96",
+  "latestVersion": "1.0.97",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Cải thiện báo cáo và giao diện vận hành.",
-    "Tối ưu hóa quản lý hóa đơn, lịch sử đơn hàng và in vé online."
+    "Bổ sung hủy giữ chỗ cho vé mời, vé hợp đồng và đổi ghế.",
+    "Tối ưu thanh thao tác chọn ghế cho màn hình 1024x768."
   ],
   "releaseNotesUrl": ""
 }

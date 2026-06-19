@@ -4,6 +4,7 @@ import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
 import { useCreateOrder } from "@renderer/hooks/orders/useCreateOrder";
+import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
 import { planScreeningsKeys } from "@renderer/hooks/planScreenings/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { formatMoney, isPlanScreeningLocked } from "@renderer/lib/utils";
@@ -12,8 +13,8 @@ import { useAuthStore } from "@renderer/store/auth.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { ListSeat, OrderDetailProps, PlanScreeningDetailProps } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import type { DescriptionsProps } from "antd";
-import { Button, Descriptions, Form, Input, Modal, Select } from "antd";
+import { Button, Form, Input, Modal, Select } from "antd";
+import { CirclePlus, FileText, TimerOff, TicketX } from "lucide-react";
 import { ChangeEvent, Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
 import PrintInvitationTicketDialog from "./PrintInvitationTicketDialog";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
@@ -83,6 +84,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
   const [selectedItem, setSelectedItem] = useState<OrderDetailProps | null>(null);
   const [note, setNote] = useState("");
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
+  const [isCancelReservePending, setIsCancelReservePending] = useState(false);
 
   const handleDialogPrintClose = useCallback((open: boolean) => {
     setDialogPrintOpen(open);
@@ -97,6 +99,7 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
 
   const createOrder = useCreateOrder();
   const cancelOrder = useCancelOrder();
+  const { data: screeningOrders } = useOrdersByScreening(planScreeningId);
   const isPlanScreeningPast = isPlanScreeningLocked(data.projectDate, data.projectTime);
 
   const {
@@ -132,32 +135,10 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
     [selectedSeats]
   );
 
-  const items: DescriptionsProps["items"] = [
-    {
-      key: "1",
-      label: "Số vé",
-      children: <p className="text-right flex-1 font-bold">{selectedSeats.length}</p>
-    },
-    {
-      key: "2",
-      label: "Tiền giá trị",
-      children: <p className="text-right flex-1 font-bold">{formatMoney(totalPrice)}</p>
-    },
-    {
-      key: "3",
-      label: "Ghế đã chọn",
-      children: (
-        <p className="flex-1 text-right line-clamp-1 max-w-full">
-          {selectedSeats.map((s) => s.code).join(", ")}
-        </p>
-      )
-    },
-    {
-      key: "4",
-      label: "Nhân viên xử lý",
-      children: <p className="flex-1 text-right">{user?.fullname}</p>
-    }
-  ];
+  const selectedSeatText = useMemo(
+    () => selectedSeats.map((seat) => seat.code).join(", "),
+    [selectedSeats]
+  );
 
   const openNoteModal = () => {
     setNoteModalOpen(true);
@@ -255,41 +236,150 @@ const Actions = ({ data, planScreeningId, selectedSeats, setSelectedSeats }: Act
     });
   };
 
+  const onCancelReserve = async () => {
+    if (isPlanScreeningPast) {
+      message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
+    const selectedSeatCodes = new Set(
+      selectedSeats.map((seat) => `${seat.floor}-${seat.code.trim().toUpperCase()}`)
+    );
+    const orderIds = Array.from(
+      new Set(
+        (screeningOrders || [])
+          .filter((order) =>
+            order.items.some((item) =>
+              [item.listChairValueF1, item.listChairValueF2, item.listChairValueF3].some(
+                (seatValues, floorIndex) =>
+                  (seatValues || "")
+                    .split(",")
+                    .map((seat) => seat.trim())
+                    .filter(Boolean)
+                    .some((seatCode) =>
+                      selectedSeatCodes.has(`${floorIndex + 1}-${seatCode.toUpperCase()}`)
+                    )
+              )
+            )
+          )
+          .map((order) => order.id)
+      )
+    );
+
+    if (orderIds.length === 0) {
+      message.error("Không xác định được đơn giữ chỗ của các ghế đã chọn");
+      return;
+    }
+
+    setIsCancelReservePending(true);
+
+    try {
+      await ordersApi.cancelReserve({
+        listChairIndexF1: selectedSeats.filter((seat) => seat.floor === 1).map((seat) => seat.seat),
+        listChairIndexF2: selectedSeats.filter((seat) => seat.floor === 2).map((seat) => seat.seat),
+        listChairIndexF3: selectedSeats.filter((seat) => seat.floor === 3).map((seat) => seat.seat),
+        orderIds
+      });
+
+      setSelectedSeats([]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) }),
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.getOrdersByScreening(planScreeningId)
+        })
+      ]);
+      queryClient.refetchQueries({
+        queryKey: ordersKeys.all
+      });
+      message.success("Hủy giữ chỗ thành công");
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Hủy giữ chỗ thất bại"));
+    } finally {
+      setIsCancelReservePending(false);
+    }
+  };
+
+  const disableActions =
+    selectedSeats.length === 0 ||
+    createOrder.isPending ||
+    isCancelReservePending ||
+    isPlanScreeningPast;
+
   return (
     <div className="shrink-0 border-t border-emerald-900/20 bg-emerald-100/50 px-2 backdrop-blur-md dark:border-emerald-300/20 dark:bg-emerald-950/80">
-      <div className="p-2 flex gap-6 max-w-5xl mx-auto">
-        <div className="flex-1 bg-app-bg-container py-2 px-4 rounded-md">
-          <Descriptions size="small" items={items} column={2} />
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(300px,1fr)_minmax(190px,240px)_auto] items-center gap-2 p-2">
+        <div className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-1 rounded-md border border-white/55 bg-white/85 px-3 py-2 text-sm shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/35">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="shrink-0 text-slate-500 dark:text-slate-300">Số vé</span>
+            <span className="truncate font-bold text-slate-900 dark:text-slate-50">
+              {selectedSeats.length}
+            </span>
+          </div>
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="shrink-0 text-slate-500 dark:text-slate-300">Giá trị</span>
+            <span className="truncate font-bold text-slate-900 dark:text-slate-50">
+              {formatMoney(totalPrice)}
+            </span>
+          </div>
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="shrink-0 text-slate-500 dark:text-slate-300">Ghế</span>
+            <span className="truncate text-right font-semibold text-slate-700 dark:text-slate-100">
+              {selectedSeatText || "-"}
+            </span>
+          </div>
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="shrink-0 text-slate-500 dark:text-slate-300">NV</span>
+            <span className="truncate text-right font-semibold text-slate-700 dark:text-slate-100">
+              {user?.fullname || "-"}
+            </span>
+          </div>
         </div>
-        <div className="min-w-56">
-          <p className="text-sm">Ghi chú</p>
-          <Button className="w-full text-left justify-start" onClick={openNoteModal}>
-            {note.trim() ? note : "Nhập ghi chú"}
+        <div className="min-w-0">
+          <p className="mb-1 text-xs font-semibold text-slate-500 dark:text-slate-300">Ghi chú</p>
+          <Button
+            className="h-9 w-full justify-start overflow-hidden border-slate-200 bg-white/80 text-left dark:border-white/12 dark:bg-white/6"
+            icon={<FileText size={15} />}
+            onClick={openNoteModal}
+          >
+            <span className="truncate">{note.trim() ? note : "Nhập ghi chú"}</span>
           </Button>
         </div>
-        <div className="flex gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 rounded-md border border-slate-200/80 bg-white/80 p-1 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/35">
           {canCreate && (
             <Button
-              variant="outlined"
-              color="primary"
-              className="h-full! font-bold"
+              type="primary"
+              className="h-9 min-w-[104px] px-3 font-semibold"
+              icon={<CirclePlus size={15} />}
               onClick={onBooking}
-              disabled={selectedSeats.length === 0 || createOrder.isPending || isPlanScreeningPast}
+              disabled={disableActions}
             >
               Thêm vé mời
             </Button>
           )}
 
           {canDelete && (
-            <Button
-              variant="outlined"
-              color="danger"
-              className="h-full! font-bold"
-              disabled={selectedSeats.length === 0 || createOrder.isPending || isPlanScreeningPast}
-              onClick={() => setOpenCancelSeats(true)}
-            >
-              Hủy vé mời
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                color="orange"
+                className="h-9 min-w-[88px] border-amber-300 px-3 text-amber-700 hover:!border-amber-400 hover:!text-amber-700 dark:border-amber-500/40 dark:text-amber-200 dark:hover:!border-amber-400 dark:hover:!text-amber-100"
+                icon={<TimerOff size={15} />}
+                disabled={disableActions}
+                onClick={() => void onCancelReserve()}
+              >
+                Hủy giữ
+              </Button>
+              <Button
+                variant="outlined"
+                color="danger"
+                className="h-9 min-w-[104px] px-3 font-semibold"
+                icon={<TicketX size={15} />}
+                disabled={disableActions}
+                onClick={() => setOpenCancelSeats(true)}
+              >
+                Hủy vé mời
+              </Button>
+            </>
           )}
         </div>
       </div>

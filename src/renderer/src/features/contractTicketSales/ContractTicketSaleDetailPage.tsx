@@ -92,6 +92,7 @@ const ContractTicketSaleDetailPage = () => {
           <Actions
             data={data}
             orderDetail={orderDetail}
+            screeningOrders={screeningOrders || []}
             contractSeatKeys={contractSeatKeys}
             contractOrderId={Number(id)}
             planScreeningId={planScreeningIdNumber}
