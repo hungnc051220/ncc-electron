@@ -9,7 +9,15 @@ import {
   QrState,
   SeatTypeProps
 } from "@shared/types";
-import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
+import {
+  app,
+  autoUpdater as electronAutoUpdater,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  screen,
+  shell
+} from "electron";
 import fs from "fs";
 import path, { join } from "path";
 import icon from "../../resources/icon.ico?asset";
@@ -47,9 +55,19 @@ let currentQrState: QrState = {
 const printService = createPrintService();
 let hasConfirmedAppQuit = false;
 let isQuitConfirmationOpen = false;
+let isQuittingForUpdate = false;
+
+function setQuittingForUpdate(isInstalling: boolean) {
+  isQuittingForUpdate = isInstalling;
+
+  if (isInstalling) {
+    hasConfirmedAppQuit = true;
+    isQuitConfirmationOpen = false;
+  }
+}
 
 async function confirmAppQuit(parentWindow?: BrowserWindow | null) {
-  if (hasConfirmedAppQuit) {
+  if (hasConfirmedAppQuit || isQuittingForUpdate) {
     return true;
   }
 
@@ -282,7 +300,7 @@ function createWindow(): void {
   });
 
   mainWindow.on("close", (event) => {
-    if (hasConfirmedAppQuit) {
+    if (hasConfirmedAppQuit || isQuittingForUpdate) {
       return;
     }
 
@@ -307,7 +325,9 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
 
-  setupUpdater(mainWindow);
+  setupUpdater(mainWindow, {
+    onInstallUpdateStateChange: setQuittingForUpdate
+  });
 }
 
 function getExternalDisplay() {
@@ -648,18 +668,26 @@ if (!gotTheLock) {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
+  if (isQuittingForUpdate) {
+    return;
+  }
+
   if (process.platform !== "darwin") {
     void requestAppQuit(mainWindow);
   }
 });
 
 app.on("before-quit", (event) => {
-  if (hasConfirmedAppQuit) {
+  if (hasConfirmedAppQuit || isQuittingForUpdate) {
     return;
   }
 
   event.preventDefault();
   void requestAppQuit(mainWindow);
+});
+
+electronAutoUpdater.on("before-quit-for-update", () => {
+  setQuittingForUpdate(true);
 });
 
 // In this file you can include the rest of your app's specific main process

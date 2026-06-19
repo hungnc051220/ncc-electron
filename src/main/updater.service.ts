@@ -165,7 +165,11 @@ async function refreshPolicy(win?: BrowserWindow) {
   };
 }
 
-export function setupUpdater(win: BrowserWindow) {
+interface SetupUpdaterOptions {
+  onInstallUpdateStateChange?: (isInstalling: boolean) => void;
+}
+
+export function setupUpdater(win: BrowserWindow, setupOptions?: SetupUpdaterOptions) {
   const isDev = !app.isPackaged;
   const isDevReleaseChannel = appReleaseChannel === "dev";
 
@@ -205,8 +209,10 @@ export function setupUpdater(win: BrowserWindow) {
     }
 
     try {
+      setupOptions?.onInstallUpdateStateChange?.(true);
       autoUpdater.quitAndInstall(Boolean(options?.isSilent), true);
     } catch (error) {
+      setupOptions?.onInstallUpdateStateChange?.(false);
       safeSend(win, "update:error", getUpdateErrorMessage(error));
     }
   });
