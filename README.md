@@ -76,10 +76,9 @@ Workflow release nằm tại:
 
 - `.github/workflows/release.yml`
 
-Workflow này chạy khi có `push` lên 2 nhánh:
+Workflow này chạy khi có `push` lên nhánh:
 
 - `main`
-- `dev`
 
 Mỗi lần push, workflow sẽ:
 
@@ -88,45 +87,29 @@ Mỗi lần push, workflow sẽ:
 3. Đóng gói app Windows bằng `electron-builder`
 4. Tạo GitHub Release và upload các file build trong thư mục `dist`
 
-## Quy ước release theo nhánh
-
-### Nhánh `main`
+## Quy ước release
 
 - Dùng release channel: `latest`
 - Tạo release chính thức
 - Không tự bật DevTools trong bản đóng gói
 
-### Nhánh `dev`
+## Cách dùng version trong CI
 
-- Dùng release channel: `dev`
-- Tạo prerelease
-- Bản đóng gói cho phép mở DevTools
-- Khi mở app, DevTools sẽ tự bật ở chế độ `detach`
-- Có thể bật/tắt lại bằng `F12` hoặc `Ctrl/Cmd + Shift + I`
-
-## Cách sinh version trong CI
-
-Workflow không dùng trực tiếp patch version trong `package.json` cho từng lần release.
-
-Thay vào đó, CI sinh version động theo dạng:
+CI dùng version hiện tại trong `package.json` cho release chính thức:
 
 ```text
-main: <major>.<minor>.<buildNumber>
-dev:  <major>.<minor>.<buildNumber>-dev
+<major>.<minor>.<patch>
 ```
 
 Ví dụ:
 
 ```text
-1.0.24501
-1.0.24501-dev
+1.0.98
 ```
 
-Việc này giúp:
+Trước khi phát hành bản mới, cần cập nhật version trong `package.json`. Workflow sẽ tạo tag theo dạng `v<version>` và bỏ qua release nếu tag đó đã tồn tại.
 
-- Mỗi lần push đều có version riêng
-- Không bị trùng tag/release
-- `main` và `dev` không ghi đè lẫn nhau
+Điều này giúp tránh ghi đè tag/release đã có.
 
 ## Repo phát hành release
 
@@ -168,9 +151,8 @@ App dùng `electron-updater`.
 Khi build từ CI:
 
 - bản `main` sẽ kiểm tra update ở channel `latest`
-- bản `dev` sẽ kiểm tra update ở channel `dev` và chấp nhận prerelease
 
-Điều này giúp bản `dev` chỉ nhận update từ nhánh `dev`, còn bản stable chỉ nhận release từ `main`.
+Điều này giúp bản stable chỉ nhận release chính thức từ nhánh `main`.
 
 ## Các file liên quan đến release
 
@@ -184,14 +166,9 @@ Khi build từ CI:
 ### Phát triển tính năng
 
 ```bash
-git checkout dev
+git checkout main
 yarn dev
 ```
-
-Khi push lên `dev`:
-
-- GitHub Actions sẽ build prerelease
-- Bản build này mở được DevTools
 
 ### Phát hành chính thức
 

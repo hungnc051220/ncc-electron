@@ -159,6 +159,19 @@ const VouchersPage = () => {
       )
     },
     {
+      title: "Số vé tối thiểu",
+      key: "minTicketQuantity",
+      dataIndex: "minTicketQuantity",
+      width: 160,
+      align: "right",
+      sorter: (a, b) => compareNumber(a.minTicketQuantity, b.minTicketQuantity),
+      render: (value?: number) => (
+        <span className="font-medium text-slate-700 dark:text-slate-200">
+          {value && value > 0 ? formatNumber(value) : "Không yêu cầu"}
+        </span>
+      )
+    },
+    {
       title: "Áp dụng tối đa/khách",
       key: "perCustomerLimit",
       dataIndex: "perCustomerLimit",

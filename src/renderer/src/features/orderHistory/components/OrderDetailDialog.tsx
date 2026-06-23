@@ -14,6 +14,7 @@ import {
   cn,
   extractSeatValues,
   formatMoney,
+  formatNumber,
   formatPaymentMethod,
   resolvePaymentType,
   formatSeatValues,
@@ -206,6 +207,24 @@ const OrderDetailDialog = ({
     .filter(Boolean)
     .join(" ");
   const totalTickets = currentItems.reduce((sum, item) => sum + item.quantity, 0);
+  const ticketPriceDetails = useMemo(() => {
+    const priceQuantityMap = currentItems.reduce<Map<number, number>>((map, item) => {
+      const price = item.unitPriceInclTax || 0;
+      const quantity = item.quantity || 0;
+
+      if (quantity <= 0) {
+        return map;
+      }
+
+      map.set(price, (map.get(price) || 0) + quantity);
+      return map;
+    }, new Map());
+
+    return Array.from(priceQuantityMap.entries())
+      .sort(([priceA], [priceB]) => priceB - priceA)
+      .map(([price, quantity]) => `Vé ${formatMoney(price)}: ${formatNumber(quantity)} vé`)
+      .join(", ");
+  }, [currentItems]);
   const isRefundOrder = currentOrder?.refundStatusId != null;
   const isCancelOrder =
     currentOrder?.orderStatusId === OrderStatus.CANCELLED ||
@@ -1143,6 +1162,7 @@ const OrderDetailDialog = ({
                 {renderInfoRow("Phòng chiếu", currentDetail?.room?.name)}
 
                 {renderInfoRow("Số lượng vé", totalTickets)}
+                {renderInfoRow("Chi tiết giá vé", renderMultilineEllipsisText(ticketPriceDetails))}
                 {renderInfoRow("Vị trí ghế", renderMultilineEllipsisText(getChairs()))}
               </div>
             </div>

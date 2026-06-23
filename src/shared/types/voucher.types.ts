@@ -30,6 +30,7 @@ export interface BatchVoucherProps {
   endAt: string;
   status: number;
   minOrderAmount: number;
+  minTicketQuantity?: number;
   perCustomerLimit: number;
   createdBy: number;
   createdAt: string;

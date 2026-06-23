@@ -26,8 +26,6 @@ jobs:
       tag: ${{ steps.meta.outputs.tag }}
       channel: ${{ steps.meta.outputs.channel }}
       release_name: ${{ steps.meta.outputs.release_name }}
-      enable_devtools: ${{ steps.meta.outputs.enable_devtools }}
-      is_prerelease: ${{ steps.meta.outputs.is_prerelease }}
 
     steps:
       - name: Checkout source
@@ -38,25 +36,14 @@ jobs:
         shell: bash
         run: |
           base_version=$(node -p "require('./package.json').version")
-          if [ "${GITHUB_REF_NAME}" = "dev" ]; then
-            channel="dev"
-            version="${base_version}-dev.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
-            enable_devtools="true"
-            is_prerelease="true"
-          else
-            channel="latest"
-            version="${base_version}"
-            enable_devtools="false"
-            is_prerelease="false"
-          fi
+          channel="latest"
+          version="${base_version}"
 
           {
             echo "version=${version}"
             echo "tag=v${version}"
             echo "channel=${channel}"
             echo "release_name=Desktop ${GITHUB_REF_NAME} ${version}"
-            echo "enable_devtools=${enable_devtools}"
-            echo "is_prerelease=${is_prerelease}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Check existing release version
@@ -99,7 +86,7 @@ jobs:
         shell: pwsh
         env:
           APP_RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
-          APP_ENABLE_DEVTOOLS: ${{ needs.prepare-release.outputs.enable_devtools }}
+          APP_ENABLE_DEVTOOLS: "false"
         run: |
           yarn build
           npx electron-builder --win --publish never `
@@ -141,7 +128,7 @@ jobs:
       - name: Build Linux AppImage and DEB
         env:
           APP_RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
-          APP_ENABLE_DEVTOOLS: ${{ needs.prepare-release.outputs.enable_devtools }}
+          APP_ENABLE_DEVTOOLS: "false"
         run: |
           yarn build
           npx electron-builder --linux AppImage deb --publish never \
@@ -181,7 +168,7 @@ jobs:
           tag_name: ${{ needs.prepare-release.outputs.tag }}
           name: ${{ needs.prepare-release.outputs.release_name }}
           target_commitish: ${{ github.sha }}
-          prerelease: ${{ needs.prepare-release.outputs.is_prerelease }}
+          prerelease: false
           generate_release_notes: true
           files: |
             dist/*

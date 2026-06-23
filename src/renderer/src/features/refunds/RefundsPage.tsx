@@ -131,6 +131,14 @@ const RefundsPage = () => {
           : ""
     },
     {
+      title: "Người hủy",
+      key: "cancelUserName",
+      dataIndex: "order",
+      sorter: (a, b) =>
+        compareText(a.order?.cancelTicket?.userName, b.order?.cancelTicket?.userName),
+      render: (order) => order?.cancelTicket?.userName || ""
+    },
+    {
       title: "Lý do hủy vé",
       key: "reason",
       dataIndex: "order",

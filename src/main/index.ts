@@ -15,8 +15,10 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
   screen,
-  shell
+  shell,
+  type MenuItemConstructorOptions
 } from "electron";
 import fs from "fs";
 import path, { join } from "path";
@@ -152,6 +154,41 @@ function configureDebugTools(win: BrowserWindow, openOnStart = false) {
       }
     });
   }
+}
+
+function configureContextMenu(win: BrowserWindow) {
+  win.webContents.on("context-menu", (_event, params) => {
+    if (win.isDestroyed() || win.webContents.isDestroyed()) {
+      return;
+    }
+
+    const { editFlags } = params;
+
+    if (params.isEditable) {
+      const menu = Menu.buildFromTemplate([
+        { role: "cut", enabled: editFlags.canCut },
+        { role: "copy", enabled: editFlags.canCopy },
+        { role: "paste", enabled: editFlags.canPaste },
+        { type: "separator" },
+        { role: "selectAll", enabled: editFlags.canSelectAll }
+      ]);
+
+      menu.popup({ window: win });
+      return;
+    }
+
+    if (!params.selectionText.trim()) {
+      return;
+    }
+
+    const template: MenuItemConstructorOptions[] = [{ role: "copy", enabled: editFlags.canCopy }];
+
+    if (editFlags.canSelectAll) {
+      template.push({ type: "separator" }, { role: "selectAll", enabled: true });
+    }
+
+    Menu.buildFromTemplate(template).popup({ window: win });
+  });
 }
 
 function loadRenderer(win: BrowserWindow, route: string) {
@@ -294,6 +331,7 @@ function createWindow(): void {
   });
 
   configureDebugTools(mainWindow, enablePackagedDevTools);
+  configureContextMenu(mainWindow);
 
   mainWindow.on("ready-to-show", () => {
     mainWindow?.show();
@@ -371,6 +409,7 @@ function createCustomerWindow(route: string) {
   });
 
   configureDebugTools(customerWindow);
+  configureContextMenu(customerWindow);
 
   loadRenderer(customerWindow, route);
 
