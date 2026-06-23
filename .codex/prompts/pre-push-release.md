@@ -22,8 +22,8 @@ Inspect repo trước, không tự bịa script, remote, secret, bucket hoặc r
 - Chỉ chạy command có trong `package.json`. Ưu tiên:
   - `npm run typecheck`
   - `npm run lint`
+  - `npm test` nếu script test tồn tại
   - `npm run build`
-- `npm test` không nằm trong gate bắt buộc của flow push/release; chỉ chạy khi user yêu cầu rõ hoặc thay đổi có rủi ro test đáng kể.
 - Nếu command bắt buộc fail, dừng lại, tóm tắt lỗi, file liên quan và hướng sửa. Không push khi check bắt buộc chưa pass.
 - Không chạy `lint:fix`, `format`, build release hoặc push nếu user chưa yêu cầu rõ.
 - Nếu user yêu cầu push nhiều remote, ưu tiên GitHub trước để GitHub Actions chạy sớm, sau đó mới push Bitbucket.
@@ -38,8 +38,9 @@ Inspect repo trước, không tự bịa script, remote, secret, bucket hoặc r
 - Sau build, kiểm tra artifact thật trong `dist` theo target:
   - Windows: `dist/*.exe`, `dist/*.blockmap`, `dist/*.yml`
   - Linux CI: `dist/*.AppImage`, `dist/*.deb`, `dist/*.blockmap`, `dist/*.yml`
-- Không xử lý hoặc đẩy `src/main/update-policy.json` nếu build fail hoặc artifact release chưa tồn tại.
+- `src/main/update-policy.json` là post-release step: không cập nhật/push file này trước khi GitHub Actions build/release thành công và artifact/release hợp lệ.
 - Nếu update `update-policy.json`, kiểm tra `latestVersion`, `minSupportedVersion`, `mode`, `messages`, `releaseNotesUrl` và liên hệ với release/tag thực tế.
+- `messages` trong `update-policy.json` là user-facing changelog, phải viết tiếng Việt tự nhiên, dễ hiểu, mô tả thay đổi theo góc nhìn người dùng; không dùng thuật ngữ kỹ thuật như build, artifact, pipeline, workflow, Electron, IPC, refactor, patch, commit hoặc release job.
 - Nếu user muốn release `dev`, phải confirm workflow trigger hiện tại trước khi bật hoặc push.
 - Nếu cần validate skill nhưng môi trường thiếu Python, ghi rõ không chạy được validator và fallback bằng review thủ công.
 

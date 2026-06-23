@@ -14,12 +14,14 @@ File này lưu các quyết định bền vững cho repo. Không dùng như cha
 - Test tối thiểu sau thay đổi code là `npm run typecheck`; chạy `npm run lint` khi có sửa TypeScript/TSX. Test chuyên sâu theo phạm vi module.
 - GitHub là remote chính để chạy GitHub Actions; Bitbucket là remote mirror/backup hoặc review nội bộ.
 - Khi push code lên nhiều remote, ưu tiên push GitHub trước để CI chạy sớm, sau đó mới push Bitbucket.
-- Trước khi push/release phải pass local checks bắt buộc theo script có thật trong `package.json`: `typecheck`, `lint`, `build`. `npm test` là check tùy chọn theo phạm vi/rủi ro hoặc khi user yêu cầu rõ. Nếu local check bắt buộc fail thì không push.
+- Trước khi push/release phải pass local checks bắt buộc theo script có thật trong `package.json`: `typecheck`, `lint`, `test` nếu có script, và `build`. Nếu local check bắt buộc fail thì không push.
 - Nếu push GitHub fail thì không push tiếp Bitbucket, trừ khi user yêu cầu rõ.
 - Release hiện tại coi GitHub Releases là release target chính nếu repo không thể hiện server, bucket hoặc release target khác.
-- Không xử lý hoặc push `src/main/update-policy.json` nếu build fail hoặc artifact release chưa tồn tại.
+- Không xử lý hoặc push `src/main/update-policy.json` nếu GitHub Actions build/release chưa thành công hoặc artifact/release chưa hợp lệ.
 - Nếu cần release `dev`, phải confirm lại workflow trigger trước khi bật.
 - Nếu môi trường thiếu Python nên không validate skill tự động được, ghi rõ trong kết quả và fallback bằng review thủ công.
+- `messages` trong `src/main/update-policy.json` là changelog hiển thị cho người dùng cuối, không phải log kỹ thuật/CI. Nội dung phải mô tả thay đổi theo góc nhìn người dùng, tiếng Việt tự nhiên, ngắn gọn, dễ hiểu và không dùng thuật ngữ nội bộ như build, artifact, pipeline, workflow, Electron, IPC, refactor, patch, commit hoặc release job.
+- Ví dụ task `Thêm context menu copy/paste` nên viết message: `Thêm menu chuột phải giúp sao chép, dán và chọn nội dung nhanh hơn.`
 
 ## Không Lưu Ở Đây
 

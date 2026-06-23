@@ -69,6 +69,8 @@ Prompt tái sử dụng:
 
 Khi user nói ngắn như “Tôi đã tăng version trong package.json, hãy release phiên bản mới”, “Đẩy code và release bản mới”, hoặc “Chuẩn bị release phiên bản mới”, ưu tiên dùng [.codex/prompts/release-version.md](.codex/prompts/release-version.md).
 
+Trong one-shot release, `src/main/update-policy.json` là bước hậu release: chỉ cập nhật/push sau khi GitHub Actions build/release thành công và artifact/release hợp lệ. Trường `messages` trong file này là thông tin cập nhật/changelog hiển thị cho người dùng cuối, phải viết tiếng Việt tự nhiên, dễ hiểu, mô tả lợi ích hoặc hành vi mới; không dùng log kỹ thuật như build, artifact, pipeline, workflow, Electron, IPC, refactor, patch, commit hoặc release job.
+
 ## Hướng Dẫn Test
 
 Vitest chạy trong jsdom với Testing Library, jest-dom, MSW, setup timezone dayjs, reset store và `queryClient.clear()` từ `src/renderer/src/test/setup.ts`. Dùng React Testing Library để test hành vi người dùng và trạng thái hiển thị. Dùng MSW khi cần mô phỏng network behavior; mock trực tiếp domain API cho test mutation hook hẹp nếu test gần đó đang theo pattern này. Dùng Playwright cho luồng end-to-end như booking/customer-display hoặc tích hợp trình duyệt.

@@ -4,8 +4,10 @@
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Sửa lỗi hiển thị xác nhận thoát khi khởi động lại để cài cập nhật.",
-    "Tối ưu luồng cài đặt phiên bản mới sau khi tải về."
+    "Thêm menu chuột phải giúp sao chép, dán và chọn nội dung nhanh hơn.",
+    "Có thể sao chép dữ liệu trong bảng thuận tiện hơn khi bôi đen nội dung.",
+    "Hiển thị rõ số vé tối thiểu cần có khi áp dụng voucher.",
+    "Bổ sung thông tin người hủy vé và chi tiết số vé theo từng mức giá trong đơn hàng."
   ],
   "releaseNotesUrl": ""
 }

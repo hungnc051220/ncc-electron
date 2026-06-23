@@ -30,8 +30,10 @@ Dùng skill này khi user yêu cầu build release Electron, kiểm tra artifact
    - `npm run build:unpack` để build thư mục unpack.
    - `npm run build:linux:wsl` nếu cần build Linux từ Windows qua WSL.
 5. Sau build, kiểm tra artifact thật trong `dist`.
-6. Chỉ xử lý `src/main/update-policy.json` sau khi build pass và artifact đúng target tồn tại.
-7. Không upload, push hoặc publish nếu build fail hoặc artifact chưa tồn tại.
+6. Push GitHub để GitHub Actions chạy release; xác nhận workflow build/release thành công.
+7. Xác nhận GitHub Release/artifact hợp lệ theo workflow thực tế.
+8. Chỉ xử lý `src/main/update-policy.json` sau khi GitHub Actions thành công và artifact/release hợp lệ.
+9. Không upload, push hoặc publish policy nếu build/release fail hoặc artifact chưa tồn tại.
 
 ## Artifact Cần Kiểm Tra
 
@@ -49,9 +51,14 @@ Khi kiểm tra local, phân biệt artifact mới theo `LastWriteTime`, version 
 
 - File nằm ở `src/main/update-policy.json`.
 - App mặc định fetch policy từ `https://raw.githubusercontent.com/hungnc051220/ncc-electron/main/src/main/update-policy.json`.
-- Chỉ cập nhật policy sau khi release build thành công và đã xác nhận version/tag.
+- Chỉ cập nhật policy sau khi GitHub Actions release thành công và đã xác nhận version/tag/artifact.
 - Kiểm tra các field: `enabled`, `latestVersion`, `minSupportedVersion`, `mode`, `messages`, `releaseNotesUrl`.
-- Không đẩy riêng `update-policy.json` trước khi artifact release đã tồn tại. Workflow hiện `paths-ignore` file này nên push chỉ policy không kích hoạt release.
+- `messages` là changelog hiển thị cho người dùng cuối, không phải log kỹ thuật, kết quả build hoặc thông báo CI/CD.
+- Message phải viết tiếng Việt tự nhiên, ngắn gọn, dễ hiểu, mô tả lợi ích/hành vi mới theo góc nhìn người dùng.
+- Không dùng thuật ngữ kỹ thuật như build, artifact, pipeline, workflow, Electron, IPC, refactor, patch, commit hoặc release job.
+- Nếu task kỹ thuật là `Thêm context menu copy/paste`, message phù hợp là `Thêm menu chuột phải giúp sao chép, dán và chọn nội dung nhanh hơn.`
+- Nếu không rõ nên ghi message gì, đọc git diff để đề xuất changelog user-facing hoặc hỏi user xác nhận.
+- Không đẩy riêng `update-policy.json` trước khi artifact/release đã tồn tại. Workflow hiện `paths-ignore` file này nên push chỉ policy không kích hoạt release.
 
 ## Thông Tin Cần User Cung Cấp Khi Thiếu
 
