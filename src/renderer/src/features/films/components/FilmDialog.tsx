@@ -55,6 +55,8 @@ const ageAboveLabelMap = {
   18: "Phim được phổ biến đến người xem từ đủ 18 tuổi trở lên (18+)"
 };
 
+const normalizeAgeAbove = (value?: number | null) => value ?? null;
+
 export interface FieldValues {
   id?: number;
   filmName: string;
@@ -254,7 +256,7 @@ const FilmDialog = ({
           ...values,
           premieredDay: values["premieredDay"].format("YYYY-MM-DD"),
           orderNo: 0,
-          ageAbove: values.ageAbove ? values.ageAbove : null
+          ageAbove: normalizeAgeAbove(values.ageAbove)
         },
         {
           onSuccess: () => {
@@ -273,7 +275,7 @@ const FilmDialog = ({
             id: editingFilm.id,
             ...values,
             premieredDay: values["premieredDay"].format("YYYY-MM-DD"),
-            ageAbove: values.ageAbove ? values.ageAbove : null
+            ageAbove: normalizeAgeAbove(values.ageAbove)
           }
         },
         {
