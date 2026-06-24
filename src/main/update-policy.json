@@ -1,13 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.99",
+  "latestVersion": "1.0.100",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Thêm menu chuột phải giúp sao chép, dán và chọn nội dung nhanh hơn.",
-    "Có thể sao chép dữ liệu trong bảng thuận tiện hơn khi bôi đen nội dung.",
-    "Hiển thị rõ số vé tối thiểu cần có khi áp dụng voucher.",
-    "Bổ sung thông tin người hủy vé và chi tiết số vé theo từng mức giá trong đơn hàng."
+    "Giữ đúng lựa chọn phim dành cho mọi độ tuổi khi tạo hoặc chỉnh sửa phim."
   ],
   "releaseNotesUrl": ""
 }
