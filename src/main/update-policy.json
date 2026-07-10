@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.100",
+  "latestVersion": "1.0.101",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Giữ đúng lựa chọn phim dành cho mọi độ tuổi khi tạo hoặc chỉnh sửa phim."
+    "Khi hủy vé, hệ thống tự động chọn toàn bộ ghế trong cùng đơn và hiển thị xác nhận rõ ràng để tránh hủy nhầm."
   ],
-  "releaseNotesUrl": ""
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.101"
 }
