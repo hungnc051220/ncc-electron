@@ -800,19 +800,62 @@ describe("Actions", () => {
     fireEvent.click(screen.getByRole("button", { name: /^hủy vé$/i }));
     fireEvent.mouseDown(screen.getByRole("combobox"));
     fireEvent.click(await screen.findByText("Khach doi y"));
-    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    fireEvent.click(screen.getByRole("button", { name: /quay lại/i }));
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: /^hủy vé$/i }));
-    fireEvent.click(screen.getByRole("button", { name: /ok/i }));
+    fireEvent.click(screen.getByRole("button", { name: /hủy toàn bộ đơn/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Chọn lý do hủy vé")).toBeInTheDocument();
     });
     expect(mocks.cancelOrderMutate).not.toHaveBeenCalled();
+  });
+
+  it("shows the complete order and submits its order id when cancelling tickets", async () => {
+    const seats = [
+      createSeat({ seat: "1", code: "A1", status: 1 }),
+      createSeat({ seat: "2", code: "A2", status: 1 })
+    ];
+
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={seats}
+        setSelectedSeats={vi.fn()}
+        cancelMode
+        setCancelMode={vi.fn()}
+        cancelOrderSelection={{
+          orderId: 456,
+          directSeatKey: "1-2",
+          seats,
+          seatKeys: ["1-1", "1-2"],
+          isComplete: true
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^hủy vé$/i }));
+    expect(screen.getByRole("dialog", { name: /hủy toàn bộ đơn vé/i })).toHaveTextContent("A1, A2");
+
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByText("Khach doi y"));
+    fireEvent.click(screen.getByRole("button", { name: /hủy toàn bộ đơn/i }));
+
+    await waitFor(() => {
+      expect(mocks.cancelOrderMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          planScreenId: 1,
+          orderIds: [456],
+          listChairIndexF1: ["1", "2"]
+        }),
+        expect.any(Object)
+      );
+    });
   });
 
   it("cancels reserved seats with all matching order ids", async () => {

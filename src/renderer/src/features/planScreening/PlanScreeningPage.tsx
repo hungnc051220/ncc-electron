@@ -29,6 +29,12 @@ import { ordersApi } from "@renderer/api/orders.api";
 import { useSelectingChairs } from "@renderer/hooks/orders/useSelectingChairs";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import {
+  buildCancelOrderSelection,
+  CancelOrderSelection,
+  isOrderCancellable
+} from "./components/cancelOrderSelection";
 
 const getSeatKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
 
@@ -78,6 +84,9 @@ const buildSelectingDto = (planScreenId: number, currentPosName: string, seats: 
 const PlanScreeningPage = () => {
   const { id } = useParams();
   const [selectedSeats, setSelectedSeats] = useState<ListSeat[]>([]);
+  const [cancelOrderSelection, setCancelOrderSelection] = useState<CancelOrderSelection | null>(
+    null
+  );
   const [selectingSeatsByOther, setSelectingSeatsByOther] = useState<Record<string, string>>({});
   const [cancelMode, setCancelMode] = useState(false);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
@@ -88,6 +97,7 @@ const PlanScreeningPage = () => {
   const [qrState, setQrState] = useState<QrState>({ isOpen: false });
   const { posName } = useSettingPosStore();
   const queryClient = useQueryClient();
+  const { message } = useAntdApp();
   const syncedSelectedSeatsRef = useRef<ListSeat[]>([]);
   const syncedSelectedSeatKeysRef = useRef<Set<string>>(new Set());
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -594,6 +604,56 @@ const PlanScreeningPage = () => {
   const renderSeatTypes = isCustomerMode ? customerSeatTypes : seatTypes;
   const renderOrders = isCustomerMode ? customerOrders : orders;
 
+  const handleCancelOrderSelectionChange = useCallback((selection: CancelOrderSelection | null) => {
+    setCancelOrderSelection(selection);
+    setSelectedSeats(selection?.seats || []);
+  }, []);
+
+  const handleIncompleteCancelOrder = useCallback(() => {
+    message.warning(
+      "Dữ liệu ghế của đơn chưa đồng bộ đầy đủ. Vui lòng tải lại sơ đồ trước khi hủy."
+    );
+  }, [message]);
+
+  useEffect(() => {
+    if (!cancelMode || !cancelOrderSelection || !data?.listSeats || !orders) return;
+
+    const order = orders.find((item) => item.id === cancelOrderSelection.orderId);
+    if (!order || !isOrderCancellable(order)) {
+      handleCancelOrderSelectionChange(null);
+      message.warning("Đơn vé đã thay đổi trạng thái. Vui lòng chọn lại ghế cần hủy.");
+      return;
+    }
+
+    const nextSelection = buildCancelOrderSelection({
+      order,
+      seats: data.listSeats.flat(),
+      planScreeningId: Number(id),
+      directSeatKey: cancelOrderSelection.directSeatKey
+    });
+
+    if (!nextSelection.isComplete) {
+      handleCancelOrderSelectionChange(null);
+      handleIncompleteCancelOrder();
+      return;
+    }
+
+    const currentKeys = cancelOrderSelection.seatKeys.join(",");
+    const nextKeys = nextSelection.seatKeys.join(",");
+    if (currentKeys !== nextKeys) {
+      handleCancelOrderSelectionChange(nextSelection);
+    }
+  }, [
+    cancelMode,
+    cancelOrderSelection,
+    data?.listSeats,
+    handleCancelOrderSelectionChange,
+    handleIncompleteCancelOrder,
+    id,
+    message,
+    orders
+  ]);
+
   if (!id) {
     return (
       <div className="flex h-screen items-center justify-center bg-app-bg p-4">
@@ -658,11 +718,17 @@ const PlanScreeningPage = () => {
         <Seats
           data={renderData}
           orders={renderOrders}
+          currentPlanScreeningId={Number(id)}
           seatTypes={renderSeatTypes}
           selectedSeats={selectedSeats}
           selectingSeatsByOther={isCustomerMode ? undefined : selectingSeatsByOther}
           setSelectedSeats={setSelectedSeats}
           cancelMode={cancelMode}
+          cancelOrderSelection={isCustomerMode ? null : cancelOrderSelection}
+          onCancelOrderSelectionChange={
+            isCustomerMode ? undefined : handleCancelOrderSelectionChange
+          }
+          onIncompleteCancelOrder={isCustomerMode ? undefined : handleIncompleteCancelOrder}
           isCustomerView={isCustomerMode}
           syncedSelectedFloor={isCustomerMode ? selectedFloor : undefined}
           onSelectedFloorChange={!isCustomerMode ? setSelectedFloor : undefined}
@@ -686,6 +752,8 @@ const PlanScreeningPage = () => {
             setSelectedSeats={setSelectedSeats}
             cancelMode={cancelMode}
             setCancelMode={setCancelMode}
+            cancelOrderSelection={cancelOrderSelection}
+            onCancelOrderSelectionClear={() => handleCancelOrderSelectionChange(null)}
           />
         )}
 

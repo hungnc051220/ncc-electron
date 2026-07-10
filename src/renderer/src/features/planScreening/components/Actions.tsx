@@ -44,6 +44,7 @@ import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import { CancelOrderSelection, formatCancelSeatList } from "./cancelOrderSelection";
 
 export const paymentTypes = [
   {
@@ -118,6 +119,8 @@ interface ActionsProps {
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
   cancelMode: boolean;
   setCancelMode: Dispatch<SetStateAction<boolean>>;
+  cancelOrderSelection?: CancelOrderSelection | null;
+  onCancelOrderSelectionClear?: () => void;
 }
 
 const Actions = ({
@@ -126,7 +129,9 @@ const Actions = ({
   selectedSeats,
   setSelectedSeats,
   cancelMode,
-  setCancelMode
+  setCancelMode,
+  cancelOrderSelection,
+  onCancelOrderSelectionClear = () => undefined
 }: ActionsProps) => {
   const { message } = useAntdApp();
 
@@ -150,6 +155,20 @@ const Actions = ({
   const [qrData, setQrData] = useState<QrDialogData | undefined>(undefined);
   const qrDataRef = useRef<QrDialogData | undefined>(undefined);
   const [openCancelSeats, setOpenCancelSeats] = useState(false);
+  const cancelSeatList = useMemo(
+    () => formatCancelSeatList(cancelOrderSelection?.seats || []),
+    [cancelOrderSelection?.seats]
+  );
+  const hasValidCancelSelection = cancelOrderSelection
+    ? cancelOrderSelection.isComplete
+    : selectedSeats.length > 0;
+
+  useEffect(() => {
+    if (!cancelOrderSelection) {
+      setOpenCancelSeats(false);
+      form.resetFields();
+    }
+  }, [cancelOrderSelection, form]);
   const [lastSaleTotal, setLastSaleTotal] = useState(
     () => Number(sessionStorage.getItem("lastTotal")) || 0
   );
@@ -670,6 +689,7 @@ const Actions = ({
 
     const body: CancelOrderDto = {
       planScreenId,
+      orderIds: cancelOrderSelection ? [cancelOrderSelection.orderId] : undefined,
       cancelReasonId: values?.cancelReasonId || 1,
       isRefund: values?.isRefund || false,
       ...selectedSeatIndicesByFloor
@@ -678,6 +698,7 @@ const Actions = ({
     cancelOrder.mutate(body, {
       onSuccess: () => {
         setSelectedSeats([]);
+        onCancelOrderSelectionClear();
         setOpenCancelSeats(false);
         form.resetFields();
         queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
@@ -774,28 +795,41 @@ const Actions = ({
             variant="outlined"
             color="danger"
             disabled={
-              !canUpdate || !cancelMode || selectedSeats.length === 0 || isPlanScreeningPast
+              !canUpdate ||
+              !cancelMode ||
+              !hasValidCancelSelection ||
+              selectedSeats.length === 0 ||
+              isPlanScreeningPast ||
+              cancelOrder.isPending
             }
             onClick={() => setOpenCancelSeats(true)}
           >
             Hủy vé
           </Button>
           <Modal
-            title="Xác nhận hủy vé"
+            title="Hủy toàn bộ đơn vé?"
             open={openCancelSeats}
+            okText="Hủy toàn bộ đơn"
+            cancelText="Quay lại"
             onOk={() => {
               form.submit();
             }}
             onCancel={() => {
+              if (cancelOrder.isPending) return;
               setOpenCancelSeats(false);
               form.resetFields();
             }}
             okButtonProps={{
-              loading: cancelOrder.isPending
+              danger: true,
+              loading: cancelOrder.isPending,
+              disabled: !hasValidCancelSelection
             }}
             cancelButtonProps={{
               disabled: cancelOrder.isPending
             }}
+            closable={!cancelOrder.isPending}
+            keyboard={!cancelOrder.isPending}
+            mask={{ closable: !cancelOrder.isPending }}
             forceRender
             modalRender={(dom) => (
               <Form<FieldType>
@@ -813,6 +847,17 @@ const Actions = ({
             )}
             destroyOnHidden
           >
+            {cancelOrderSelection && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-950 dark:border-red-800/70 dark:bg-red-950/35 dark:text-red-100">
+                <p className="font-semibold">
+                  Đơn #{cancelOrderSelection.orderId} gồm {cancelOrderSelection.seats.length} ghế:
+                </p>
+                <p className="mt-1 wrap-break-word">{cancelSeatList}</p>
+                <p className="mt-2 text-red-800 dark:text-red-200">
+                  Bạn không thể hủy riêng từng ghế. Sau khi hủy, bạn cần đặt lại đơn mới.
+                </p>
+              </div>
+            )}
             <Form.Item<FieldType>
               name="cancelReasonId"
               label="Lý do hủy vé"

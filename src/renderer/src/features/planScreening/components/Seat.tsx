@@ -89,6 +89,8 @@ const Seat = ({
   seatUniqueKey,
   isDimmed,
   isSpotlighted,
+  isCancelRelated,
+  isCancelPrimary,
   onHover,
   onLeave
 }: {
@@ -105,6 +107,8 @@ const Seat = ({
   seatUniqueKey?: string;
   isDimmed?: boolean;
   isSpotlighted?: boolean;
+  isCancelRelated?: boolean;
+  isCancelPrimary?: boolean;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
 }) => {
@@ -157,7 +161,11 @@ const Seat = ({
         isSelectingByOther && !isSelected && "ring-1 ring-primary/70 dark:ring-white",
         isDimmed && "opacity-30 saturate-50",
         isSpotlighted && "ring-2 ring-white/90 shadow-[0_0_0_2px_rgba(59,130,246,0.55)] z-10",
-        isSpotlighted && !isSelected && "opacity-100 saturate-100"
+        isSpotlighted && !isSelected && "opacity-100 saturate-100",
+        isCancelRelated &&
+          "opacity-100 saturate-100 bg-red-400 text-white ring-2 ring-red-200/80 z-10 dark:bg-red-700 dark:ring-red-300/60",
+        isCancelPrimary &&
+          "bg-red-600 text-white ring-2 ring-red-100 shadow-[0_0_0_3px_rgba(220,38,38,0.45),0_6px_16px_rgba(127,29,29,0.35)] z-20 dark:bg-red-500 dark:ring-red-200"
       )}
       style={{
         backgroundColor: shouldShowPositionColor ? seatColor : undefined,

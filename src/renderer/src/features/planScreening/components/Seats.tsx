@@ -27,6 +27,13 @@ import { useNavigate, useSearchParams } from "react-router";
 import Selecto from "react-selecto";
 import Seat from "./Seat";
 import TooltipFloating from "./TooltipFloating";
+import {
+  buildCancelOrderSelection,
+  buildSeatOrderMap,
+  CancelOrderSelection,
+  findSeatOrder,
+  isOrderCancellable
+} from "./cancelOrderSelection";
 
 type TooltipPosition = {
   x: number;
@@ -56,6 +63,9 @@ interface SeatsProps {
   selectionMode?: "default" | "emptyOnly";
   restrictedSeatKeys?: string[];
   spotlightSeatKeys?: string[];
+  cancelOrderSelection?: CancelOrderSelection | null;
+  onCancelOrderSelectionChange?: (selection: CancelOrderSelection | null) => void;
+  onIncompleteCancelOrder?: () => void;
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
@@ -81,7 +91,10 @@ const Seats = ({
   isRefreshLoading,
   selectionMode = "default",
   restrictedSeatKeys,
-  spotlightSeatKeys
+  spotlightSeatKeys,
+  cancelOrderSelection,
+  onCancelOrderSelectionChange,
+  onIncompleteCancelOrder
 }: SeatsProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -110,6 +123,7 @@ const Seats = ({
   );
   const spotlightSeatKeySet = useMemo(() => new Set(spotlightSeatKeys || []), [spotlightSeatKeys]);
   const hasSeatSpotlight = spotlightSeatKeySet.size > 0;
+  const hasCancelSpotlight = cancelMode && Boolean(cancelOrderSelection?.seatKeys.length);
   const selectedSeatKeySet = useMemo(
     () => new Set(selectedSeats.map((seat) => getSeatUniqueKey(seat))),
     [selectedSeats]
@@ -117,7 +131,8 @@ const Seats = ({
 
   useEffect(() => {
     setSelectedSeats([]);
-  }, [cancelMode, setSelectedSeats]);
+    onCancelOrderSelectionChange?.(null);
+  }, [cancelMode, onCancelOrderSelectionChange, setSelectedSeats]);
 
   useEffect(() => {
     if (selectedSeats.length === 0) {
@@ -143,6 +158,7 @@ const Seats = ({
       }
 
       setSelectedSeats([]);
+      onCancelOrderSelectionChange?.(null);
     };
 
     document.addEventListener("pointerdown", handlePointerDownOutsideSeats);
@@ -150,7 +166,7 @@ const Seats = ({
     return () => {
       document.removeEventListener("pointerdown", handlePointerDownOutsideSeats);
     };
-  }, [selectedSeats.length, setSelectedSeats]);
+  }, [onCancelOrderSelectionChange, selectedSeats.length, setSelectedSeats]);
 
   const canSelectSeat = useCallback(
     (seat: ListSeat) => {
@@ -265,56 +281,10 @@ const Seats = ({
       .filter((row) => row.length > 0);
   }, [seats, selectedFloor]);
 
-  const seatOrderMap = useMemo(() => {
-    const map: Record<string, OrderResponseProps> = {};
-
-    const splitSeats = (value?: string) =>
-      (value ?? "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-
-    orders?.forEach((order) => {
-      order.items?.forEach((item) => {
-        if (currentPlanScreeningId && item.planScreenId !== currentPlanScreeningId) {
-          return;
-        }
-
-        [1, 2, 3].forEach((floor) => {
-          const indexKey = `listChairIndexF${floor}` as
-            | "listChairIndexF1"
-            | "listChairIndexF2"
-            | "listChairIndexF3";
-          const valueKey = `listChairValueF${floor}` as
-            | "listChairValueF1"
-            | "listChairValueF2"
-            | "listChairValueF3";
-          const seatKeys = [
-            ...splitSeats(item[indexKey]).map((seatIndex) => `${floor}-${seatIndex}`),
-            ...splitSeats(item[valueKey]).map((seatValue) => `${floor}-code:${seatValue}`)
-          ];
-
-          seatKeys.forEach((mapKey) => {
-            const existing = map[mapKey];
-
-            if (!existing) {
-              map[mapKey] = order;
-              return;
-            }
-
-            const existingTime = dayjs(existing.createdOnUtc);
-            const incomingTime = dayjs(order.createdOnUtc);
-
-            if (incomingTime.isAfter(existingTime)) {
-              map[mapKey] = order;
-            }
-          });
-        });
-      });
-    });
-
-    return map;
-  }, [currentPlanScreeningId, orders]);
+  const seatOrderMap = useMemo(
+    () => buildSeatOrderMap(orders, currentPlanScreeningId),
+    [currentPlanScreeningId, orders]
+  );
 
   const hoverSeatOrder = useMemo(() => {
     if (!hoverSeat) return undefined;
@@ -486,6 +456,30 @@ const Seats = ({
       const seatUniqueKey = getSeatUniqueKey(seat);
       if (selectingSeatKeysByOther.has(seatUniqueKey)) return;
 
+      if (cancelMode) {
+        const order = findSeatOrder(seat, seatOrderMap);
+        if (!order || !isOrderCancellable(order) || !currentPlanScreeningId || !seats) {
+          onIncompleteCancelOrder?.();
+          return;
+        }
+
+        const selection = buildCancelOrderSelection({
+          order,
+          seats: seats.flat(),
+          planScreeningId: currentPlanScreeningId,
+          directSeatKey: seatUniqueKey
+        });
+
+        if (!selection.isComplete) {
+          onIncompleteCancelOrder?.();
+          return;
+        }
+
+        onCancelOrderSelectionChange?.(selection);
+        setSelectedSeats(selection.seats);
+        return;
+      }
+
       setSelectedSeats((prev) => {
         const isAlreadySelected = prev.find((s) => getSeatUniqueKey(s) === seatUniqueKey);
         if (isAlreadySelected) {
@@ -500,7 +494,18 @@ const Seats = ({
         return [...prev, seat];
       });
     },
-    [maxSelectableSeats, onSelectionLimitReached, selectingSeatKeysByOther, setSelectedSeats]
+    [
+      cancelMode,
+      currentPlanScreeningId,
+      maxSelectableSeats,
+      onCancelOrderSelectionChange,
+      onIncompleteCancelOrder,
+      onSelectionLimitReached,
+      seatOrderMap,
+      seats,
+      selectingSeatKeysByOther,
+      setSelectedSeats
+    ]
   );
 
   const handleSelectoSelect = useCallback(
@@ -707,7 +712,10 @@ const Seats = ({
         {item.map((seat) => {
           const seatUniqueKey = getSeatUniqueKey(seat);
           const isSpotlighted = hasSeatSpotlight && spotlightSeatKeySet.has(seatUniqueKey);
-          const isDimmed = hasSeatSpotlight && cancelMode && !isSpotlighted;
+          const isCancelRelated = Boolean(cancelOrderSelection?.seatKeys.includes(seatUniqueKey));
+          const isDimmed =
+            (hasSeatSpotlight && cancelMode && !isSpotlighted) ||
+            (hasCancelSpotlight && !isCancelRelated);
           const isBlockedOnline = isSeatBlockedOnline(seat);
           const isPendingPayment =
             pendingPaymentSeatKeySet.has(seatUniqueKey) ||
@@ -732,6 +740,8 @@ const Seats = ({
               seatUniqueKey={seatUniqueKey}
               isDimmed={isDimmed}
               isSpotlighted={isSpotlighted}
+              isCancelRelated={cancelMode && isCancelRelated}
+              isCancelPrimary={cancelMode && cancelOrderSelection?.directSeatKey === seatUniqueKey}
               onHover={handleHover}
               onLeave={handleLeave}
             />
@@ -757,7 +767,9 @@ const Seats = ({
     canSelectSeat,
     cancelMode,
     hasSeatSpotlight,
+    hasCancelSpotlight,
     isSeatBlockedOnline,
+    cancelOrderSelection,
     seatTypeColorMap,
     handleHover,
     handleLeave,
@@ -928,7 +940,7 @@ const Seats = ({
         </div>
 
         {/* React-Selecto với cấu hình tối ưu */}
-        {seatSize !== null && (
+        {seatSize !== null && !cancelMode && (
           <Selecto
             key={`selecto-${selectedFloor}`}
             ref={selectoRef}

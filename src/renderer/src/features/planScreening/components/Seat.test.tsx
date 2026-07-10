@@ -25,7 +25,7 @@ const createSeat = (overrides: Partial<ListSeat> = {}): ListSeat => ({
 
 const renderSeat = (overrides: Partial<ComponentProps<typeof Seat>> = {}) => {
   const onSelect = vi.fn();
-  render(
+  const view = render(
     <Seat
       seat={createSeat()}
       isSelected={false}
@@ -38,6 +38,7 @@ const renderSeat = (overrides: Partial<ComponentProps<typeof Seat>> = {}) => {
 
   return {
     onSelect,
+    unmount: view.unmount,
     seatElement: screen.getByText("A1").closest("[data-seat-code='A1']") as HTMLDivElement
   };
 };
@@ -101,5 +102,18 @@ describe("Seat", () => {
 
     expect(seatElement).not.toHaveClass("bg-trunks");
     expect(seatElement.style.backgroundColor).toBe("");
+  });
+
+  it("distinguishes the directly clicked cancel seat from related order seats", () => {
+    const related = renderSeat({ isSelected: true, isCancelRelated: true });
+    expect(related.seatElement).toHaveClass("bg-red-400", "dark:bg-red-700", "z-10");
+    related.unmount();
+
+    const primarySeat = renderSeat({
+      isSelected: true,
+      isCancelRelated: true,
+      isCancelPrimary: true
+    }).seatElement;
+    expect(primarySeat).toHaveClass("bg-red-600", "dark:bg-red-500", "z-20");
   });
 });

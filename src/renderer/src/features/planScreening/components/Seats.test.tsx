@@ -339,4 +339,54 @@ describe("Seats", () => {
 
     expect(screen.getByText("A1").closest("[data-seat-code='A1']")).not.toHaveClass("bg-trunks");
   });
+
+  it("selects the complete order when a sold seat is clicked in cancel mode", () => {
+    const firstSeat = createSeat({ status: 1 });
+    const secondSeat = createSeat({ seat: "2", code: "A2", column: 2, status: 1 });
+    const setSelectedSeats = vi.fn();
+    const onCancelOrderSelectionChange = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <Seats
+          data={{ ...createPlanScreening(firstSeat), listSeats: [[firstSeat, secondSeat]] }}
+          orders={[
+            createOrder({
+              id: 321,
+              orderStatusId: OrderStatus.COMPLETED,
+              paymentStatusId: PaymentStatus.PAID,
+              items: [
+                {
+                  planScreenId: 1,
+                  listChairIndexF1: "1,2",
+                  listChairIndexF2: "",
+                  listChairIndexF3: "",
+                  listChairValueF1: "A1,A2",
+                  listChairValueF2: "",
+                  listChairValueF3: ""
+                }
+              ] as OrderResponseProps["items"]
+            })
+          ]}
+          currentPlanScreeningId={1}
+          selectedSeats={[]}
+          setSelectedSeats={setSelectedSeats}
+          cancelMode
+          onCancelOrderSelectionChange={onCancelOrderSelectionChange}
+        />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByText("A2"));
+
+    expect(onCancelOrderSelectionChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        orderId: 321,
+        directSeatKey: "1-2",
+        seatKeys: ["1-1", "1-2"],
+        isComplete: true
+      })
+    );
+    expect(setSelectedSeats).toHaveBeenLastCalledWith([firstSeat, secondSeat]);
+  });
 });
