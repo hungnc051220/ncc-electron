@@ -277,6 +277,7 @@ const OrderDetailDialog = ({
   const canShowChangeSuccessButton =
     !!currentOrder &&
     // !isCancelOrder &&
+    !currentOrder.cancelTicket &&
     currentOrder.orderStatusId !== OrderStatus.COMPLETED &&
     !isInvitationOrder &&
     !currentOrder.isContract &&

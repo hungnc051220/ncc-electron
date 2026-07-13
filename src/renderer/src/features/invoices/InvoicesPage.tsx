@@ -2,8 +2,9 @@ import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
-import { MoreOutlined } from "@ant-design/icons";
+import Icon, { MoreOutlined } from "@ant-design/icons";
 import { useInvoices } from "@renderer/hooks/invoices/useInvoices";
+import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import {
   formatNumber,
   compareText,
@@ -14,14 +15,15 @@ import {
 import { usePermission } from "@renderer/permissions/usePermission";
 import { InvoiceProps, InvoiceStatus } from "@shared/types";
 import type { PaginationProps, TableProps } from "antd";
-import { Dropdown } from "antd";
-import { Eye, RefreshCcw, SquarePen } from "lucide-react";
+import { Button, Dropdown } from "antd";
+import { DownloadIcon, Eye, RefreshCcw, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import InvoiceDialog from "./components/InvoiceDialog";
 import { InvoiceStatusBadge } from "./components/InvoiceStatusBadge";
 import UpdateStatusInvoiceDialog from "./components/UpdateStatusInvoiceDialog";
 import dayjs from "dayjs";
 import OrderDetailDialog from "../orderHistory/components/OrderDetailDialog";
+import { exportInvoicesExcel, fetchAllInvoicesForExport } from "./components/exportInvoicesExcel";
 
 const InvoicesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +33,8 @@ const InvoicesPage = () => {
   const [selectedItem, setSelectedItem] = useState<InvoiceProps | null>(null);
   const [dialogViewOrderDetailOpen, setDialogViewOrderDetailOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const { message } = useAntdApp();
 
   const params = useMemo(
     () => ({
@@ -84,6 +88,45 @@ const InvoicesPage = () => {
       setSelectedOrderId(null);
     }
   }, []);
+
+  const handleExportExcel = useCallback(async () => {
+    const messageKey = "export-invoices";
+    setIsExporting(true);
+    message.open({
+      key: messageKey,
+      type: "loading",
+      content: "Đang xuất file Excel...",
+      duration: 0
+    });
+
+    try {
+      const allInvoices = await fetchAllInvoicesForExport();
+
+      if (allInvoices.length === 0) {
+        message.open({
+          key: messageKey,
+          type: "warning",
+          content: "Không có dữ liệu để xuất Excel"
+        });
+        return;
+      }
+
+      const result = await exportInvoicesExcel(allInvoices);
+      message.open({
+        key: messageKey,
+        type: result.canceled ? "warning" : "success",
+        content: result.canceled ? "Bạn đã hủy lưu file Excel" : "Xuất file Excel thành công"
+      });
+    } catch (error) {
+      message.open({
+        key: messageKey,
+        type: "error",
+        content: error instanceof Error ? error.message : "Xuất file Excel thất bại"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  }, [message]);
 
   const actionItems = [
     ...(canView
@@ -267,7 +310,23 @@ const InvoicesPage = () => {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
       <PageHeader
         left={<AppBreadcrumb />}
-        right={<RefreshButton loading={isFetching} onRefresh={() => refetch()} />}
+        right={
+          <>
+            {canView && (
+              <Button
+                variant="solid"
+                color="green"
+                icon={<Icon component={DownloadIcon} />}
+                loading={isExporting}
+                disabled={!invoices?.total}
+                onClick={() => void handleExportExcel()}
+              >
+                Xuất Excel
+              </Button>
+            )}
+            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+          </>
+        }
       />
 
       <AutoHeightTable
