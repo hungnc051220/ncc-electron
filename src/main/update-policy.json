@@ -1,10 +1,11 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.101",
+  "latestVersion": "1.0.102",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Khi hủy vé, hệ thống tự động chọn toàn bộ ghế trong cùng đơn và hiển thị xác nhận rõ ràng để tránh hủy nhầm."
+    "Thêm chức năng xuất toàn bộ danh sách hóa đơn điện tử ra file Excel để tra cứu và lưu trữ thuận tiện hơn.",
+    "Không còn hiển thị thao tác chuyển sang thành công đối với đơn đã có thông tin hủy vé, giúp tránh cập nhật nhầm trạng thái."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.101"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.102"
 }
