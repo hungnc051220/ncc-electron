@@ -180,6 +180,7 @@ export interface OrderDetailProps {
 
 export interface CancellationTicketProps {
   id: number;
+  invNo?: string;
   filmName: string;
   roomName: string;
   projectDate: string;

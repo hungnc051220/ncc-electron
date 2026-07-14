@@ -17,7 +17,6 @@ import {
   formatNumber,
   formatPaymentMethod,
   resolvePaymentType,
-  formatSeatValues,
   resolveOrderPaymentStatus
 } from "@renderer/lib/utils";
 import {
@@ -30,11 +29,30 @@ import {
   CancellationTicketProps
 } from "@shared/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Checkbox, Modal, Popover, Table, Tag, Typography } from "antd";
+import { Button, Modal, Popover, Table, Tag, Typography } from "antd";
 import type { PopoverProps, TableColumnsType } from "antd";
 import dayjs from "dayjs";
+import {
+  Armchair,
+  CalendarDays,
+  CircleDollarSign,
+  Clock3,
+  CreditCard,
+  Film,
+  Gift,
+  Info,
+  Link2,
+  Mail,
+  Phone,
+  ReceiptText,
+  Send,
+  Ticket,
+  UserRound,
+  UsersRound,
+  WalletCards
+} from "lucide-react";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { usePermission } from "@renderer/permissions/usePermission";
 
@@ -54,6 +72,15 @@ type SeatKeyCollection = {
   indexKeys: Set<string>;
   valueKeys: Set<string>;
   labels: Set<string>;
+};
+
+type PromotionTableRow = {
+  key: string;
+  name: string;
+  value: string;
+  quantity: number;
+  seats: string;
+  totalDiscount: number;
 };
 
 const splitSeatList = (value?: string | null) =>
@@ -83,7 +110,7 @@ const ellipsisPopoverProps: Pick<
   }
 };
 
-const renderEllipsisPopover = (content: string, children: ReactNode) => {
+const renderEllipsisPopover = (content: ReactNode, children: ReactNode) => {
   if (!content) {
     return children;
   }
@@ -96,13 +123,14 @@ const renderEllipsisPopover = (content: string, children: ReactNode) => {
 };
 
 const renderEllipsisText = (value?: string | null) => {
-  const text = value || "-";
+  const normalizedValue = value?.trim() || "";
+  const text = normalizedValue || "-";
 
   return (
     <div className="min-w-0 overflow-hidden">
       {renderEllipsisPopover(
-        value || "",
-        <Typography.Text className="max-w-60" ellipsis>
+        normalizedValue,
+        <Typography.Text className="block! max-w-full!" ellipsis>
           {text}
         </Typography.Text>
       )}
@@ -110,19 +138,17 @@ const renderEllipsisText = (value?: string | null) => {
   );
 };
 
-const renderMultilineEllipsisText = (value?: string | null) => {
-  const text = value || "-";
-
-  return renderEllipsisPopover(
-    value || "",
-    <Typography.Paragraph
-      className="mb-0! w-full max-w-full text-right text-sm! font-medium! text-slate-900! dark:text-slate-100!"
-      ellipsis={true}
+const renderRefundStateBadge = (status?: OrderResponseProps["refundStatusId"]) =>
+  status ? (
+    <RefundStatusBadge status={status} />
+  ) : (
+    <Tag
+      color="error"
+      className="mr-0 rounded-full border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"
     >
-      {text}
-    </Typography.Paragraph>
+      Chưa hoàn tiền
+    </Tag>
   );
-};
 
 const getSeatKeysFromItems = (items?: OrderItem[] | null, planScreenId?: number | null) =>
   (items ?? []).reduce<SeatKeyCollection>(
@@ -189,6 +215,9 @@ const OrderDetailDialog = ({
   const [isChangingToSuccess, setIsChangingToSuccess] = useState(false);
   const [isCheckingTransaction, setIsCheckingTransaction] = useState(false);
   const [isExportingETicket, setIsExportingETicket] = useState(false);
+  const [isCancellingEInvoice, setIsCancellingEInvoice] = useState(false);
+  const isCancellingEInvoiceRef = useRef(false);
+  const isCancelEInvoiceConfirmOpenRef = useRef(false);
   const updateOrder = useUpdateOrder();
   const {
     data: orderDetail,
@@ -203,11 +232,13 @@ const OrderDetailDialog = ({
     currentDetail?.planScreening?.id ?? currentOrder?.planScreenId ?? 0;
   const { refetch: refetchOrdersByScreening } = useOrdersByScreening(currentPlanScreeningId);
   const currentItems = useMemo(() => currentOrder?.items ?? [], [currentOrder?.items]);
+  const seatLabels = useMemo(() => extractSeatValues(currentItems), [currentItems]);
   const customerName = [currentOrder?.customerFirstName, currentOrder?.customerLastName]
+    .map((name) => name?.trim())
     .filter(Boolean)
     .join(" ");
   const totalTickets = currentItems.reduce((sum, item) => sum + item.quantity, 0);
-  const ticketPriceDetails = useMemo(() => {
+  const ticketPriceRows = useMemo(() => {
     const priceQuantityMap = currentItems.reduce<Map<number, number>>((map, item) => {
       const price = item.unitPriceInclTax || 0;
       const quantity = item.quantity || 0;
@@ -222,14 +253,16 @@ const OrderDetailDialog = ({
 
     return Array.from(priceQuantityMap.entries())
       .sort(([priceA], [priceB]) => priceB - priceA)
-      .map(([price, quantity]) => `Vé ${formatMoney(price)}: ${formatNumber(quantity)} vé`)
-      .join(", ");
+      .map(([price, quantity]) => ({ price, quantity }));
   }, [currentItems]);
+  const ticketPriceDetails = ticketPriceRows
+    .map(({ price, quantity }) => `Vé ${formatMoney(price)}: ${formatNumber(quantity)} vé`)
+    .join(", ");
   const isRefundOrder = currentOrder?.refundStatusId != null;
   const isCancelOrder =
     currentOrder?.orderStatusId === OrderStatus.CANCELLED ||
     currentOrder?.orderStatusId === OrderStatus.FAIL;
-  const { data: cancelTicketsResponse, isFetching: isFetchingCancelTickets } = useQuery({
+  const { data: cancelTicketsResponse } = useQuery({
     queryKey: ["order-detail-cancel-tickets", currentOrderId],
     queryFn: () =>
       cancelTicketsApi.getAll({
@@ -243,11 +276,6 @@ const OrderDetailDialog = ({
     () => cancelTicketsResponse?.data ?? [],
     [cancelTicketsResponse?.data]
   );
-  const totalCancelledTickets = useMemo(
-    () => cancelTickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0),
-    [cancelTickets]
-  );
-
   const hasCancelTickets = cancelTickets.length > 0;
   const isInvitationOrder = !!currentOrder?.isInvitation;
   const orderTypeBadge = isInvitationOrder
@@ -287,6 +315,7 @@ const OrderDetailDialog = ({
   const canExport = can("invoices", "export");
   const canExportETicket =
     currentOrder?.orderStatusId === OrderStatus.COMPLETED && canExport && !currentOrder.eTicketUrl;
+  const canCancelEInvoice = !!currentOrder?.invNo && !!currentOrder.cancelTicket;
 
   const isVietQrOrder =
     resolvePaymentType(currentOrder?.paymentMethodSystemName) === PaymentType.VIETQR;
@@ -350,10 +379,6 @@ const OrderDetailDialog = ({
         ? "ticket"
         : "none";
 
-  const getChairs = () => {
-    return formatSeatValues(currentItems);
-  };
-
   const getCancelTicketChairs = (ticket: CancellationTicketProps) =>
     [ticket.cancelChairValueF1, ticket.cancelChairValueF2, ticket.cancelChairValueF3]
       .flatMap((value) => splitSeatList(value))
@@ -381,7 +406,10 @@ const OrderDetailDialog = ({
         key: "fullName",
         width: 140,
         render: (canceller) =>
-          [canceller?.customerFirstName, canceller?.customerLastName].filter(Boolean).join(" ")
+          [canceller?.customerFirstName, canceller?.customerLastName]
+            .map((name) => name?.trim())
+            .filter(Boolean)
+            .join(" ") || "-"
       },
       {
         title: "Số vé",
@@ -419,6 +447,94 @@ const OrderDetailDialog = ({
 
     return type || "Ưu đãi đặc biệt";
   };
+
+  const promotionTableData = useMemo<PromotionTableRow[]>(() => {
+    if (promotionMode === "campaign" && (isU22Voucher || currentOrder?.campaign)) {
+      return [
+        {
+          key: `campaign-${currentOrder?.campaign?.id ?? "u22"}`,
+          name: isU22Voucher
+            ? "Khuyến mãi giá vé dành cho thành viên U22"
+            : currentOrder?.campaign?.name || "Khuyến mãi thành viên",
+          value: currentOrder?.voucherCode || "Ưu đãi thành viên",
+          quantity: totalTickets,
+          seats: seatLabels.join(", "),
+          totalDiscount: (currentOrder?.orderDiscount || 0) - pricePointReward
+        }
+      ];
+    }
+
+    if (promotionMode === "ticket") {
+      return ticketPromotions.map((promotion) => ({
+        key: `ticket-${promotion.id}`,
+        name: promotion.name,
+        value: getPromotionValue(promotion.type, promotion.rate, promotion.amount),
+        quantity: promotion.quantity,
+        seats: promotion.seats.join(", "),
+        totalDiscount: promotion.totalDiscount
+      }));
+    }
+
+    return [];
+  }, [
+    currentOrder?.campaign,
+    currentOrder?.orderDiscount,
+    currentOrder?.voucherCode,
+    isU22Voucher,
+    pricePointReward,
+    promotionMode,
+    seatLabels,
+    ticketPromotions,
+    totalTickets
+  ]);
+
+  const promotionTableColumns = useMemo<TableColumnsType<PromotionTableRow>>(
+    () => [
+      {
+        title: "Chương trình",
+        dataIndex: "name",
+        key: "name",
+        width: 190,
+        render: (value: string) => renderEllipsisText(value)
+      },
+      {
+        title: "Ưu đãi",
+        dataIndex: "value",
+        key: "value",
+        width: 110,
+        align: "right",
+        render: (value: string) => renderEllipsisText(value)
+      },
+      {
+        title: "Số vé",
+        dataIndex: "quantity",
+        key: "quantity",
+        width: 70,
+        align: "right"
+      },
+      {
+        title: "Ghế áp dụng",
+        dataIndex: "seats",
+        key: "seats",
+        width: 110,
+        ellipsis: { showTitle: false },
+        render: (value: string) => renderEllipsisText(value)
+      },
+      {
+        title: "Tổng giảm",
+        dataIndex: "totalDiscount",
+        key: "totalDiscount",
+        width: 110,
+        align: "right",
+        render: (value: number) => (
+          <span className="font-medium text-rose-600 dark:text-rose-300">
+            -{formatMoney(value || 0)}
+          </span>
+        )
+      }
+    ],
+    []
+  );
 
   const formatInvitationTicketLabel = (key: string) => {
     const labelMap: Record<string, string> = {
@@ -522,6 +638,37 @@ const OrderDetailDialog = ({
     [invitationTicket]
   );
 
+  const fieldIconMap: Record<string, ReactNode> = {
+    "Tên khách hàng": <UserRound />,
+    "Số điện thoại": <Phone />,
+    Email: <Mail />,
+    "Thời gian mua": <Clock3 />,
+    "Kênh thanh toán": <CreditCard />,
+    "Mã vé điện tử": <ReceiptText />,
+    "Đường dẫn vé điện tử": <Link2 />,
+    "Trạng thái gửi vé": <Send />,
+    "Tên phim": <Film />,
+    "Ngày chiếu": <CalendarDays />,
+    "Giờ chiếu": <Clock3 />,
+    "Phòng chiếu": <Film />,
+    "Số lượng vé": <UsersRound />,
+    "Chi tiết giá vé": <Ticket />,
+    "Vị trí ghế": <Armchair />,
+    "Tổng tiền gốc": <CircleDollarSign />,
+    "Khuyến mãi đã áp dụng": <Gift />,
+    "Điểm thưởng đã áp dụng": <CircleDollarSign />,
+    "Khách cần thanh toán": <WalletCards />,
+    "Thời gian hủy": <Clock3 />,
+    "Người hủy": <UserRound />,
+    "Ghế hủy": <Armchair />,
+    "Lý do": <ReceiptText />,
+    "Trạng thái hoàn tiền": <WalletCards />,
+    "Số tiền đã hoàn": <CircleDollarSign />
+  };
+
+  const resolveInfoValue = (value?: ReactNode, fallback: ReactNode = "-") =>
+    typeof value === "string" ? (value.trim() ? value : fallback) : (value ?? fallback);
+
   const renderInfoRow = (
     label: string,
     value?: ReactNode,
@@ -535,20 +682,35 @@ const OrderDetailDialog = ({
     <div
       className={cn(
         options?.stackedOnMobile
-          ? "grid grid-cols-1 items-start gap-2 border-b border-slate-100 py-2 last:border-b-0 md:grid-cols-[132px_minmax(0,1fr)] md:gap-4 dark:border-app-border"
-          : "grid grid-cols-[96px_minmax(0,1fr)] items-start gap-4 border-b border-slate-100 py-2 last:border-b-0 dark:border-app-border",
+          ? "grid grid-cols-1 items-start gap-1 border-b border-slate-100 py-1.5 last:border-b-0 md:grid-cols-[112px_minmax(0,1fr)] md:gap-3 dark:border-app-border"
+          : "grid grid-cols-[88px_minmax(0,1fr)] items-start gap-3 border-b border-slate-100 py-1.5 last:border-b-0 dark:border-app-border",
         options?.borderClassName
       )}
     >
-      <span className="whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+        <span className="[&>svg]:size-4 text-primary">{fieldIconMap[label] ?? <Info />}</span>
+        {label}
+      </span>
       <span
         className={cn(
           "min-w-0 wrap-break-word text-right text-sm font-medium text-slate-900 dark:text-slate-100",
           options?.valueClassName
         )}
       >
-        {value ?? options?.fallback ?? "-"}
+        {resolveInfoValue(value, options?.fallback)}
       </span>
+    </div>
+  );
+
+  const renderInfoItem = (label: string, value?: ReactNode, className?: string) => (
+    <div className={cn("min-w-0 bg-white px-3.5 py-3 dark:bg-app-bg-container", className)}>
+      <p className="mb-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <span className="[&>svg]:size-4 text-primary">{fieldIconMap[label] ?? <Info />}</span>
+        {label}
+      </p>
+      <div className="min-w-0 text-sm font-semibold text-slate-900 dark:text-slate-100">
+        {resolveInfoValue(value)}
+      </div>
     </div>
   );
 
@@ -705,8 +867,8 @@ const OrderDetailDialog = ({
       content: (
         <span>
           Bạn có chắc chắn muốn chuyển đơn hàng với Mã đặt vé:{" "}
-          <strong>{currentOrder.barCode ?? "-"}</strong> sang thành công không? Thao tác không thể
-          thu hồi.
+          <strong>{currentOrder.barCode?.trim() || "-"}</strong> sang thành công không? Thao tác
+          không thể thu hồi.
         </span>
       ),
       okText: "Xác nhận",
@@ -788,17 +950,82 @@ const OrderDetailDialog = ({
     }
   };
 
+  const onCancelEInvoice = () => {
+    const cancelTicketId = currentOrder?.cancelTicket?.id;
+
+    if (
+      !cancelTicketId ||
+      isCancellingEInvoiceRef.current ||
+      isCancelEInvoiceConfirmOpenRef.current
+    ) {
+      return;
+    }
+
+    isCancelEInvoiceConfirmOpenRef.current = true;
+
+    modal.confirm({
+      title: "Xác nhận hủy hóa đơn điện tử",
+      content: "Bạn có chắc chắn muốn hủy hóa đơn điện tử của đơn hàng này không?",
+      okText: "Hủy HĐĐT",
+      cancelText: "Đóng",
+      okButtonProps: { danger: true },
+      afterClose: () => {
+        isCancelEInvoiceConfirmOpenRef.current = false;
+      },
+      onOk: async () => {
+        if (isCancellingEInvoiceRef.current) return Promise.reject();
+
+        isCancellingEInvoiceRef.current = true;
+        setIsCancellingEInvoice(true);
+
+        try {
+          await cancelTicketsApi.cancelEInvoice(cancelTicketId);
+          await Promise.all([
+            refetchOrderDetail(),
+            queryClient.invalidateQueries({ queryKey: ["cancel-tickets"] })
+          ]);
+          message.success("Hủy hóa đơn điện tử thành công");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Hủy hóa đơn điện tử thất bại"));
+          throw error;
+        } finally {
+          isCancellingEInvoiceRef.current = false;
+          setIsCancellingEInvoice(false);
+        }
+      }
+    });
+  };
+
   return (
     <Modal
       title="Thông tin vé bán"
       open={open}
       onCancel={() => onOpenChange(false)}
-      width={1000}
-      style={{ top: 20, paddingBottom: 20 }}
+      width="min(1400px, calc(100vw - 24px))"
+      centered
+      classNames={{
+        wrapper: "py-4",
+        container: "overflow-hidden p-0!",
+        header:
+          "mb-0! border-b border-slate-200 px-4 py-3 dark:border-app-border dark:bg-app-bg-container",
+        body: "max-h-[calc(100vh-144px)] overflow-y-auto p-4! dark:bg-app-bg-container",
+        footer:
+          "mt-0! border-t border-slate-200 px-4 py-2.5 dark:border-app-border dark:bg-app-bg-container"
+      }}
       cancelText="Đóng"
       footer={(_, { CancelBtn }) => (
         <>
           <CancelBtn />
+          {canCancelEInvoice && (
+            <Button
+              danger
+              onClick={onCancelEInvoice}
+              loading={isCancellingEInvoice}
+              disabled={isCancellingEInvoice}
+            >
+              Hủy HĐĐT
+            </Button>
+          )}
           {canExportETicket && (
             <Button
               icon={<ExportOutlined />}
@@ -826,35 +1053,83 @@ const OrderDetailDialog = ({
         </>
       )}
     >
-      <div className="space-y-5 text-slate-900 dark:text-slate-100">
-        <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(135deg,#f8fafc_0%,#eef6ff_45%,#fff7ed_100%)] p-5 dark:border-app-border dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.92)_0%,rgba(15,23,42,0.84)_48%,rgba(51,65,85,0.72)_100%)]">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                Đơn hàng{" "}
-                <span className="text-black dark:text-white">#{currentOrder?.id ?? "-"}</span>
-                {orderTypeBadge && (
-                  <span
-                    className={cn(
-                      "ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal",
-                      orderTypeBadge.className
-                    )}
-                  >
-                    {orderTypeBadge.label}
+      <div className="space-y-3 text-slate-900 dark:text-slate-100">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid min-w-0 flex-1 grid-cols-2 items-start gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="border-r border-slate-200 px-3 first:pl-0 dark:border-app-border">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                  Đơn hàng
+                </p>
+                <div className="flex h-6 items-center gap-2">
+                  <span className="text-sm font-bold text-amber-600 dark:text-amber-300">
+                    #{currentOrder?.id ?? "-"}
                   </span>
-                )}
-              </p>
-              <h3 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
-                Mã đặt vé: {currentOrder?.barCode ?? "-"}
-              </h3>
-              {!currentOrder?.isOnline && (
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Máy bán:{" "}
-                  <span className="font-bold text-primary">
-                    {currentOrder?.items[0]?.posName || "-"}
+                  {orderTypeBadge && (
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                        orderTypeBadge.className
+                      )}
+                    >
+                      {orderTypeBadge.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="border-r border-slate-200 px-3 dark:border-app-border">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                  Mã đặt vé
+                </p>
+                <p className="flex h-6 min-w-0 items-center">
+                  <span className="block max-w-full truncate text-sm font-bold text-primary">
+                    {currentOrder?.barCode?.trim() || "-"}
                   </span>
                 </p>
-              )}
+              </div>
+              <div className="border-r border-slate-200 px-3 dark:border-app-border">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                  Máy bán
+                </p>
+                <p className="flex h-6 min-w-0 items-center truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {currentOrder?.items[0]?.posName || currentOrder?.posName || "-"}
+                </p>
+              </div>
+              <div className="border-r border-slate-200 px-3 dark:border-app-border">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                  Trạng thái đơn
+                </p>
+                <div className="flex h-6 items-center">
+                  {currentOrder?.orderStatusId ? (
+                    <OrderStatusBadge status={currentOrder.orderStatusId} type="order" />
+                  ) : (
+                    "-"
+                  )}
+                </div>
+              </div>
+              <div className="px-3">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                  Trạng thái thanh toán
+                </p>
+                <div className="flex h-6 items-center gap-1.5">
+                  {resolvedPaymentStatusId ? (
+                    <OrderStatusBadge status={resolvedPaymentStatusId} type="payment" />
+                  ) : (
+                    "-"
+                  )}
+                  {isVietQrOrder && (
+                    <Button
+                      size="small"
+                      icon={<SyncOutlined spin={isCheckingTransaction} className="size-3" />}
+                      onClick={() => void onCheckTransaction()}
+                      color="cyan"
+                      variant="outlined"
+                      loading={isCheckingTransaction}
+                      shape="square"
+                    />
+                  )}
+                </div>
+              </div>
             </div>
 
             {currentOrder && (
@@ -863,60 +1138,35 @@ const OrderDetailDialog = ({
                 onClick={() => void refreshOrderDetail()}
                 loading={isFetchingOrderDetail && !isChangingToSuccess}
               >
-                Làm mới dữ liệu
+                Làm mới
               </Button>
             )}
           </div>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[1.1fr,0.9fr]">
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
+        <div className="grid items-start gap-3 lg:grid-cols-12">
+          <section className="h-fit self-start rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:col-span-6 dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
             {isInvitationOrder ? (
               <>
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-2 flex items-center justify-between">
                   <div>
                     <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                       Thông tin giấy mời
                     </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Chi tiết phát hành và gửi vé mời cho khách
-                    </p>
                   </div>
                 </div>
 
                 {invitationTicket ? (
-                  <div className="space-y-5">
-                    <div className="grid gap-x-6 md:grid-cols-2">
-                      <div>
-                        {invitationTicketFields
-                          .filter((_, index) => index % 2 === 0)
-                          .map(([key, value]) =>
-                            renderInfoRow(
-                              formatInvitationTicketLabel(key),
-                              key === "status"
-                                ? renderInvitationTicketStatus(String(value))
-                                : formatInvitationTicketValue(key, value),
-                              {
-                                valueClassName: key === "status" ? "" : undefined
-                              }
-                            )
-                          )}
-                      </div>
-                      <div>
-                        {invitationTicketFields
-                          .filter((_, index) => index % 2 === 1)
-                          .map(([key, value]) =>
-                            renderInfoRow(
-                              formatInvitationTicketLabel(key),
-                              key === "status"
-                                ? renderInvitationTicketStatus(String(value))
-                                : formatInvitationTicketValue(key, value),
-                              {
-                                valueClassName: key === "status" ? "" : undefined
-                              }
-                            )
-                          )}
-                      </div>
+                  <div className="space-y-3">
+                    <div className="grid gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 dark:border-app-border dark:bg-app-border">
+                      {invitationTicketFields.map(([key, value]) =>
+                        renderInfoItem(
+                          formatInvitationTicketLabel(key),
+                          key === "status"
+                            ? renderInvitationTicketStatus(String(value))
+                            : formatInvitationTicketValue(key, value)
+                        )
+                      )}
                     </div>
 
                     {invitationTicket.urlTicket ? (
@@ -929,12 +1179,12 @@ const OrderDetailDialog = ({
                           </div>
                         </div>
 
-                        <div className="grid gap-4 lg:grid-cols-[280px,1fr]">
+                        <div className="grid gap-3 lg:grid-cols-[220px,1fr]">
                           <div className="overflow-hidden rounded-2xl">
                             <img
                               src={invitationTicket.urlTicket}
                               alt="Ảnh vé mời"
-                              className="h-full w-full object-contain"
+                              className="max-h-52 w-full object-contain"
                             />
                           </div>
                         </div>
@@ -949,238 +1199,137 @@ const OrderDetailDialog = ({
               </>
             ) : (
               <>
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-2 flex items-center justify-between">
                   <div>
                     <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                       Khách hàng và thông tin vé
                     </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Thông tin người mua và trạng thái gửi vé
-                    </p>
                   </div>
                 </div>
 
-                <div className="grid gap-x-6 md:grid-cols-2">
-                  <div>
-                    {renderInfoRow("Tên khách hàng", customerName)}
-                    {renderInfoRow("Email", currentOrder?.customerEmail)}
-                    {renderInfoRow("Số điện thoại", currentOrder?.customerPhone)}
-                    {renderInfoRow("Mã vé điện tử", currentOrder?.invNo)}
-                    {renderInfoRow(
-                      "Đường dẫn vé điện tử",
-                      currentOrder?.eTicketUrl ? (
-                        <a
-                          href={currentOrder.eTicketUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary underline underline-offset-2 break-all hover:opacity-80"
-                        >
-                          {currentOrder.eTicketUrl}
-                        </a>
-                      ) : undefined,
-                      {
-                        valueClassName: "text-left md:text-right",
-                        stackedOnMobile: true
-                      }
-                    )}
-                  </div>
-                  <div>
-                    {renderInfoRow(
-                      "Thời gian mua",
-                      currentOrder?.createdOnUtc
-                        ? dayjs(currentOrder.createdOnUtc).format("HH:mm DD/MM/YYYY")
-                        : "-"
-                    )}
-                    {renderInfoRow(
-                      "Kênh thanh toán",
-                      formatPaymentMethod(currentOrder?.paymentMethodSystemName)
-                    )}
-                    <div className="border-b border-slate-100 py-2 dark:border-app-border">
-                      <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                        Trạng thái gửi vé
-                      </p>
-                      <div className="flex flex-wrap gap-4">
-                        <Checkbox checked={!!currentOrder?.isEmailSent} disabled>
-                          Đã gửi email
-                        </Checkbox>
-                        <Checkbox checked={!!currentOrder?.isSmsSent} disabled>
-                          Đã gửi tin nhắn
-                        </Checkbox>
-                      </div>
+                <div className="grid gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 xl:grid-cols-3 dark:border-app-border dark:bg-app-border">
+                  {renderInfoItem("Tên khách hàng", customerName || "-")}
+                  {renderInfoItem("Số điện thoại", currentOrder?.customerPhone || "-")}
+                  {renderInfoItem("Email", renderEllipsisText(currentOrder?.customerEmail))}
+                  {renderInfoItem(
+                    "Thời gian mua",
+                    currentOrder?.createdOnUtc
+                      ? dayjs(currentOrder.createdOnUtc).format("HH:mm DD/MM/YYYY")
+                      : "-"
+                  )}
+                  {renderInfoItem(
+                    "Kênh thanh toán",
+                    formatPaymentMethod(currentOrder?.paymentMethodSystemName)
+                  )}
+                  {renderInfoItem("Mã vé điện tử", currentOrder?.invNo)}
+                  {renderInfoItem(
+                    "Đường dẫn vé điện tử",
+                    currentOrder?.eTicketUrl
+                      ? renderEllipsisPopover(
+                          currentOrder.eTicketUrl,
+                          <a
+                            href={currentOrder.eTicketUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block max-w-full truncate text-primary underline underline-offset-2 hover:opacity-80"
+                          >
+                            {currentOrder.eTicketUrl}
+                          </a>
+                        )
+                      : undefined,
+                    "sm:col-span-2"
+                  )}
+                  {renderInfoItem(
+                    "Trạng thái gửi vé",
+                    <div className="flex flex-nowrap gap-1">
+                      <Tag
+                        color={currentOrder?.isEmailSent ? "success" : "default"}
+                        className="mr-0 whitespace-nowrap text-[11px]"
+                      >
+                        {currentOrder?.isEmailSent ? "Đã gửi email" : "Chưa gửi email"}
+                      </Tag>
+                      <Tag
+                        color={currentOrder?.isSmsSent ? "success" : "default"}
+                        className="mr-0 whitespace-nowrap text-[11px]"
+                      >
+                        {currentOrder?.isSmsSent ? "Đã gửi SMS" : "Chưa gửi SMS"}
+                      </Tag>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 py-2">
-                      <div>
-                        <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                          Trạng thái đơn
-                        </p>
-                        {currentOrder?.orderStatusId && (
-                          <OrderStatusBadge status={currentOrder.orderStatusId} type="order" />
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="mb-1 flex itmes-center gap-2">
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Trạng thái thanh toán
-                          </p>
-                          {isVietQrOrder && (
-                            <Button
-                              size="small"
-                              icon={
-                                <SyncOutlined spin={isCheckingTransaction} className="size-3" />
-                              }
-                              onClick={() => void onCheckTransaction()}
-                              color="cyan"
-                              variant="outlined"
-                              loading={isCheckingTransaction}
-                              shape="square"
-                            />
-                          )}
-                        </div>
-                        {resolvedPaymentStatusId && (
-                          <OrderStatusBadge status={resolvedPaymentStatusId} type="payment" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </>
             )}
-
-            {(hasCancelTickets || isFetchingCancelTickets || isRefundOrder) && (
-              <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-500/20 dark:bg-rose-500/5">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                      Thông tin hủy / hoàn tiền
-                    </h4>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Chi tiết xử lý đơn hàng sau khi phát sinh hủy hoặc hoàn tiền
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-x-6 md:grid-cols-2">
-                  <div>
-                    {renderInfoRow(
-                      "Số lần hủy",
-                      isFetchingCancelTickets
-                        ? "Đang tải..."
-                        : hasCancelTickets
-                          ? cancelTickets.length
-                          : "-",
-                      {
-                        borderClassName: "border-rose-100 dark:border-rose-500/10"
-                      }
-                    )}
-                    {renderInfoRow(
-                      "Số lượng vé hủy",
-                      isFetchingCancelTickets
-                        ? "Đang tải..."
-                        : hasCancelTickets
-                          ? totalCancelledTickets
-                          : "-",
-                      {
-                        borderClassName: "border-rose-100 dark:border-rose-500/10"
-                      }
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-start justify-between gap-4 border-b border-rose-100 py-2 dark:border-rose-500/10">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">
-                        Trạng thái hoàn tiền
-                      </span>
-                      <div className="flex justify-end text-right [&_.ant-tag]:m-0">
-                        {isRefundOrder ? (
-                          <RefundStatusBadge status={currentOrder?.refundStatusId} />
-                        ) : (
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:border-slate-600/40 dark:bg-slate-700/30 dark:text-slate-200">
-                            Chưa hoàn tiền
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {renderInfoRow(
-                      "Số tiền đã hoàn",
-                      formatMoney(currentOrder?.refundedAmount || 0),
-                      {
-                        borderClassName: "border-rose-100 dark:border-rose-500/10"
-                      }
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-2 dark:border-rose-500/10">
-                  <Table<CancellationTicketProps>
-                    className={cn(
-                      "mt-2 overflow-hidden rounded-xl border border-rose-100 bg-white shadow-sm dark:border-rose-500/10 dark:bg-white/3",
-                      "[&_.ant-table]:bg-transparent [&_.ant-table]:text-slate-700 dark:[&_.ant-table]:text-slate-200",
-                      "[&_.ant-table-container]:rounded-xl [&_.ant-table-container]:border-0",
-                      "[&_.ant-table-thead>tr>th]:border-rose-100 [&_.ant-table-thead>tr>th]:bg-rose-100 [&_.ant-table-thead>tr>th]:text-xs [&_.ant-table-thead>tr>th]:font-semibold [&_.ant-table-thead>tr>th]:text-slate-600 dark:[&_.ant-table-thead>tr>th]:border-rose-500/10 dark:[&_.ant-table-thead>tr>th]:bg-rose-500/10 dark:[&_.ant-table-thead>tr>th]:text-slate-200",
-                      "[&_.ant-table-tbody>tr>td]:border-rose-100 [&_.ant-table-tbody>tr>td]:text-sm dark:[&_.ant-table-tbody>tr>td]:border-rose-500/10",
-                      "[&_.ant-table-tbody>tr:hover>td]:bg-rose-50/70 dark:[&_.ant-table-tbody>tr:hover>td]:bg-rose-500/10",
-                      "[&_.ant-empty-description]:text-slate-500 dark:[&_.ant-empty-description]:text-slate-400"
-                    )}
-                    columns={cancelTicketColumns}
-                    dataSource={cancelTickets}
-                    rowKey="id"
-                    size="small"
-                    loading={isFetchingCancelTickets}
-                    pagination={false}
-                    scroll={{ x: 760 }}
-                    locale={{ emptyText: "Không có phiếu hủy" }}
-                  />
-                </div>
-              </div>
-            )}
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
-            <div className="mb-4">
+          <section
+            className={cn(
+              "h-fit self-start rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
+              "lg:col-span-6"
+            )}
+          >
+            <div className="mb-2">
               <h3 className="text-base font-semibold text-slate-900 dark:text-white">Suất chiếu</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Thông tin phim, lịch chiếu và ghế ngồi
-              </p>
             </div>
 
-            <div className="grid gap-x-6 md:grid-cols-2">
-              <div>
-                {renderInfoRow("Tên phim", currentDetail?.film?.filmName)}
-                {renderInfoRow(
-                  "Giờ chiếu",
-                  currentDetail?.planScreening?.projectTime
-                    ? dayjs(currentDetail.planScreening.projectTime).format("HH:mm")
-                    : "-"
-                )}
-                {renderInfoRow(
-                  "Ngày chiếu",
-                  currentDetail?.planScreening?.projectDate
-                    ? dayjs(currentDetail.planScreening.projectDate).format("DD/MM/YYYY")
-                    : "-"
-                )}
-              </div>
-              <div>
-                {renderInfoRow("Phòng chiếu", currentDetail?.room?.name)}
-
-                {renderInfoRow("Số lượng vé", totalTickets)}
-                {renderInfoRow("Chi tiết giá vé", renderMultilineEllipsisText(ticketPriceDetails))}
-                {renderInfoRow("Vị trí ghế", renderMultilineEllipsisText(getChairs()))}
-              </div>
+            <div className="grid gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 xl:grid-cols-3 dark:border-app-border dark:bg-app-border">
+              {renderInfoItem(
+                "Tên phim",
+                renderEllipsisText(currentDetail?.film?.filmName),
+                "sm:col-span-2 xl:col-span-3"
+              )}
+              {renderInfoItem(
+                "Ngày chiếu",
+                currentDetail?.planScreening?.projectDate
+                  ? dayjs(currentDetail.planScreening.projectDate).format("DD/MM/YYYY")
+                  : "-"
+              )}
+              {renderInfoItem(
+                "Giờ chiếu",
+                currentDetail?.planScreening?.projectTime
+                  ? dayjs(currentDetail.planScreening.projectTime).format("HH:mm")
+                  : "-"
+              )}
+              {renderInfoItem("Phòng chiếu", currentDetail?.room?.name)}
+              {renderInfoItem("Số lượng vé", totalTickets)}
+              {renderInfoItem(
+                "Chi tiết giá vé",
+                renderEllipsisPopover(
+                  <div className="min-w-64 space-y-2">
+                    {ticketPriceRows.map(({ price, quantity }, index) => (
+                      <div
+                        key={price}
+                        className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 dark:border-app-border"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-primary">Mức giá {index + 1}</p>
+                          <p className="font-semibold text-slate-900 dark:text-slate-100">
+                            {formatMoney(price)}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                          {formatNumber(quantity)} vé
+                        </span>
+                      </div>
+                    ))}
+                  </div>,
+                  <Typography.Text className="block! max-w-full!" ellipsis>
+                    {ticketPriceDetails || "-"}
+                  </Typography.Text>
+                )
+              )}
+              {renderInfoItem("Vị trí ghế", renderEllipsisText(seatLabels.join(", ")))}
             </div>
           </section>
         </div>
 
         {!currentOrder?.isInvitation && (
-          <div className="grid gap-5 lg:grid-cols-[1.05fr,0.95fr]">
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
-              <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="grid items-stretch gap-3 lg:grid-cols-12">
+            <section className="order-1 flex h-full flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:col-span-7 dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
+              <div className="mb-2 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                     Chương trình khuyến mãi
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Mỗi đơn chỉ áp dụng một loại ưu đãi tại thời điểm thanh toán
-                  </p>
                 </div>
                 <div
                   className={cn(
@@ -1201,72 +1350,35 @@ const OrderDetailDialog = ({
                 </div>
               </div>
 
-              {promotionMode === "campaign" && (isU22Voucher || currentOrder?.campaign) ? (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-                  {renderInfoRow(
-                    "Tên chương trình",
-                    isU22Voucher
-                      ? "Khuyến mãi giá vé dành cho thành viên U22"
-                      : currentOrder?.campaign?.name,
-                    {
-                      borderClassName: "border-emerald-100 dark:border-emerald-500/20"
-                    }
-                  )}
-                  {renderInfoRow("Mã áp dụng", currentOrder.voucherCode || "Không có mã", {
-                    fallback: "Không có mã",
-                    borderClassName: "border-emerald-100 dark:border-emerald-500/20"
-                  })}
-                  {renderInfoRow(
-                    "Giá trị khuyến mãi",
-                    formatMoney((currentOrder.orderDiscount || 0) - pricePointReward)
-                  )}
+              {promotionTableData.length > 0 ? (
+                <div className="flex-1 overflow-hidden rounded-lg border border-slate-200 dark:border-app-border">
+                  <Table<PromotionTableRow>
+                    className={cn(
+                      "[&_.ant-table]:bg-transparent",
+                      "[&_.ant-table-thead>tr>th]:px-2.5 [&_.ant-table-thead>tr>th]:py-2 [&_.ant-table-thead>tr>th]:text-xs",
+                      "[&_.ant-table-tbody>tr>td]:px-2.5 [&_.ant-table-tbody>tr>td]:py-2 [&_.ant-table-tbody>tr>td]:text-sm"
+                    )}
+                    columns={promotionTableColumns}
+                    dataSource={promotionTableData}
+                    rowKey="key"
+                    size="small"
+                    tableLayout="fixed"
+                    pagination={false}
+                  />
                 </div>
-              ) : null}
-
-              {promotionMode === "ticket" ? (
-                <div className="space-y-3">
-                  {ticketPromotions.map((promotion) => (
-                    <div
-                      key={promotion.id}
-                      className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
-                            {promotion.name}
-                          </p>
-                          <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
-                            {getPromotionValue(promotion.type, promotion.rate, promotion.amount)}{" "}
-                            cho {promotion.quantity} vé
-                          </p>
-                        </div>
-                        <div className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-amber-900 dark:bg-slate-900/70 dark:text-amber-200">
-                          Giảm {formatMoney(promotion.totalDiscount)}
-                        </div>
-                      </div>
-                      <p className="mt-3 text-sm text-amber-900 dark:text-amber-200">
-                        Ghế áp dụng: {promotion.seats.join(", ") || "-"}
-                      </p>
-                    </div>
-                  ))}
+              ) : (
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
+                  <Gift className="size-5 text-slate-400 dark:text-slate-500" aria-hidden />
+                  <span>Đơn hàng này không áp dụng chương trình khuyến mãi.</span>
                 </div>
-              ) : null}
-
-              {promotionMode === "none" && !currentDetail?.order?.voucherCode ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
-                  Đơn hàng này không áp dụng chương trình khuyến mãi.
-                </div>
-              ) : null}
+              )}
             </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
-              <div className="mb-4">
+            <section className="order-2 h-full self-stretch rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:col-span-5 dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
+              <div className="mb-2">
                 <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                   Thanh toán
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Tóm tắt giá trị trước và sau ưu đãi
-                </p>
               </div>
 
               <div className="space-y-1">
@@ -1290,6 +1402,71 @@ const OrderDetailDialog = ({
               </div>
             </section>
           </div>
+        )}
+
+        {hasCancelTickets && (
+          <section className="h-fit self-start rounded-xl border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-500/20 dark:bg-rose-500/5">
+            <div className="mb-2">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Thông tin hủy / hoàn tiền
+              </h4>
+            </div>
+
+            {cancelTickets.length === 1 ? (
+              <div className="grid gap-px overflow-hidden rounded-lg border border-rose-200 bg-rose-200 sm:grid-cols-2 lg:grid-cols-4 dark:border-rose-500/20 dark:bg-rose-500/20">
+                {renderInfoItem(
+                  "Thời gian hủy",
+                  cancelTickets[0].createdOnUtc
+                    ? dayjs(cancelTickets[0].createdOnUtc).format("HH:mm DD/MM/YYYY")
+                    : "-"
+                )}
+                {renderInfoItem(
+                  "Người hủy",
+                  [
+                    cancelTickets[0].canceller?.customerFirstName,
+                    cancelTickets[0].canceller?.customerLastName
+                  ]
+                    .map((name) => name?.trim())
+                    .filter(Boolean)
+                    .join(" ") || "-"
+                )}
+                {renderInfoItem("Số lượng vé", cancelTickets[0].quantity || 0)}
+                {renderInfoItem(
+                  "Ghế hủy",
+                  renderEllipsisText(getCancelTicketChairs(cancelTickets[0]))
+                )}
+                {renderInfoItem(
+                  "Lý do",
+                  renderEllipsisText(cancelTickets[0].reason),
+                  "sm:col-span-2"
+                )}
+                {renderInfoItem(
+                  "Trạng thái hoàn tiền",
+                  renderRefundStateBadge(currentOrder?.refundStatusId)
+                )}
+                {renderInfoItem("Số tiền đã hoàn", formatMoney(currentOrder?.refundedAmount || 0))}
+              </div>
+            ) : (
+              <div className="overflow-auto dark:border-rose-500/10">
+                <Table<CancellationTicketProps>
+                  className={cn(
+                    "overflow-hidden rounded-xl border border-rose-100 bg-white shadow-sm dark:border-rose-500/10 dark:bg-white/3",
+                    "[&_.ant-table]:bg-transparent [&_.ant-table]:text-slate-700 dark:[&_.ant-table]:text-slate-200",
+                    "[&_.ant-table-container]:rounded-xl [&_.ant-table-container]:border-0",
+                    "[&_.ant-table-thead>tr>th]:border-rose-100 [&_.ant-table-thead>tr>th]:bg-rose-100 [&_.ant-table-thead>tr>th]:text-xs [&_.ant-table-thead>tr>th]:font-semibold [&_.ant-table-thead>tr>th]:text-slate-600 dark:[&_.ant-table-thead>tr>th]:border-rose-500/10 dark:[&_.ant-table-thead>tr>th]:bg-rose-500/10 dark:[&_.ant-table-thead>tr>th]:text-slate-200",
+                    "[&_.ant-table-tbody>tr>td]:border-rose-100 [&_.ant-table-tbody>tr>td]:text-sm dark:[&_.ant-table-tbody>tr>td]:border-rose-500/10",
+                    "[&_.ant-table-tbody>tr:hover>td]:bg-rose-50/70 dark:[&_.ant-table-tbody>tr:hover>td]:bg-rose-500/10"
+                  )}
+                  columns={cancelTicketColumns}
+                  dataSource={cancelTickets}
+                  rowKey="id"
+                  size="small"
+                  pagination={false}
+                  scroll={{ x: 760, ...(cancelTickets.length > 4 ? { y: 144 } : {}) }}
+                />
+              </div>
+            )}
+          </section>
         )}
       </div>
     </Modal>

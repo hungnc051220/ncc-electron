@@ -52,5 +52,9 @@ export const cancelTicketsApi = {
     const res = await api.get(`/pos/cancel-ticket?${query}`);
 
     return res.data;
+  },
+
+  cancelEInvoice: async (cancelTicketId: number): Promise<void> => {
+    await api.post(`/pos/cancel-ticket/${cancelTicketId}/cancel-einvoice`);
   }
 };
