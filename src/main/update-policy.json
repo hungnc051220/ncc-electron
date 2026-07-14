@@ -1,11 +1,11 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.102",
+  "latestVersion": "1.0.103",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Thêm chức năng xuất toàn bộ danh sách hóa đơn điện tử ra file Excel để tra cứu và lưu trữ thuận tiện hơn.",
-    "Không còn hiển thị thao tác chuyển sang thành công đối với đơn đã có thông tin hủy vé, giúp tránh cập nhật nhầm trạng thái."
+    "Cải thiện popup thông tin vé bán với bố cục gọn gàng, dễ theo dõi đầy đủ thông tin trên một màn hình.",
+    "Bổ sung thao tác hủy hóa đơn điện tử cho đơn hủy, kèm bước xác nhận để hạn chế thao tác nhầm."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.102"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.103"
 }
