@@ -1,11 +1,13 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.103",
+  "latestVersion": "1.0.104",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Cải thiện popup thông tin vé bán với bố cục gọn gàng, dễ theo dõi đầy đủ thông tin trên một màn hình.",
-    "Bổ sung thao tác hủy hóa đơn điện tử cho đơn hủy, kèm bước xác nhận để hạn chế thao tác nhầm."
+    "Làm mới màn hình đăng nhập với bố cục hiện đại, gọn gàng và phù hợp hơn với máy POS.",
+    "Bổ sung nút tắt ứng dụng cùng hộp thoại xác nhận rõ ràng, hạn chế thao tác nhầm.",
+    "Cải thiện chi tiết đơn hàng, giúp nhận biết hóa đơn đã hủy và sao chép mã vé thuận tiện hơn.",
+    "Cải thiện vé mời khi xuất ảnh: hiển thị font ổn định, tự mở ảnh sau khi xuất và không còn nội dung trống sai định dạng."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.103"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.104"
 }
