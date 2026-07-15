@@ -37,6 +37,7 @@ import {
   CalendarDays,
   CircleDollarSign,
   Clock3,
+  Copy,
   CreditCard,
   Film,
   Gift,
@@ -315,7 +316,10 @@ const OrderDetailDialog = ({
   const canExport = can("invoices", "export");
   const canExportETicket =
     currentOrder?.orderStatusId === OrderStatus.COMPLETED && canExport && !currentOrder.eTicketUrl;
-  const canCancelEInvoice = !!currentOrder?.invNo && !!currentOrder.cancelTicket;
+  const replacementInvoiceNo = currentOrder?.cancelTicket?.invNo?.trim() ?? "";
+  const isEInvoiceCancelled = !!replacementInvoiceNo;
+  const canCancelEInvoice =
+    !!currentOrder?.invNo && !!currentOrder.cancelTicket && !isEInvoiceCancelled;
 
   const isVietQrOrder =
     resolvePaymentType(currentOrder?.paymentMethodSystemName) === PaymentType.VIETQR;
@@ -955,6 +959,7 @@ const OrderDetailDialog = ({
 
     if (
       !cancelTicketId ||
+      isEInvoiceCancelled ||
       isCancellingEInvoiceRef.current ||
       isCancelEInvoiceConfirmOpenRef.current
     ) {
@@ -995,6 +1000,30 @@ const OrderDetailDialog = ({
       }
     });
   };
+
+  const copyInvoiceNo = async (invoiceNo: string) => {
+    try {
+      await navigator.clipboard.writeText(invoiceNo);
+      message.success(`Đã sao chép mã ${invoiceNo}`);
+    } catch {
+      message.error("Không thể sao chép mã HĐĐT");
+    }
+  };
+
+  const renderCopyInvoiceButton = (invoiceNo: string, label: string) => (
+    <Button
+      type="text"
+      size="small"
+      icon={<Copy className="size-3.5" aria-hidden />}
+      aria-label={label}
+      title={label}
+      className="shrink-0 text-slate-500! hover:text-primary! dark:text-slate-400!"
+      onClick={(event) => {
+        event.stopPropagation();
+        void copyInvoiceNo(invoiceNo);
+      }}
+    />
+  );
 
   return (
     <Modal
@@ -1144,8 +1173,8 @@ const OrderDetailDialog = ({
           </div>
         </div>
 
-        <div className="grid items-start gap-3 lg:grid-cols-12">
-          <section className="h-fit self-start rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:col-span-6 dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
+        <div className="grid gap-3 lg:grid-cols-12 lg:items-stretch">
+          <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:col-span-6 dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
             {isInvitationOrder ? (
               <>
                 <div className="mb-2 flex items-center justify-between">
@@ -1221,7 +1250,54 @@ const OrderDetailDialog = ({
                     "Kênh thanh toán",
                     formatPaymentMethod(currentOrder?.paymentMethodSystemName)
                   )}
-                  {renderInfoItem("Mã vé điện tử", currentOrder?.invNo)}
+                  {renderInfoItem(
+                    "Mã vé điện tử",
+                    currentOrder?.invNo && isEInvoiceCancelled ? (
+                      renderEllipsisPopover(
+                        <div className="min-w-72 space-y-2">
+                          <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 dark:border-app-border">
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-primary">Mã HĐĐT gốc</p>
+                              <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
+                                <span>{currentOrder.invNo}</span>
+                                {renderCopyInvoiceButton(
+                                  currentOrder.invNo,
+                                  "Sao chép mã HĐĐT gốc"
+                                )}
+                              </div>
+                            </div>
+                            <span className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                              Đã hủy
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-primary">Mã HĐĐT thay thế</p>
+                              <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
+                                <span>{replacementInvoiceNo}</span>
+                                {renderCopyInvoiceButton(
+                                  replacementInvoiceNo,
+                                  "Sao chép mã HĐĐT thay thế"
+                                )}
+                              </div>
+                            </div>
+                            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                              Thay thế
+                            </span>
+                          </div>
+                        </div>,
+                        <span className="inline-flex items-center gap-2">
+                          <span>{currentOrder.invNo}</span>
+                          {renderCopyInvoiceButton(currentOrder.invNo, "Sao chép mã HĐĐT gốc")}
+                          <Tag color="error" className="mr-0 rounded-full text-[11px]">
+                            Đã hủy
+                          </Tag>
+                        </span>
+                      )
+                    ) : (
+                      currentOrder?.invNo
+                    )
+                  )}
                   {renderInfoItem(
                     "Đường dẫn vé điện tử",
                     currentOrder?.eTicketUrl
@@ -1263,7 +1339,7 @@ const OrderDetailDialog = ({
 
           <section
             className={cn(
-              "h-fit self-start rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
+              "rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
               "lg:col-span-6"
             )}
           >

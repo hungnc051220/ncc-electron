@@ -26,6 +26,11 @@ type EndpointFormValues = {
   apiBaseUrl?: string;
 };
 
+type LoginSettingsPopupProps = {
+  className?: string;
+  showLabel?: boolean;
+};
+
 const ENDPOINT_ACCESS_CODE = "admin123";
 
 const { Paragraph, Text, Title } = Typography;
@@ -38,7 +43,7 @@ const toSocketUrl = (apiUrl: string) => {
   return apiUrl.replace("http", "ws");
 };
 
-const LoginSettingsPopup = () => {
+const LoginSettingsPopup = ({ className, showLabel = false }: LoginSettingsPopupProps) => {
   const { message } = useAntdApp();
 
   const [open, setOpen] = useState(false);
@@ -160,7 +165,15 @@ const LoginSettingsPopup = () => {
 
   return (
     <>
-      <Button icon={<SettingOutlined />} onClick={() => setOpen(true)} />
+      <Button
+        type="text"
+        icon={<SettingOutlined />}
+        onClick={() => setOpen(true)}
+        aria-label="Mở cài đặt"
+        className={className}
+      >
+        {showLabel ? "Cài đặt" : null}
+      </Button>
       <Modal title="Cài đặt" open={open} centered width={720} onCancel={closeModal} footer={null}>
         <Tabs
           activeKey={activeTab}

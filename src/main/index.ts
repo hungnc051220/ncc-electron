@@ -102,13 +102,7 @@ async function confirmAppQuit(parentWindow?: BrowserWindow | null) {
   }
 }
 
-async function requestAppQuit(parentWindow?: BrowserWindow | null) {
-  const shouldQuit = await confirmAppQuit(parentWindow ?? mainWindow);
-
-  if (!shouldQuit) {
-    return;
-  }
-
+function quitAppAfterConfirmation() {
   hasConfirmedAppQuit = true;
 
   if (customerWindow && !customerWindow.isDestroyed()) {
@@ -120,6 +114,16 @@ async function requestAppQuit(parentWindow?: BrowserWindow | null) {
   }
 
   app.quit();
+}
+
+async function requestAppQuit(parentWindow?: BrowserWindow | null) {
+  const shouldQuit = await confirmAppQuit(parentWindow ?? mainWindow);
+
+  if (!shouldQuit) {
+    return;
+  }
+
+  quitAppAfterConfirmation();
 }
 
 function configureDebugTools(win: BrowserWindow, openOnStart = false) {
@@ -220,10 +224,21 @@ const getTemplatePath = () => {
   return templatePath;
 };
 
-function renderTemplate(html, data) {
+function normalizeTemplateValue(value: unknown) {
+  if (value == null) {
+    return "";
+  }
+
+  const normalizedValue = String(value);
+  const comparableValue = normalizedValue.trim().toLowerCase();
+
+  return comparableValue === "null" || comparableValue === "undefined" ? "" : normalizedValue;
+}
+
+function renderTemplate(html: string, data: Record<string, unknown>) {
   let result = html;
   Object.entries(data).forEach(([key, value]) => {
-    result = result.replaceAll(`{{${key}}}`, value);
+    result = result.replaceAll(`{{${key}}}`, normalizeTemplateValue(value));
   });
   return result;
 }
@@ -652,8 +667,16 @@ if (!gotTheLock) {
         });
 
         const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+        const fontPath = path.join(path.dirname(templatePath), "UTM Bebas.ttf");
+
+        if (!fs.existsSync(fontPath)) {
+          throw new Error(`Không tìm thấy file font UTM Bebas.ttf: ${fontPath}`);
+        }
+
+        const fontSource = `data:font/ttf;base64,${fs.readFileSync(fontPath).toString("base64")}`;
 
         const html = renderTemplate(htmlTemplate, {
+          fontSource,
           filmName: payload.filmName,
           filmNameEn: payload.filmNameEn,
           countryName: payload.countryName,
@@ -676,6 +699,12 @@ if (!gotTheLock) {
 
         await renderTicketImage(html, outputPath);
 
+        const openError = await shell.openPath(outputPath);
+
+        if (openError) {
+          throw new Error(`Đã xuất vé nhưng không thể mở ảnh tự động: ${openError}`);
+        }
+
         writeExportTicketLog("success", outputPath);
         return outputPath;
       } catch (error) {
@@ -691,6 +720,10 @@ if (!gotTheLock) {
 
     ipcMain.on("app:quit", () => {
       void requestAppQuit(mainWindow);
+    });
+
+    ipcMain.on("app:quit-confirmed", () => {
+      quitAppAfterConfirmation();
     });
 
     createWindow();

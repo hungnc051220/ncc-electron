@@ -76,4 +76,5 @@ export interface PreloadAPI {
   requestTheme: () => void;
   onThemeUpdate: (cb: (theme: AppTheme) => void) => () => void;
   quitApp: () => void;
+  quitAppConfirmed: () => void;
 }

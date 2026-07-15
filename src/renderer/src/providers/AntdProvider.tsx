@@ -24,6 +24,11 @@ const AntdProvider = ({ children }: { children: React.ReactNode }) => {
     <StyleProvider layer>
       <ConfigProvider
         locale={viVN}
+        modal={{
+          mask: {
+            blur: true
+          }
+        }}
         theme={{
           token: {
             colorPrimary: "#464FB4",
