@@ -1,11 +1,13 @@
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { CancelContactTicketSaleDto } from "@renderer/api/contractTicketSales.api";
+import { ordersApi } from "@renderer/api/orders.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import { useCancelContractTicketSale } from "@renderer/hooks/contractTicketSales/useCancelContractTicketSale";
+import { contractTicketSalesKeys } from "@renderer/hooks/contractTicketSales/keys";
 import { useContractTicketSales } from "@renderer/hooks/contractTicketSales/useContractTicketSales";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
@@ -24,7 +26,7 @@ import { useAuthStore } from "@renderer/store/auth.store";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import { OrderDetailProps, OrderResponseProps } from "@shared/types";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { PaginationProps, TableProps } from "antd";
 import { Button, Dropdown, Form, Modal, Select, Table, Tooltip } from "antd";
 import dayjs from "dayjs";
@@ -70,6 +72,7 @@ const ContractTicketSalesPage = () => {
   const { message } = useAntdApp();
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { posShortName } = useSettingPosStore();
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
@@ -166,19 +169,36 @@ const ContractTicketSalesPage = () => {
       try {
         const tickets = await buildTicketsFromOrder(item, user?.fullname, posShortName);
         await window.api.printTickets(tickets, selectedPrinter);
-        message.success({
-          content: "In vé thành công",
-          key: messageKey
-        });
       } catch (error) {
         message.error({
           content: getPrintErrorMessage(error),
           key: messageKey,
           duration: 4
         });
+        return;
+      }
+
+      try {
+        await ordersApi.markPrinted({
+          orderId: item.order.id,
+          posShortName
+        });
+
+        message.success({
+          content: "In vé thành công",
+          key: messageKey
+        });
+
+        await queryClient.invalidateQueries({ queryKey: contractTicketSalesKeys.all });
+      } catch (error) {
+        message.error({
+          content: getApiErrorMessage(error, "Cập nhật trạng thái in vé thất bại"),
+          key: messageKey,
+          duration: 4
+        });
       }
     },
-    [message, posShortName, selectedPrinter, user]
+    [message, posShortName, queryClient, selectedPrinter, user]
   );
 
   const handleExportExcel = useCallback(

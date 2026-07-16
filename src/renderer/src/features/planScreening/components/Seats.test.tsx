@@ -389,4 +389,54 @@ describe("Seats", () => {
     );
     expect(setSelectedSeats).toHaveBeenLastCalledWith([firstSeat, secondSeat]);
   });
+
+  it("selects only the clicked contract ticket when cancelling contract tickets", () => {
+    const firstSeat = createSeat({ status: 1, isContract: 1 });
+    const secondSeat = createSeat({
+      seat: "2",
+      code: "A2",
+      column: 2,
+      status: 1,
+      isContract: 1
+    });
+    const setSelectedSeats = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <Seats
+          data={{ ...createPlanScreening(firstSeat), listSeats: [[firstSeat, secondSeat]] }}
+          orders={[
+            createOrder({
+              id: 321,
+              orderStatusId: OrderStatus.COMPLETED,
+              paymentStatusId: PaymentStatus.PAID,
+              items: [
+                {
+                  planScreenId: 1,
+                  listChairIndexF1: "1,2",
+                  listChairIndexF2: "",
+                  listChairIndexF3: "",
+                  listChairValueF1: "A1,A2",
+                  listChairValueF2: "",
+                  listChairValueF3: ""
+                }
+              ] as OrderResponseProps["items"]
+            })
+          ]}
+          currentPlanScreeningId={1}
+          selectedSeats={[]}
+          setSelectedSeats={setSelectedSeats}
+          cancelMode
+          screenMode="contract"
+          restrictedSeatKeys={["1-1", "1-2"]}
+        />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByText("A2"));
+
+    const updateSelection = setSelectedSeats.mock.calls.at(-1)?.[0];
+    expect(updateSelection).toBeTypeOf("function");
+    expect(updateSelection([])).toEqual([secondSeat]);
+  });
 });

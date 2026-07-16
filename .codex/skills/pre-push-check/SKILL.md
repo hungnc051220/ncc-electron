@@ -25,12 +25,13 @@ Dùng skill này khi user nói sắp push, muốn kiểm tra branch, kiểm tra 
    - `npm run typecheck`
    - `npm run lint`
    - `npm run build`
-4. Nếu command bắt buộc fail, dừng quy trình push, tóm tắt lỗi đầu tiên đáng sửa và file liên quan.
-5. Nếu check bắt buộc pass, tóm tắt rủi ro còn lại và remote/branch có thể push.
+4. Test không phải bước bắt buộc trong quy trình push/release; chỉ chạy khi task yêu cầu hoặc khi cần kiểm tra phạm vi thay đổi.
+5. Nếu command bắt buộc fail, dừng quy trình push, tóm tắt lỗi đầu tiên đáng sửa và file liên quan.
+6. Nếu check bắt buộc pass, tóm tắt rủi ro còn lại và remote/branch có thể push.
 
 ## Quy Tắc Push Hai Remote
 
-- Không push nếu `typecheck`, `lint`, test nếu có, hoặc build bắt buộc chưa pass.
+- Không push nếu `typecheck`, `lint` hoặc build bắt buộc chưa pass.
 - Không tự push nếu user chưa yêu cầu rõ.
 - Không tự bịa remote name. Dùng remote từ `git remote -v`.
 - Nếu cần đẩy cả GitHub và Bitbucket, ưu tiên push GitHub trước để CI chạy sớm, sau đó mới push Bitbucket.

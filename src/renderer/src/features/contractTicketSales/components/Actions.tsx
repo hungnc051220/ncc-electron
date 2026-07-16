@@ -102,7 +102,7 @@ const Actions = ({
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
-  const { posName } = useSettingPosStore();
+  const { posName, posShortName } = useSettingPosStore();
   const selectedPrinter = usePrinterStore((s) => s.selectedPrinter);
   const { can } = usePermission();
   const canUpdate = can("contract_ticket_sales", "update");
@@ -208,11 +208,6 @@ const Actions = ({
       const tickets = await buildTicketsFromOrder(printableOrderDetail, user?.fullname, posName);
 
       await window.api?.printTickets(tickets, selectedPrinter);
-
-      message.success({
-        key: printMessageKey,
-        content: "In vé thành công"
-      });
     } catch (error) {
       console.error(error);
       message.error({
@@ -220,13 +215,46 @@ const Actions = ({
         content: getPrintErrorMessage(error),
         duration: 4
       });
+      return;
+    }
+
+    try {
+      await ordersApi.markPrinted({
+        orderId: contractOrderId,
+        posShortName
+      });
+
+      message.success({
+        key: printMessageKey,
+        content: "In vé thành công"
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreeningId) }),
+        queryClient.invalidateQueries({
+          queryKey: ordersKeys.getOrdersByScreening(planScreeningId)
+        }),
+        queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(contractOrderId) }),
+        queryClient.invalidateQueries({ queryKey: contractTicketSalesKeys.all })
+      ]);
+    } catch (error) {
+      console.error(error);
+      message.error({
+        key: printMessageKey,
+        content: getApiErrorMessage(error, "Cập nhật trạng thái in vé thất bại"),
+        duration: 4
+      });
     }
   }, [
+    contractOrderId,
     hasPrintableTickets,
     message,
+    planScreeningId,
     posName,
+    posShortName,
     printMessageKey,
     printableOrderDetail,
+    queryClient,
     selectedPrinter,
     user
   ]);

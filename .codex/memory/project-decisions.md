@@ -14,7 +14,7 @@ File này lưu các quyết định bền vững cho repo. Không dùng như cha
 - Test tối thiểu sau thay đổi code là `npm run typecheck`; chạy `npm run lint` khi có sửa TypeScript/TSX. Test chuyên sâu theo phạm vi module.
 - GitHub là remote chính để chạy GitHub Actions; Bitbucket là remote mirror/backup hoặc review nội bộ.
 - Khi push code lên nhiều remote, ưu tiên push GitHub trước để CI chạy sớm, sau đó mới push Bitbucket.
-- Trước khi push/release phải pass local checks bắt buộc theo script có thật trong `package.json`: `typecheck`, `lint`, `test` nếu có script, và `build`. Nếu local check bắt buộc fail thì không push.
+- Trước khi push/release phải pass local checks bắt buộc theo script có thật trong `package.json`: `typecheck`, `lint` và `build`. Không chạy test trong flow release mặc định; chỉ chạy khi user yêu cầu hoặc cần xác minh phạm vi thay đổi. Nếu local check bắt buộc fail thì không push.
 - Nếu push GitHub fail thì không push tiếp Bitbucket, trừ khi user yêu cầu rõ.
 - Release hiện tại coi GitHub Releases là release target chính nếu repo không thể hiện server, bucket hoặc release target khác.
 - Không xử lý hoặc push `src/main/update-policy.json` nếu GitHub Actions build/release chưa thành công hoặc artifact/release chưa hợp lệ.

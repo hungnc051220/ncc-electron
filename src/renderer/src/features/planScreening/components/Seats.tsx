@@ -457,6 +457,19 @@ const Seats = ({
       if (selectingSeatKeysByOther.has(seatUniqueKey)) return;
 
       if (cancelMode) {
+        if (screenMode === "contract") {
+          setSelectedSeats((prev) => {
+            const isAlreadySelected = prev.some(
+              (selectedSeat) => getSeatUniqueKey(selectedSeat) === seatUniqueKey
+            );
+
+            return isAlreadySelected
+              ? prev.filter((selectedSeat) => getSeatUniqueKey(selectedSeat) !== seatUniqueKey)
+              : [...prev, seat];
+          });
+          return;
+        }
+
         const order = findSeatOrder(seat, seatOrderMap);
         if (!order || !isOrderCancellable(order) || !currentPlanScreeningId || !seats) {
           onIncompleteCancelOrder?.();
@@ -504,6 +517,7 @@ const Seats = ({
       seatOrderMap,
       seats,
       selectingSeatKeysByOther,
+      screenMode,
       setSelectedSeats
     ]
   );
