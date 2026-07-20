@@ -1,11 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.105",
+  "latestVersion": "1.0.106",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Cho phép hủy riêng từng vé hợp đồng theo nhu cầu.",
-    "Cập nhật chính xác trạng thái đã in sau khi xuất vé hợp đồng."
+    "Tối ưu cửa sổ thông tin bán vé giấy mời, giúp nội dung gọn gàng và dễ theo dõi hơn.",
+    "Cải thiện phần xem trước ảnh giấy mời, hiển thị đúng tỷ lệ và thao tác ổn định sau khi đóng ảnh.",
+    "Làm nổi bật nút xuất vé điện tử để thao tác nhanh và dễ nhận biết hơn."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.105"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.106"
 }
