@@ -56,6 +56,7 @@ import type { ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { usePermission } from "@renderer/permissions/usePermission";
+import InvitationTicketPreview from "./InvitationTicketPreview";
 
 interface OrderDialogProps {
   open: boolean;
@@ -138,6 +139,10 @@ const renderEllipsisText = (value?: string | null) => {
     </div>
   );
 };
+
+const renderWrappedText = (value?: string | null) => (
+  <span className="block min-w-0 wrap-break-word whitespace-normal">{value?.trim() || "-"}</span>
+);
 
 const renderRefundStateBadge = (status?: OrderResponseProps["refundStatusId"]) =>
   status ? (
@@ -540,55 +545,6 @@ const OrderDetailDialog = ({
     []
   );
 
-  const formatInvitationTicketLabel = (key: string) => {
-    const labelMap: Record<string, string> = {
-      receivedEmail: "Email nhận vé",
-      createdAt: "Thời gian xuất vé",
-      status: "Trạng thái",
-      urlTicket: "Ảnh vé mời",
-      createdBy: "Người tạo"
-    };
-
-    if (labelMap[key]) {
-      return labelMap[key];
-    }
-
-    return key
-      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-      .replace(/_/g, " ")
-      .replace(/^./, (char) => char.toUpperCase());
-  };
-
-  const formatInvitationTicketValue = (key: string, value: unknown) => {
-    if (value == null || value === "") {
-      return "-";
-    }
-
-    if (typeof value === "boolean") {
-      return value ? "Có" : "Không";
-    }
-
-    if (typeof value === "string") {
-      const trimmedValue = value.trim();
-
-      if (!trimmedValue) {
-        return "-";
-      }
-
-      if (["createdAt", "updatedAt", "sentAt"].includes(key) && dayjs(trimmedValue).isValid()) {
-        return dayjs(trimmedValue).format("HH:mm DD/MM/YYYY");
-      }
-
-      return trimmedValue;
-    }
-
-    if (typeof value === "number") {
-      return value;
-    }
-
-    return JSON.stringify(value);
-  };
-
   const renderInvitationTicketStatus = (status?: string | null) => {
     const normalizedStatus = status?.toLowerCase();
     const configMap: Record<string, { label: string; color: string; className: string }> = {
@@ -618,7 +574,7 @@ const OrderDetailDialog = ({
       <Tag
         color={config?.color ?? "default"}
         className={cn(
-          "mr-0 rounded-full border px-3 py-1 text-xs font-semibold",
+          "mr-0 rounded-full border px-2 py-0.5 text-xs font-semibold",
           config?.className
         )}
       >
@@ -627,22 +583,11 @@ const OrderDetailDialog = ({
     );
   };
 
-  const invitationTicketFields = useMemo(
-    () =>
-      invitationTicket
-        ? (
-            [
-              ["receivedEmail", invitationTicket.receivedEmail],
-              ["createdAt", invitationTicket.createdAt],
-              ["status", invitationTicket.status],
-              ["createdBy", invitationTicket.createdBy]
-            ] as const
-          ).filter(([, value]) => value != null && value !== "")
-        : [],
-    [invitationTicket]
-  );
-
   const fieldIconMap: Record<string, ReactNode> = {
+    "Email nhận vé": <Mail />,
+    "Thời gian xuất vé": <Clock3 />,
+    "Trạng thái gửi": <Send />,
+    "Người tạo": <UserRound />,
     "Tên khách hàng": <UserRound />,
     "Số điện thoại": <Phone />,
     Email: <Mail />,
@@ -1027,10 +972,13 @@ const OrderDetailDialog = ({
 
   return (
     <Modal
-      title="Thông tin vé bán"
+      title="Thông tin bán vé"
       open={open}
+      destroyOnHidden
       onCancel={() => onOpenChange(false)}
-      width="min(1400px, calc(100vw - 24px))"
+      width={
+        isInvitationOrder ? "min(1180px, calc(100vw - 24px))" : "min(1400px, calc(100vw - 24px))"
+      }
       centered
       classNames={{
         wrapper: "py-4",
@@ -1057,6 +1005,8 @@ const OrderDetailDialog = ({
           )}
           {canExportETicket && (
             <Button
+              variant="solid"
+              color="blue"
               icon={<ExportOutlined />}
               onClick={() => void onExportETicket()}
               loading={isExportingETicket}
@@ -1083,10 +1033,15 @@ const OrderDetailDialog = ({
       )}
     >
       <div className="space-y-3 text-slate-900 dark:text-slate-100">
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
+        <div
+          className={cn(
+            "rounded-xl border border-slate-200 bg-white shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
+            isInvitationOrder ? "px-3 py-2.5" : "px-4 py-3"
+          )}
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="grid min-w-0 flex-1 grid-cols-2 items-start gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
-              <div className="border-r border-slate-200 px-3 first:pl-0 dark:border-app-border">
+            <div className="grid min-w-0 flex-1 grid-cols-2 items-start gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="min-w-0 px-1">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                   Đơn hàng
                 </p>
@@ -1106,7 +1061,7 @@ const OrderDetailDialog = ({
                   )}
                 </div>
               </div>
-              <div className="border-r border-slate-200 px-3 dark:border-app-border">
+              <div className="min-w-0 px-1">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                   Mã đặt vé
                 </p>
@@ -1116,7 +1071,7 @@ const OrderDetailDialog = ({
                   </span>
                 </p>
               </div>
-              <div className="border-r border-slate-200 px-3 dark:border-app-border">
+              <div className="min-w-0 px-1">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                   Máy bán
                 </p>
@@ -1124,7 +1079,7 @@ const OrderDetailDialog = ({
                   {currentOrder?.items[0]?.posName || currentOrder?.posName || "-"}
                 </p>
               </div>
-              <div className="border-r border-slate-200 px-3 dark:border-app-border">
+              <div className="min-w-0 px-1">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                   Trạng thái đơn
                 </p>
@@ -1136,7 +1091,7 @@ const OrderDetailDialog = ({
                   )}
                 </div>
               </div>
-              <div className="px-3">
+              <div className="min-w-0 px-1">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                   Trạng thái thanh toán
                 </p>
@@ -1163,18 +1118,26 @@ const OrderDetailDialog = ({
 
             {currentOrder && (
               <Button
+                size="small"
                 icon={<ReloadOutlined />}
+                aria-label="Làm mới thông tin đơn hàng"
+                className="shrink-0"
                 onClick={() => void refreshOrderDetail()}
                 loading={isFetchingOrderDetail && !isChangingToSuccess}
               >
-                Làm mới
+                <span className="hidden sm:inline">Làm mới</span>
               </Button>
             )}
           </div>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-12 lg:items-stretch">
-          <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:col-span-6 dark:border-app-border dark:bg-app-bg-container dark:shadow-none">
+        <div className="grid items-stretch gap-3 lg:grid-cols-12">
+          <section
+            className={cn(
+              "rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
+              isInvitationOrder ? "flex h-full flex-col lg:col-span-4" : "lg:col-span-6"
+            )}
+          >
             {isInvitationOrder ? (
               <>
                 <div className="mb-2 flex items-center justify-between">
@@ -1186,43 +1149,28 @@ const OrderDetailDialog = ({
                 </div>
 
                 {invitationTicket ? (
-                  <div className="space-y-3">
-                    <div className="grid gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 dark:border-app-border dark:bg-app-border">
-                      {invitationTicketFields.map(([key, value]) =>
-                        renderInfoItem(
-                          formatInvitationTicketLabel(key),
-                          key === "status"
-                            ? renderInvitationTicketStatus(String(value))
-                            : formatInvitationTicketValue(key, value)
-                        )
-                      )}
-                    </div>
-
-                    {invitationTicket.urlTicket ? (
-                      <div className="border-t border-slate-200 dark:border-app-border border-dashed">
-                        <div className="my-3 flex items-center justify-between gap-3">
-                          <div>
-                            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                              Ảnh vé mời
-                            </h4>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-3 lg:grid-cols-[220px,1fr]">
-                          <div className="overflow-hidden rounded-2xl">
-                            <img
-                              src={invitationTicket.urlTicket}
-                              alt="Ảnh vé mời"
-                              className="max-h-52 w-full object-contain"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
+                  <div className="grid flex-1 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:auto-rows-fr dark:border-app-border dark:bg-app-border">
+                    {renderInfoItem(
+                      "Email nhận vé",
+                      renderWrappedText(invitationTicket.receivedEmail),
+                      "sm:col-span-2"
+                    )}
+                    {renderInfoItem(
+                      "Thời gian xuất vé",
+                      invitationTicket.createdAt && dayjs(invitationTicket.createdAt).isValid()
+                        ? dayjs(invitationTicket.createdAt).format("HH:mm DD/MM/YYYY")
+                        : "-"
+                    )}
+                    {renderInfoItem("Người tạo", renderWrappedText(invitationTicket.createdBy))}
+                    {renderInfoItem(
+                      "Trạng thái gửi",
+                      renderInvitationTicketStatus(invitationTicket.status),
+                      "sm:col-span-2"
+                    )}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
-                    Chưa có dữ liệu
+                  <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-300 px-4 py-4 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                    Chưa có thông tin xuất giấy mời.
                   </div>
                 )}
               </>
@@ -1252,51 +1200,49 @@ const OrderDetailDialog = ({
                   )}
                   {renderInfoItem(
                     "Mã vé điện tử",
-                    currentOrder?.invNo && isEInvoiceCancelled ? (
-                      renderEllipsisPopover(
-                        <div className="min-w-72 space-y-2">
-                          <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 dark:border-app-border">
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-primary">Mã HĐĐT gốc</p>
-                              <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
-                                <span>{currentOrder.invNo}</span>
-                                {renderCopyInvoiceButton(
-                                  currentOrder.invNo,
-                                  "Sao chép mã HĐĐT gốc"
-                                )}
+                    currentOrder?.invNo && isEInvoiceCancelled
+                      ? renderEllipsisPopover(
+                          <div className="min-w-72 space-y-2">
+                            <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 dark:border-app-border">
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-primary">Mã HĐĐT gốc</p>
+                                <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
+                                  <span>{currentOrder.invNo}</span>
+                                  {renderCopyInvoiceButton(
+                                    currentOrder.invNo,
+                                    "Sao chép mã HĐĐT gốc"
+                                  )}
+                                </div>
                               </div>
+                              <span className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                                Đã hủy
+                              </span>
                             </div>
-                            <span className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-primary">Mã HĐĐT thay thế</p>
+                                <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
+                                  <span>{replacementInvoiceNo}</span>
+                                  {renderCopyInvoiceButton(
+                                    replacementInvoiceNo,
+                                    "Sao chép mã HĐĐT thay thế"
+                                  )}
+                                </div>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                                Thay thế
+                              </span>
+                            </div>
+                          </div>,
+                          <span className="inline-flex items-center gap-2">
+                            <span>{currentOrder.invNo}</span>
+                            {renderCopyInvoiceButton(currentOrder.invNo, "Sao chép mã HĐĐT gốc")}
+                            <Tag color="error" className="mr-0 rounded-full text-[11px]">
                               Đã hủy
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-primary">Mã HĐĐT thay thế</p>
-                              <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
-                                <span>{replacementInvoiceNo}</span>
-                                {renderCopyInvoiceButton(
-                                  replacementInvoiceNo,
-                                  "Sao chép mã HĐĐT thay thế"
-                                )}
-                              </div>
-                            </div>
-                            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                              Thay thế
-                            </span>
-                          </div>
-                        </div>,
-                        <span className="inline-flex items-center gap-2">
-                          <span>{currentOrder.invNo}</span>
-                          {renderCopyInvoiceButton(currentOrder.invNo, "Sao chép mã HĐĐT gốc")}
-                          <Tag color="error" className="mr-0 rounded-full text-[11px]">
-                            Đã hủy
-                          </Tag>
-                        </span>
-                      )
-                    ) : (
-                      currentOrder?.invNo
-                    )
+                            </Tag>
+                          </span>
+                        )
+                      : currentOrder?.invNo
                   )}
                   {renderInfoItem(
                     "Đường dẫn vé điện tử",
@@ -1340,18 +1286,25 @@ const OrderDetailDialog = ({
           <section
             className={cn(
               "rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
-              "lg:col-span-6"
+              isInvitationOrder ? "flex h-full flex-col lg:col-span-8" : "lg:col-span-6"
             )}
           >
             <div className="mb-2">
               <h3 className="text-base font-semibold text-slate-900 dark:text-white">Suất chiếu</h3>
             </div>
 
-            <div className="grid gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 xl:grid-cols-3 dark:border-app-border dark:bg-app-border">
+            <div
+              className={cn(
+                "grid gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 dark:border-app-border dark:bg-app-border",
+                isInvitationOrder ? "flex-1 lg:auto-rows-fr lg:grid-cols-3" : "xl:grid-cols-3"
+              )}
+            >
               {renderInfoItem(
                 "Tên phim",
-                renderEllipsisText(currentDetail?.film?.filmName),
-                "sm:col-span-2 xl:col-span-3"
+                isInvitationOrder
+                  ? renderWrappedText(currentDetail?.film?.filmName)
+                  : renderEllipsisText(currentDetail?.film?.filmName),
+                isInvitationOrder ? "sm:col-span-2 lg:col-span-3" : "sm:col-span-2 xl:col-span-3"
               )}
               {renderInfoItem(
                 "Ngày chiếu",
@@ -1369,34 +1322,51 @@ const OrderDetailDialog = ({
               {renderInfoItem("Số lượng vé", totalTickets)}
               {renderInfoItem(
                 "Chi tiết giá vé",
-                renderEllipsisPopover(
-                  <div className="min-w-64 space-y-2">
-                    {ticketPriceRows.map(({ price, quantity }, index) => (
-                      <div
-                        key={price}
-                        className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 dark:border-app-border"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-primary">Mức giá {index + 1}</p>
-                          <p className="font-semibold text-slate-900 dark:text-slate-100">
-                            {formatMoney(price)}
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                          {formatNumber(quantity)} vé
-                        </span>
-                      </div>
-                    ))}
-                  </div>,
-                  <Typography.Text className="block! max-w-full!" ellipsis>
-                    {ticketPriceDetails || "-"}
-                  </Typography.Text>
-                )
+                isInvitationOrder
+                  ? renderWrappedText(ticketPriceDetails)
+                  : renderEllipsisPopover(
+                      <div className="min-w-64 space-y-2">
+                        {ticketPriceRows.map(({ price, quantity }, index) => (
+                          <div
+                            key={price}
+                            className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 dark:border-app-border"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-primary">
+                                Mức giá {index + 1}
+                              </p>
+                              <p className="font-semibold text-slate-900 dark:text-slate-100">
+                                {formatMoney(price)}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                              {formatNumber(quantity)} vé
+                            </span>
+                          </div>
+                        ))}
+                      </div>,
+                      <Typography.Text className="block! max-w-full!" ellipsis>
+                        {ticketPriceDetails || "-"}
+                      </Typography.Text>
+                    )
               )}
-              {renderInfoItem("Vị trí ghế", renderEllipsisText(seatLabels.join(", ")))}
+              {renderInfoItem(
+                "Vị trí ghế",
+                isInvitationOrder
+                  ? renderWrappedText(seatLabels.join(", "))
+                  : renderEllipsisText(seatLabels.join(", "))
+              )}
             </div>
           </section>
         </div>
+
+        {isInvitationOrder && (
+          <InvitationTicketPreview
+            active={open}
+            imageUrl={invitationTicket?.urlTicket}
+            ticketCode={currentOrder?.barCode}
+          />
+        )}
 
         {!currentOrder?.isInvitation && (
           <div className="grid items-stretch gap-3 lg:grid-cols-12">
