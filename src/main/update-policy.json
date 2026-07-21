@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.106",
+  "latestVersion": "1.0.107",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Tối ưu cửa sổ thông tin bán vé giấy mời, giúp nội dung gọn gàng và dễ theo dõi hơn.",
-    "Cải thiện phần xem trước ảnh giấy mời, hiển thị đúng tỷ lệ và thao tác ổn định sau khi đóng ảnh.",
-    "Làm nổi bật nút xuất vé điện tử để thao tác nhanh và dễ nhận biết hơn."
+    "Cải thiện hiển thị bảng trong các màn hình có tab, giúp bảng tận dụng chiều cao còn lại và cuộn đúng khi có nhiều dữ liệu.",
+    "Bổ sung thông tin người xuất vé, nút sao chép mã đơn hàng và thao tác làm mới chi tiết đơn hàng thuận tiện hơn.",
+    "Cải thiện quy trình xuất vé mời: đóng cửa sổ ngay khi thành công và không tự mở ảnh khi đã có thông tin người nhận."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.106"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.107"
 }
