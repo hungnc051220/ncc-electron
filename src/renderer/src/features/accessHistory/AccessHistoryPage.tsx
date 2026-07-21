@@ -1,7 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import FullHeightTabs from "@renderer/components/FullHeightTabs";
 import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
-import { Tabs } from "antd";
 import type { TabsProps } from "antd";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import TabActivityLogDetail from "./components/TabActivityLogDetail";
@@ -52,12 +52,7 @@ const AccessHistoryPage = () => {
         }
       />
 
-      <Tabs
-        type="card"
-        defaultActiveKey="1"
-        items={items}
-        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
-      />
+      <FullHeightTabs type="card" defaultActiveKey="1" items={items} />
     </div>
   );
 };

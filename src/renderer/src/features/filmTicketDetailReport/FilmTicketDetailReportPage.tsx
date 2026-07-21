@@ -1,5 +1,6 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import type { ReportRevenueByFilmDto } from "@renderer/api/reportsApi";
+import FullHeightTabs from "@renderer/components/FullHeightTabs";
 import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import {
@@ -17,7 +18,6 @@ import TabSummary from "@renderer/features/staffRevenueReport/components/revenue
 import { useReportRevenueByFilm } from "@renderer/hooks/reports/useReportRevenueByFilm";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import type { TabsProps } from "antd";
-import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
@@ -339,11 +339,10 @@ const FilmTicketDetailReportPage = () => {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4 pb-3">
       <PageHeader left={<AppBreadcrumb />} />
 
-      <Tabs
+      <FullHeightTabs
         defaultActiveKey="chart"
         type="card"
         items={items}
-        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
           <div className="mb-1 flex items-center justify-end gap-2">
             <Filter filterValues={filterValues} onSearch={setFilterValues} />

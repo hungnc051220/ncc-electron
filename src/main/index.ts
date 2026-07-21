@@ -3,6 +3,7 @@ import {
   AppConfig,
   AppTheme,
   CurrentSeatState,
+  ExportTicketPayload,
   OrderResponseProps,
   PlanScreeningDetailProps,
   PrintTicketPayload,
@@ -655,7 +656,7 @@ if (!gotTheLock) {
       };
     });
 
-    ipcMain.handle("export-ticket", async (_, payload) => {
+    ipcMain.handle("export-ticket", async (_, payload: ExportTicketPayload) => {
       try {
         const templatePath = getTemplatePath();
         writeExportTicketLog("templatePath", templatePath);
@@ -663,7 +664,8 @@ if (!gotTheLock) {
           barCode: payload.barCode,
           folder: payload.folder,
           imageSource: payload.imageSource,
-          filmName: payload.filmName
+          filmName: payload.filmName,
+          openAfterExport: payload.openAfterExport !== false
         });
 
         const htmlTemplate = fs.readFileSync(templatePath, "utf-8");
@@ -699,10 +701,12 @@ if (!gotTheLock) {
 
         await renderTicketImage(html, outputPath);
 
-        const openError = await shell.openPath(outputPath);
+        if (payload.openAfterExport !== false) {
+          const openError = await shell.openPath(outputPath);
 
-        if (openError) {
-          throw new Error(`Đã xuất vé nhưng không thể mở ảnh tự động: ${openError}`);
+          if (openError) {
+            throw new Error(`Đã xuất vé nhưng không thể mở ảnh tự động: ${openError}`);
+          }
         }
 
         writeExportTicketLog("success", outputPath);

@@ -1,7 +1,8 @@
-import { ExportOutlined, ReloadOutlined, SyncOutlined } from "@ant-design/icons";
+import { ExportOutlined, SyncOutlined } from "@ant-design/icons";
 import { cancelTicketsApi } from "@renderer/api/cancelTickets.api";
 import { ordersApi } from "@renderer/api/orders.api";
 import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
+import RefreshButton from "@renderer/components/RefreshButton";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
@@ -57,6 +58,7 @@ import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { usePermission } from "@renderer/permissions/usePermission";
 import InvitationTicketPreview from "./InvitationTicketPreview";
+import { getInvitationTicketIssuerName, refreshOrderDetailData } from "./OrderDetailDialog.utils";
 
 interface OrderDialogProps {
   open: boolean;
@@ -222,6 +224,7 @@ const OrderDetailDialog = ({
   const [isCheckingTransaction, setIsCheckingTransaction] = useState(false);
   const [isExportingETicket, setIsExportingETicket] = useState(false);
   const [isCancellingEInvoice, setIsCancellingEInvoice] = useState(false);
+  const [isRefreshingOrderDetail, setIsRefreshingOrderDetail] = useState(false);
   const isCancellingEInvoiceRef = useRef(false);
   const isCancelEInvoiceConfirmOpenRef = useRef(false);
   const updateOrder = useUpdateOrder();
@@ -331,6 +334,7 @@ const OrderDetailDialog = ({
   const resolvedPaymentStatusId = resolveOrderPaymentStatus(currentOrder);
 
   const invitationTicket = currentOrder?.invitationTickets;
+  const invitationTicketIssuerName = getInvitationTicketIssuerName(currentOrder);
 
   const ticketPromotions = useMemo(() => {
     const map = new Map<
@@ -587,7 +591,7 @@ const OrderDetailDialog = ({
     "Email nhận vé": <Mail />,
     "Thời gian xuất vé": <Clock3 />,
     "Trạng thái gửi": <Send />,
-    "Người tạo": <UserRound />,
+    "Người xuất vé": <UserRound />,
     "Tên khách hàng": <UserRound />,
     "Số điện thoại": <Phone />,
     Email: <Mail />,
@@ -765,15 +769,23 @@ const OrderDetailDialog = ({
   };
 
   const refreshOrderDetail = async () => {
-    if (!currentOrder) return;
+    return refreshOrderDetailData({
+      orderId: currentOrderId,
+      refetch: refetchOrderDetail,
+      invalidateOrders: () => queryClient.invalidateQueries({ queryKey: ordersKeys.all })
+    });
+  };
 
-    const refreshed = await refetchOrderDetail();
-    const latestOrderId = refreshed.data?.order.id ?? currentOrder.id;
-
-    queryClient.invalidateQueries({ queryKey: ordersKeys.all });
-    queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(latestOrderId) });
-
-    return refreshed.data;
+  const onRefreshOrderDetail = async () => {
+    try {
+      setIsRefreshingOrderDetail(true);
+      await refreshOrderDetail();
+      message.success("Đã cập nhật thông tin đơn hàng");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Làm mới thông tin đơn hàng thất bại"));
+    } finally {
+      setIsRefreshingOrderDetail(false);
+    }
   };
 
   const onChangeStatusOrder = async () => {
@@ -946,16 +958,21 @@ const OrderDetailDialog = ({
     });
   };
 
-  const copyInvoiceNo = async (invoiceNo: string) => {
+  const copyText = async (value: string, successMessage: string, errorMessage: string) => {
     try {
-      await navigator.clipboard.writeText(invoiceNo);
-      message.success(`Đã sao chép mã ${invoiceNo}`);
+      await navigator.clipboard.writeText(value);
+      message.success(successMessage);
     } catch {
-      message.error("Không thể sao chép mã HĐĐT");
+      message.error(errorMessage);
     }
   };
 
-  const renderCopyInvoiceButton = (invoiceNo: string, label: string) => (
+  const renderCopyButton = (
+    value: string,
+    label: string,
+    successMessage: string,
+    errorMessage: string
+  ) => (
     <Button
       type="text"
       size="small"
@@ -965,10 +982,13 @@ const OrderDetailDialog = ({
       className="shrink-0 text-slate-500! hover:text-primary! dark:text-slate-400!"
       onClick={(event) => {
         event.stopPropagation();
-        void copyInvoiceNo(invoiceNo);
+        void copyText(value, successMessage, errorMessage);
       }}
     />
   );
+
+  const renderCopyInvoiceButton = (invoiceNo: string, label: string) =>
+    renderCopyButton(invoiceNo, label, `Đã sao chép mã ${invoiceNo}`, "Không thể sao chép mã HĐĐT");
 
   return (
     <Modal
@@ -1043,12 +1063,19 @@ const OrderDetailDialog = ({
             <div className="grid min-w-0 flex-1 grid-cols-2 items-start gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
               <div className="min-w-0 px-1">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
-                  Đơn hàng
+                  Mã đơn hàng
                 </p>
                 <div className="flex h-6 items-center gap-2">
                   <span className="text-sm font-bold text-amber-600 dark:text-amber-300">
-                    #{currentOrder?.id ?? "-"}
+                    {currentOrder?.id ?? "-"}
                   </span>
+                  {currentOrder?.id != null &&
+                    renderCopyButton(
+                      String(currentOrder.id),
+                      "Sao chép mã đơn hàng",
+                      `Đã sao chép mã đơn hàng ${currentOrder.id}`,
+                      "Không thể sao chép mã đơn hàng"
+                    )}
                   {orderTypeBadge && (
                     <span
                       className={cn(
@@ -1117,16 +1144,21 @@ const OrderDetailDialog = ({
             </div>
 
             {currentOrder && (
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
+              <RefreshButton
+                color="primary"
+                variant="filled"
+                label="Làm mới"
                 aria-label="Làm mới thông tin đơn hàng"
                 className="shrink-0"
-                onClick={() => void refreshOrderDetail()}
-                loading={isFetchingOrderDetail && !isChangingToSuccess}
-              >
-                <span className="hidden sm:inline">Làm mới</span>
-              </Button>
+                onRefresh={onRefreshOrderDetail}
+                loading={isRefreshingOrderDetail || isFetchingOrderDetail}
+                disabled={
+                  isChangingToSuccess ||
+                  isCheckingTransaction ||
+                  isExportingETicket ||
+                  isCancellingEInvoice
+                }
+              />
             )}
           </div>
         </div>
@@ -1161,7 +1193,7 @@ const OrderDetailDialog = ({
                         ? dayjs(invitationTicket.createdAt).format("HH:mm DD/MM/YYYY")
                         : "-"
                     )}
-                    {renderInfoItem("Người tạo", renderWrappedText(invitationTicket.createdBy))}
+                    {renderInfoItem("Người xuất vé", renderWrappedText(invitationTicketIssuerName))}
                     {renderInfoItem(
                       "Trạng thái gửi",
                       renderInvitationTicketStatus(invitationTicket.status),

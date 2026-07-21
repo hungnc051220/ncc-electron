@@ -13,9 +13,13 @@ import type { FormProps } from "antd";
 import { Button, Checkbox, Form, Input, Modal, Select, Space } from "antd";
 import dayjs from "dayjs";
 import QRCode from "qrcode";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
+import {
+  completeInvitationTicketExport,
+  shouldOpenInvitationTicketAfterExport
+} from "./PrintInvitationTicketDialog.utils";
 
 const templateHtml = `<!DOCTYPE html>
 <html>
@@ -43,7 +47,7 @@ interface FieldType {
   title: string;
   phoneNumber?: string;
   sendZaloOA?: boolean;
-  saveLocation?: string;
+  saveLocation: string;
 }
 
 interface PrintInvitationTicketDialogProps {
@@ -62,6 +66,7 @@ const PrintInvitationTicketDialog = ({
   const queryClient = useQueryClient();
   const [form] = Form.useForm<FieldType>();
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
   const uploadImage = useUploadImage();
   const { data: backgrounds, isFetching: isFetchingBackgrounds } = useInvitationTicketBackgrounds();
   const createInvitationTicket = useCreateInvitationTicket();
@@ -131,7 +136,6 @@ const PrintInvitationTicketDialog = ({
     const qrBase64 = await generateQrCode(selectedItem.order.barCode);
 
     try {
-      setLoading(true);
       outputPath = await window.api.exportTicket({
         filmName: selectedItem.film?.filmName,
         filmNameEn: selectedItem.film?.filmNameEn,
@@ -147,12 +151,11 @@ const PrintInvitationTicketDialog = ({
         floor: selectedItem.room.floor,
         categories:
           selectedItem.film?.categories?.map((category) => category.name).join(", ") || "",
-        countryName: selectedItem.film?.country?.name
+        countryName: selectedItem.film?.country?.name,
+        openAfterExport: shouldOpenInvitationTicketAfterExport(values)
       });
-      setLoading(false);
       return outputPath;
     } catch (error) {
-      setLoading(false);
       console.error(error);
       message.error(getApiErrorMessage(error, "Xuất vé thất bại"));
       return outputPath;
@@ -160,21 +163,29 @@ const PrintInvitationTicketDialog = ({
   };
 
   const handleExport: FormProps<FieldType>["onFinish"] = async (values: FieldType) => {
-    if (!selectedItem) return;
+    if (!selectedItem || isSubmittingRef.current) return;
 
-    const outputPath = await getOutputPath(values);
-
-    if (!outputPath) {
-      return;
-    }
-
-    if (!values.title || !values.receivedEmail) {
-      message.success("Xuất vé thành công");
-      onOpenChange(false);
-      return;
-    }
+    isSubmittingRef.current = true;
+    setLoading(true);
+    let exportSucceeded = false;
 
     try {
+      const outputPath = await getOutputPath(values);
+
+      if (!outputPath) {
+        return;
+      }
+
+      if (!values.title || !values.receivedEmail) {
+        exportSucceeded = true;
+        completeInvitationTicketExport({
+          successMessage: "Xuất vé thành công",
+          closeModal: () => onOpenChange(false),
+          showSuccess: (successMessage) => message.success(successMessage)
+        });
+        return;
+      }
+
       const file = await filePathToFile(outputPath, selectedItem.order.barCode);
       let imageUrl = "";
 
@@ -210,10 +221,19 @@ const PrintInvitationTicketDialog = ({
         })
       ]);
 
-      message.success("Xuất vé mời qua email thành công");
-      onOpenChange(false);
+      exportSucceeded = true;
+      completeInvitationTicketExport({
+        successMessage: "Xuất vé mời qua email thành công",
+        closeModal: () => onOpenChange(false),
+        showSuccess: (successMessage) => message.success(successMessage)
+      });
     } catch (error: unknown) {
       message.error(getApiErrorMessage(error, "Xuất vé thành công nhưng xử lý tệp thất bại"));
+    } finally {
+      if (!exportSucceeded) {
+        isSubmittingRef.current = false;
+        setLoading(false);
+      }
     }
   };
 
@@ -238,11 +258,19 @@ const PrintInvitationTicketDialog = ({
           htmlType: "submit",
           autoFocus: true
         }}
-        confirmLoading={createInvitationTicket.isPending || uploadImage.isPending || loading}
+        confirmLoading={loading}
         cancelButtonProps={{
-          disabled: createInvitationTicket.isPending || uploadImage.isPending || loading
+          disabled: loading
         }}
-        onCancel={() => onOpenChange(false)}
+        onCancel={() => {
+          if (!loading) onOpenChange(false);
+        }}
+        afterOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            isSubmittingRef.current = false;
+            setLoading(false);
+          }
+        }}
         forceRender
         modalRender={(dom) => (
           <Form layout="vertical" form={form} onFinish={handleExport}>

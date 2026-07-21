@@ -129,6 +129,7 @@ export interface InvitationTicketProps {
   status: string;
   urlTicket: string;
   createdBy: string;
+  createdByStaffName?: string;
 }
 
 export interface OrderItem {

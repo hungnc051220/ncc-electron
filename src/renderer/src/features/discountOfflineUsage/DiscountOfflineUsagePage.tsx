@@ -1,11 +1,12 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
+import FullHeightTabs from "@renderer/components/FullHeightTabs";
 import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import { useDiscountOfflineUsageReport } from "@renderer/hooks/reports/useDiscountOfflineUsageReport";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import type { DiscountOfflineUsageReportItem } from "@shared/types";
-import { Table, Tabs, type TableProps, type TabsProps } from "antd";
+import { Table, type TableProps, type TabsProps } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import ExportExcelButton from "./components/ExportExcel";
@@ -201,12 +202,11 @@ const DiscountOfflineUsagePage = () => {
         }
       />
 
-      <Tabs
+      <FullHeightTabs
         type="card"
         activeKey={activeReportType}
         onChange={(key) => setActiveReportType(key as ReportType)}
         items={tabItems}
-        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
       />
     </div>
   );

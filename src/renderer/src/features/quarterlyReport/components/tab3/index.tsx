@@ -2,8 +2,8 @@ import { useReportQuarterly } from "@renderer/hooks/reports/useReportQuarterly";
 import DateRangeRequiredEmptyState from "@renderer/features/staffRevenueReport/components/DateRangeRequiredEmptyState";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { MonthlyReportRoomProps, RoomReport } from "@shared/types";
+import FullHeightTabs from "@renderer/components/FullHeightTabs";
 import type { TabsProps } from "antd";
-import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo } from "react";
@@ -542,10 +542,9 @@ const Tab3 = ({ filterValues }: Tab3Props) => {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <Tabs
+      <FullHeightTabs
         items={items}
         defaultActiveKey="chart"
-        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
           <div className="mb-2 flex justify-end gap-3">
             {filterValues.fromDate && (

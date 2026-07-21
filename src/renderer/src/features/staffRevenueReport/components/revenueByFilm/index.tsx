@@ -1,8 +1,8 @@
 import { useReportRevenueByFilm } from "@renderer/hooks/reports/useReportRevenueByFilm";
 import RefreshButton from "@renderer/components/RefreshButton";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
+import FullHeightTabs from "@renderer/components/FullHeightTabs";
 import type { TabsProps } from "antd";
-import { Tabs } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
@@ -374,10 +374,9 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <Tabs
+      <FullHeightTabs
         items={items}
         defaultActiveKey="1"
-        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
         tabBarExtraContent={
           <div className="flex justify-end gap-3 mr-2">
             <Filter filterValues={filterValues} onSearch={onSearch} />

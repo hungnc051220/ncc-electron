@@ -2,6 +2,7 @@ import {
   AppConfig,
   AppTheme,
   CurrentSeatState,
+  ExportTicketPayload,
   OrderResponseProps,
   PlanScreeningDetailProps,
   PrintTicketPayload,
@@ -57,7 +58,7 @@ export interface PreloadAPI {
   getDefaultExportFolder(): Promise<string>;
   selectFolder(): Promise<string>;
 
-  exportTicket(payload: unknown): Promise<string>;
+  exportTicket(payload: ExportTicketPayload): Promise<string>;
 
   readFile(path: string): Promise<Uint8Array>;
   saveFile(params: SaveFileParams): Promise<SaveFileResult>;

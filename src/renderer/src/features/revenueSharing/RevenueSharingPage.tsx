@@ -1,7 +1,7 @@
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import FullHeightTabs from "@renderer/components/FullHeightTabs";
 import PageHeader from "@renderer/components/PageHeader";
 import type { TabsProps } from "antd";
-import { Tabs } from "antd";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import PaymentScheduleTab from "./components/paymentScheduleTab";
@@ -51,13 +51,12 @@ const RevenueSharingPage = () => {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4 pb-3">
       <PageHeader left={<AppBreadcrumb />} />
 
-      <Tabs
+      <FullHeightTabs
         activeKey={activeKey}
         onChange={setActiveKey}
         type="card"
         items={items}
         tabBarExtraContent={tabActions[activeKey]}
-        className="flex h-full min-h-0 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content]:h-full [&_.ant-tabs-content]:min-h-0 [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-tabpane]:min-h-0"
       />
     </div>
   );

@@ -23,6 +23,24 @@ export type PrintTicketsArgs = {
   printerName?: string;
 };
 
+export interface ExportTicketPayload {
+  filmName?: string | null;
+  filmNameEn?: string | null;
+  duration?: number | null;
+  date: string;
+  datetime: string;
+  room?: string | null;
+  seat: string;
+  imageSource: string;
+  qrImage: string;
+  barCode: string;
+  folder: string;
+  floor?: string | null;
+  categories?: string;
+  countryName?: string | null;
+  openAfterExport?: boolean;
+}
+
 export type UpdateMode = "optional" | "silent" | "force";
 
 export interface UpdatePolicy {
