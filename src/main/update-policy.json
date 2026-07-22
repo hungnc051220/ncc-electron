@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.107",
+  "latestVersion": "1.0.108",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Cải thiện hiển thị bảng trong các màn hình có tab, giúp bảng tận dụng chiều cao còn lại và cuộn đúng khi có nhiều dữ liệu.",
-    "Bổ sung thông tin người xuất vé, nút sao chép mã đơn hàng và thao tác làm mới chi tiết đơn hàng thuận tiện hơn.",
-    "Cải thiện quy trình xuất vé mời: đóng cửa sổ ngay khi thành công và không tự mở ảnh khi đã có thông tin người nhận."
+    "Cải thiện màn Lịch sử hoạt động, giúp nội dung thay đổi dễ đọc và tra cứu chi tiết thuận tiện hơn.",
+    "Hiển thị rõ tên dữ liệu, người thực hiện, thời gian và giá trị trước–sau của mỗi thay đổi.",
+    "Cập nhật thao tác bật hoặc tắt bán vé online để chỉ thay đổi đúng trạng thái đã chọn."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.107"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.108"
 }
