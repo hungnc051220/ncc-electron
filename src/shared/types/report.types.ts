@@ -2,15 +2,16 @@ import { UserProps } from "./user.types";
 
 export interface AuditLogProps {
   id: number;
-  userId: number;
-  model: string;
-  user: UserProps;
-  entityId: string;
-  action: string;
-  oldValues: string;
-  newValues: string;
-  changedFields: string;
-  timestamp: string;
+  userId?: number | null;
+  username?: string | null;
+  model?: string | null;
+  user?: UserProps | null;
+  entityId?: string | number | null;
+  action?: string | null;
+  oldValues?: unknown;
+  newValues?: unknown;
+  changedFields?: unknown;
+  timestamp?: string | null;
 }
 
 export interface RevenueByEmployeeProps {

@@ -29,6 +29,9 @@ export interface PlanScreeningDto {
   noOnlineChairF3?: string;
 }
 
+export type PlanScreeningOnlineSellingDto = Required<Pick<PlanScreeningDto, "isOnlineSelling">>;
+export type PlanScreeningUpdateDto = PlanScreeningDto | PlanScreeningOnlineSellingDto;
+
 export const planScreeningsApi = {
   getAll: async (params: PlanScreeningsQuery): Promise<ApiResponse<PlanScreeningDetailProps>> => {
     const { current, pageSize, planCinemaId, fromDate, toDate, roomId, filmId, sort } = params;
@@ -88,7 +91,7 @@ export const planScreeningsApi = {
     const res = await api.post("/api/pos/plan-screenings", dto);
     return res.data;
   },
-  update: async (id: number, dto: PlanScreeningDto) => {
+  update: async (id: number, dto: PlanScreeningUpdateDto) => {
     const res = await api.patch(`/api/pos/plan-screenings/${id}`, dto);
     return res.data;
   },

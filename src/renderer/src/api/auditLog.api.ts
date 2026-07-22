@@ -17,7 +17,7 @@ export const auditLogApi = {
 
     const filter: Record<string, unknown> = {};
 
-    if (userId) {
+    if (userId !== undefined && userId !== null) {
       filter.userId = userId;
     }
 

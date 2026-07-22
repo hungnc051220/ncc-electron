@@ -69,7 +69,6 @@ const OnlineShowtimeBookingPage = () => {
         {
           id: item.id,
           dto: {
-            ...item,
             isOnlineSelling: item.isOnlineSelling === 1 ? 0 : 1
           }
         },
