@@ -18,6 +18,7 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import {
   completeInvitationTicketExport,
+  getInvitationTicketContactInfo,
   shouldOpenInvitationTicketAfterExport
 } from "./PrintInvitationTicketDialog.utils";
 
@@ -41,11 +42,12 @@ const templateHtml = `<!DOCTYPE html>
 
 interface FieldType {
   orderId: number;
-  receivedEmail: string;
+  fullName?: string;
+  receivedEmail?: string;
   status: string;
   background: string;
-  title: string;
-  phoneNumber?: string;
+  title?: string;
+  receivedPhone?: string;
   sendZaloOA?: boolean;
   saveLocation: string;
 }
@@ -176,7 +178,9 @@ const PrintInvitationTicketDialog = ({
         return;
       }
 
-      if (!values.title || !values.receivedEmail) {
+      const { receivedEmail, receivedPhone } = getInvitationTicketContactInfo(values);
+
+      if (!receivedEmail && !receivedPhone) {
         exportSucceeded = true;
         completeInvitationTicketExport({
           successMessage: "Xuất vé thành công",
@@ -199,13 +203,16 @@ const PrintInvitationTicketDialog = ({
       try {
         await createInvitationTicket.mutateAsync({
           orderId: selectedItem.order.id,
-          receivedEmail: values.receivedEmail,
+          fullName: receivedPhone ? values.fullName?.trim() : undefined,
+          receivedEmail,
+          receivedPhone,
+          sendZaloOA: Boolean(receivedPhone),
           status: "sent",
           urlTicket: imageUrl,
-          title: values.title
+          title: receivedEmail ? values.title?.trim() : undefined
         });
       } catch (error: unknown) {
-        message.error(getApiErrorMessage(error, "Xuất vé mời qua email thất bại"));
+        message.error(getApiErrorMessage(error, "Gửi vé mời thất bại"));
         return;
       }
 
@@ -223,7 +230,7 @@ const PrintInvitationTicketDialog = ({
 
       exportSucceeded = true;
       completeInvitationTicketExport({
-        successMessage: "Xuất vé mời qua email thành công",
+        successMessage: "Gửi vé mời thành công",
         closeModal: () => onOpenChange(false),
         showSuccess: (successMessage) => message.success(successMessage)
       });
@@ -240,11 +247,15 @@ const PrintInvitationTicketDialog = ({
   const image = Form.useWatch("background", form);
   const sendZaloOA = Form.useWatch("sendZaloOA", form);
   const handleInputChange =
-    (field: "receivedEmail" | "title" | "phoneNumber") => (e: ChangeEvent<HTMLInputElement>) => {
+    (field: "fullName" | "receivedEmail" | "title" | "receivedPhone") =>
+    (e: ChangeEvent<HTMLInputElement>) => {
       form.setFieldValue(field, e.target.value);
     };
 
-  const inputProps = (field: "receivedEmail" | "title" | "phoneNumber", placeholder: string) => ({
+  const inputProps = (
+    field: "fullName" | "receivedEmail" | "title" | "receivedPhone",
+    placeholder: string
+  ) => ({
     placeholder,
     onChange: handleInputChange(field)
   });
@@ -358,15 +369,37 @@ const PrintInvitationTicketDialog = ({
           >
             <Input {...inputProps("title", "Nhập tiêu đề email")} />
           </Form.Item>
-          <Form.Item name="sendZaloOA" label={null} valuePropName="checked">
-            <Checkbox>Gửi zalo OA</Checkbox>
+          <Form.Item name="sendZaloOA" label={null} valuePropName="checked" className="col-span-2">
+            <Checkbox
+              onChange={(event) => {
+                if (!event.target.checked) {
+                  form.setFieldValue("fullName", undefined);
+                  form.setFieldValue("receivedPhone", undefined);
+                }
+              }}
+            >
+              Gửi zalo OA
+            </Checkbox>
           </Form.Item>
           <Form.Item
-            name="phoneNumber"
+            name="fullName"
+            label="Tên khách hàng"
+            rules={[
+              {
+                required: sendZaloOA,
+                whitespace: true,
+                message: "Nhập tên khách hàng gửi ZaloOA"
+              }
+            ]}
+          >
+            <Input {...inputProps("fullName", "Nhập tên khách hàng")} disabled={!sendZaloOA} />
+          </Form.Item>
+          <Form.Item
+            name="receivedPhone"
             label="Số điện thoại"
             rules={[{ required: sendZaloOA, message: "Nhập số điện thoại gửi ZaloOA" }]}
           >
-            <Input {...inputProps("phoneNumber", "Nhập số điện thoại")} />
+            <Input {...inputProps("receivedPhone", "Nhập số điện thoại")} disabled={!sendZaloOA} />
           </Form.Item>
           {image ? (
             <img

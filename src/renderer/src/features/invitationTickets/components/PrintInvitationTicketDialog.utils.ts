@@ -1,6 +1,7 @@
 type InvitationTicketContactInfo = {
   receivedEmail?: string | null;
-  phoneNumber?: string | null;
+  receivedPhone?: string | null;
+  sendZaloOA?: boolean;
 };
 
 type CompleteInvitationTicketExportParams = {
@@ -9,10 +10,19 @@ type CompleteInvitationTicketExportParams = {
   showSuccess: (message: string) => void;
 };
 
-export const shouldOpenInvitationTicketAfterExport = ({
+export const getInvitationTicketContactInfo = ({
   receivedEmail,
-  phoneNumber
-}: InvitationTicketContactInfo) => !receivedEmail?.trim() && !phoneNumber?.trim();
+  receivedPhone,
+  sendZaloOA
+}: InvitationTicketContactInfo) => ({
+  receivedEmail: receivedEmail?.trim() || undefined,
+  receivedPhone: sendZaloOA ? receivedPhone?.trim() || undefined : undefined
+});
+
+export const shouldOpenInvitationTicketAfterExport = (contactInfo: InvitationTicketContactInfo) => {
+  const { receivedEmail, receivedPhone } = getInvitationTicketContactInfo(contactInfo);
+  return !receivedEmail && !receivedPhone;
+};
 
 export const completeInvitationTicketExport = ({
   successMessage,

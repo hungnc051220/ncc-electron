@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   completeInvitationTicketExport,
+  getInvitationTicketContactInfo,
   shouldOpenInvitationTicketAfterExport
 } from "./PrintInvitationTicketDialog.utils";
 
@@ -8,7 +9,7 @@ describe("shouldOpenInvitationTicketAfterExport", () => {
   it("opens the exported image when no contact information is provided", () => {
     expect(shouldOpenInvitationTicketAfterExport({})).toBe(true);
     expect(
-      shouldOpenInvitationTicketAfterExport({ receivedEmail: "   ", phoneNumber: "   " })
+      shouldOpenInvitationTicketAfterExport({ receivedEmail: "   ", receivedPhone: "   " })
     ).toBe(true);
   });
 
@@ -19,7 +20,44 @@ describe("shouldOpenInvitationTicketAfterExport", () => {
   });
 
   it("does not open the exported image when a phone number is provided", () => {
-    expect(shouldOpenInvitationTicketAfterExport({ phoneNumber: "0901234567" })).toBe(false);
+    expect(
+      shouldOpenInvitationTicketAfterExport({
+        receivedPhone: "0901234567",
+        sendZaloOA: true
+      })
+    ).toBe(false);
+  });
+
+  it("ignores a phone number when sending through Zalo OA is not selected", () => {
+    expect(shouldOpenInvitationTicketAfterExport({ receivedPhone: "0901234567" })).toBe(true);
+  });
+});
+
+describe("getInvitationTicketContactInfo", () => {
+  it("normalizes email and an enabled Zalo OA phone number", () => {
+    expect(
+      getInvitationTicketContactInfo({
+        receivedEmail: " guest@example.com ",
+        receivedPhone: " 0901234567 ",
+        sendZaloOA: true
+      })
+    ).toEqual({
+      receivedEmail: "guest@example.com",
+      receivedPhone: "0901234567"
+    });
+  });
+
+  it("omits blank email and a disabled Zalo OA phone number", () => {
+    expect(
+      getInvitationTicketContactInfo({
+        receivedEmail: "   ",
+        receivedPhone: "0901234567",
+        sendZaloOA: false
+      })
+    ).toEqual({
+      receivedEmail: undefined,
+      receivedPhone: undefined
+    });
   });
 });
 

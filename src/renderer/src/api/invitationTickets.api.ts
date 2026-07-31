@@ -3,10 +3,13 @@ import { BackgroundProps } from "@shared/types";
 
 export interface InvitationTicketDto {
   orderId: number;
-  receivedEmail: string;
+  fullName?: string;
+  receivedEmail?: string;
+  receivedPhone?: string;
+  sendZaloOA?: boolean;
   status: "new" | "sent" | "failed";
   urlTicket: string;
-  title: string;
+  title?: string;
 }
 
 export const invitationTicketsApi = {
