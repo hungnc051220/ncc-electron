@@ -1,12 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.109",
+  "latestVersion": "1.0.110",
   "minSupportedVersion": "1.0.91",
   "mode": "silent",
   "messages": [
-    "Hiển thị trạng thái ghế đã bán nhất quán hơn và cập nhật sơ đồ kịp thời khi trạng thái thanh toán thay đổi.",
-    "Thêm nút sao chép mã đặt vé trong chi tiết đơn hàng.",
-    "Điều chỉnh tên các cột báo cáo để phân biệt rõ số lượng đơn hàng và số lượng ghế đã bán."
+    "Cho phép gửi vé mời qua Zalo OA với tên và số điện thoại người nhận."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.109"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.110"
 }
