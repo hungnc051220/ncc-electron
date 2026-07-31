@@ -394,7 +394,6 @@ const PlanScreeningPage = () => {
     });
 
     const cleanupOrderPaymentUpdated = onOrderPaymentUpdated((payload) => {
-      if (payload.paymentStatus !== 30) return;
       if (payload.planScreenId !== currentPlanScreenId) return;
 
       invalidateCurrentScreeningData();

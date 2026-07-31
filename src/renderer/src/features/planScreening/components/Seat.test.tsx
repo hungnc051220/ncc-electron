@@ -94,14 +94,12 @@ describe("Seat", () => {
     expect(seatElement).not.toHaveClass("bg-trunks");
   });
 
-  it("does not render sold color for seats released from a failed order update", () => {
+  it("renders the sold color whenever the seat status is sold", () => {
     const { seatElement } = renderSeat({
-      seat: createSeat({ status: 1 }),
-      isReleasedFromOrder: true
+      seat: createSeat({ status: 1 })
     });
 
-    expect(seatElement).not.toHaveClass("bg-trunks");
-    expect(seatElement.style.backgroundColor).toBe("");
+    expect(seatElement).toHaveClass("bg-trunks", "text-white");
   });
 
   it("distinguishes the directly clicked cancel seat from related order seats", () => {

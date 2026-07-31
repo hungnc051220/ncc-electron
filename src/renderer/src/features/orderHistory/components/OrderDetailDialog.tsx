@@ -1092,11 +1092,18 @@ const OrderDetailDialog = ({
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                   Mã đặt vé
                 </p>
-                <p className="flex h-6 min-w-0 items-center">
-                  <span className="block max-w-full truncate text-sm font-bold text-primary">
+                <div className="flex h-6 min-w-0 items-center gap-1">
+                  <span className="min-w-0 truncate text-sm font-bold text-primary">
                     {currentOrder?.barCode?.trim() || "-"}
                   </span>
-                </p>
+                  {currentOrder?.barCode?.trim() &&
+                    renderCopyButton(
+                      currentOrder.barCode.trim(),
+                      "Sao chép mã đặt vé",
+                      `Đã sao chép mã đặt vé ${currentOrder.barCode.trim()}`,
+                      "Không thể sao chép mã đặt vé"
+                    )}
+                </div>
               </div>
               <div className="min-w-0 px-1">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">

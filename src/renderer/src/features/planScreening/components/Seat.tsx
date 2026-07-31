@@ -84,7 +84,6 @@ const Seat = ({
   isPendingPayment,
   isBlockedOnline,
   isSelectingByOther,
-  isReleasedFromOrder,
   seatColor,
   seatUniqueKey,
   isDimmed,
@@ -102,7 +101,6 @@ const Seat = ({
   isPendingPayment?: boolean;
   isBlockedOnline?: boolean;
   isSelectingByOther?: boolean;
-  isReleasedFromOrder?: boolean;
   seatColor?: string;
   seatUniqueKey?: string;
   isDimmed?: boolean;
@@ -123,7 +121,6 @@ const Seat = ({
     !isSelected &&
     !seat.isHold &&
     !isPendingPayment &&
-    !isReleasedFromOrder &&
     !seat.isContract &&
     !seat.isInvitation &&
     !isBlockedOnline &&
@@ -136,7 +133,6 @@ const Seat = ({
     !isSelected &&
     !seat.isHold &&
     !isPendingPayment &&
-    !isReleasedFromOrder &&
     !seat.isContract &&
     !seat.isInvitation &&
     seat.type !== 12;
@@ -149,10 +145,7 @@ const Seat = ({
         colorMap[seat.type],
         canSelect && "cursor-pointer",
         isBlockedOnline && "bg-trunks/50 dark:bg-gray-500",
-        seat.status === 1 &&
-          !isPendingPayment &&
-          !isReleasedFromOrder &&
-          "bg-trunks dark:bg-gray-700 text-white",
+        seat.status === 1 && !isPendingPayment && "bg-trunks dark:bg-gray-700 text-white",
         seat.isContract && "bg-raditz text-white",
         (seat.isHold || isPendingPayment) && "bg-roshi text-white",
         seat.isInvitation && "bg-red-500 text-white",

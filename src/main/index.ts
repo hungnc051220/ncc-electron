@@ -37,7 +37,7 @@ let currentTheme: AppTheme = store.get("theme", "light") as AppTheme;
 const enablePackagedDevTools = process.env.APP_ENABLE_DEVTOOLS === "true";
 const shouldEnableDevTools = is.dev || enablePackagedDevTools;
 
-const gotTheLock = app.requestSingleInstanceLock();
+const gotTheLock = is.dev || app.requestSingleInstanceLock();
 
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;

@@ -295,25 +295,6 @@ const Seats = ({
     );
   }, [hoverSeat, seatOrderMap]);
 
-  const releasedSeatKeySet = useMemo(() => {
-    const releasedSeatKeys = new Set<string>();
-
-    Object.entries(seatOrderMap).forEach(([seatKey, order]) => {
-      const paymentStatusId = resolveOrderPaymentStatus(order);
-      const isReleasedOrder =
-        order.orderStatusId === OrderStatus.FAIL ||
-        order.orderStatusId === OrderStatus.CANCELLED ||
-        paymentStatusId === PaymentStatus.FAIL ||
-        paymentStatusId === PaymentStatus.VOIDED;
-
-      if (!isReleasedOrder) return;
-
-      releasedSeatKeys.add(seatKey);
-    });
-
-    return releasedSeatKeys;
-  }, [seatOrderMap]);
-
   const pendingPaymentSeatKeySet = useMemo(() => {
     const pendingSeatKeys = new Set<string>();
 
@@ -734,17 +715,12 @@ const Seats = ({
           const isPendingPayment =
             pendingPaymentSeatKeySet.has(seatUniqueKey) ||
             pendingPaymentSeatKeySet.has(`${seat.floor}-code:${seat.code}`);
-          const isReleasedFromOrder =
-            releasedSeatKeySet.has(seatUniqueKey) ||
-            releasedSeatKeySet.has(`${seat.floor}-code:${seat.code}`);
-
           return (
             <Seat
               key={seat.seat}
               seat={seat}
               isSelected={selectedSeatKeySet.has(seatUniqueKey)}
               isPendingPayment={isPendingPayment}
-              isReleasedFromOrder={isReleasedFromOrder}
               isSelectingByOther={selectingSeatKeysByOther.has(seatUniqueKey)}
               onSelect={handleSelectSeat}
               size={seatSize}
@@ -788,7 +764,6 @@ const Seats = ({
     handleHover,
     handleLeave,
     pendingPaymentSeatKeySet,
-    releasedSeatKeySet,
     selectingSeatKeysByOther,
     spotlightSeatKeySet
   ]);

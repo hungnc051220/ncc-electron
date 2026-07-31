@@ -83,7 +83,7 @@ const SoldTicketsPage = () => {
       render: (value) => (value ? "Online" : "Offline")
     },
     {
-      title: "Số lượng vé điện tử đã xuất",
+      title: "Số lượng đơn hàng điện tử đã xuất",
       key: "countEticket",
       dataIndex: "countEticket",
       align: "right",
@@ -91,7 +91,7 @@ const SoldTicketsPage = () => {
       render: (value) => formatNumber(value || 0)
     },
     {
-      title: "Số lượng vé đã bán",
+      title: "Số lượng đơn hàng đã bán",
       dataIndex: "countOrder",
       key: "countOrder",
       align: "right",

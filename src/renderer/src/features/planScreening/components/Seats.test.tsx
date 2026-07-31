@@ -237,6 +237,39 @@ describe("Seats", () => {
     });
   });
 
+  it("shows the seat type color as the background while the seat is available", () => {
+    const availableSeat = createSeat({ status: 0, type: 1 });
+
+    render(
+      <MemoryRouter>
+        <Seats
+          data={createPlanScreening(availableSeat)}
+          orders={[]}
+          seatTypes={[
+            {
+              id: 1,
+              positionCode: "VIP",
+              name: "Ghế VIP",
+              color: "#ffb319",
+              pictureId: 0,
+              isSeat: true,
+              isDefault: false,
+              deleted: false,
+              createdOnUtc: "",
+              updatedOnUtc: ""
+            }
+          ]}
+          selectedSeats={[]}
+          setSelectedSeats={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("A1").closest("[data-seat-code='A1']")).toHaveStyle({
+      backgroundColor: "#ffb319"
+    });
+  });
+
   it("allows only sold seats, not reserved seats, to be selected in cancel mode", () => {
     const setSelectedSeats = vi.fn();
     const soldSeat = createSeat({ status: 1 });
@@ -307,8 +340,8 @@ describe("Seats", () => {
     }
   });
 
-  it("does not flash sold color when the latest order for a seat is failed", () => {
-    const failedSeat = createSeat({ status: 1, positionId: undefined });
+  it("keeps the sold color when the latest payment for a seat has failed", () => {
+    const failedSeat = createSeat({ status: 1, type: 1 });
     const setSelectedSeats = vi.fn();
 
     render(
@@ -317,7 +350,8 @@ describe("Seats", () => {
           data={createPlanScreening(failedSeat)}
           orders={[
             createOrder({
-              orderStatusId: OrderStatus.FAIL,
+              orderStatusId: OrderStatus.COMPLETED,
+              paymentStatusId: PaymentStatus.FAIL,
               items: [
                 {
                   planScreenId: 1,
@@ -337,7 +371,7 @@ describe("Seats", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("A1").closest("[data-seat-code='A1']")).not.toHaveClass("bg-trunks");
+    expect(screen.getByText("A1").closest("[data-seat-code='A1']")).toHaveClass("bg-trunks");
   });
 
   it("selects the complete order when a sold seat is clicked in cancel mode", () => {

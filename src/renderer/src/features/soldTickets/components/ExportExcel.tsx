@@ -104,8 +104,8 @@ const ExportExcelButton = ({ tableData, dateRange, loading }: ExportExcelProps) 
         "STT",
         "Cổng thanh toán",
         "Loại vé",
-        "Số lượng vé điện tử đã xuất",
-        "Số lượng vé đã bán",
+        "Số lượng đơn hàng điện tử đã xuất",
+        "Số lượng đơn hàng đã bán",
         "Số lượng ghế đã bán",
         "Tổng tiền thanh toán"
       ];
