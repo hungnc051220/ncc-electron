@@ -16,7 +16,7 @@ describe("FullHeightTabs", () => {
       <FullHeightTabs
         items={items}
         className="custom-root"
-        classNames={{ body: "custom-body", content: "custom-content" }}
+        classNames={{ content: "custom-content" }}
       />
     );
 
@@ -28,7 +28,6 @@ describe("FullHeightTabs", () => {
       "flex-col",
       "custom-root"
     );
-    expect(container.querySelector(".custom-body")).toHaveClass("h-full", "min-h-0", "min-w-0");
     expect(container.querySelector(".custom-content")).toHaveClass("h-full", "min-h-0", "min-w-0");
     expect(screen.getByText("Nội dung tab")).toBeInTheDocument();
   });
@@ -39,14 +38,12 @@ describe("FullHeightTabs", () => {
         items={items}
         classNames={() => ({
           header: "custom-header",
-          body: "custom-body-function",
           content: "custom-content-function"
         })}
       />
     );
 
     expect(container.querySelector(".custom-header")).toBeInTheDocument();
-    expect(container.querySelector(".custom-body-function")).toHaveClass("h-full", "min-h-0");
     expect(container.querySelector(".custom-content-function")).toHaveClass("h-full", "min-h-0");
   });
 });

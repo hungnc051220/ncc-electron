@@ -281,7 +281,7 @@ const Filter = ({ onSearch, filterValues, observedActorOptions = [] }: FilterPro
           count={activeFilterCount}
           size="small"
           offset={[-2, 2]}
-          title={activeFilterCount > 0 ? `${activeFilterCount} bộ lọc đang áp dụng` : null}
+          title={activeFilterCount > 0 ? `${activeFilterCount} bộ lọc đang áp dụng` : undefined}
         >
           <Button
             variant="outlined"

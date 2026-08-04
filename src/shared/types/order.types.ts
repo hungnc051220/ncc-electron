@@ -125,6 +125,8 @@ export interface InvitationTicketProps {
   id: number;
   orderId: number;
   receivedEmail: string;
+  receivedPhone?: string | null;
+  fullName?: string | null;
   createdAt: string;
   status: string;
   urlTicket: string;

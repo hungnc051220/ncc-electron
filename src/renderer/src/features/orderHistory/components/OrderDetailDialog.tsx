@@ -589,6 +589,8 @@ const OrderDetailDialog = ({
 
   const fieldIconMap: Record<string, ReactNode> = {
     "Email nhận vé": <Mail />,
+    "Tên người nhận": <UserRound />,
+    "Số điện thoại người nhận": <Phone />,
     "Thời gian xuất vé": <Clock3 />,
     "Trạng thái gửi": <Send />,
     "Người xuất vé": <UserRound />,
@@ -1174,7 +1176,7 @@ const OrderDetailDialog = ({
           <section
             className={cn(
               "rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
-              isInvitationOrder ? "flex h-full flex-col lg:col-span-4" : "lg:col-span-6"
+              isInvitationOrder ? "flex h-full flex-col lg:col-span-5" : "lg:col-span-6"
             )}
           >
             {isInvitationOrder ? (
@@ -1188,23 +1190,38 @@ const OrderDetailDialog = ({
                 </div>
 
                 {invitationTicket ? (
-                  <div className="grid flex-1 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:auto-rows-fr dark:border-app-border dark:bg-app-border">
+                  <div className="grid flex-1 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:auto-rows-fr lg:grid-cols-6 dark:border-app-border dark:bg-app-border">
                     {renderInfoItem(
                       "Email nhận vé",
                       renderWrappedText(invitationTicket.receivedEmail),
-                      "sm:col-span-2"
+                      "sm:col-span-2 lg:col-span-3"
+                    )}
+                    {renderInfoItem(
+                      "Tên người nhận",
+                      renderWrappedText(invitationTicket.fullName),
+                      "lg:col-span-3"
+                    )}
+                    {renderInfoItem(
+                      "Số điện thoại người nhận",
+                      renderWrappedText(invitationTicket.receivedPhone),
+                      "lg:col-span-3"
                     )}
                     {renderInfoItem(
                       "Thời gian xuất vé",
                       invitationTicket.createdAt && dayjs(invitationTicket.createdAt).isValid()
                         ? dayjs(invitationTicket.createdAt).format("HH:mm DD/MM/YYYY")
-                        : "-"
+                        : "-",
+                      "lg:col-span-3"
                     )}
-                    {renderInfoItem("Người xuất vé", renderWrappedText(invitationTicketIssuerName))}
                     {renderInfoItem(
                       "Trạng thái gửi",
                       renderInvitationTicketStatus(invitationTicket.status),
-                      "sm:col-span-2"
+                      "sm:col-span-2 lg:col-span-3"
+                    )}
+                    {renderInfoItem(
+                      "Người xuất vé",
+                      renderWrappedText(invitationTicketIssuerName),
+                      "sm:col-span-2 lg:col-span-3"
                     )}
                   </div>
                 ) : (
@@ -1325,7 +1342,7 @@ const OrderDetailDialog = ({
           <section
             className={cn(
               "rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
-              isInvitationOrder ? "flex h-full flex-col lg:col-span-8" : "lg:col-span-6"
+              isInvitationOrder ? "flex h-full flex-col lg:col-span-7" : "lg:col-span-6"
             )}
           >
             <div className="mb-2">
