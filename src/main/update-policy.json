@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.110",
+  "latestVersion": "1.0.111",
   "minSupportedVersion": "1.0.91",
   "mode": "silent",
   "messages": [
-    "Cho phép gửi vé mời qua Zalo OA với tên và số điện thoại người nhận."
+    "Hiển thị thêm tên, số điện thoại người nhận và sắp xếp thông tin giấy mời dễ theo dõi hơn."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.110"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.111"
 }
