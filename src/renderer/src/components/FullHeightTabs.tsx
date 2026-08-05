@@ -9,6 +9,7 @@ type TabsClassNamesObject = Exclude<TabsClassNames, TabsClassNamesFunction>;
 
 const withFullHeightPanels = (classNames?: TabsClassNamesObject): TabsClassNamesObject => ({
   ...classNames,
+  body: cn(PANEL_CLASS_NAME, classNames?.body),
   content: cn(PANEL_CLASS_NAME, classNames?.content)
 });
 

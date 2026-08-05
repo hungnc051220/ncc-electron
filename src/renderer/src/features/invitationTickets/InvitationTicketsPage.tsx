@@ -253,7 +253,8 @@ const InvitationTicketsPage = () => {
       key: "filmName",
       dataIndex: "filmName",
       sorter: (a, b) => compareText(a.film?.filmName, b.film?.filmName),
-      render: (_, record) => record.film?.filmName || ""
+      render: (_, record) => record.film?.filmName || "",
+      width: 400
     },
     {
       title: "Phòng chiếu",
@@ -366,8 +367,7 @@ const InvitationTicketsPage = () => {
         ),
       render: (_, record) => {
         return record.order?.invitationTickets?.receivedEmail || "";
-      },
-      align: "center"
+      }
     },
     {
       title: "Thời gian xuất vé",
