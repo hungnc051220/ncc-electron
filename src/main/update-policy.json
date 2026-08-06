@@ -1,11 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.112",
+  "latestVersion": "1.0.113",
   "minSupportedVersion": "1.0.91",
   "mode": "silent",
   "messages": [
-    "Tối ưu bảng dữ liệu để hiển thị đầy đủ theo chiều cao màn hình và thuận tiện theo dõi hơn.",
-    "Cải thiện bố cục danh sách vé mời, giúp tên phim và thông tin người nhận dễ đọc hơn."
+    "Điều chỉnh chi tiết đơn hàng để vé mời chỉ hiển thị các thao tác phù hợp."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.112"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.113"
 }
