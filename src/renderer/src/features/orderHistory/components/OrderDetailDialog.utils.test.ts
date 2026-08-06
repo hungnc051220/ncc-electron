@@ -1,6 +1,27 @@
+import { OrderStatus } from "@shared/types";
 import type { OrderDetailProps, OrderResponseProps } from "@shared/types";
 import { describe, expect, it, vi } from "vitest";
-import { getInvitationTicketIssuerName, refreshOrderDetailData } from "./OrderDetailDialog.utils";
+import {
+  canExportOrderETicket,
+  getInvitationTicketIssuerName,
+  refreshOrderDetailData
+} from "./OrderDetailDialog.utils";
+
+describe("canExportOrderETicket", () => {
+  const completedOrder = {
+    orderStatusId: OrderStatus.COMPLETED,
+    eTicketUrl: "",
+    isInvitation: false
+  };
+
+  it("allows exporting an electronic ticket for an eligible regular order", () => {
+    expect(canExportOrderETicket(completedOrder, true)).toBe(true);
+  });
+
+  it("does not allow exporting an electronic ticket for an invitation order", () => {
+    expect(canExportOrderETicket({ ...completedOrder, isInvitation: true }, true)).toBe(false);
+  });
+});
 
 describe("getInvitationTicketIssuerName", () => {
   it("uses the invitation ticket staff name", () => {

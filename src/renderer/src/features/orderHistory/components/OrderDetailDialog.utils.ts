@@ -1,4 +1,20 @@
+import { OrderStatus } from "@shared/types";
 import type { OrderDetailProps, OrderResponseProps } from "@shared/types";
+
+type ElectronicTicketOrder = Pick<
+  OrderResponseProps,
+  "eTicketUrl" | "isInvitation" | "orderStatusId"
+>;
+
+export const canExportOrderETicket = (
+  order: ElectronicTicketOrder | null | undefined,
+  hasExportPermission: boolean
+) =>
+  !!order &&
+  order.orderStatusId === OrderStatus.COMPLETED &&
+  hasExportPermission &&
+  !order.eTicketUrl &&
+  !order.isInvitation;
 
 export const getInvitationTicketIssuerName = (order?: OrderResponseProps | null) =>
   order?.invitationTickets?.createdByStaffName?.trim() || "-";

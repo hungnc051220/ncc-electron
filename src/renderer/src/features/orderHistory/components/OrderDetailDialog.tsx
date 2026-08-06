@@ -58,7 +58,11 @@ import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { usePermission } from "@renderer/permissions/usePermission";
 import InvitationTicketPreview from "./InvitationTicketPreview";
-import { getInvitationTicketIssuerName, refreshOrderDetailData } from "./OrderDetailDialog.utils";
+import {
+  canExportOrderETicket,
+  getInvitationTicketIssuerName,
+  refreshOrderDetailData
+} from "./OrderDetailDialog.utils";
 
 interface OrderDialogProps {
   open: boolean;
@@ -322,8 +326,7 @@ const OrderDetailDialog = ({
     !isPastProjectDate;
 
   const canExport = can("invoices", "export");
-  const canExportETicket =
-    currentOrder?.orderStatusId === OrderStatus.COMPLETED && canExport && !currentOrder.eTicketUrl;
+  const canExportETicket = canExportOrderETicket(currentOrder, canExport);
   const replacementInvoiceNo = currentOrder?.cancelTicket?.invNo?.trim() ?? "";
   const isEInvoiceCancelled = !!replacementInvoiceNo;
   const canCancelEInvoice =
