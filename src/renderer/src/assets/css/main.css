@@ -40,6 +40,33 @@
   --scrollbar-thumb-active: #8b8b8b;
 }
 
+@keyframes seat-conflict-flash {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@layer components {
+  .seat-cell {
+    contain: layout paint style;
+  }
+
+  .seat-conflict-flash {
+    animation: seat-conflict-flash 700ms ease-out 1 forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat-conflict-flash {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 html,
 body,
 #root,

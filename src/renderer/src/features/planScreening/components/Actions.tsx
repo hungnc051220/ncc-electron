@@ -919,7 +919,7 @@ const Actions = ({
           <Button
             variant="outlined"
             color="green"
-            loading={isSeatSelectionPending}
+            aria-busy={isSeatSelectionPending}
             disabled={disableNonCancelActions || !canUpdate || selectedSeats.length === 0}
             onClick={() => void onReserveSeats()}
           >
@@ -966,7 +966,7 @@ const Actions = ({
 
                 void onBooking();
               }}
-              loading={isSeatSelectionPending}
+              aria-busy={isSeatSelectionPending}
               disabled={
                 createOrder.isPending ||
                 isSeatSelectionPending ||

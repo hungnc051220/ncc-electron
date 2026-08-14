@@ -938,20 +938,27 @@ const mutateSelectingSeatThroughApi = async (
         selectingChairIndexF2: floor === "2" ? seatIndex : "",
         selectingChairIndexF3: floor === "3" ? seatIndex : ""
       };
-      const response = await fetch(
-        `${config.apiBaseUrl}/api/pos/seat/selecting-chairs/${selectedOperation}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${auth?.state?.token || ""}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(dto)
-        }
-      );
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const response = await fetch(
+          `${config.apiBaseUrl}/api/pos/seat/selecting-chairs/${selectedOperation}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${auth?.state?.token || ""}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(dto)
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error(`Selecting mutation failed: ${response.status}`);
+        if (response.ok) return;
+        if (response.status !== 429 || attempt === 4) {
+          throw new Error(`Selecting mutation failed: ${response.status}`);
+        }
+
+        const retryAfterSeconds = Number(response.headers.get("Retry-After") || "0");
+        const retryDelay = Math.max(retryAfterSeconds * 1000, (attempt + 1) * 500);
+        await new Promise((resolve) => window.setTimeout(resolve, retryDelay));
       }
     },
     {

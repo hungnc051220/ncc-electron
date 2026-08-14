@@ -132,6 +132,11 @@ const Seats = ({
     () => new Set(selectedSeats.map((seat) => getSeatUniqueKey(seat))),
     [selectedSeats]
   );
+  const selectedSeatKeySetRef = useRef(selectedSeatKeySet);
+
+  useLayoutEffect(() => {
+    selectedSeatKeySetRef.current = selectedSeatKeySet;
+  }, [selectedSeatKeySet]);
 
   useEffect(() => {
     setSelectedSeats([]);
@@ -430,11 +435,18 @@ const Seats = ({
     });
     return map;
   }, [seats, canSelectSeat]);
+  const seatMapRef = useRef(seatMap);
 
   const selectingSeatKeysByOther = useMemo(
     () => new Set(Object.keys(selectingSeatsByOther || {})),
     [selectingSeatsByOther]
   );
+  const selectingSeatKeysByOtherRef = useRef(selectingSeatKeysByOther);
+
+  useLayoutEffect(() => {
+    seatMapRef.current = seatMap;
+    selectingSeatKeysByOtherRef.current = selectingSeatKeysByOther;
+  }, [seatMap, selectingSeatKeysByOther]);
   const pendingSelectedSeatKeySet = useMemo(
     () => new Set(pendingSelectedSeatKeys || []),
     [pendingSelectedSeatKeys]
@@ -447,7 +459,10 @@ const Seats = ({
   const handleSelectSeat = useCallback(
     (seat: ListSeat) => {
       const seatUniqueKey = getSeatUniqueKey(seat);
-      if (selectingSeatKeysByOther.has(seatUniqueKey) && !selectedSeatKeySet.has(seatUniqueKey)) {
+      if (
+        selectingSeatKeysByOtherRef.current.has(seatUniqueKey) &&
+        !selectedSeatKeySetRef.current.has(seatUniqueKey)
+      ) {
         return;
       }
 
@@ -511,8 +526,6 @@ const Seats = ({
       onSelectionLimitReached,
       seatOrderMap,
       seats,
-      selectingSeatKeysByOther,
-      selectedSeatKeySet,
       screenMode,
       setSelectedSeats
     ]
@@ -523,6 +536,8 @@ const Seats = ({
       isSelectingRef.current = true;
 
       setSelectedSeats((prev) => {
+        const currentSeatMap = seatMapRef.current;
+        const currentSelectingSeatKeysByOther = selectingSeatKeysByOtherRef.current;
         const newSelected = new Set(prev.map((s) => getSeatUniqueKey(s)));
         let hasReachedLimit = false;
 
@@ -531,9 +546,9 @@ const Seats = ({
           const uniqueKey = el.getAttribute("data-seat-unique-key");
           if (
             uniqueKey &&
-            seatMap[uniqueKey] &&
+            currentSeatMap[uniqueKey] &&
             !newSelected.has(uniqueKey) &&
-            !selectingSeatKeysByOther.has(uniqueKey)
+            !currentSelectingSeatKeysByOther.has(uniqueKey)
           ) {
             if (maxSelectableSeats && newSelected.size >= maxSelectableSeats) {
               hasReachedLimit = true;
@@ -553,7 +568,7 @@ const Seats = ({
 
         // Convert back to array
         const nextSelected = Array.from(newSelected)
-          .map((uniqueKey) => seatMap[uniqueKey])
+          .map((uniqueKey) => currentSeatMap[uniqueKey])
           .filter(Boolean);
 
         if (hasReachedLimit) {
@@ -567,13 +582,7 @@ const Seats = ({
         isSelectingRef.current = false;
       }, 100);
     },
-    [
-      maxSelectableSeats,
-      onSelectionLimitReached,
-      seatMap,
-      selectingSeatKeysByOther,
-      setSelectedSeats
-    ]
+    [maxSelectableSeats, onSelectionLimitReached, setSelectedSeats]
   );
 
   const calculateSeatSize = useCallback(() => {
@@ -900,7 +909,7 @@ const Seats = ({
 
       <div
         ref={mainContainerRef}
-        className="relative m-2 pt-1 gap-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/20 p-2 shadow-sm backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/14"
+        className="relative m-2 pt-1 gap-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/28 bg-white/45 p-2 shadow-sm dark:border-white/8 dark:bg-slate-950/38"
       >
         <fieldset className="border-t-3 border-jiren w-2/3 mx-auto">
           <legend className="mx-auto px-3 text-xs xl:text-sm text-trunks dark:text-gray-200 font-bold">

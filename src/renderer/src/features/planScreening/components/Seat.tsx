@@ -1,5 +1,5 @@
 import { cn } from "@renderer/lib/utils";
-import { ListSeat } from "@shared/types";
+import type { ListSeat } from "@shared/types";
 import { memo, useCallback } from "react";
 
 const colorMap: { [key: string]: string } = {
@@ -9,8 +9,13 @@ const colorMap: { [key: string]: string } = {
   12: "bg-transparent"
 };
 
+const contrastTextColorCache = new Map<string, string>();
+
 const getContrastTextColor = (backgroundColor: string) => {
   const normalized = backgroundColor.trim().toLowerCase();
+  const cachedColor = contrastTextColorCache.get(normalized);
+  if (cachedColor) return cachedColor;
+
   if (!normalized || normalized === "transparent") {
     return "#374151";
   }
@@ -72,8 +77,31 @@ const getContrastTextColor = (backgroundColor: string) => {
 
   // Perceived luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance >= 0.6 ? "#111827" : "#ffffff";
+  const contrastColor = luminance >= 0.6 ? "#111827" : "#ffffff";
+  contrastTextColorCache.set(normalized, contrastColor);
+  return contrastColor;
 };
+
+interface SeatProps {
+  seat: ListSeat;
+  isSelected: boolean;
+  onSelect: (seat: ListSeat) => void;
+  size: number;
+  canSelect: boolean;
+  isPendingPayment?: boolean;
+  isBlockedOnline?: boolean;
+  isSelectingByOther?: boolean;
+  isSelectionPending?: boolean;
+  isSelectionConflicted?: boolean;
+  seatColor?: string;
+  seatUniqueKey?: string;
+  isDimmed?: boolean;
+  isSpotlighted?: boolean;
+  isCancelRelated?: boolean;
+  isCancelPrimary?: boolean;
+  onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
+  onLeave?: () => void;
+}
 
 const Seat = ({
   seat,
@@ -94,26 +122,7 @@ const Seat = ({
   isCancelPrimary,
   onHover,
   onLeave
-}: {
-  seat: ListSeat;
-  isSelected: boolean;
-  onSelect: (seat: ListSeat) => void;
-  size: number;
-  canSelect: boolean;
-  isPendingPayment?: boolean;
-  isBlockedOnline?: boolean;
-  isSelectingByOther?: boolean;
-  isSelectionPending?: boolean;
-  isSelectionConflicted?: boolean;
-  seatColor?: string;
-  seatUniqueKey?: string;
-  isDimmed?: boolean;
-  isSpotlighted?: boolean;
-  isCancelRelated?: boolean;
-  isCancelPrimary?: boolean;
-  onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
-  onLeave?: () => void;
-}) => {
+}: SeatProps) => {
   const handleClick = useCallback(() => {
     if (canSelect && (!isSelectingByOther || isSelected)) {
       onSelect(seat);
@@ -144,7 +153,7 @@ const Seat = ({
   return (
     <div
       className={cn(
-        "relative rounded-sm flex items-center justify-center",
+        "seat-cell relative rounded-sm flex items-center justify-center",
         canSelect && (!isSelectingByOther || isSelected) && "selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
@@ -156,8 +165,8 @@ const Seat = ({
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white",
         isSelectingByOther && !isSelected && "ring-1 ring-primary/70 dark:ring-white",
-        isSelectionPending && isSelected && "animate-pulse ring-2 ring-sky-300",
-        isSelectionConflicted && isSelected && "animate-pulse ring-2 ring-red-500",
+        isSelectionPending && isSelected && "ring-1 ring-sky-300",
+        isSelectionConflicted && isSelected && "ring-2 ring-red-500",
         isDimmed && "opacity-30 saturate-50",
         isSpotlighted && "ring-2 ring-white/90 shadow-[0_0_0_2px_rgba(59,130,246,0.55)] z-10",
         isSpotlighted && !isSelected && "opacity-100 saturate-100",
@@ -179,11 +188,29 @@ const Seat = ({
       data-seat-code={seat.code}
       data-seat-floor={seat.floor}
       data-seat-unique-key={seatUniqueKey ?? `${seat.floor}-${seat.seat}`}
+      data-seat-selection-state={
+        isSelectionConflicted
+          ? "conflicted"
+          : isSelectionPending
+            ? "pending"
+            : isSelected
+              ? "confirmed"
+              : "idle"
+      }
       onMouseEnter={(e) => onHover?.(seat, e)}
       onMouseLeave={onLeave}
     >
+      {isSelectionConflicted && isSelected && (
+        <span
+          aria-hidden="true"
+          className="seat-conflict-flash pointer-events-none absolute inset-0 rounded-sm bg-red-500/45"
+        />
+      )}
       <p
-        className={cn("text-xs", isSelectingByOther && !isSelected && "font-bold underline")}
+        className={cn(
+          "relative text-xs",
+          isSelectingByOther && !isSelected && "font-bold underline"
+        )}
         style={{ fontSize: `${Math.max(10, size * 0.25)}px` }}
       >
         {seat.type !== 12 ? seat.code : ""}
@@ -192,7 +219,39 @@ const Seat = ({
   );
 };
 
-const MemoizedSeat = memo(Seat);
+const areSeatValuesEqual = (previous: ListSeat, next: ListSeat) => {
+  if (previous === next) return true;
+
+  const previousKeys = Object.keys(previous) as Array<keyof ListSeat>;
+  const nextKeys = Object.keys(next) as Array<keyof ListSeat>;
+
+  return (
+    previousKeys.length === nextKeys.length &&
+    previousKeys.every((key) => previous[key] === next[key])
+  );
+};
+
+const areSeatPropsEqual = (previous: SeatProps, next: SeatProps) =>
+  areSeatValuesEqual(previous.seat, next.seat) &&
+  previous.isSelected === next.isSelected &&
+  previous.onSelect === next.onSelect &&
+  previous.size === next.size &&
+  previous.canSelect === next.canSelect &&
+  previous.isPendingPayment === next.isPendingPayment &&
+  previous.isBlockedOnline === next.isBlockedOnline &&
+  previous.isSelectingByOther === next.isSelectingByOther &&
+  previous.isSelectionPending === next.isSelectionPending &&
+  previous.isSelectionConflicted === next.isSelectionConflicted &&
+  previous.seatColor === next.seatColor &&
+  previous.seatUniqueKey === next.seatUniqueKey &&
+  previous.isDimmed === next.isDimmed &&
+  previous.isSpotlighted === next.isSpotlighted &&
+  previous.isCancelRelated === next.isCancelRelated &&
+  previous.isCancelPrimary === next.isCancelPrimary &&
+  previous.onHover === next.onHover &&
+  previous.onLeave === next.onLeave;
+
+const MemoizedSeat = memo(Seat, areSeatPropsEqual);
 
 MemoizedSeat.displayName = "Seat";
 

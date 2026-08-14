@@ -83,17 +83,30 @@ describe("Seat", () => {
 
   it("shows pending and conflicted ownership states", () => {
     const pendingSeat = renderSeat({ isSelected: true, isSelectionPending: true });
-    expect(pendingSeat.seatElement).toHaveClass("animate-pulse", "ring-sky-300");
+    expect(pendingSeat.seatElement).toHaveClass("ring-sky-300");
+    expect(pendingSeat.seatElement).not.toHaveClass("animate-pulse");
+    expect(pendingSeat.seatElement).toHaveAttribute("data-seat-selection-state", "pending");
+    expect(
+      pendingSeat.seatElement.querySelector("[data-seat-pending-indicator]")
+    ).not.toBeInTheDocument();
     pendingSeat.unmount();
 
     const conflictedSeat = renderSeat({ isSelected: true, isSelectionConflicted: true });
-    expect(conflictedSeat.seatElement).toHaveClass("animate-pulse", "ring-red-500");
+    expect(conflictedSeat.seatElement).toHaveClass("ring-red-500");
+    expect(conflictedSeat.seatElement).not.toHaveClass("animate-pulse");
+    expect(conflictedSeat.seatElement).toHaveAttribute("data-seat-selection-state", "conflicted");
+    expect(conflictedSeat.seatElement.querySelector(".seat-conflict-flash")).toBeInTheDocument();
+    expect(
+      conflictedSeat.seatElement.querySelector("[data-seat-conflict-indicator]")
+    ).not.toBeInTheDocument();
   });
 
   it("renders selected seats with the selected state color", () => {
     const { seatElement } = renderSeat({ isSelected: true });
 
     expect(seatElement).toHaveClass("bg-whis", "text-white");
+    expect(seatElement).not.toHaveClass("animate-pulse");
+    expect(seatElement).toHaveAttribute("data-seat-selection-state", "confirmed");
   });
 
   it("renders sold and hold states with the correct priority styling", () => {

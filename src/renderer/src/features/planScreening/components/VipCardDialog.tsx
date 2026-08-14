@@ -13,6 +13,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ElementRef, ReactNode } from "react";
 import type { TableProps } from "antd";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import {
+  isValidPointRedemptionIncrement,
+  POINT_REDEMPTION_STEP,
+  roundPointRedemptionLimitDown,
+  roundPointRedemptionLimitUp
+} from "./vipCardPointRedemption";
 
 interface VipCardDialogProps {
   open: boolean;
@@ -551,6 +557,7 @@ const VipCardDialog = ({
     [discountAmount, totalPrice]
   );
   const minPointsForRedemption = pointExchangeConfig?.minPointsForRedemption || 0;
+  const minimumRedeemablePoints = roundPointRedemptionLimitUp(minPointsForRedemption);
   const hasPointExchangeConfig =
     Boolean(pointExchangeConfig?.basePoint) &&
     Boolean(pointExchangeConfig?.baseAmount) &&
@@ -565,13 +572,12 @@ const VipCardDialog = ({
       ),
     [finalAmount, pointExchangeConfig?.baseAmount, pointExchangeConfig?.basePoint]
   );
-  const maxRedeemablePoints = Math.max(
-    0,
+  const maxRedeemablePoints = roundPointRedemptionLimitDown(
     Math.min(currentPointBalance, maxRedeemablePointsByAmount)
   );
   const defaultExchangePoints =
-    maxRedeemablePoints > 0
-      ? Math.min(Math.max(exchangePoints || minPointsForRedemption, 0), maxRedeemablePoints)
+    maxRedeemablePoints >= minimumRedeemablePoints && maxRedeemablePoints > 0
+      ? Math.min(Math.max(exchangePoints || minimumRedeemablePoints, 0), maxRedeemablePoints)
       : 0;
   const draftPointRedemptionAmount = Math.min(
     calculatePointRedemptionAmount(
@@ -592,8 +598,11 @@ const VipCardDialog = ({
   const amountAfterPointRedemption = Math.max(finalAmount - pointRedemptionAmount, 0);
   const isDraftExchangePointsOutOfRange =
     normalizedDraftExchangePoints > 0 &&
-    (normalizedDraftExchangePoints < minPointsForRedemption ||
+    (normalizedDraftExchangePoints < minimumRedeemablePoints ||
       normalizedDraftExchangePoints > maxRedeemablePoints);
+  const isDraftExchangePointsInvalidIncrement =
+    normalizedDraftExchangePoints > 0 &&
+    !isValidPointRedemptionIncrement(normalizedDraftExchangePoints);
 
   useEffect(() => {
     if (exchangePoints <= 0) return;
@@ -601,7 +610,7 @@ const VipCardDialog = ({
     if (
       !hasPointExchangeConfig ||
       finalAmount <= 0 ||
-      maxRedeemablePoints < minPointsForRedemption
+      maxRedeemablePoints < minimumRedeemablePoints
     ) {
       setExchangePoints(0);
       setDraftExchangePoints(0);
@@ -619,7 +628,7 @@ const VipCardDialog = ({
     finalAmount,
     hasPointExchangeConfig,
     maxRedeemablePoints,
-    minPointsForRedemption
+    minimumRedeemablePoints
   ]);
 
   const columns: TableProps<BatchProps>["columns"] = [
@@ -734,8 +743,15 @@ const VipCardDialog = ({
       return;
     }
 
-    if (normalizedExchangePoints < minPointsForRedemption) {
-      message.error(`Số điểm quy đổi tối thiểu là ${formatNumber(minPointsForRedemption)} điểm`);
+    if (!isValidPointRedemptionIncrement(normalizedExchangePoints)) {
+      message.error(
+        `Số điểm quy đổi phải là bội số của ${formatNumber(POINT_REDEMPTION_STEP)} điểm`
+      );
+      return;
+    }
+
+    if (normalizedExchangePoints < minimumRedeemablePoints) {
+      message.error(`Số điểm quy đổi tối thiểu là ${formatNumber(minimumRedeemablePoints)} điểm`);
       return;
     }
 
@@ -971,12 +987,19 @@ const VipCardDialog = ({
             <p className="text-sm text-slate-500 dark:text-slate-400">Điểm quy đổi</p>
             <InputNumber
               ref={exchangePointInputRef}
-              className="w-40 justify-self-end text-right text-sm [&_.ant-input-number-input]:text-right"
-              min={minPointsForRedemption}
+              className="w-30 justify-self-end text-sm"
+              min={minimumRedeemablePoints}
               max={maxRedeemablePoints}
+              keyboard={true}
+              step={POINT_REDEMPTION_STEP}
+              precision={0}
               value={draftExchangePoints}
-              status={isDraftExchangePointsOutOfRange ? "error" : undefined}
-              controls={false}
+              status={
+                isDraftExchangePointsOutOfRange || isDraftExchangePointsInvalidIncrement
+                  ? "error"
+                  : undefined
+              }
+              controls={true}
               disabled={isFetchingConfigExchangePoints || !hasPointExchangeConfig}
               formatter={(value) => (value || value === 0 ? formatNumber(Number(value)) : "")}
               parser={(value) => {
@@ -995,12 +1018,16 @@ const VipCardDialog = ({
             />
           </div>
 
-          {isDraftExchangePointsOutOfRange && (
+          {isDraftExchangePointsInvalidIncrement ? (
             <p className="-mt-1 text-right text-xs text-red-500">
-              Nhập từ {formatNumber(minPointsForRedemption)} đến {formatNumber(maxRedeemablePoints)}{" "}
-              điểm.
+              Số điểm quy đổi phải là bội số của {formatNumber(POINT_REDEMPTION_STEP)} điểm.
             </p>
-          )}
+          ) : isDraftExchangePointsOutOfRange ? (
+            <p className="-mt-1 text-right text-xs text-red-500">
+              Nhập từ {formatNumber(minimumRedeemablePoints)} đến{" "}
+              {formatNumber(maxRedeemablePoints)} điểm.
+            </p>
+          ) : null}
 
           <div className="grid grid-cols-[160px_minmax(0,1fr)] items-center gap-3">
             <p className="text-sm text-slate-500 dark:text-slate-400">Điểm sau khi quy đổi</p>
@@ -1034,9 +1061,10 @@ const VipCardDialog = ({
             </p>
             <p>
               Tối thiểu{" "}
-              <span className="font-semibold">{formatNumber(minPointsForRedemption)}</span> điểm,
+              <span className="font-semibold">{formatNumber(minimumRedeemablePoints)}</span> điểm,
               tối đa <span className="font-semibold">{formatNumber(maxRedeemablePoints)}</span> điểm
-              theo giá trị đơn hiện tại.
+              theo giá trị đơn hiện tại; số điểm nhập phải là bội số của{" "}
+              <span className="font-semibold">{formatNumber(POINT_REDEMPTION_STEP)}</span>.
             </p>
           </div>
         </div>

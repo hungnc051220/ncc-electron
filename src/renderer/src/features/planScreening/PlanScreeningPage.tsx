@@ -43,6 +43,7 @@ import {
 
 const SELECTION_SYNC_DEBOUNCE_MS = 40;
 const OWNERSHIP_STABILIZATION_MS = 250;
+const OWNERSHIP_EXPIRY_RECONCILE_GRACE_MS = 250;
 const OWNERSHIP_MISSING_RETRY_DELAYS = [150, 300] as const;
 
 const getSeatKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
@@ -67,6 +68,22 @@ const areSeatKeySetsEqual = (left: Set<string>, right: Set<string>) => {
   }
 
   return true;
+};
+
+const reuseSeatKeySetIfEqual = (current: Set<string>, next: Set<string>) =>
+  areSeatKeySetsEqual(current, next) ? current : next;
+
+const areSeatOwnerRecordsEqual = (
+  current: Record<string, string>,
+  next: Record<string, string>
+) => {
+  const currentKeys = Object.keys(current);
+  const nextKeys = Object.keys(next);
+
+  return (
+    currentKeys.length === nextKeys.length &&
+    currentKeys.every((seatKey) => current[seatKey] === next[seatKey])
+  );
 };
 
 const waitForDelay = (delay: number) =>
@@ -129,6 +146,10 @@ const PlanScreeningPage = () => {
   const desiredSelectedSeatKeysRef = useRef<Set<string>>(new Set());
   const selectingSeatsRequestIdRef = useRef(0);
   const selectingSeatsReconcileTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const selectingSeatsExpiryDeadlineByPosRef = useRef<Map<string, number>>(new Map());
+  const selectingSeatsExpiryReconcileTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const ownershipVerificationRequestIdRef = useRef(0);
   const ownershipVerificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const selectingSeatsRetryAttemptRef = useRef(0);
@@ -185,16 +206,11 @@ const PlanScreeningPage = () => {
     [seatKeyLookup]
   );
 
-  const loadSelectingSeatsByOther = useCallback(async () => {
-    if (!id || isCustomerMode || !posName) return;
-
+  const loadSelectingChairsSnapshot = useCallback(async () => {
     const requestId = ++selectingSeatsRequestIdRef.current;
+    const snapshots = await ordersApi.getSelectingChairs(Number(id));
 
-    try {
-      const snapshots = await ordersApi.getSelectingChairs(Number(id));
-
-      if (requestId !== selectingSeatsRequestIdRef.current) return;
-
+    if (requestId === selectingSeatsRequestIdRef.current) {
       const nextState: Record<string, string> = {};
 
       snapshots.forEach((snapshot) => {
@@ -211,16 +227,28 @@ const PlanScreeningPage = () => {
         });
       });
 
-      setSelectingSeatsByOther(nextState);
+      setSelectingSeatsByOther((current) =>
+        areSeatOwnerRecordsEqual(current, nextState) ? current : nextState
+      );
+    }
+
+    return snapshots;
+  }, [id, parseSelectingSeatIndexes, posName]);
+
+  const loadSelectingSeatsByOther = useCallback(async () => {
+    if (!id || isCustomerMode || !posName) return;
+
+    try {
+      await loadSelectingChairsSnapshot();
     } catch (error) {
       console.error("Failed to sync selecting chairs snapshot:", error);
     }
-  }, [id, isCustomerMode, parseSelectingSeatIndexes, posName]);
+  }, [id, isCustomerMode, loadSelectingChairsSnapshot, posName]);
 
   const loadOwnSelectingSeatsSnapshot = useCallback(async () => {
     if (!id || isCustomerMode || !posName) return [];
 
-    const snapshots = await ordersApi.getSelectingChairs(Number(id));
+    const snapshots = await loadSelectingChairsSnapshot();
     const ownSnapshot = snapshots.find(
       (snapshot) => snapshot.planScreenId === Number(id) && snapshot.posName === posName
     );
@@ -241,7 +269,14 @@ const PlanScreeningPage = () => {
     return uniqueSeatKeys
       .map((seatKey) => seatMap.get(seatKey))
       .filter((seat): seat is ListSeat => Boolean(seat));
-  }, [data?.listSeats, id, isCustomerMode, parseSelectingSeatIndexes, posName]);
+  }, [
+    data?.listSeats,
+    id,
+    isCustomerMode,
+    loadSelectingChairsSnapshot,
+    parseSelectingSeatIndexes,
+    posName
+  ]);
 
   const removeLocalSelectedSeats = useCallback((seatKeys: Set<string>) => {
     if (seatKeys.size === 0) return;
@@ -253,16 +288,21 @@ const PlanScreeningPage = () => {
     desiredSelectedSeatsRef.current = nextDesiredSeats;
     desiredSelectedSeatKeysRef.current = new Set(nextDesiredSeats.map((seat) => getSeatKey(seat)));
 
-    setSelectedSeats((current) => current.filter((seat) => !seatKeys.has(getSeatKey(seat))));
+    setSelectedSeats((current) => {
+      const next = current.filter((seat) => !seatKeys.has(getSeatKey(seat)));
+      return next.length === current.length ? current : next;
+    });
     setConfirmedSelectedSeatKeys((current) => {
       const next = new Set(current);
       seatKeys.forEach((seatKey) => next.delete(seatKey));
-      return next;
+      return reuseSeatKeySetIfEqual(current, next);
     });
     const nextConflictedSeatKeys = new Set(conflictedSelectedSeatKeysRef.current);
     seatKeys.forEach((seatKey) => nextConflictedSeatKeys.delete(seatKey));
     conflictedSelectedSeatKeysRef.current = nextConflictedSeatKeys;
-    setConflictedSelectedSeatKeys(nextConflictedSeatKeys);
+    setConflictedSelectedSeatKeys((current) =>
+      reuseSeatKeySetIfEqual(current, nextConflictedSeatKeys)
+    );
   }, []);
 
   const verifyCurrentSelectedSeatsOwnership = useCallback(
@@ -279,8 +319,8 @@ const PlanScreeningPage = () => {
       const targetSeatKeys = new Set(targetSeats.map((seat) => getSeatKey(seat)));
 
       if (targetSeats.length === 0) {
-        setConfirmedSelectedSeatKeys(new Set());
-        setConflictedSelectedSeatKeys(new Set());
+        setConfirmedSelectedSeatKeys((current) => reuseSeatKeySetIfEqual(current, new Set()));
+        setConflictedSelectedSeatKeys((current) => reuseSeatKeySetIfEqual(current, new Set()));
         return false;
       }
 
@@ -292,7 +332,7 @@ const PlanScreeningPage = () => {
       try {
         for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
           try {
-            const snapshots = await ordersApi.getSelectingChairs(Number(id));
+            const snapshots = await loadSelectingChairsSnapshot();
 
             if (
               requestId !== ownershipVerificationRequestIdRef.current ||
@@ -337,13 +377,17 @@ const PlanScreeningPage = () => {
           ...lastResolution.missingSeatKeys
         ]);
 
-        setConfirmedSelectedSeatKeys(new Set(lastResolution.confirmedSeatKeys));
-        conflictedSelectedSeatKeysRef.current = new Set(lastResolution.conflictedSeatKeys);
-        setConflictedSelectedSeatKeys(new Set(lastResolution.conflictedSeatKeys));
+        const nextConfirmedSeatKeys = new Set(lastResolution.confirmedSeatKeys);
+        const nextConflictedSeatKeys = new Set(lastResolution.conflictedSeatKeys);
+        setConfirmedSelectedSeatKeys((current) =>
+          reuseSeatKeySetIfEqual(current, nextConfirmedSeatKeys)
+        );
+        conflictedSelectedSeatKeysRef.current = nextConflictedSeatKeys;
+        setConflictedSelectedSeatKeys((current) =>
+          reuseSeatKeySetIfEqual(current, nextConflictedSeatKeys)
+        );
 
         if (rejectedSeatKeys.size === 0) {
-          conflictedSelectedSeatKeysRef.current = new Set();
-          setConflictedSelectedSeatKeys(new Set());
           return true;
         }
 
@@ -360,7 +404,7 @@ const PlanScreeningPage = () => {
             }
           });
 
-          return next;
+          return areSeatOwnerRecordsEqual(current, next) ? current : next;
         });
 
         const rejectedSeatCodes = targetSeats
@@ -384,7 +428,15 @@ const PlanScreeningPage = () => {
         return false;
       }
     },
-    [id, isCustomerMode, message, parseSelectingSeatIndexes, posName, removeLocalSelectedSeats]
+    [
+      id,
+      isCustomerMode,
+      loadSelectingChairsSnapshot,
+      message,
+      parseSelectingSeatIndexes,
+      posName,
+      removeLocalSelectedSeats
+    ]
   );
 
   const scheduleOwnershipVerification = useCallback(
@@ -400,6 +452,43 @@ const PlanScreeningPage = () => {
     },
     [verifyCurrentSelectedSeatsOwnership]
   );
+
+  const loadSelectingSeatsByOtherRef = useRef(loadSelectingSeatsByOther);
+  const scheduleOwnershipVerificationRef = useRef(scheduleOwnershipVerification);
+
+  useEffect(() => {
+    loadSelectingSeatsByOtherRef.current = loadSelectingSeatsByOther;
+    scheduleOwnershipVerificationRef.current = scheduleOwnershipVerification;
+  }, [loadSelectingSeatsByOther, scheduleOwnershipVerification]);
+
+  const scheduleSelectingSeatsExpiryReconcile = useCallback(() => {
+    if (selectingSeatsExpiryReconcileTimeoutRef.current) {
+      clearTimeout(selectingSeatsExpiryReconcileTimeoutRef.current);
+      selectingSeatsExpiryReconcileTimeoutRef.current = null;
+    }
+
+    const nextDeadline = Math.min(...selectingSeatsExpiryDeadlineByPosRef.current.values());
+    if (!Number.isFinite(nextDeadline)) return;
+
+    selectingSeatsExpiryReconcileTimeoutRef.current = setTimeout(
+      () => {
+        selectingSeatsExpiryReconcileTimeoutRef.current = null;
+        const now = Date.now();
+
+        selectingSeatsExpiryDeadlineByPosRef.current.forEach((deadline, ownerPosName) => {
+          if (deadline <= now) {
+            selectingSeatsExpiryDeadlineByPosRef.current.delete(ownerPosName);
+          }
+        });
+
+        void loadSelectingSeatsByOtherRef.current().finally(() => {
+          scheduleOwnershipVerificationRef.current(0);
+          scheduleSelectingSeatsExpiryReconcile();
+        });
+      },
+      Math.max(0, nextDeadline - Date.now())
+    );
+  }, []);
 
   const verifySelectedSeatsBeforeAction = useCallback(async () => {
     setIsFinalSeatVerificationPending(true);
@@ -503,7 +592,7 @@ const PlanScreeningPage = () => {
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;
 
-    setSelectingSeatsByOther({});
+    setSelectingSeatsByOther((current) => (areSeatOwnerRecordsEqual(current, {}) ? current : {}));
     void loadSelectingSeatsByOther();
 
     const scheduleSelectingSeatsReconcile = () => {
@@ -520,7 +609,22 @@ const PlanScreeningPage = () => {
     };
 
     const cleanup = onSelectingChairsUpdate((payload) => {
-      if (payload.planScreenId !== Number(id) || payload.posName === posName) return;
+      if (payload.planScreenId !== Number(id)) return;
+
+      if (payload.operation === "add") {
+        const expiredSeconds = Number(payload.expiredSeconds);
+        if (Number.isFinite(expiredSeconds) && expiredSeconds > 0) {
+          selectingSeatsExpiryDeadlineByPosRef.current.set(
+            payload.posName,
+            Date.now() + expiredSeconds * 1000 + OWNERSHIP_EXPIRY_RECONCILE_GRACE_MS
+          );
+          scheduleSelectingSeatsExpiryReconcile();
+        }
+      }
+
+      if (payload.posName === posName) {
+        return;
+      }
 
       const seatKeys = [
         ...parseSelectingSeatIndexes(payload.selectingChairIndexF1, 1),
@@ -539,11 +643,13 @@ const PlanScreeningPage = () => {
             ...localConflictKeys
           ]);
           conflictedSelectedSeatKeysRef.current = nextConflictedSeatKeys;
-          setConflictedSelectedSeatKeys(nextConflictedSeatKeys);
+          setConflictedSelectedSeatKeys((current) =>
+            reuseSeatKeySetIfEqual(current, nextConflictedSeatKeys)
+          );
           setConfirmedSelectedSeatKeys((current) => {
             const next = new Set(current);
             localConflictKeys.forEach((seatKey) => next.delete(seatKey));
-            return next;
+            return reuseSeatKeySetIfEqual(current, next);
           });
         }
       }
@@ -557,23 +663,29 @@ const PlanScreeningPage = () => {
               delete nextState[seatKey];
             }
           });
-          return nextState;
+          return areSeatOwnerRecordsEqual(prev, nextState) ? prev : nextState;
         }
 
         seatKeys.forEach((seatKey) => {
           nextState[seatKey] = payload.posName;
         });
 
-        return nextState;
+        return areSeatOwnerRecordsEqual(prev, nextState) ? prev : nextState;
       });
 
-      scheduleSelectingSeatsReconcile();
-      scheduleOwnershipVerification(180);
+      if (desiredSelectedSeatKeysRef.current.size > 0) {
+        scheduleOwnershipVerification(180);
+      } else {
+        scheduleSelectingSeatsReconcile();
+      }
     });
 
     const cleanupSocketConnect = onSocketConnect(() => {
-      void loadSelectingSeatsByOther();
-      scheduleOwnershipVerification(0);
+      if (desiredSelectedSeatKeysRef.current.size > 0) {
+        scheduleOwnershipVerification(0);
+      } else {
+        void loadSelectingSeatsByOther();
+      }
     });
 
     return () => {
@@ -591,8 +703,21 @@ const PlanScreeningPage = () => {
     loadSelectingSeatsByOther,
     parseSelectingSeatIndexes,
     posName,
+    scheduleSelectingSeatsExpiryReconcile,
     scheduleOwnershipVerification
   ]);
+
+  useEffect(() => {
+    const expiryDeadlineByPos = selectingSeatsExpiryDeadlineByPosRef.current;
+
+    return () => {
+      if (selectingSeatsExpiryReconcileTimeoutRef.current) {
+        clearTimeout(selectingSeatsExpiryReconcileTimeoutRef.current);
+        selectingSeatsExpiryReconcileTimeoutRef.current = null;
+      }
+      expiryDeadlineByPos.clear();
+    };
+  }, [id, isCustomerMode, posName]);
 
   useEffect(() => {
     if (!id || isCustomerMode) return;
@@ -702,8 +827,8 @@ const PlanScreeningPage = () => {
       if (targetSeats.length > 0) {
         scheduleOwnershipVerification();
       } else {
-        setConfirmedSelectedSeatKeys(new Set());
-        setConflictedSelectedSeatKeys(new Set());
+        setConfirmedSelectedSeatKeys((current) => reuseSeatKeySetIfEqual(current, new Set()));
+        setConflictedSelectedSeatKeys((current) => reuseSeatKeySetIfEqual(current, new Set()));
       }
     } catch (error) {
       console.error("Failed to sync selecting chairs:", error);
@@ -800,16 +925,19 @@ const PlanScreeningPage = () => {
     desiredSelectedSeatsRef.current = desiredSeats;
     desiredSelectedSeatKeysRef.current = desiredSeatKeys;
     ownershipVerificationRequestIdRef.current += 1;
-    setConfirmedSelectedSeatKeys(
-      (current) => new Set(Array.from(current).filter((seatKey) => desiredSeatKeys.has(seatKey)))
-    );
+    setConfirmedSelectedSeatKeys((current) => {
+      const next = new Set(Array.from(current).filter((seatKey) => desiredSeatKeys.has(seatKey)));
+      return reuseSeatKeySetIfEqual(current, next);
+    });
     const nextConflictedSeatKeys = new Set(
       Array.from(conflictedSelectedSeatKeysRef.current).filter((seatKey) =>
         desiredSeatKeys.has(seatKey)
       )
     );
     conflictedSelectedSeatKeysRef.current = nextConflictedSeatKeys;
-    setConflictedSelectedSeatKeys(nextConflictedSeatKeys);
+    setConflictedSelectedSeatKeys((current) =>
+      reuseSeatKeySetIfEqual(current, nextConflictedSeatKeys)
+    );
 
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
@@ -894,9 +1022,9 @@ const PlanScreeningPage = () => {
     syncedSelectedSeatsRef.current = [];
     syncedSelectedSeatKeysRef.current = new Set();
     setSelectedSeats([]);
-    setConfirmedSelectedSeatKeys(new Set());
+    setConfirmedSelectedSeatKeys((current) => reuseSeatKeySetIfEqual(current, new Set()));
     conflictedSelectedSeatKeysRef.current = new Set();
-    setConflictedSelectedSeatKeys(new Set());
+    setConflictedSelectedSeatKeys((current) => reuseSeatKeySetIfEqual(current, new Set()));
 
     return () => {
       isSelectingSeatsSyncDisposedRef.current = true;
@@ -1092,9 +1220,15 @@ const PlanScreeningPage = () => {
             isCustomerMode
               ? undefined
               : async () => {
+                  const refreshSelectingChairs =
+                    desiredSelectedSeatKeysRef.current.size > 0
+                      ? verifyCurrentSelectedSeatsOwnership()
+                      : loadSelectingSeatsByOther();
+
                   await Promise.allSettled([
                     refetchPlanScreeningDetail(),
-                    refetchOrdersByScreening()
+                    refetchOrdersByScreening(),
+                    refreshSelectingChairs
                   ]);
                 }
           }

@@ -776,8 +776,15 @@ describe("Actions", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
+    const holdButton = screen.getByRole("button", { name: /giữ chỗ/i });
+    const printButton = screen.getByRole("button", { name: /in vé/i });
+
+    expect(holdButton).toBeDisabled();
+    expect(printButton).toBeDisabled();
+    expect(holdButton).toHaveAttribute("aria-busy", "true");
+    expect(printButton).toHaveAttribute("aria-busy", "true");
+    expect(holdButton).not.toHaveClass("ant-btn-loading");
+    expect(printButton).not.toHaveClass("ant-btn-loading");
   });
 
   it("does not create an order when final seat ownership verification fails", async () => {
