@@ -70,6 +70,26 @@ describe("Seat", () => {
     expect(seatElement).toHaveClass("ring-1");
   });
 
+  it("allows an already selected seat to be removed after another POS claims it", () => {
+    const { onSelect, seatElement } = renderSeat({
+      isSelected: true,
+      isSelectingByOther: true
+    });
+
+    fireEvent.click(seatElement);
+
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ code: "A1" }));
+  });
+
+  it("shows pending and conflicted ownership states", () => {
+    const pendingSeat = renderSeat({ isSelected: true, isSelectionPending: true });
+    expect(pendingSeat.seatElement).toHaveClass("animate-pulse", "ring-sky-300");
+    pendingSeat.unmount();
+
+    const conflictedSeat = renderSeat({ isSelected: true, isSelectionConflicted: true });
+    expect(conflictedSeat.seatElement).toHaveClass("animate-pulse", "ring-red-500");
+  });
+
   it("renders selected seats with the selected state color", () => {
     const { seatElement } = renderSeat({ isSelected: true });
 

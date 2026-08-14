@@ -35,6 +35,15 @@ import {
   CancelOrderSelection,
   isOrderCancellable
 } from "./components/cancelOrderSelection";
+import {
+  buildSeatOwnersByKey,
+  getSelectionSyncRetryDelay,
+  resolveSeatOwnership
+} from "./seatSelectionOwnership";
+
+const SELECTION_SYNC_DEBOUNCE_MS = 40;
+const OWNERSHIP_STABILIZATION_MS = 250;
+const OWNERSHIP_MISSING_RETRY_DELAYS = [150, 300] as const;
 
 const getSeatKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
 
@@ -59,6 +68,11 @@ const areSeatKeySetsEqual = (left: Set<string>, right: Set<string>) => {
 
   return true;
 };
+
+const waitForDelay = (delay: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, delay);
+  });
 
 const buildSelectingDto = (planScreenId: number, currentPosName: string, seats: ListSeat[]) => {
   const uniqueSeats = getUniqueSeats(seats);
@@ -88,6 +102,14 @@ const PlanScreeningPage = () => {
     null
   );
   const [selectingSeatsByOther, setSelectingSeatsByOther] = useState<Record<string, string>>({});
+  const [confirmedSelectedSeatKeys, setConfirmedSelectedSeatKeys] = useState<Set<string>>(
+    new Set()
+  );
+  const [conflictedSelectedSeatKeys, setConflictedSelectedSeatKeys] = useState<Set<string>>(
+    new Set()
+  );
+  const conflictedSelectedSeatKeysRef = useRef<Set<string>>(new Set());
+  const [isFinalSeatVerificationPending, setIsFinalSeatVerificationPending] = useState(false);
   const [cancelMode, setCancelMode] = useState(false);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [customerData, setCustomerData] = useState<PlanScreeningDetailProps | undefined>(undefined);
@@ -107,6 +129,11 @@ const PlanScreeningPage = () => {
   const desiredSelectedSeatKeysRef = useRef<Set<string>>(new Set());
   const selectingSeatsRequestIdRef = useRef(0);
   const selectingSeatsReconcileTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const ownershipVerificationRequestIdRef = useRef(0);
+  const ownershipVerificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const selectingSeatsRetryAttemptRef = useRef(0);
+  const selectingSeatsSyncGenerationRef = useRef(0);
+  const runSelectingSeatsSyncRef = useRef<() => Promise<void>>(async () => undefined);
 
   const {
     data,
@@ -215,6 +242,174 @@ const PlanScreeningPage = () => {
       .map((seatKey) => seatMap.get(seatKey))
       .filter((seat): seat is ListSeat => Boolean(seat));
   }, [data?.listSeats, id, isCustomerMode, parseSelectingSeatIndexes, posName]);
+
+  const removeLocalSelectedSeats = useCallback((seatKeys: Set<string>) => {
+    if (seatKeys.size === 0) return;
+
+    const nextDesiredSeats = desiredSelectedSeatsRef.current.filter(
+      (seat) => !seatKeys.has(getSeatKey(seat))
+    );
+
+    desiredSelectedSeatsRef.current = nextDesiredSeats;
+    desiredSelectedSeatKeysRef.current = new Set(nextDesiredSeats.map((seat) => getSeatKey(seat)));
+
+    setSelectedSeats((current) => current.filter((seat) => !seatKeys.has(getSeatKey(seat))));
+    setConfirmedSelectedSeatKeys((current) => {
+      const next = new Set(current);
+      seatKeys.forEach((seatKey) => next.delete(seatKey));
+      return next;
+    });
+    const nextConflictedSeatKeys = new Set(conflictedSelectedSeatKeysRef.current);
+    seatKeys.forEach((seatKey) => nextConflictedSeatKeys.delete(seatKey));
+    conflictedSelectedSeatKeysRef.current = nextConflictedSeatKeys;
+    setConflictedSelectedSeatKeys(nextConflictedSeatKeys);
+  }, []);
+
+  const verifyCurrentSelectedSeatsOwnership = useCallback(
+    async ({
+      retryDelays = OWNERSHIP_MISSING_RETRY_DELAYS,
+      notifyOnError = true
+    }: {
+      retryDelays?: readonly number[];
+      notifyOnError?: boolean;
+    } = {}) => {
+      if (!id || isCustomerMode || !posName) return false;
+
+      const targetSeats = getUniqueSeats(desiredSelectedSeatsRef.current);
+      const targetSeatKeys = new Set(targetSeats.map((seat) => getSeatKey(seat)));
+
+      if (targetSeats.length === 0) {
+        setConfirmedSelectedSeatKeys(new Set());
+        setConflictedSelectedSeatKeys(new Set());
+        return false;
+      }
+
+      const requestId = ++ownershipVerificationRequestIdRef.current;
+      const syncGeneration = selectingSeatsSyncGenerationRef.current;
+      let lastResolution: ReturnType<typeof resolveSeatOwnership> | undefined;
+      let lastOwnersBySeat: ReturnType<typeof buildSeatOwnersByKey> | undefined;
+
+      try {
+        for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+          try {
+            const snapshots = await ordersApi.getSelectingChairs(Number(id));
+
+            if (
+              requestId !== ownershipVerificationRequestIdRef.current ||
+              syncGeneration !== selectingSeatsSyncGenerationRef.current ||
+              !areSeatKeySetsEqual(targetSeatKeys, desiredSelectedSeatKeysRef.current)
+            ) {
+              return false;
+            }
+
+            lastOwnersBySeat = buildSeatOwnersByKey(
+              snapshots,
+              Number(id),
+              parseSelectingSeatIndexes
+            );
+            lastResolution = resolveSeatOwnership(targetSeatKeys, lastOwnersBySeat, posName);
+            const needsConflictStabilization =
+              attempt === 0 &&
+              Array.from(targetSeatKeys).some((seatKey) =>
+                conflictedSelectedSeatKeysRef.current.has(seatKey)
+              );
+
+            if (
+              lastResolution.conflictedSeatKeys.size > 0 ||
+              (lastResolution.missingSeatKeys.size === 0 && !needsConflictStabilization) ||
+              attempt === retryDelays.length
+            ) {
+              break;
+            }
+          } catch (error) {
+            if (attempt === retryDelays.length) {
+              throw error;
+            }
+          }
+
+          await waitForDelay(retryDelays[attempt]);
+        }
+
+        if (!lastResolution || !lastOwnersBySeat) return false;
+
+        const rejectedSeatKeys = new Set([
+          ...lastResolution.conflictedSeatKeys,
+          ...lastResolution.missingSeatKeys
+        ]);
+
+        setConfirmedSelectedSeatKeys(new Set(lastResolution.confirmedSeatKeys));
+        conflictedSelectedSeatKeysRef.current = new Set(lastResolution.conflictedSeatKeys);
+        setConflictedSelectedSeatKeys(new Set(lastResolution.conflictedSeatKeys));
+
+        if (rejectedSeatKeys.size === 0) {
+          conflictedSelectedSeatKeysRef.current = new Set();
+          setConflictedSelectedSeatKeys(new Set());
+          return true;
+        }
+
+        setSelectingSeatsByOther((current) => {
+          const next = { ...current };
+
+          rejectedSeatKeys.forEach((seatKey) => {
+            const otherOwner = Array.from(lastOwnersBySeat?.get(seatKey) || []).find(
+              (owner) => owner !== posName
+            );
+
+            if (otherOwner) {
+              next[seatKey] = otherOwner;
+            }
+          });
+
+          return next;
+        });
+
+        const rejectedSeatCodes = targetSeats
+          .filter((seat) => rejectedSeatKeys.has(getSeatKey(seat)))
+          .map((seat) => seat.code)
+          .join(", ");
+
+        removeLocalSelectedSeats(rejectedSeatKeys);
+        message.warning(
+          rejectedSeatCodes
+            ? `Ghế ${rejectedSeatCodes} không còn thuộc quyền giữ của máy này và đã được bỏ chọn`
+            : "Một số ghế không còn thuộc quyền giữ của máy này và đã được bỏ chọn"
+        );
+
+        return false;
+      } catch (error) {
+        console.error("Failed to verify selecting chairs ownership:", error);
+        if (notifyOnError) {
+          message.error("Không thể xác nhận quyền giữ ghế. Vui lòng kiểm tra kết nối và thử lại");
+        }
+        return false;
+      }
+    },
+    [id, isCustomerMode, message, parseSelectingSeatIndexes, posName, removeLocalSelectedSeats]
+  );
+
+  const scheduleOwnershipVerification = useCallback(
+    (delay = OWNERSHIP_STABILIZATION_MS) => {
+      if (ownershipVerificationTimeoutRef.current) {
+        clearTimeout(ownershipVerificationTimeoutRef.current);
+      }
+
+      ownershipVerificationTimeoutRef.current = setTimeout(() => {
+        ownershipVerificationTimeoutRef.current = null;
+        void verifyCurrentSelectedSeatsOwnership();
+      }, delay);
+    },
+    [verifyCurrentSelectedSeatsOwnership]
+  );
+
+  const verifySelectedSeatsBeforeAction = useCallback(async () => {
+    setIsFinalSeatVerificationPending(true);
+
+    try {
+      return await verifyCurrentSelectedSeatsOwnership({ retryDelays: [150] });
+    } finally {
+      setIsFinalSeatVerificationPending(false);
+    }
+  }, [verifyCurrentSelectedSeatsOwnership]);
 
   useEffect(() => {
     mutateSelectingChairsRef.current = mutateSelectingChairsAsync;
@@ -333,6 +528,26 @@ const PlanScreeningPage = () => {
         ...parseSelectingSeatIndexes(payload.selectingChairIndexF3, 3)
       ];
 
+      if (payload.operation === "add") {
+        const localConflictKeys = seatKeys.filter((seatKey) =>
+          desiredSelectedSeatKeysRef.current.has(seatKey)
+        );
+
+        if (localConflictKeys.length > 0) {
+          const nextConflictedSeatKeys = new Set([
+            ...conflictedSelectedSeatKeysRef.current,
+            ...localConflictKeys
+          ]);
+          conflictedSelectedSeatKeysRef.current = nextConflictedSeatKeys;
+          setConflictedSelectedSeatKeys(nextConflictedSeatKeys);
+          setConfirmedSelectedSeatKeys((current) => {
+            const next = new Set(current);
+            localConflictKeys.forEach((seatKey) => next.delete(seatKey));
+            return next;
+          });
+        }
+      }
+
       setSelectingSeatsByOther((prev) => {
         const nextState = { ...prev };
 
@@ -353,10 +568,12 @@ const PlanScreeningPage = () => {
       });
 
       scheduleSelectingSeatsReconcile();
+      scheduleOwnershipVerification(180);
     });
 
     const cleanupSocketConnect = onSocketConnect(() => {
       void loadSelectingSeatsByOther();
+      scheduleOwnershipVerification(0);
     });
 
     return () => {
@@ -368,7 +585,14 @@ const PlanScreeningPage = () => {
       cleanup?.();
       cleanupSocketConnect?.();
     };
-  }, [id, isCustomerMode, loadSelectingSeatsByOther, parseSelectingSeatIndexes, posName]);
+  }, [
+    id,
+    isCustomerMode,
+    loadSelectingSeatsByOther,
+    parseSelectingSeatIndexes,
+    posName,
+    scheduleOwnershipVerification
+  ]);
 
   useEffect(() => {
     if (!id || isCustomerMode) return;
@@ -422,10 +646,13 @@ const PlanScreeningPage = () => {
     if (!id || isCustomerMode || !posName || isSelectingSeatsSyncDisposedRef.current) return;
     if (isSelectingSeatsSyncingRef.current) return;
 
+    const syncGeneration = selectingSeatsSyncGenerationRef.current;
+
     const syncedSeatKeys = syncedSelectedSeatKeysRef.current;
     const desiredSeatKeys = desiredSelectedSeatKeysRef.current;
 
     if (areSeatKeySetsEqual(syncedSeatKeys, desiredSeatKeys)) {
+      selectingSeatsRetryAttemptRef.current = 0;
       return;
     }
 
@@ -436,6 +663,7 @@ const PlanScreeningPage = () => {
     const syncedSeats = syncedSelectedSeatsRef.current;
     const addedSeats = targetSeats.filter((seat) => !syncedSeatKeys.has(getSeatKey(seat)));
     const removedSeats = syncedSeats.filter((seat) => !targetSeatKeys.has(getSeatKey(seat)));
+    let syncSucceeded = false;
 
     try {
       if (addedSeats.length > 0) {
@@ -452,7 +680,10 @@ const PlanScreeningPage = () => {
         });
       }
 
-      if (isSelectingSeatsSyncDisposedRef.current) {
+      if (
+        isSelectingSeatsSyncDisposedRef.current ||
+        syncGeneration !== selectingSeatsSyncGenerationRef.current
+      ) {
         if (targetSeats.length > 0) {
           await mutateSelectingChairsRef.current({
             operation: "remove",
@@ -463,17 +694,40 @@ const PlanScreeningPage = () => {
         return;
       }
 
+      syncSucceeded = true;
+      selectingSeatsRetryAttemptRef.current = 0;
       syncedSelectedSeatsRef.current = targetSeats;
       syncedSelectedSeatKeysRef.current = targetSeatKeys;
+
+      if (targetSeats.length > 0) {
+        scheduleOwnershipVerification();
+      } else {
+        setConfirmedSelectedSeatKeys(new Set());
+        setConflictedSelectedSeatKeys(new Set());
+      }
     } catch (error) {
       console.error("Failed to sync selecting chairs:", error);
+      selectingSeatsRetryAttemptRef.current += 1;
 
       try {
         const serverSeats = await loadOwnSelectingSeatsSnapshot();
-        if (isSelectingSeatsSyncDisposedRef.current) return;
+        if (
+          isSelectingSeatsSyncDisposedRef.current ||
+          syncGeneration !== selectingSeatsSyncGenerationRef.current
+        ) {
+          return;
+        }
 
         syncedSelectedSeatsRef.current = serverSeats;
-        syncedSelectedSeatKeysRef.current = new Set(serverSeats.map((seat) => getSeatKey(seat)));
+        const serverSeatKeys = new Set(serverSeats.map((seat) => getSeatKey(seat)));
+        syncedSelectedSeatKeysRef.current = serverSeatKeys;
+
+        // Chỉ verify ngay khi snapshot đã phản ánh đúng desired state (ví dụ server xử lý
+        // thành công nhưng response mutation bị mất). Nếu snapshot chưa khớp, ownership
+        // verification sẽ kết luận missing quá sớm và cắt mất chuỗi retry 250/500/1000ms.
+        if (areSeatKeySetsEqual(serverSeatKeys, desiredSelectedSeatKeysRef.current)) {
+          scheduleOwnershipVerification(0);
+        }
       } catch (snapshotError) {
         console.error(
           "Failed to reload selecting chairs snapshot after sync error:",
@@ -483,7 +737,12 @@ const PlanScreeningPage = () => {
     } finally {
       isSelectingSeatsSyncingRef.current = false;
 
-      if (
+      if (syncGeneration !== selectingSeatsSyncGenerationRef.current) {
+        syncTimeoutRef.current = setTimeout(() => {
+          syncTimeoutRef.current = null;
+          void runSelectingSeatsSyncRef.current();
+        }, 0);
+      } else if (
         !isSelectingSeatsSyncDisposedRef.current &&
         !areSeatKeySetsEqual(syncedSelectedSeatKeysRef.current, desiredSelectedSeatKeysRef.current)
       ) {
@@ -491,21 +750,66 @@ const PlanScreeningPage = () => {
           clearTimeout(syncTimeoutRef.current);
         }
 
-        syncTimeoutRef.current = setTimeout(() => {
-          syncTimeoutRef.current = null;
-          void runSelectingSeatsSync();
-        }, 0);
+        const retryAttempt = selectingSeatsRetryAttemptRef.current;
+        const retryDelay = syncSucceeded ? 0 : getSelectionSyncRetryDelay(retryAttempt);
+
+        if (retryDelay === null) {
+          selectingSeatsRetryAttemptRef.current = 0;
+          const unsyncedSeatKeys = new Set(
+            Array.from(desiredSelectedSeatKeysRef.current).filter(
+              (seatKey) => !syncedSelectedSeatKeysRef.current.has(seatKey)
+            )
+          );
+
+          if (unsyncedSeatKeys.size > 0) {
+            removeLocalSelectedSeats(unsyncedSeatKeys);
+            message.error("Không thể giữ một số ghế sau nhiều lần thử. Các ghế đó đã được bỏ chọn");
+          } else {
+            message.warning("Chưa thể giải phóng trạng thái ghế trên máy chủ");
+          }
+        } else {
+          syncTimeoutRef.current = setTimeout(() => {
+            syncTimeoutRef.current = null;
+            void runSelectingSeatsSyncRef.current();
+          }, retryDelay);
+        }
+      } else {
+        selectingSeatsRetryAttemptRef.current = 0;
       }
     }
-  }, [id, isCustomerMode, loadOwnSelectingSeatsSnapshot, posName]);
+  }, [
+    id,
+    isCustomerMode,
+    loadOwnSelectingSeatsSnapshot,
+    message,
+    posName,
+    removeLocalSelectedSeats,
+    scheduleOwnershipVerification
+  ]);
+
+  useEffect(() => {
+    runSelectingSeatsSyncRef.current = runSelectingSeatsSync;
+  }, [runSelectingSeatsSync]);
 
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;
 
     const desiredSeats = cancelMode ? [] : getUniqueSeats(selectedSeats);
+    const desiredSeatKeys = new Set(desiredSeats.map((seat) => getSeatKey(seat)));
 
     desiredSelectedSeatsRef.current = desiredSeats;
-    desiredSelectedSeatKeysRef.current = new Set(desiredSeats.map((seat) => getSeatKey(seat)));
+    desiredSelectedSeatKeysRef.current = desiredSeatKeys;
+    ownershipVerificationRequestIdRef.current += 1;
+    setConfirmedSelectedSeatKeys(
+      (current) => new Set(Array.from(current).filter((seatKey) => desiredSeatKeys.has(seatKey)))
+    );
+    const nextConflictedSeatKeys = new Set(
+      Array.from(conflictedSelectedSeatKeysRef.current).filter((seatKey) =>
+        desiredSeatKeys.has(seatKey)
+      )
+    );
+    conflictedSelectedSeatKeysRef.current = nextConflictedSeatKeys;
+    setConflictedSelectedSeatKeys(nextConflictedSeatKeys);
 
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
@@ -514,9 +818,9 @@ const PlanScreeningPage = () => {
     syncTimeoutRef.current = setTimeout(
       () => {
         syncTimeoutRef.current = null;
-        void runSelectingSeatsSync();
+        void runSelectingSeatsSyncRef.current();
       },
-      cancelMode ? 0 : 150
+      cancelMode ? 0 : SELECTION_SYNC_DEBOUNCE_MS
     );
 
     return () => {
@@ -525,7 +829,7 @@ const PlanScreeningPage = () => {
         syncTimeoutRef.current = null;
       }
     };
-  }, [cancelMode, id, isCustomerMode, posName, runSelectingSeatsSync, selectedSeats]);
+  }, [cancelMode, id, isCustomerMode, posName, selectedSeats]);
 
   useEffect(() => {
     if (!id || isCustomerMode || !posName || !data?.listSeats) return;
@@ -548,7 +852,7 @@ const PlanScreeningPage = () => {
 
           syncTimeoutRef.current = setTimeout(() => {
             syncTimeoutRef.current = null;
-            void runSelectingSeatsSync();
+            void runSelectingSeatsSyncRef.current();
           }, 0);
         }
       } catch (error) {
@@ -571,14 +875,41 @@ const PlanScreeningPage = () => {
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;
 
+    selectingSeatsSyncGenerationRef.current += 1;
     isSelectingSeatsSyncDisposedRef.current = false;
+    selectingSeatsRetryAttemptRef.current = 0;
+    ownershipVerificationRequestIdRef.current += 1;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+    if (ownershipVerificationTimeoutRef.current) {
+      clearTimeout(ownershipVerificationTimeoutRef.current);
+      ownershipVerificationTimeoutRef.current = null;
+    }
+
+    desiredSelectedSeatsRef.current = [];
+    desiredSelectedSeatKeysRef.current = new Set();
+    syncedSelectedSeatsRef.current = [];
+    syncedSelectedSeatKeysRef.current = new Set();
+    setSelectedSeats([]);
+    setConfirmedSelectedSeatKeys(new Set());
+    conflictedSelectedSeatKeysRef.current = new Set();
+    setConflictedSelectedSeatKeys(new Set());
 
     return () => {
       isSelectingSeatsSyncDisposedRef.current = true;
+      selectingSeatsSyncGenerationRef.current += 1;
+      ownershipVerificationRequestIdRef.current += 1;
 
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
         syncTimeoutRef.current = null;
+      }
+      if (ownershipVerificationTimeoutRef.current) {
+        clearTimeout(ownershipVerificationTimeoutRef.current);
+        ownershipVerificationTimeoutRef.current = null;
       }
 
       const lastSelectedSeats = getUniqueSeats([
@@ -598,6 +929,29 @@ const PlanScreeningPage = () => {
       });
     };
   }, [id, isCustomerMode, posName]);
+
+  const selectedSeatKeys = useMemo(
+    () => new Set(selectedSeats.map((seat) => getSeatKey(seat))),
+    [selectedSeats]
+  );
+  const pendingSelectedSeatKeys = useMemo(
+    () =>
+      Array.from(selectedSeatKeys).filter(
+        (seatKey) =>
+          !confirmedSelectedSeatKeys.has(seatKey) && !conflictedSelectedSeatKeys.has(seatKey)
+      ),
+    [confirmedSelectedSeatKeys, conflictedSelectedSeatKeys, selectedSeatKeys]
+  );
+  const conflictedSelectedSeatKeyList = useMemo(
+    () => Array.from(conflictedSelectedSeatKeys).filter((seatKey) => selectedSeatKeys.has(seatKey)),
+    [conflictedSelectedSeatKeys, selectedSeatKeys]
+  );
+  const isSeatSelectionPending =
+    !cancelMode &&
+    selectedSeats.length > 0 &&
+    (pendingSelectedSeatKeys.length > 0 ||
+      conflictedSelectedSeatKeyList.length > 0 ||
+      isFinalSeatVerificationPending);
 
   const renderData = isCustomerMode ? customerData : data;
   const renderSeatTypes = isCustomerMode ? customerSeatTypes : seatTypes;
@@ -721,6 +1075,8 @@ const PlanScreeningPage = () => {
           seatTypes={renderSeatTypes}
           selectedSeats={selectedSeats}
           selectingSeatsByOther={isCustomerMode ? undefined : selectingSeatsByOther}
+          pendingSelectedSeatKeys={isCustomerMode ? undefined : pendingSelectedSeatKeys}
+          conflictedSelectedSeatKeys={isCustomerMode ? undefined : conflictedSelectedSeatKeyList}
           setSelectedSeats={setSelectedSeats}
           cancelMode={cancelMode}
           cancelOrderSelection={isCustomerMode ? null : cancelOrderSelection}
@@ -753,6 +1109,8 @@ const PlanScreeningPage = () => {
             setCancelMode={setCancelMode}
             cancelOrderSelection={cancelOrderSelection}
             onCancelOrderSelectionClear={() => handleCancelOrderSelectionChange(null)}
+            isSeatSelectionPending={isSeatSelectionPending}
+            verifySelectedSeats={verifySelectedSeatsBeforeAction}
           />
         )}
 

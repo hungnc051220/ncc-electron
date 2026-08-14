@@ -121,6 +121,8 @@ interface ActionsProps {
   setCancelMode: Dispatch<SetStateAction<boolean>>;
   cancelOrderSelection?: CancelOrderSelection | null;
   onCancelOrderSelectionClear?: () => void;
+  isSeatSelectionPending?: boolean;
+  verifySelectedSeats?: () => Promise<boolean>;
 }
 
 const Actions = ({
@@ -131,7 +133,9 @@ const Actions = ({
   cancelMode,
   setCancelMode,
   cancelOrderSelection,
-  onCancelOrderSelectionClear = () => undefined
+  onCancelOrderSelectionClear = () => undefined,
+  isSeatSelectionPending = false,
+  verifySelectedSeats
 }: ActionsProps) => {
   const { message } = useAntdApp();
 
@@ -394,7 +398,7 @@ const Actions = ({
     }));
   }, [selectedDiscountGroups, selectedSeats]);
 
-  const onBooking = (params?: {
+  const onBooking = async (params?: {
     customerId?: number;
     memberCardCode?: string;
     voucherCode?: string;
@@ -408,6 +412,10 @@ const Actions = ({
 
     if (!posName || !posShortName) {
       message.error("Chưa cấu hình máy POS, không thể thao tác");
+      return;
+    }
+
+    if (verifySelectedSeats && !(await verifySelectedSeats())) {
       return;
     }
 
@@ -502,7 +510,7 @@ const Actions = ({
     });
   };
 
-  const onReserveSeats = () => {
+  const onReserveSeats = async () => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
       return;
@@ -510,6 +518,10 @@ const Actions = ({
 
     if (!posName || !posShortName) {
       message.error("Chưa cấu hình máy POS, không thể thao tác");
+      return;
+    }
+
+    if (verifySelectedSeats && !(await verifySelectedSeats())) {
       return;
     }
 
@@ -776,7 +788,7 @@ const Actions = ({
     isCancelReservePending ||
     isPlanScreeningPast ||
     updateOrder.isPending;
-  const disableNonCancelActions = disableActions || cancelMode;
+  const disableNonCancelActions = disableActions || cancelMode || isSeatSelectionPending;
 
   return (
     <div
@@ -907,8 +919,9 @@ const Actions = ({
           <Button
             variant="outlined"
             color="green"
+            loading={isSeatSelectionPending}
             disabled={disableNonCancelActions || !canUpdate || selectedSeats.length === 0}
-            onClick={onReserveSeats}
+            onClick={() => void onReserveSeats()}
           >
             Giữ chỗ
           </Button>
@@ -951,10 +964,12 @@ const Actions = ({
                   return;
                 }
 
-                onBooking();
+                void onBooking();
               }}
+              loading={isSeatSelectionPending}
               disabled={
                 createOrder.isPending ||
+                isSeatSelectionPending ||
                 selectedSeats.length === 0 ||
                 createQr.isPending ||
                 cancelMode ||

@@ -84,6 +84,8 @@ const Seat = ({
   isPendingPayment,
   isBlockedOnline,
   isSelectingByOther,
+  isSelectionPending,
+  isSelectionConflicted,
   seatColor,
   seatUniqueKey,
   isDimmed,
@@ -101,6 +103,8 @@ const Seat = ({
   isPendingPayment?: boolean;
   isBlockedOnline?: boolean;
   isSelectingByOther?: boolean;
+  isSelectionPending?: boolean;
+  isSelectionConflicted?: boolean;
   seatColor?: string;
   seatUniqueKey?: string;
   isDimmed?: boolean;
@@ -111,10 +115,10 @@ const Seat = ({
   onLeave?: () => void;
 }) => {
   const handleClick = useCallback(() => {
-    if (canSelect && !isSelectingByOther) {
+    if (canSelect && (!isSelectingByOther || isSelected)) {
       onSelect(seat);
     }
-  }, [canSelect, isSelectingByOther, onSelect, seat]);
+  }, [canSelect, isSelected, isSelectingByOther, onSelect, seat]);
 
   const shouldShowPositionColor =
     !!seatColor &&
@@ -141,7 +145,7 @@ const Seat = ({
     <div
       className={cn(
         "relative rounded-sm flex items-center justify-center",
-        canSelect && !isSelectingByOther && "selectable-seat",
+        canSelect && (!isSelectingByOther || isSelected) && "selectable-seat",
         colorMap[seat.type],
         canSelect && "cursor-pointer",
         isBlockedOnline && "bg-trunks/50 dark:bg-gray-500",
@@ -152,6 +156,8 @@ const Seat = ({
         !canSelect && "cursor-not-allowed",
         isSelected && "bg-whis text-white",
         isSelectingByOther && !isSelected && "ring-1 ring-primary/70 dark:ring-white",
+        isSelectionPending && isSelected && "animate-pulse ring-2 ring-sky-300",
+        isSelectionConflicted && isSelected && "animate-pulse ring-2 ring-red-500",
         isDimmed && "opacity-30 saturate-50",
         isSpotlighted && "ring-2 ring-white/90 shadow-[0_0_0_2px_rgba(59,130,246,0.55)] z-10",
         isSpotlighted && !isSelected && "opacity-100 saturate-100",

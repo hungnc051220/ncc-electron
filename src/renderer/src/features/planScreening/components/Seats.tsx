@@ -50,6 +50,8 @@ interface SeatsProps {
   seatTypes?: SeatTypeProps[];
   selectedSeats: ListSeat[];
   selectingSeatsByOther?: Record<string, string>;
+  pendingSelectedSeatKeys?: string[];
+  conflictedSelectedSeatKeys?: string[];
   setSelectedSeats: Dispatch<SetStateAction<ListSeat[]>>;
   cancelMode?: boolean;
   isCustomerView?: boolean;
@@ -79,6 +81,8 @@ const Seats = ({
   seatTypes,
   selectedSeats,
   selectingSeatsByOther,
+  pendingSelectedSeatKeys,
+  conflictedSelectedSeatKeys,
   setSelectedSeats,
   cancelMode,
   isCustomerView,
@@ -431,11 +435,21 @@ const Seats = ({
     () => new Set(Object.keys(selectingSeatsByOther || {})),
     [selectingSeatsByOther]
   );
+  const pendingSelectedSeatKeySet = useMemo(
+    () => new Set(pendingSelectedSeatKeys || []),
+    [pendingSelectedSeatKeys]
+  );
+  const conflictedSelectedSeatKeySet = useMemo(
+    () => new Set(conflictedSelectedSeatKeys || []),
+    [conflictedSelectedSeatKeys]
+  );
 
   const handleSelectSeat = useCallback(
     (seat: ListSeat) => {
       const seatUniqueKey = getSeatUniqueKey(seat);
-      if (selectingSeatKeysByOther.has(seatUniqueKey)) return;
+      if (selectingSeatKeysByOther.has(seatUniqueKey) && !selectedSeatKeySet.has(seatUniqueKey)) {
+        return;
+      }
 
       if (cancelMode) {
         if (screenMode === "contract") {
@@ -498,6 +512,7 @@ const Seats = ({
       seatOrderMap,
       seats,
       selectingSeatKeysByOther,
+      selectedSeatKeySet,
       screenMode,
       setSelectedSeats
     ]
@@ -722,6 +737,8 @@ const Seats = ({
               isSelected={selectedSeatKeySet.has(seatUniqueKey)}
               isPendingPayment={isPendingPayment}
               isSelectingByOther={selectingSeatKeysByOther.has(seatUniqueKey)}
+              isSelectionPending={pendingSelectedSeatKeySet.has(seatUniqueKey)}
+              isSelectionConflicted={conflictedSelectedSeatKeySet.has(seatUniqueKey)}
               onSelect={handleSelectSeat}
               size={seatSize}
               canSelect={canSelectSeat(seat)}
@@ -765,6 +782,8 @@ const Seats = ({
     handleLeave,
     pendingPaymentSeatKeySet,
     selectingSeatKeysByOther,
+    pendingSelectedSeatKeySet,
+    conflictedSelectedSeatKeySet,
     spotlightSeatKeySet
   ]);
 

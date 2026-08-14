@@ -763,6 +763,46 @@ describe("Actions", () => {
     expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
   });
 
+  it("disables order actions while selected seats are awaiting ownership confirmation", () => {
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={[createSeat()]}
+        setSelectedSeats={vi.fn()}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+        isSeatSelectionPending
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
+  });
+
+  it("does not create an order when final seat ownership verification fails", async () => {
+    const verifySelectedSeats = vi.fn().mockResolvedValue(false);
+
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={[createSeat()]}
+        setSelectedSeats={vi.fn()}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+        verifySelectedSeats={verifySelectedSeats}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /in vé/i }));
+
+    await waitFor(() => {
+      expect(verifySelectedSeats).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+  });
+
   it("keeps only the cancel ticket action enabled in cancel mode", () => {
     renderWithProviders(
       <Actions
