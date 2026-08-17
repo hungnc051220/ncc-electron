@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.113",
+  "latestVersion": "1.0.114",
   "minSupportedVersion": "1.0.91",
   "mode": "silent",
   "messages": [
-    "Điều chỉnh chi tiết đơn hàng để vé mời chỉ hiển thị các thao tác phù hợp."
+    "Cải thiện việc tải và đặt lại giá vị trí khi thêm lịch chiếu, tránh giữ lại mức giá của lần thao tác trước."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.113"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.114"
 }
