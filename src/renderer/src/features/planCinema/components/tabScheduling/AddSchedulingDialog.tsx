@@ -51,6 +51,11 @@ const positionFields: PositionField[] = [
   "priceOfPosition2",
   "priceOfPosition3"
 ];
+const emptyPositionPriceFormValues: PositionPriceFormValues = {
+  priceOfPosition1: undefined,
+  priceOfPosition2: undefined,
+  priceOfPosition3: undefined
+};
 
 interface AddSchedulingDialogProps {
   planCinemaId: number;
@@ -136,11 +141,9 @@ const AddSchedulingDialog = ({
   const [open, setOpen] = useState(false);
   const [isSamePrice, setIsSamePrice] = useState(false);
   const [confirmOfflineOpen, setConfirmOfflineOpen] = useState(false);
-  const [savedIndividualPrices, setSavedIndividualPrices] = useState<PositionPriceFormValues>({
-    priceOfPosition1: undefined,
-    priceOfPosition2: undefined,
-    priceOfPosition3: undefined
-  });
+  const [savedIndividualPrices, setSavedIndividualPrices] = useState<PositionPriceFormValues>(
+    emptyPositionPriceFormValues
+  );
   const [pendingSubmitBody, setPendingSubmitBody] = useState<{
     planCinemaId: number;
     projectDate: string;
@@ -197,7 +200,8 @@ const AddSchedulingDialog = ({
   const {
     data: planPricing,
     error: planPricingError,
-    isError: isPlanPricingError
+    isError: isPlanPricingError,
+    isPlaceholderData: isPlanPricingPlaceholder
   } = useTicketPricesByPlan({
     roomId,
     versionCode: selectedFilm?.film.versionCode ?? "",
@@ -206,8 +210,8 @@ const AddSchedulingDialog = ({
   });
 
   const mappedPlanPricing = useMemo(
-    () => getPlanPricingValues(planPricing?.pricings),
-    [planPricing?.pricings]
+    () => getPlanPricingValues(isPlanPricingPlaceholder ? undefined : planPricing?.pricings),
+    [isPlanPricingPlaceholder, planPricing?.pricings]
   );
 
   const activePositionFields = useMemo(
@@ -218,7 +222,7 @@ const AddSchedulingDialog = ({
   const resetForm = () => {
     form.resetFields();
     form.setFieldsValue(defaultFormValues);
-    setSavedIndividualPrices(getPositionPriceFormValues(mappedPlanPricing));
+    setSavedIndividualPrices(emptyPositionPriceFormValues);
     setIsSamePrice(false);
     setConfirmOfflineOpen(false);
     setPendingSubmitBody(null);
