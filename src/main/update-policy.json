@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.114",
+  "latestVersion": "1.0.115",
   "minSupportedVersion": "1.0.91",
   "mode": "silent",
   "messages": [
-    "Cải thiện việc tải và đặt lại giá vị trí khi thêm lịch chiếu, tránh giữ lại mức giá của lần thao tác trước."
+    "Chỉ áp dụng một trong hai hình thức khuyến mãi hoặc đổi điểm; khi chuyển lựa chọn, ưu đãi trước đó được bỏ để tính đúng tiền vé."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.114"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.115"
 }
