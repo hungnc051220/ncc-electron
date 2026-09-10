@@ -413,6 +413,9 @@ const VipCardDialog = ({
   useEffect(() => {
     if (open) {
       setVoucherType(hasSeatTypeDiscount ? "none" : "campaign");
+      setExchangePoints(0);
+      setDraftExchangePoints(0);
+      setIsExchangePointModalOpen(false);
     }
   }, [hasSeatTypeDiscount, open]);
 
@@ -566,11 +569,11 @@ const VipCardDialog = ({
   const maxRedeemablePointsByAmount = useMemo(
     () =>
       calculateMaxRedeemablePointsByAmount(
-        finalAmount,
+        totalPrice || 0,
         pointExchangeConfig?.basePoint,
         pointExchangeConfig?.baseAmount
       ),
-    [finalAmount, pointExchangeConfig?.baseAmount, pointExchangeConfig?.basePoint]
+    [totalPrice, pointExchangeConfig?.baseAmount, pointExchangeConfig?.basePoint]
   );
   const maxRedeemablePoints = roundPointRedemptionLimitDown(
     Math.min(currentPointBalance, maxRedeemablePointsByAmount)
@@ -585,7 +588,7 @@ const VipCardDialog = ({
       pointExchangeConfig?.basePoint,
       pointExchangeConfig?.baseAmount
     ),
-    finalAmount
+    totalPrice || 0
   );
   const pointRedemptionAmount = Math.min(
     calculatePointRedemptionAmount(
@@ -686,7 +689,10 @@ const VipCardDialog = ({
           : voucherType === "u22"
             ? "U22Ticket"
             : selectedVoucherCode,
-      pointReward: !hasSeatTypeDiscount && exchangePoints > 0 ? exchangePoints : undefined
+      pointReward:
+        !hasSeatTypeDiscount && voucherType === "none" && exchangePoints > 0
+          ? exchangePoints
+          : undefined
     });
     onCancel();
   };
@@ -767,6 +773,7 @@ const VipCardDialog = ({
       return;
     }
 
+    setVoucherType("none");
     setExchangePoints(normalizedExchangePoints);
     setDraftExchangePoints(normalizedExchangePoints);
     setIsExchangePointModalOpen(false);
@@ -840,7 +847,12 @@ const VipCardDialog = ({
 
           <Radio.Group
             value={voucherType}
-            onChange={(e) => setVoucherType(e.target.value)}
+            onChange={(e) => {
+              setVoucherType(e.target.value);
+              if (e.target.value !== "none") {
+                onClearExchangePoints();
+              }
+            }}
             className="flex flex-row flex-wrap items-center gap-x-5 gap-y-2"
           >
             <Radio value="campaign" disabled={!isCustomerSearched || hasSeatTypeDiscount}>
