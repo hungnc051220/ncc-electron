@@ -15,3 +15,4 @@ export * from "./invoice.types";
 export * from "./permission.types";
 export * from "./voucher.types";
 export * from "./sharingRate.types";
+export * from "./schedule-display.types";

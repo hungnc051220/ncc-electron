@@ -1,6 +1,6 @@
 {
   "name": "ncc-system",
-  "version": "1.0.115",
+  "version": "1.0.116",
   "description": "Hệ thống quản lý Rạp Chiếu Phim Quốc Gia - NCC System",
   "main": "./out/main/index.js",
   "author": "HungNC",
@@ -20,13 +20,15 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "start": "electron-vite preview",
+    "predev": "npm run build:schedule",
     "dev": "electron-vite dev",
-    "build": "npm run typecheck && electron-vite build",
+    "build:schedule": "vite build --config vite.schedule.config.ts",
+    "build": "npm run typecheck && electron-vite build && npm run build:schedule",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux",
     "build:linux:wsl": "powershell -ExecutionPolicy Bypass -File scripts/build-linux-wsl.ps1"
   },
   "dependencies": {

@@ -8,6 +8,8 @@ import {
   PlanScreeningDetailProps,
   QrState,
   SeatTypeProps,
+  ScheduleDisplayConfigStatus,
+  ScheduleDisplayConnectionResult,
   UpdatePolicy,
   UpdateReadyInfo,
   UpdateDownloadProgress,
@@ -18,6 +20,12 @@ import {
 const api: PreloadAPI = {
   getConfig: () => ipcRenderer.invoke("get-config"),
   setConfig: (config) => ipcRenderer.invoke("set-config", config),
+  getScheduleDisplayStatus: (): Promise<ScheduleDisplayConfigStatus> =>
+    ipcRenderer.invoke("schedule-display:get-status"),
+  setScheduleDisplayApiKey: (apiKey): Promise<ScheduleDisplayConfigStatus> =>
+    ipcRenderer.invoke("schedule-display:set-api-key", apiKey),
+  testScheduleDisplayConnection: (apiKey): Promise<ScheduleDisplayConnectionResult> =>
+    ipcRenderer.invoke("schedule-display:test-connection", apiKey),
   openCustomerScreen: (id) => ipcRenderer.invoke("customer:open", id),
   openCustomerRoute: (route) => ipcRenderer.invoke("customer:open-route", route),
   closeCustomerScreen: () => ipcRenderer.invoke("customer:close"),

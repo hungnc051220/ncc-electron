@@ -11,6 +11,7 @@ import SettingBranch from "./components/SettingBranch";
 import SettingEndpoint from "./components/SettingEndpoint";
 import SettingPos from "./components/SettingPos";
 import SettingPrinter from "./components/SettingPrinter";
+import SettingScheduleDisplay from "./components/SettingScheduleDisplay";
 
 const { Content } = Layout;
 
@@ -53,6 +54,12 @@ const SettingPage = () => {
         label: "Cấu hình Endpoint",
         permissionKey: "settings_endpoint",
         content: <SettingEndpoint />
+      },
+      {
+        key: "settings-schedule-display",
+        label: "Màn hình TV",
+        permissionKey: "settings_endpoint",
+        content: <SettingScheduleDisplay />
       },
       {
         key: "change-password",

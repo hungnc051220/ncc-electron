@@ -8,6 +8,8 @@ import {
   PrintTicketPayload,
   QrState,
   SeatTypeProps,
+  ScheduleDisplayConfigStatus,
+  ScheduleDisplayConnectionResult,
   UpdatePolicy,
   UpdateReadyInfo,
   UpdateDownloadProgress,
@@ -40,6 +42,9 @@ export interface SaveFileResult {
 export interface PreloadAPI {
   getConfig: () => Promise<AppConfig>;
   setConfig: (config: AppConfig) => Promise<void>;
+  getScheduleDisplayStatus: () => Promise<ScheduleDisplayConfigStatus>;
+  setScheduleDisplayApiKey: (apiKey: string) => Promise<ScheduleDisplayConfigStatus>;
+  testScheduleDisplayConnection: (apiKey?: string) => Promise<ScheduleDisplayConnectionResult>;
   openCustomerScreen(id: number): Promise<void>;
   openCustomerRoute(route: string): Promise<void>;
   closeCustomerScreen(): Promise<void>;

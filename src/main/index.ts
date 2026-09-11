@@ -17,6 +17,7 @@ import {
   dialog,
   ipcMain,
   Menu,
+  safeStorage,
   screen,
   shell,
   type MenuItemConstructorOptions
@@ -28,6 +29,11 @@ import { createPrintService } from "./print.service";
 import ElectronStore from "electron-store";
 import { getConfig, setConfig } from "./config.service";
 import { setupUpdater } from "./updater.service";
+import { createScheduleDisplayConfigService } from "./schedule-display-config.service";
+import {
+  createScheduleDisplayService,
+  type ScheduleDisplayService
+} from "./schedule-display.service";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Store = (ElectronStore as any).default ?? ElectronStore;
@@ -41,6 +47,7 @@ const gotTheLock = is.dev || app.requestSingleInstanceLock();
 
 let mainWindow: BrowserWindow | null = null;
 let customerWindow: BrowserWindow | null = null;
+let scheduleDisplayService: ScheduleDisplayService | null = null;
 let currentScreeningData: PlanScreeningDetailProps | null = null;
 let currentSeatTypes: SeatTypeProps[] = [];
 let currentScreeningOrders: OrderResponseProps[] = [];
@@ -467,6 +474,28 @@ if (!gotTheLock) {
       setConfig(config);
     });
 
+    const displayConfigService = createScheduleDisplayConfigService({
+      configPath: path.join(app.getPath("userData"), "schedule-display.json"),
+      encryption: safeStorage
+    });
+    const displayService = createScheduleDisplayService({
+      rendererRoot: join(__dirname, "../schedule"),
+      getSecret: () => displayConfigService.getApiKey()
+    });
+    scheduleDisplayService = displayService;
+
+    ipcMain.handle("schedule-display:get-status", () => displayService.getStatus());
+    ipcMain.handle("schedule-display:set-api-key", async (_, apiKey: string) => {
+      if (typeof apiKey !== "string") throw new Error("Khóa API không hợp lệ");
+      displayConfigService.setApiKey(apiKey);
+      return displayService.getStatus();
+    });
+    ipcMain.handle("schedule-display:test-connection", (_, apiKey?: string) =>
+      displayService.testConnection(typeof apiKey === "string" ? apiKey : undefined)
+    );
+
+    void displayService.start();
+
     ipcMain.handle("get-printers", async (event) => {
       const win = BrowserWindow.fromWebContents(event.sender);
       if (!win) return [];
@@ -760,6 +789,10 @@ app.on("before-quit", (event) => {
 
   event.preventDefault();
   void requestAppQuit(mainWindow);
+});
+
+app.on("will-quit", () => {
+  void scheduleDisplayService?.stop();
 });
 
 electronAutoUpdater.on("before-quit-for-update", () => {

@@ -1,0 +1,593 @@
+@font-face {
+  font-family: "Inter";
+  src: url("../assets/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  font-family: "Inter", Arial, sans-serif;
+  color: #f3f4ff;
+  background: #000a15;
+  font-synthesis: none;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background:
+    linear-gradient(
+      132deg,
+      transparent 0 2%,
+      #ff123c35 2.3%,
+      transparent 3.2% 6%,
+      #b9002145 6.3%,
+      transparent 8%
+    ),
+    linear-gradient(
+      132deg,
+      transparent 43%,
+      #ef002c1c 44%,
+      transparent 46% 76%,
+      #b7002029 77%,
+      transparent 79%
+    ),
+    radial-gradient(ellipse at 102% 0%, #b700245c, transparent 22%),
+    radial-gradient(ellipse at -10% 75%, #e000303d, transparent 24%),
+    radial-gradient(ellipse at 105% 100%, #d000203b, transparent 23%),
+    linear-gradient(115deg, #000813, #001322 52%, #000611);
+}
+
+/* Measurements follow the 941 × 1672 reference. All cards share an equal grid track. */
+.schedule-screen {
+  --card-gap: 0.65vw;
+  --title-size: 1.5vw;
+  --meta-size: 1.28vw;
+  --chip-width: 7.15vw;
+  --chip-height: 2.8vw;
+  --chip-font: 1.5vw;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: 11.7vw minmax(0, 1fr) 15.3vw;
+  width: 100vw;
+  height: 100dvh;
+  padding: 1.9vw 2.7vw 1.5vw;
+  gap: 0.85vw;
+  overflow: hidden;
+}
+
+.schedule-screen::before {
+  position: absolute;
+  z-index: -1;
+  top: 10vw;
+  left: -7vw;
+  width: 25vw;
+  height: 7vw;
+  border-top: 0.3vw solid #ff4861;
+  border-radius: 50%;
+  box-shadow:
+    0 -0.4vw 1vw #f60037,
+    inset 0 0.7vw 1.5vw #f6003730;
+  transform: rotate(22deg);
+  content: "";
+}
+
+.schedule-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24% 52% 24%;
+  min-width: 0;
+  align-items: start;
+}
+
+.header-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.65vw;
+  gap: 1.8vw;
+}
+
+.brand-logo {
+  display: block;
+  width: 19vw;
+  height: 6.05vw;
+  object-fit: contain;
+}
+.brand-caption,
+.header-kicker,
+.clock-caption {
+  margin: 0;
+  color: #b2d7e8;
+  font-size: 1.03vw;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.brand-caption {
+  font-size: 0.91vw;
+  letter-spacing: 0.25em;
+}
+
+.header-title-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8vw;
+}
+.schedule-header h1 {
+  margin: 0;
+  color: #fff5f3;
+  font-size: 4.05vw;
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 0.3vw #ff6b73,
+    0 0 1vw #ec00277d;
+  transform: scaleX(0.9);
+}
+.schedule-date {
+  color: #ffd478;
+  font-size: 3.1vw;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 0.65vw #e9a42b30;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.header-kicker {
+  margin-top: 0;
+  font-size: 1.02vw;
+  letter-spacing: 0.36em;
+}
+
+.schedule-clock-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.5vw;
+  margin-left: 1vw;
+}
+.schedule-clock {
+  color: #fafafa;
+  font-size: 4.15vw;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-shadow: 0 0.1vw 0.3vw #000;
+}
+.schedule-weekday {
+  position: relative;
+  margin-top: 0.7vw;
+  padding-bottom: 1.1vw;
+  color: #f0f1f2;
+  font-size: 1.45vw;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.schedule-weekday::after {
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: max(1px, 0.1vw);
+  background: #f03142;
+  box-shadow: 0 0 0.5vw #eb1339;
+  content: "";
+}
+.clock-caption {
+  margin-top: 0.8vw;
+}
+.stale-badge {
+  margin-top: 0.3vw;
+  color: #ffb683;
+  font-size: 1vw;
+}
+.schedule-clock-panel:has(.stale-badge) .clock-caption {
+  display: none;
+}
+
+.schedule-content,
+.movie-slides-viewport,
+.movie-slides-track,
+.movie-grid {
+  min-width: 0;
+  min-height: 0;
+}
+.movie-slides-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.movie-slides-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition-property: transform;
+  transition-timing-function: ease-in-out;
+}
+.movie-grid {
+  flex: 0 0 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--schedule-rows), minmax(0, 1fr));
+  grid-auto-flow: row;
+  width: 100%;
+  height: 100%;
+  column-gap: 1.7vw;
+  row-gap: var(--card-gap);
+}
+
+@media (orientation: portrait) {
+  .movie-grid {
+    gap: 1.7vw;
+  }
+
+  .movie-slides-viewport {
+    /* Use the existing space below the grid so larger gaps do not shrink the cards. */
+    height: calc(100% + (var(--schedule-rows) - 1) * (1.7vw - var(--card-gap)));
+  }
+}
+
+.movie-card {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.55vw;
+  overflow: hidden;
+  border: max(1px, 0.1vw) solid #3b637d;
+  border-radius: 1.45vw;
+  background:
+    radial-gradient(ellipse at 95% 0%, #35405a4d, transparent 55%),
+    linear-gradient(108deg, #071927, #00101d 60%, #0b1c2b);
+  box-shadow:
+    inset 0 0 0.7vw #6b8da51c,
+    0 0 0.2vw #122f42;
+}
+.movie-poster-shell {
+  position: relative;
+  contain: size;
+  flex: 0 0 auto;
+  width: 28%;
+  height: 100%;
+  min-height: 0;
+  max-width: 30%;
+  overflow: hidden;
+  border: max(1px, 0.07vw) solid #73898885;
+  border-radius: 0.85vw;
+  background: #041c2e;
+}
+.movie-poster {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.movie-poster-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #14344a, #031320);
+  color: #8bc5e4;
+  font-size: 2.6vw;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+.movie-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  padding: 0.4vw 0.85vw 0.2vw 1.9vw;
+  gap: 0.15vw;
+}
+.movie-header {
+  padding-right: 4vw;
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65vw;
+  min-width: 0;
+}
+.movie-title {
+  display: -webkit-box;
+  margin: 0;
+  min-width: 0;
+  color: #f2f1ff;
+  font-size: var(--title-size);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
+  text-transform: uppercase;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.version-badge {
+  position: absolute;
+  right: 0.85vw;
+  top: 0.65vw;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.4vw;
+  height: 3.25vw;
+  margin-top: -0.15vw;
+  padding-inline: 0.35vw;
+  border: max(1px, 0.12vw) solid #e42643;
+  border-radius: 0.6vw;
+  background: #040d18;
+  color: #fff;
+  font-size: 1.6vw;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow:
+    0 0 0.9vw #ed103d4a,
+    inset 0 0 0.4vw #e426432b;
+}
+.movie-details {
+  display: block;
+  flex-shrink: 0;
+  margin: 0;
+  padding-right: 3.6vw;
+  color: #add0e6;
+  font-size: var(--meta-size);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-reel {
+  position: absolute;
+  z-index: -1;
+  top: 1vw;
+  right: -9vw;
+  width: 16vw;
+  height: 16vw;
+  color: #dd2344;
+  opacity: 0.65;
+  transform: rotate(25deg) scaleX(0.7);
+  filter: drop-shadow(0 0 0.7vw #e91a40);
+}
+.age-warning {
+  display: -webkit-box;
+  flex-shrink: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #ff1939;
+  font-size: 1.2vw;
+  font-weight: 600;
+  line-height: 1.15;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.free-badge {
+  color: #f1cf91;
+  font-size: 1.15vw;
+  line-height: 1;
+}
+.session-grid {
+  --session-row-gap: 0.4vw;
+  display: grid;
+  grid-template-columns: repeat(var(--session-columns), var(--chip-width));
+  grid-template-rows: repeat(var(--session-rows), minmax(0, 1fr));
+  flex-shrink: 1;
+  height: calc(
+    var(--session-rows) * var(--chip-height) + (var(--session-rows) - 1) * var(--session-row-gap)
+  );
+  min-height: 0;
+  gap: var(--session-row-gap) 0.85vw;
+  margin-top: auto;
+  padding-top: 0;
+}
+.session-time {
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--chip-width);
+  height: 100%;
+  min-height: 0;
+  border: max(1px, 0.13vw) solid #f08086;
+  border-radius: 0.55vw;
+  background: linear-gradient(135deg, #07121f, #080d17);
+  color: #f9f7fa;
+  font-size: var(--chip-font);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow:
+    0 0 0.65vw #f22e453b,
+    inset 0 0 0.35vw #f9444930;
+}
+.session-time > span {
+  font-size: min(var(--chip-font), 65cqh);
+  line-height: 1;
+}
+
+/* Keep the same chip dimensions when seven or eight sessions need four columns. */
+.movie-card:has(.session-time:nth-child(7)) .session-grid {
+  column-gap: 0.35vw;
+}
+.session-past {
+  border-color: #82505c;
+  color: #8e909e;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.schedule-footer {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 1.5vw;
+  padding-bottom: 0.55vw;
+  color: #addbf0;
+  font-size: 0.94vw;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.schedule-footer::before {
+  position: absolute;
+  right: -3vw;
+  bottom: 3.1vw;
+  left: -3vw;
+  height: max(1px, 0.12vw);
+  background: linear-gradient(
+    90deg,
+    #ff123b,
+    transparent 18%,
+    #ff123b 41%,
+    transparent 49% 66%,
+    #ff123b 100%
+  );
+  box-shadow: 0 0 0.65vw #fc244563;
+  content: "";
+}
+.schedule-footer > svg {
+  width: 4vw;
+  height: 4vw;
+  margin-bottom: -0.75vw;
+  color: #ff4a65;
+  filter: drop-shadow(0 0 0.4vw #ff1438);
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.3vw;
+}
+.footer-brand::before,
+.footer-brand::after {
+  width: 2.5vw;
+  height: 0.35vw;
+  border-block: max(1px, 0.1vw) solid #ef1640;
+  content: "";
+}
+
+.connection-banner {
+  position: fixed;
+  z-index: 10;
+  right: 2.7vw;
+  bottom: 4.5vw;
+  max-width: 90vw;
+  padding: 0.5em 0.9em;
+  border: 1px solid #b78c40;
+  border-radius: 0.5em;
+  background: #50340ef2;
+  color: #ffe3a5;
+  font-size: 1.4vw;
+}
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 1px solid #37576c;
+  border-radius: 1.4vw;
+  background: #071725;
+  text-align: center;
+}
+.state-card h2 {
+  margin: 0;
+  font-size: 3vw;
+}
+.state-card p {
+  margin: 0.6em 0 0;
+  color: #adc6dc;
+  font-size: 1.8vw;
+}
+.state-card-error h2 {
+  color: #ff8b96;
+}
+.loading-ring {
+  width: 4vw;
+  height: 4vw;
+  margin-bottom: 1.3em;
+  border: 0.3vw solid #912e45;
+  border-top-color: #ff6679;
+  border-radius: 50%;
+}
+
+@media (orientation: landscape) {
+  .schedule-screen {
+    --title-size: 1.05vw;
+    --meta-size: 0.8vw;
+    --chip-width: 3.5vw;
+    --chip-height: 1.6vw;
+    --chip-font: 0.95vw;
+    grid-template-rows: 9vw minmax(0, 1fr) 3vw;
+    --card-gap: 0.3vw;
+  }
+  .movie-card {
+    padding: 0.25vw;
+  }
+  .movie-poster-shell {
+    width: auto;
+    aspect-ratio: 2 / 3;
+  }
+  .movie-content {
+    padding: 0.2vw 0.5vw;
+    gap: 0.2vw;
+  }
+  .movie-details {
+    flex-direction: row;
+    padding: 0;
+    margin: 0;
+    gap: 0.5vw;
+  }
+  .movie-header {
+    padding-right: 2.5vw;
+  }
+  .version-badge {
+    position: absolute;
+    right: 1vw;
+    min-width: 1.8vw;
+    height: 1.8vw;
+    font-size: 0.9vw;
+  }
+  .movie-card {
+    position: relative;
+  }
+  .age-warning {
+    font-size: 0.8vw;
+  }
+  .session-grid {
+    gap: 0.3vw;
+  }
+}
