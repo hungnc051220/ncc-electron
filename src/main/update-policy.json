@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.115",
+  "latestVersion": "1.0.116",
   "minSupportedVersion": "1.0.91",
-  "mode": "silent",
+  "mode": "optional",
   "messages": [
-    "Chỉ áp dụng một trong hai hình thức khuyến mãi hoặc đổi điểm; khi chuyển lựa chọn, ưu đãi trước đó được bỏ để tính đúng tiền vé."
+    "Thêm chức năng hiển thị lịch chiếu trên TV."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.115"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.116"
 }
