@@ -3,6 +3,24 @@ import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import { getScheduleContentSecurityPolicy } from "../src/main/schedule-display-csp";
+import postcss from "postcss";
+
+const unsupportedTvCss = (property: string, value: string) =>
+  /^(--|grid|gap$|column-gap$|row-gap$|aspect-ratio$|container|contain$|isolation$|padding-inline$|border-block)/.test(
+    property
+  ) ||
+  /var\(|\b(?:min|max|clamp)\(|\d(?:dvh|cqh)|#[\da-f]{8}\b/i.test(value) ||
+  (property === "display" && value.includes("grid"));
+const stripUnsupportedTvCss = (css: string) => {
+  const parsed = postcss.parse(css);
+  parsed.walkRules((rule) => {
+    if (rule.selector.includes(":has(")) rule.remove();
+  });
+  parsed.walkDecls((decl) => {
+    if (unsupportedTvCss(decl.prop, decl.value)) decl.remove();
+  });
+  return parsed.toString();
+};
 
 // Build first: npm run build. These checks serve emitted files, not Vite's dev transforms.
 let server: Server;
@@ -167,3 +185,134 @@ test("debug displays JavaScript, unhandled rejection and React errors", async ({
   await page.reload();
   await expect(page.locator("#schedule-debug-error")).toContainText("ERROR TYPE: REACT");
 });
+
+for (const rotation of [0, 90, 270]) {
+  test(`old TV CSS keeps 16 cards and sessions inside the screen, rotation ${rotation}`, async ({
+    page
+  }) => {
+    await page.setViewportSize(
+      rotation ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 }
+    );
+    await page.route("**/*.css", async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({ response, body: stripUnsupportedTvCss(await response.text()) });
+    });
+    await page.addInitScript(() => {
+      window.CSS.supports = () => false;
+      // Strip unsupported declarations from the rotated inline sheet too, before layout reads it.
+      const append = Node.prototype.appendChild;
+      Node.prototype.appendChild = function <T extends Node>(child: T): T {
+        const result = append.call(this, child) as T;
+        if (child instanceof HTMLStyleElement && child.sheet) {
+          const visit = (rules: CSSRuleList) => {
+            for (const rule of Array.from(rules)) {
+              if ("cssRules" in rule) visit((rule as CSSMediaRule).cssRules);
+              if (!("style" in rule)) continue;
+              const style = (rule as CSSStyleRule).style;
+              for (const prop of Array.from(style)) {
+                const value = style.getPropertyValue(prop);
+                if (
+                  /^(--|grid|gap$|column-gap$|row-gap$|aspect-ratio$|container|contain$|isolation$|padding-inline$|border-block)/.test(
+                    prop
+                  ) ||
+                  /var\(|\b(?:min|max|clamp)\(|\d(?:dvh|cqh)|#[\da-f]{8}\b/i.test(value) ||
+                  (prop === "display" && value.includes("grid"))
+                )
+                  style.removeProperty(prop);
+              }
+            }
+          };
+          visit(child.sheet.cssRules);
+        }
+        return result;
+      };
+    });
+    await page.route("**/schedule/api*", (route) =>
+      route.fulfill({
+        json: {
+          serverNow: "2026-09-10T10:00:00+07:00",
+          stale: false,
+          movies: Array.from({ length: 33 }, (_, index) => ({
+            id: index + 1,
+            title: `Phim số ${index + 1} có tên dài kiểm tra bố cục trên Android Box`,
+            posterUrl: "",
+            durationMinutes: 120,
+            ageRating: "C16",
+            version: "2D",
+            genre: "Tâm lý",
+            country: "Việt Nam",
+            free: false,
+            sessions: Array.from({ length: 12 }, (_, session) => ({
+              id: session,
+              time: "10:30",
+              startAt: "2026-09-10T10:30:00+07:00"
+            }))
+          }))
+        }
+      })
+    );
+    await page.clock.install();
+    await page.goto(`${baseUrl}?force-legacy=1&rotate=${rotation}`);
+    const active = page.locator(".movie-grid[data-active='true']");
+    await expect(active.locator(".movie-card")).toHaveCount(16);
+    await page.evaluate(() => document.fonts.ready);
+    const geometry = await page.evaluate(() => {
+      const root = document.querySelector<HTMLElement>(".schedule-screen")!;
+      const cards = Array.from(
+        root.querySelectorAll<HTMLElement>(".movie-grid[data-active='true'] .movie-card")
+      );
+      const clipped: string[] = [];
+      for (const card of cards) {
+        const bounds = card.getBoundingClientRect();
+        for (const child of card.querySelectorAll(
+          ".movie-poster-shell, .movie-title, .movie-details, .age-warning, .session-time"
+        )) {
+          const box = child.getBoundingClientRect();
+          if (
+            box.top < bounds.top - 1 ||
+            box.bottom > bounds.bottom + 1 ||
+            box.left < bounds.left - 1 ||
+            box.right > bounds.right + 1 ||
+            box.width < 1 ||
+            box.height < 1
+          )
+            clipped.push(child.className);
+        }
+      }
+      return {
+        legacy: root.classList.contains("schedule-legacy"),
+        layout: root.getAttribute("data-viewport"),
+        clipped,
+        sizes: cards.map((card) => [card.offsetWidth, card.offsetHeight]),
+        rowGap: cards[2].offsetTop - cards[0].offsetTop - cards[0].offsetHeight,
+        columnGap: cards[1].offsetLeft - cards[0].offsetLeft - cards[0].offsetWidth,
+        rootBox: {
+          width: root.getBoundingClientRect().width,
+          height: root.getBoundingClientRect().height
+        },
+        overflow:
+          document.documentElement.scrollWidth > innerWidth ||
+          document.documentElement.scrollHeight > innerHeight
+      };
+    });
+    expect(geometry.legacy).toBe(true);
+    expect(geometry.layout).toBe("1080x1920");
+    expect(geometry.clipped).toEqual([]);
+    expect(geometry.overflow).toBe(false);
+    expect(Math.abs(geometry.columnGap - geometry.rowGap)).toBeLessThanOrEqual(1);
+    expect(new Set(geometry.sizes.map((size) => size.join("x"))).size).toBe(1);
+    expect(geometry.rootBox).toEqual(
+      rotation ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 }
+    );
+    await page.screenshot({ path: `e2e-artifacts/schedule-old-tv-rotate-${rotation}.png` });
+    await page.clock.runFor(15_000);
+    await expect(active).toHaveAttribute("data-page", "2");
+    await expect(active.locator(".movie-card").first()).toHaveAttribute("data-movie-id", "17");
+    await page.clock.runFor(15_000);
+    await expect(active.locator(".movie-card")).toHaveCount(1);
+    const lastSize = await active
+      .locator(".movie-card")
+      .evaluate((card: HTMLElement) => [card.offsetWidth, card.offsetHeight]);
+    expect(lastSize).toEqual(geometry.sizes[0]);
+  });
+}

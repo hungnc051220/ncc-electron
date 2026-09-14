@@ -1,6 +1,11 @@
 import type { ScheduleDisplayPayload } from "@shared/types";
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { applyLegacyScheduleLayout, needsLegacyScheduleLayout } from "./legacyLayout";
+import "./legacy.css";
+import { getScheduleRotation, rotateScheduleCss } from "./displayRotation";
+import scheduleCss from "./schedule.css?inline";
+import legacyCss from "./legacy.css?inline";
 import { getScheduleLayout, type ScheduleViewport } from "./layout";
 import MovieScheduleSlides from "./MovieScheduleSlides";
 import ScheduleHeader from "./ScheduleHeader";
@@ -34,12 +39,26 @@ const getErrorMessage = async (response: Response) => {
 };
 
 const App = () => {
+  const screenRef = useRef<HTMLElement>(null);
+  const [rotation] = useState(() => getScheduleRotation(window.location.search));
+  const [legacyLayout] = useState(() => Boolean(rotation) || needsLegacyScheduleLayout());
   const [data, setData] = useState<ScheduleDisplayPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [serverOffset, setServerOffset] = useState(0);
   const [serverTime, setServerTime] = useState(() => new Date());
-  const [viewport, setViewport] = useState(readViewport);
+  const [physicalViewport, setViewport] = useState(readViewport);
+  const viewport = useMemo(
+    () =>
+      rotation
+        ? {
+            ...physicalViewport,
+            width: physicalViewport.height,
+            height: physicalViewport.width
+          }
+        : physicalViewport,
+    [physicalViewport, rotation]
+  );
 
   const loadSchedule = useCallback(async () => {
     try {
@@ -94,13 +113,51 @@ const App = () => {
     "--schedule-rows": layout.rows
   } as CSSProperties;
 
+  useLayoutEffect(() => {
+    let active = true;
+    let rotatedStyle: HTMLStyleElement | undefined;
+    if (rotation) {
+      rotatedStyle = document.createElement("style");
+      rotatedStyle.id = "schedule-rotation-styles";
+      rotatedStyle.textContent = rotateScheduleCss(
+        scheduleCss + "\n" + legacyCss,
+        viewport.width,
+        viewport.height
+      );
+      document.head.appendChild(rotatedStyle);
+    }
+    const applyLayout = () => {
+      if (active && legacyLayout && screenRef.current)
+        applyLegacyScheduleLayout(screenRef.current, layout, viewport);
+    };
+    applyLayout();
+    if (legacyLayout) void document.fonts?.ready?.then(applyLayout);
+    return () => {
+      active = false;
+      rotatedStyle?.remove();
+    };
+  }, [data, layout, legacyLayout, rotation, viewport]);
+
   return (
     <main
-      className={`schedule-screen density-${layout.density} orientation-${layout.orientation}`}
+      ref={screenRef}
+      className={`schedule-screen density-${layout.density} orientation-${layout.orientation}${legacyLayout ? " schedule-legacy" : ""}`}
       data-density={layout.density}
       data-orientation={layout.orientation}
       data-viewport={`${viewport.width}x${viewport.height}`}
       data-dpr={viewport.devicePixelRatio}
+      data-rotation={rotation}
+      style={
+        rotation
+          ? {
+              position: "absolute",
+              left: 0,
+              top: 0,
+              transformOrigin: "0 0",
+              transform: `translate(${rotation === 90 ? physicalViewport.width : 0}px, ${rotation === 270 ? physicalViewport.height : 0}px) rotate(${rotation}deg)`
+            }
+          : undefined
+      }
     >
       <ScheduleHeader
         date={data ? formatScheduleDate(serverTime) : "--/--/----"}

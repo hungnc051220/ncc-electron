@@ -1,0 +1,186 @@
+/* Only activated when the browser cannot render the approved modern CSS layout. */
+.schedule-legacy {
+  display: block;
+  z-index: 0;
+  background:
+    linear-gradient(
+      132deg,
+      transparent 0%,
+      transparent 2%,
+      rgba(255, 18, 60, 0.21) 2.3%,
+      transparent 3.2%,
+      transparent 6%,
+      rgba(185, 0, 33, 0.27) 6.3%,
+      transparent 8%
+    ),
+    linear-gradient(
+      132deg,
+      transparent 43%,
+      rgba(239, 0, 44, 0.11) 44%,
+      transparent 46%,
+      transparent 76%,
+      rgba(183, 0, 32, 0.16) 77%,
+      transparent 79%
+    ),
+    radial-gradient(ellipse at 102% 0%, rgba(183, 0, 36, 0.36), transparent 22%),
+    radial-gradient(ellipse at -10% 75%, rgba(224, 0, 48, 0.24), transparent 24%),
+    radial-gradient(ellipse at 105% 100%, rgba(208, 0, 32, 0.23), transparent 23%),
+    linear-gradient(115deg, #000813, #001322 52%, #000611);
+}
+.schedule-legacy .schedule-header,
+.schedule-legacy .movie-grid {
+  display: block;
+}
+.schedule-legacy .movie-grid {
+  position: relative;
+}
+.schedule-legacy .header-brand {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24%;
+  gap: 0;
+}
+.schedule-legacy .header-title-group {
+  position: absolute;
+  top: 0;
+  left: 24%;
+  width: 52%;
+  gap: 0;
+}
+.schedule-legacy .schedule-clock-panel {
+  position: absolute;
+  top: 0;
+  left: 76%;
+  width: 24%;
+}
+.schedule-legacy .brand-caption {
+  margin-top: 1.8vw;
+}
+.schedule-legacy .header-title-group > * + * {
+  margin-top: 0.8vw;
+}
+.schedule-legacy .schedule-header h1 {
+  text-shadow:
+    0 0 0.3vw #ff6b73,
+    0 0 1vw rgba(236, 0, 39, 0.49);
+}
+.schedule-legacy .schedule-date {
+  text-shadow: 0 0 0.65vw rgba(233, 164, 43, 0.19);
+}
+.schedule-legacy::before {
+  box-shadow:
+    0 -0.4vw 1vw #f60037,
+    inset 0 0.7vw 1.5vw rgba(246, 0, 55, 0.19);
+}
+.schedule-legacy .schedule-weekday::after {
+  height: 1px;
+}
+.schedule-legacy .movie-card {
+  border: 1px solid #3b637d;
+  background:
+    radial-gradient(ellipse at 95% 0%, rgba(53, 64, 90, 0.3), transparent 55%),
+    linear-gradient(108deg, #071927, #00101d 60%, #0b1c2b);
+  box-shadow:
+    inset 0 0 0.7vw rgba(107, 141, 165, 0.11),
+    0 0 0.2vw #122f42;
+}
+.schedule-legacy .movie-poster-shell {
+  max-width: none;
+  border: 1px solid rgba(115, 137, 136, 0.52);
+}
+.schedule-legacy .movie-content {
+  gap: 0;
+}
+.schedule-legacy .movie-content > * + * {
+  margin-top: 0.15vw;
+}
+.schedule-legacy .movie-title {
+  font-size: 1.5vw;
+}
+.schedule-legacy .movie-details {
+  font-size: 1.28vw;
+}
+.schedule-legacy .version-badge {
+  border: 1px solid #e42643;
+  padding-left: 0.35vw;
+  padding-right: 0.35vw;
+  box-shadow:
+    0 0 0.9vw rgba(237, 16, 61, 0.29),
+    inset 0 0 0.4vw rgba(228, 38, 67, 0.17);
+}
+.schedule-legacy .session-grid {
+  display: block;
+  position: relative;
+  flex: 0 0 auto;
+  margin-top: auto;
+}
+.schedule-legacy .session-time {
+  border: 1px solid #f08086;
+  font-size: 1.5vw;
+  box-shadow:
+    0 0 0.65vw rgba(242, 46, 69, 0.23),
+    inset 0 0 0.35vw rgba(249, 68, 73, 0.19);
+}
+.schedule-legacy .session-past {
+  border-color: #82505c;
+  box-shadow: none;
+}
+.schedule-legacy .schedule-footer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+.schedule-legacy .schedule-footer > span {
+  flex: 1;
+}
+.schedule-legacy .schedule-footer > svg {
+  flex: 0 0 4vw;
+  margin-left: 1.5vw;
+  margin-right: 1.5vw;
+}
+.schedule-legacy .schedule-footer::before {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    #ff123b,
+    transparent 18%,
+    #ff123b 41%,
+    transparent 49%,
+    transparent 66%,
+    #ff123b 100%
+  );
+  box-shadow: 0 0 0.65vw rgba(252, 36, 69, 0.39);
+}
+.schedule-legacy .footer-brand {
+  gap: 0;
+}
+.schedule-legacy .footer-brand::before,
+.schedule-legacy .footer-brand::after {
+  border-top: 1px solid #ef1640;
+  border-bottom: 1px solid #ef1640;
+}
+.schedule-legacy .footer-brand::before {
+  margin-right: 1.3vw;
+}
+.schedule-legacy .footer-brand::after {
+  margin-left: 1.3vw;
+}
+.schedule-legacy .connection-banner {
+  background: rgba(80, 52, 14, 0.95);
+}
+.schedule-legacy.orientation-landscape .movie-title {
+  font-size: 1.05vw;
+}
+.schedule-legacy.orientation-landscape .movie-details {
+  font-size: 0.8vw;
+}
+.schedule-legacy.orientation-landscape .movie-content > * + * {
+  margin-top: 0.2vw;
+}
+.schedule-legacy.orientation-landscape .movie-content > .session-grid {
+  margin-top: auto;
+}
+.schedule-legacy.orientation-landscape .session-time {
+  font-size: 0.95vw;
+}

@@ -59,7 +59,19 @@
               "\n" +
               ua +
               "\n" +
-              features;
+              features +
+              "\nviewport=" +
+              window.innerWidth +
+              "x" +
+              window.innerHeight +
+              (document.querySelector(".schedule-screen")
+                ? "; layout=" +
+                  document.querySelector(".schedule-screen").getAttribute("data-viewport") +
+                  "; rotation=" +
+                  document.querySelector(".schedule-screen").getAttribute("data-rotation") +
+                  "; CSS fallback=" +
+                  (document.querySelector(".schedule-legacy") !== null)
+                : "");
           if (!lastError) return;
           var overlay = element(
             "schedule-debug-error",
