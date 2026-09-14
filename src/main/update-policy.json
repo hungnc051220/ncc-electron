@@ -1,10 +1,11 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.117",
+  "latestVersion": "1.0.118",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Cải thiện khả năng hiển thị lịch chiếu trên các Android Box đời cũ."
+    "Cải thiện bố cục lịch chiếu trên Android Box đời cũ, giúp thông tin phim và suất chiếu hiển thị đầy đủ.",
+    "Hỗ trợ xoay lịch chiếu 90° hoặc 270° để phù hợp với hướng lắp đặt màn hình."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.117"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.118"
 }
