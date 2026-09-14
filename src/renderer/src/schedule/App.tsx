@@ -131,7 +131,12 @@ const App = () => {
         applyLegacyScheduleLayout(screenRef.current, layout, viewport);
     };
     applyLayout();
-    if (legacyLayout) void document.fonts?.ready?.then(applyLayout);
+    if (legacyLayout) {
+      const fontsReady = document.fonts?.ready;
+      // Older TV browsers can expose ready without a callable Promise.then.
+      // Font readiness is optional: the initial layout must still mount.
+      if (fontsReady && typeof fontsReady.then === "function") void fontsReady.then(applyLayout);
+    }
     return () => {
       active = false;
       rotatedStyle?.remove();

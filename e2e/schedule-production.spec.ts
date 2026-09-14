@@ -134,6 +134,38 @@ for (const mode of ["modern", "legacy", "legacy-csp1"]) {
   });
 }
 
+for (const fontApi of ["missing", "ready-method", "ready-without-then", "noncallable-then"]) {
+  test(`production legacy mounts with ${fontApi} font API`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript((mode) => {
+      CSS.supports = () => false;
+      // Some old engines expose document.fonts/ready without the modern Promise API.
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value:
+          mode === "missing"
+            ? undefined
+            : {
+                ready:
+                  mode === "ready-method"
+                    ? function () {}
+                    : mode === "noncallable-then"
+                      ? { then: true }
+                      : {}
+              }
+      });
+    }, fontApi);
+    await page.goto(`${baseUrl}?debug=1&force-legacy=1&rotate=90`);
+    await expect(page.locator(".movie-title").first()).toHaveText("Phim kiểm tra production");
+    await expect(page.locator(".schedule-header")).toBeVisible();
+    await expect(page.locator(".schedule-footer")).toBeVisible();
+    await expect(page.locator("#schedule-debug-badge")).toContainText("REACT MOUNT OK");
+    await expect(page.locator("#schedule-debug-error")).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+}
+
 test("API failure preserves static UI and diagnostics stay off by default", async ({ page }) => {
   await page.route("**/schedule/api*", (route) =>
     route.fulfill({ status: 503, json: { message: "API offline" } })
