@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { getScheduleLayout } from "./layout";
 import {
+  formatScheduleClock,
+  formatScheduleDataTime,
+  formatScheduleDate,
   formatScheduleWeekday,
   getServerOffset,
   getServerTime,
@@ -149,6 +152,33 @@ describe("ScheduleDisplayApp", () => {
 });
 
 describe("schedule display layout and time helpers", () => {
+  it("keeps Vietnam time and the mounted UI when Intl is unavailable", async () => {
+    vi.stubGlobal("Intl", undefined);
+    const date = new Date("2026-12-31T18:04:05Z");
+    expect(formatScheduleClock(date)).toBe("01:04:05");
+    expect(formatScheduleDate(date)).toBe("01/01/2027");
+    expect(formatScheduleWeekday(date)).toBe("Thứ Sáu");
+    expect(formatScheduleDataTime(date.toISOString())).toBe("01:04");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(payload)));
+    render(<App />);
+    expect(await screen.findByText(movie.title)).toBeInTheDocument();
+    expect(screen.getByText("10/09/2026")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Lịch chiếu hôm nay" })).toBeInTheDocument();
+  });
+
+  it("falls back when Intl exists but formatToParts or timezone data is missing", () => {
+    const date = new Date("2026-09-09T18:00:00Z");
+    vi.spyOn(Intl.DateTimeFormat.prototype, "formatToParts").mockImplementation(() => {
+      throw new TypeError("formatToParts is not supported");
+    });
+    expect(formatScheduleDate(date)).toBe("10/09/2026");
+    vi.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
+      throw new RangeError("Unsupported time zone");
+    });
+    expect(formatScheduleClock(date)).toBe("01:00:00");
+    expect(formatScheduleWeekday(date)).toBe("Thứ Năm");
+  });
+
   it("formats the weekday in the schedule timezone across UTC midnight", () => {
     expect(formatScheduleWeekday(new Date("2026-09-09T18:00:00Z"))).toBe("Thứ Năm");
   });

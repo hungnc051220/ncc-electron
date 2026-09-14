@@ -1,4 +1,5 @@
 import fs from "fs";
+import { createHash } from "crypto";
 import type { IncomingHttpHeaders } from "http";
 import net from "net";
 import os from "os";
@@ -99,6 +100,33 @@ afterEach(async () => {
 });
 
 describe("schedule display HTTP service", () => {
+  it("allows only exact local inline script hashes for diagnostics and the legacy loader", async () => {
+    const rendererRoot = createRendererRoot();
+    const source = "window.basic = true;\n";
+    const loader = "System.import('app.js')";
+    fs.writeFileSync(
+      path.join(rendererRoot, "schedule.html"),
+      `<html><script>${source.replace(/\n/g, "\r\n")}</script>` +
+        `<script data-src="app.js">${loader}</script><script src="external.js"></script></html>`
+    );
+    const service = createService({ rendererRoot });
+    await service.start();
+    const response = await request(service.getStatus().server.port, "/schedule?debug=1");
+    const csp = String(response.headers["content-security-policy"]);
+    const scriptPolicy = csp.split(";").find((part) => part.trim().startsWith("script-src"))!;
+    for (const body of [source, loader]) {
+      expect(scriptPolicy).toContain(
+        `'sha256-${createHash("sha256").update(body).digest("base64")}'`
+      );
+    }
+    expect(scriptPolicy).not.toContain("unsafe-inline");
+    expect(scriptPolicy).not.toContain("unsafe-eval");
+    expect(scriptPolicy.match(/sha256-/g)).toHaveLength(2);
+    const head = await request(service.getStatus().server.port, "/schedule", "HEAD");
+    expect(head.headers["content-security-policy"]).toBe(csp);
+    expect(head.body).toBe("");
+  });
+
   it("serves only the TV page and isolated assets with security headers", async () => {
     const service = createService();
     await service.start();

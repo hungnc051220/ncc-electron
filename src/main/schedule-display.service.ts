@@ -9,6 +9,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import net from "net";
 import { networkInterfaces, type NetworkInterfaceInfo } from "os";
 import path from "path";
+import { getScheduleContentSecurityPolicy } from "./schedule-display-csp";
 import {
   formatScheduleServerTime,
   getScheduleDate,
@@ -23,16 +24,7 @@ const SCHEDULE_API_URL = "https://api.chieuphimquocgia.com.vn/api/GetAllSession"
 const ASSET_ROUTE_PREFIX = "/schedule/assets/";
 const VIRTUAL_INTERFACE_PATTERN =
   /(docker|hyper-v|vethernet|virtualbox|vmware|wsl|vpn|tailscale|zerotier|loopback)/i;
-const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https:",
-  "connect-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "frame-ancestors 'none'"
-].join("; ");
+const CONTENT_SECURITY_POLICY = getScheduleContentSecurityPolicy();
 
 type FetchFunction = typeof fetch;
 
@@ -276,6 +268,18 @@ export function createScheduleDisplayService({
     cacheControl: string
   ) => {
     try {
+      if (contentType.startsWith("text/html")) {
+        const html = await fs.promises.readFile(filePath, "utf8");
+        response.writeHead(200, {
+          "Content-Security-Policy": getScheduleContentSecurityPolicy(html),
+          "Content-Type": contentType,
+          "Cache-Control": cacheControl,
+          "Content-Length": Buffer.byteLength(html)
+        });
+        response.end(headOnly ? undefined : html);
+        return;
+      }
+
       const stat = await fs.promises.stat(filePath);
       if (!stat.isFile()) throw new Error("Not a file");
 

@@ -9,6 +9,143 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';"
     />
+    <!-- Temporary TV diagnostics. Keep this inline script ES5 and before the app bundle. -->
+    <script id="schedule-basic-debug">
+      (function () {
+        if (!/(?:^|[?&])debug=1(?:&|$)/.test(window.location.search)) return;
+        if (window.__scheduleDebug) return;
+        var stage = "WAITING FOR BUNDLE";
+        var mounted = false;
+        var lastError = "";
+        var started = new Date().getTime();
+        var ua = window.navigator.userAgent;
+        var features = "modules=" + ("noModule" in document.createElement("script"));
+        features += "; fetch=" + (typeof window.fetch === "function");
+        features += "; Intl=" + (typeof window.Intl !== "undefined");
+        features +=
+          "; formatToParts=" +
+          !!(
+            window.Intl &&
+            window.Intl.DateTimeFormat &&
+            window.Intl.DateTimeFormat.prototype.formatToParts
+          );
+        if (window.CSS && window.CSS.supports) {
+          features += "; grid=" + window.CSS.supports("display", "grid");
+          features += "; container-units=" + window.CSS.supports("height", "1cqh");
+        }
+
+        function element(id, style) {
+          var node = document.getElementById(id);
+          if (!node && document.body) {
+            node = document.createElement("pre");
+            node.id = id;
+            node.style.cssText = style;
+            document.body.appendChild(node);
+          }
+          return node;
+        }
+
+        function paint() {
+          var badge = element(
+            "schedule-debug-badge",
+            "position:fixed;top:0;left:0;right:0;z-index:2147483646;margin:0;padding:8px;" +
+              "background:#164b20;color:white;font:16px monospace;white-space:pre-wrap;word-wrap:break-word;"
+          );
+          if (badge)
+            badge.textContent =
+              "JS BASIC OK | " +
+              stage +
+              (mounted ? " | REACT MOUNT OK" : " | WAITING FOR REACT") +
+              "\n" +
+              ua +
+              "\n" +
+              features;
+          if (!lastError) return;
+          var overlay = element(
+            "schedule-debug-error",
+            "position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;margin:0;padding:24px;" +
+              "background:#180707;color:white;font:22px monospace;white-space:pre-wrap;word-wrap:break-word;overflow:auto;"
+          );
+          if (overlay) overlay.textContent = lastError;
+        }
+
+        function report(type, message, source, line, column, stack) {
+          lastError =
+            "ERROR TYPE: " +
+            type +
+            "\nmessage: " +
+            String(message || "Unknown error") +
+            "\nsource: " +
+            (source || "unavailable") +
+            "\nline: " +
+            (line || 0) +
+            "\ncolumn: " +
+            (column || 0) +
+            "\n\nJS BASIC OK | " +
+            stage +
+            "\nReact mounted: " +
+            mounted +
+            "\n" +
+            ua +
+            "\n" +
+            features +
+            (stack ? "\n\n" + stack : "");
+          paint();
+        }
+
+        window.__scheduleDebug = {
+          bundle: function (name) {
+            stage = name + " BUNDLE OK";
+            paint();
+          },
+          report: report
+        };
+        window.onerror = function (message, source, line, column, error) {
+          report("JAVASCRIPT", message, source, line, column, error && error.stack);
+          return false;
+        };
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event.reason;
+          report(
+            "UNHANDLED REJECTION",
+            (reason && reason.message) || reason,
+            reason && (reason.fileName || reason.sourceURL),
+            reason && reason.lineNumber,
+            reason && reason.columnNumber,
+            reason && reason.stack
+          );
+        });
+        window.addEventListener(
+          "error",
+          function (event) {
+            var target = event.target;
+            if (target && target.tagName === "SCRIPT") {
+              report("SCRIPT LOAD", "Cannot load script", target.src, 0, 0);
+            }
+          },
+          true
+        );
+        document.addEventListener("DOMContentLoaded", paint);
+        var timer = window.setInterval(function () {
+          var root = document.getElementById("root");
+          mounted = !!(root && root.querySelector(".schedule-screen"));
+          paint();
+          if (mounted) window.clearInterval(timer);
+          else if (new Date().getTime() - started > 20000) {
+            window.clearInterval(timer);
+            if (!lastError)
+              report(
+                "BOOT TIMEOUT",
+                "React has not mounted after 20 seconds",
+                window.location.pathname,
+                0,
+                0
+              );
+          }
+        }, 250);
+        paint();
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
