@@ -1,10 +1,10 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.116",
+  "latestVersion": "1.0.117",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
-    "Thêm chức năng hiển thị lịch chiếu trên TV."
+    "Cải thiện khả năng hiển thị lịch chiếu trên các Android Box đời cũ."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.116"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.117"
 }
