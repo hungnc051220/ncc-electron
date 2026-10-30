@@ -190,6 +190,8 @@ export const ordersApi = {
 
     const filter: Record<string, unknown> = {};
 
+    filter.deleted = false;
+
     if (id) {
       filter.id = id;
     }
@@ -204,9 +206,8 @@ export const ordersApi = {
 
     if (isOnline !== undefined) {
       filter.isOnline = isOnline;
-      filter.IsInvitation = false;
-      filter.IsContract = false;
-      filter.Deleted = 0;
+      filter.isInvitation = false;
+      filter.isContract = false;
     }
 
     if (isRefund) {
