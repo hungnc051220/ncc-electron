@@ -98,6 +98,26 @@ describe("permissions/utils", () => {
     });
   });
 
+  it("does not grant paper_vouchers from the legacy /vouchers menu", () => {
+    const legacyMenus: CustomerRoleMenuProps[] = [
+      {
+        id: 3,
+        customerRoleId: 99,
+        menu: "/vouchers",
+        menuName: "Danh sách chương trình khuyến mãi",
+        readOnly: true,
+        edit: true
+      }
+    ];
+
+    const assignments = legacyMenusToAssignments(legacyMenus);
+
+    expect(assignments.map((item) => item.permissionKey)).toContain("vouchers");
+    expect(assignments.map((item) => item.permissionKey)).not.toContain("paper_vouchers");
+    expect(canAccessRoute(assignments, "/vouchers")).toBe(true);
+    expect(hasPermission(assignments, "paper_vouchers", "access")).toBe(false);
+  });
+
   it("converts matrix rows back to legacy menus", () => {
     const rows = buildPermissionMatrix([
       {

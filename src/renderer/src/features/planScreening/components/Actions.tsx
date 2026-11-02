@@ -29,7 +29,7 @@ import {
 } from "@shared/types";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { DescriptionsProps, GetProp } from "antd";
-import { Button, Checkbox, Descriptions, Form, Modal, Select } from "antd";
+import { Badge, Button, Checkbox, Descriptions, Form, Modal, Select, Tooltip } from "antd";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { useUserDetail } from "@renderer/hooks/users/useUserDetail";
@@ -45,6 +45,16 @@ import VipCardDialog from "./VipCardDialog";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { CancelOrderSelection, formatCancelSeatList } from "./cancelOrderSelection";
+import type { PaperVoucherSelectionLine } from "@renderer/features/vouchers/paperVouchers/paperVoucherRedemption";
+import { TicketPercent } from "lucide-react";
+import { isPaperVoucherMockMode } from "@renderer/api/paperVouchers.api";
+import PaperVoucherDialog from "./PaperVoucherDialog";
+import PaperVoucherSummary from "./PaperVoucherSummary";
+
+// Chưa có API ghi nhận voucher giấy vào đơn bán vé (kể cả khi đọc lô từ hệ thống): chặn in vé.
+const PAPER_VOUCHER_BLOCKS_SALE_MESSAGE = isPaperVoucherMockMode()
+  ? "Đang áp dụng voucher giấy (dữ liệu mẫu). Bỏ áp dụng trước khi bán vé thật."
+  : "Hệ thống chưa ghi nhận voucher giấy vào đơn bán vé. Bỏ áp dụng voucher trước khi in vé.";
 
 export const paymentTypes = [
   {
@@ -177,6 +187,10 @@ const Actions = ({
     () => Number(sessionStorage.getItem("lastTotal")) || 0
   );
   const [isCheckingQrTransaction, setIsCheckingQrTransaction] = useState(false);
+  // Voucher giấy chỉ lưu lựa chọn tại màn hình, chưa gửi vào đơn thật (chưa có API ghi nhận).
+  const [paperVoucherLines, setPaperVoucherLines] = useState<PaperVoucherSelectionLine[]>([]);
+  const [openPaperVoucherDialog, setOpenPaperVoucherDialog] = useState(false);
+  const hasPaperVoucher = paperVoucherLines.length > 0;
 
   const userId = useAuthStore((s) => s.userId);
   const { data: user } = useUserDetail(userId!);
@@ -359,6 +373,18 @@ const Actions = ({
   );
 
   useEffect(() => {
+    setPaperVoucherLines([]);
+    setOpenPaperVoucherDialog(false);
+  }, [planScreenId]);
+
+  useEffect(() => {
+    if (selectedSeats.length === 0 || cancelMode) {
+      setPaperVoucherLines((current) => (current.length ? [] : current));
+      setOpenPaperVoucherDialog(false);
+    }
+  }, [cancelMode, selectedSeats.length]);
+
+  useEffect(() => {
     const allowedKeys = new Set(selectedSeats.map((seat) => getSeatDiscountKey(seat)));
 
     setSelectedDiscountGroups((prev) => {
@@ -407,6 +433,11 @@ const Actions = ({
   }) => {
     if (isPlanScreeningPast) {
       message.error("Ca chiếu đã qua, không thể thao tác");
+      return;
+    }
+
+    if (hasPaperVoucher) {
+      message.error(PAPER_VOUCHER_BLOCKS_SALE_MESSAGE);
       return;
     }
 
@@ -798,6 +829,18 @@ const Actions = ({
         isCustomerView && "hidden"
       )}
     >
+      {hasPaperVoucher && (
+        <PaperVoucherSummary
+          lines={paperVoucherLines}
+          ticketCount={selectedSeats.length}
+          eligibleAmount={totalPrice - priceDiscount}
+          staffName={user?.fullname}
+          canSimulate={canCreate}
+          disabled={disableNonCancelActions}
+          onEdit={() => setOpenPaperVoucherDialog(true)}
+          onClear={() => setPaperVoucherLines([])}
+        />
+      )}
       <div className="p-2 flex gap-2 items-center justify-center">
         <div className="flex flex-col gap-2">
           <Checkbox checked={cancelMode} onChange={(e) => setCancelMode(e.target.checked)}>
@@ -936,6 +979,20 @@ const Actions = ({
         </div>
 
         <div className="flex gap-3">
+          {canCreate && !isPlanScreeningPast && (
+            <Badge count={paperVoucherLines.reduce((total, line) => total + line.quantity, 0)}>
+              <Button
+                className="flex flex-col gap-0.5"
+                style={{ height: 72 }}
+                icon={<TicketPercent size={22} />}
+                aria-busy={isSeatSelectionPending}
+                disabled={disableNonCancelActions || selectedSeats.length === 0}
+                onClick={() => setOpenPaperVoucherDialog(true)}
+              >
+                <span className="text-xs font-semibold">Voucher giấy</span>
+              </Button>
+            </Badge>
+          )}
           <div className="flex flex-col">
             <Checkbox
               checked={vipCard}
@@ -953,33 +1010,36 @@ const Actions = ({
             />
           </div>
           <div>
-            <Button
-              type="primary"
-              size="large"
-              className="flex flex-col w-full h-full gap-1"
-              style={{ height: 72 }}
-              onClick={() => {
-                if (vipCard) {
-                  setOpenVipCardDialog(true);
-                  return;
-                }
+            <Tooltip title={hasPaperVoucher ? PAPER_VOUCHER_BLOCKS_SALE_MESSAGE : undefined}>
+              <Button
+                type="primary"
+                size="large"
+                className="flex flex-col w-full h-full gap-1"
+                style={{ height: 72 }}
+                onClick={() => {
+                  if (vipCard) {
+                    setOpenVipCardDialog(true);
+                    return;
+                  }
 
-                void onBooking();
-              }}
-              aria-busy={isSeatSelectionPending}
-              disabled={
-                createOrder.isPending ||
-                isSeatSelectionPending ||
-                selectedSeats.length === 0 ||
-                createQr.isPending ||
-                cancelMode ||
-                !canCreate ||
-                isPlanScreeningPast
-              }
-            >
-              <img src={ticketIcon} width={28} height={28} alt="icon" />
-              <span className="text-base font-bold">In vé</span>
-            </Button>
+                  void onBooking();
+                }}
+                aria-busy={isSeatSelectionPending}
+                disabled={
+                  createOrder.isPending ||
+                  isSeatSelectionPending ||
+                  selectedSeats.length === 0 ||
+                  createQr.isPending ||
+                  cancelMode ||
+                  !canCreate ||
+                  isPlanScreeningPast ||
+                  hasPaperVoucher
+                }
+              >
+                <img src={ticketIcon} width={28} height={28} alt="icon" />
+                <span className="text-base font-bold">In vé</span>
+              </Button>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -1024,6 +1084,21 @@ const Actions = ({
           selectedSeats={selectedSeats}
           hasSeatTypeDiscount={Object.keys(selectedDiscountGroups).length > 0}
           filmVersionCode={data.filmInfo.versionCode}
+        />
+      )}
+
+      {openPaperVoucherDialog && (
+        <PaperVoucherDialog
+          open={openPaperVoucherDialog}
+          value={paperVoucherLines}
+          ticketCount={selectedSeats.length}
+          ticketAmount={totalPrice}
+          discountAmount={priceDiscount}
+          onCancel={() => setOpenPaperVoucherDialog(false)}
+          onApply={(lines) => {
+            setPaperVoucherLines(lines);
+            setOpenPaperVoucherDialog(false);
+          }}
         />
       )}
 

@@ -147,7 +147,15 @@ export const router = createHashRouter([
           },
           {
             path: "/vouchers",
-            element: withAccess("vouchers", <VouchersPage />)
+            element: (
+              <PermissionGuard
+                permissionKey="vouchers"
+                alternatePermissions={[{ permissionKey: "paper_vouchers" }]}
+                fallbackPath="/403"
+              >
+                <VouchersPage />
+              </PermissionGuard>
+            )
           },
           {
             path: "/plan-cinema",

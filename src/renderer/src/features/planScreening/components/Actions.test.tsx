@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +13,8 @@ import {
   PaymentType,
   PlanScreeningDetailProps
 } from "@shared/types";
+import { paperVoucherMockRepository } from "@renderer/features/vouchers/paperVouchers/paperVoucher.mock";
+import { stubObjectUrls } from "@renderer/features/vouchers/paperVouchers/paperVoucher.testUtils";
 import Actions from "./Actions";
 
 let paymentUpdatedHandler:
@@ -34,7 +36,15 @@ const mocks = vi.hoisted(() => ({
   cancelReserve: vi.fn(),
   messageSuccess: vi.fn(),
   messageError: vi.fn(),
-  invalidateQueries: vi.fn()
+  invalidateQueries: vi.fn(),
+  modalConfirm: vi.fn()
+}));
+
+vi.mock("@renderer/features/vouchers/paperVouchers/paperVoucher.utils", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@renderer/features/vouchers/paperVouchers/paperVoucher.utils")
+  >()),
+  getVietnamBusinessDate: () => "2026-10-30"
 }));
 
 vi.mock("antd", async () => {
@@ -121,6 +131,9 @@ vi.mock("@renderer/hooks/useAntdApp", () => ({
     message: {
       success: mocks.messageSuccess,
       error: mocks.messageError
+    },
+    modal: {
+      confirm: mocks.modalConfirm
     }
   })
 }));
@@ -943,5 +956,140 @@ describe("Actions", () => {
       });
       expect(mocks.messageSuccess).toHaveBeenCalledWith("Hủy giữ chỗ thành công");
     });
+  });
+});
+
+describe("Actions paper vouchers (mock)", () => {
+  const twoSeats = [createSeat(), createSeat({ seat: "2", code: "A2", price: 90000 })];
+
+  const renderActions = (selectedSeats: ListSeat[] = twoSeats) => {
+    const props = {
+      data: createPlanScreening(),
+      planScreenId: 1,
+      setSelectedSeats: vi.fn(),
+      cancelMode: false,
+      setCancelMode: vi.fn()
+    };
+    const view = renderWithProviders(<Actions {...props} selectedSeats={selectedSeats} />);
+    const rerenderSeats = (seats: ListSeat[]) =>
+      view.rerender(
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <Actions {...props} selectedSeats={seats} />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+    return { ...view, rerenderSeats };
+  };
+
+  const applyVouchers = async (batchCodes: string[]) => {
+    fireEvent.click(screen.getByText("Voucher giấy").closest("button")!);
+    for (const batchCode of batchCodes) {
+      const option = await screen.findByTestId(`paper-voucher-option-${batchCode}`);
+      fireEvent.click(within(option).getByText("Chọn").closest("button")!);
+    }
+    fireEvent.click(screen.getByText("Áp dụng").closest("button")!);
+    return screen.findByTestId("paper-voucher-pos-summary");
+  };
+
+  beforeEach(() => {
+    paperVoucherMockRepository.reset();
+    stubObjectUrls();
+    mocks.createOrderMutate.mockReset();
+    mocks.messageSuccess.mockReset();
+    mocks.messageError.mockReset();
+    mocks.modalConfirm.mockReset();
+    useSettingPosStore.setState({ posName: "POS Machine 1", posShortName: "M11" });
+  });
+
+  it("applies several batches and blocks the real sale while they are selected", async () => {
+    renderActions();
+
+    const summary = await applyVouchers(["LÔ-003", "LÔ-004"]);
+
+    expect(within(summary).getByText(/LÔ-003/)).toBeInTheDocument();
+    expect(within(summary).getByText(/LÔ-004/)).toBeInTheDocument();
+    expect(within(summary).getByText("Dữ liệu mẫu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /in vé/i })).toBeDisabled();
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+
+    fireEvent.click(within(summary).getByText("Bỏ áp dụng").closest("button")!);
+    expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /in vé/i })).toBeEnabled();
+  });
+
+  it("revalidates the selection when seats change and clears it when no seat is left", async () => {
+    const { rerenderSeats } = renderActions();
+    await applyVouchers(["LÔ-003", "LÔ-004"]);
+
+    rerenderSeats([createSeat()]);
+    const summary = screen.getByTestId("paper-voucher-pos-summary");
+    expect(within(summary).getByRole("alert")).toHaveTextContent(
+      "Số voucher (2) vượt số vé đang chọn (1)"
+    );
+    expect(within(summary).getByText("Mô phỏng hoàn tất").closest("button")).toBeDisabled();
+
+    rerenderSeats([]);
+    await waitFor(() =>
+      expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument()
+    );
+  });
+
+  it("records a simulated completion once without calling the real order API", async () => {
+    renderActions();
+    const summary = await applyVouchers(["LÔ-003", "LÔ-004"]);
+
+    fireEvent.click(within(summary).getByText("Mô phỏng hoàn tất").closest("button")!);
+    expect(mocks.modalConfirm).toHaveBeenCalledTimes(1);
+    const { onOk } = mocks.modalConfirm.mock.calls[0][0] as { onOk: () => Promise<void> };
+
+    await act(async () => {
+      await onOk();
+    });
+
+    const batches = await paperVoucherMockRepository.list();
+    expect(batches.find((item) => item.id === 3)?.usedCount).toBe(87);
+    expect(batches.find((item) => item.id === 4)?.usedCount).toBe(1);
+    expect((await paperVoucherMockRepository.listUsages(3))[0]).toMatchObject({
+      quantity: 1,
+      staffName: "Cashier",
+      appliedAmount: 100000
+    });
+    expect(mocks.messageSuccess).toHaveBeenCalledWith(
+      expect.stringContaining("dữ liệu mẫu (chưa lưu lên hệ thống)")
+    );
+    expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument();
+
+    await act(async () => {
+      await onOk();
+    });
+    expect((await paperVoucherMockRepository.list()).find((item) => item.id === 3)?.usedCount).toBe(
+      87
+    );
+    expect(mocks.messageError).toHaveBeenCalledWith(
+      "Giao dịch mô phỏng này đã được ghi nhận trước đó"
+    );
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+    expect(mocks.createQrMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("hides the paper voucher action when the screening has passed", () => {
+    renderWithProviders(
+      <Actions
+        data={{
+          ...createPlanScreening(),
+          projectDate: "2026-03-16",
+          projectTime: "2026-03-16T00:00:00.000Z"
+        }}
+        planScreenId={1}
+        selectedSeats={twoSeats}
+        setSelectedSeats={vi.fn()}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText("Voucher giấy")).not.toBeInTheDocument();
   });
 });

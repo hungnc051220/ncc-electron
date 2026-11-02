@@ -147,6 +147,14 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     actions: ["access", "list", "view", "create", "update", "delete"]
   },
   {
+    key: "paper_vouchers",
+    module: "Quản lý danh sách",
+    label: "Voucher giấy",
+    route: "/vouchers",
+    description: "Quản lý lô voucher giấy, độc lập với quyền chương trình khuyến mãi",
+    actions: ["access", "list", "view", "create", "update", "delete"]
+  },
+  {
     key: "plan_cinema",
     module: "Kế hoạch chiếu phim",
     label: "Lập kế hoạch chiếu phim",
