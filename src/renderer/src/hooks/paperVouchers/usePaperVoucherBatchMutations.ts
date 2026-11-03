@@ -47,15 +47,6 @@ export const useSetPaperVoucherBatchLocked = () => {
   });
 };
 
-export const useSimulatePaperVoucherRedemption = () => {
-  const handlers = useInvalidatePaperVouchers();
-
-  return useMutation({
-    mutationFn: paperVouchersApi.simulateRedemption,
-    ...handlers
-  });
-};
-
 export const useDeletePaperVoucherBatch = () => {
   const handlers = useInvalidatePaperVouchers();
 

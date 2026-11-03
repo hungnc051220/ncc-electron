@@ -190,42 +190,11 @@ export const toPaperVoucherBatchFilterQuery = (
   return query;
 };
 
-/** Lọc theo cùng ngữ nghĩa query của API `GET /batches` (dùng cho mock). */
-export const filterPaperVoucherBatches = (
-  batches: PaperVoucherBatch[],
-  query: PaperVoucherBatchFilterQuery,
-  today: string = getVietnamBusinessDate()
-) => {
-  const keyword = normalizeSearchText(query.keyword);
-  const hasExpiryRange = Boolean(query.expiresFrom || query.expiresTo);
-
-  return batches.filter((batch) => {
-    if (
-      keyword &&
-      !normalizeSearchText(batch.batchCode).includes(keyword) &&
-      !normalizeSearchText(batch.name).includes(keyword)
-    ) {
-      return false;
-    }
-
-    if (query.faceValue !== undefined && batch.faceValue !== query.faceValue) return false;
-    if (query.noExpiry !== undefined && query.noExpiry === !!batch.expiresAt) return false;
-    if (hasExpiryRange) {
-      if (!batch.expiresAt) return false;
-      if (query.expiresFrom && batch.expiresAt < query.expiresFrom) return false;
-      if (query.expiresTo && batch.expiresAt > query.expiresTo) return false;
-    }
-    if (query.status && getPaperVoucherStatus(batch, today) !== query.status) return false;
-
-    return true;
-  });
-};
-
 export const getDistinctSortedValues = <T extends string | number>(values: T[]) =>
   Array.from(new Set(values)).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
 
 /**
- * Validate nghiệp vụ dùng chung cho form và repository.
+ * Validate nghiệp vụ của form tạo/sửa lô.
  * Trả về thông báo lỗi tiếng Việt đầu tiên, hoặc `null` nếu hợp lệ.
  */
 export const validatePaperVoucherBatchDto = (

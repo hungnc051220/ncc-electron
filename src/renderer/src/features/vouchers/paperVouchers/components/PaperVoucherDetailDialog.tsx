@@ -24,19 +24,17 @@ interface PaperVoucherDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   batch: PaperVoucherBatch;
   today: string;
-  isMock: boolean;
 }
 
 const formatDateTime = (value?: string | null) =>
   value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "--";
 
 const USAGE_STATUS_META: Record<PaperVoucherUsageStatus, { label: string; color: string }> = {
-  simulated: { label: "Mô phỏng", color: "warning" },
   applied: { label: "Đã áp dụng", color: "success" },
   reversed: { label: "Đã hoàn", color: "default" }
 };
 
-const getUsageColumns = (isMock: boolean): TableProps<PaperVoucherUsage>["columns"] => [
+const USAGE_COLUMNS: TableProps<PaperVoucherUsage>["columns"] = [
   {
     title: "Thời gian",
     key: "createdAt",
@@ -45,7 +43,7 @@ const getUsageColumns = (isMock: boolean): TableProps<PaperVoucherUsage>["column
     render: (value: string) => formatDateTime(value)
   },
   {
-    title: isMock ? "Giao dịch mô phỏng" : "Giao dịch",
+    title: "Giao dịch",
     key: "transactionId",
     dataIndex: "transactionId",
     render: (value: string | null, record) => (
@@ -66,7 +64,7 @@ const getUsageColumns = (isMock: boolean): TableProps<PaperVoucherUsage>["column
     render: (value: number) => formatNumber(value)
   },
   {
-    title: isMock ? "Áp dụng dự kiến" : "Giá trị áp dụng",
+    title: "Giá trị áp dụng",
     key: "appliedAmount",
     dataIndex: "appliedAmount",
     width: 130,
@@ -115,8 +113,7 @@ const PaperVoucherDetailDialog = ({
   open,
   onOpenChange,
   batch: initialBatch,
-  today,
-  isMock
+  today
 }: PaperVoucherDetailDialogProps) => {
   const { data: batch = initialBatch, error: batchError } = usePaperVoucherBatch(
     initialBatch,
@@ -227,19 +224,12 @@ const PaperVoucherDetailDialog = ({
               pagination={false}
               loading={isFetchingUsages}
               dataSource={usages}
-              columns={getUsageColumns(isMock)}
+              columns={USAGE_COLUMNS}
               scroll={{ y: 200 }}
             />
           ) : (
             <div className="rounded-lg border border-app-border py-2">
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={
-                  isMock
-                    ? "Chưa có giao dịch mô phỏng. Lịch sử sẽ hiển thị khi voucher giấy được ghi nhận tại quầy bán vé."
-                    : "Chưa có lượt sử dụng"
-                }
-              />
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có lượt sử dụng" />
             </div>
           )}
         </section>

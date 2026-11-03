@@ -1,4 +1,3 @@
-import { isPaperVoucherMockMode } from "@renderer/api/paperVouchers.api";
 import { usePaperVoucherBatches } from "@renderer/hooks/paperVouchers/usePaperVoucherBatches";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { cn, formatMoney, formatNumber } from "@renderer/lib/utils";
@@ -10,17 +9,18 @@ import {
   PAPER_VOUCHER_STATUS_META
 } from "@renderer/features/vouchers/paperVouchers/paperVoucher.utils";
 import {
-  calculatePaperVoucherPreview,
   getPaperVoucherAvailability,
   sortPaperVoucherBatchesForPos,
+  summarizePaperVoucherSelection,
   validatePaperVoucherSelection,
   type PaperVoucherSelectionLine
 } from "@renderer/features/vouchers/paperVouchers/paperVoucherRedemption";
 import type { PaperVoucherBatch } from "@shared/types";
 import { Alert, Button, Empty, InputNumber, Modal, Segmented, Space, Spin, Tag } from "antd";
-import { CalendarDays, CircleAlert, Minus, Plus, TriangleAlert } from "lucide-react";
+import { CalendarDays, CircleAlert, Minus, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { isPaperVoucherSaleEnabled } from "./paperVoucherSale";
 
 interface PaperVoucherDialogProps {
   open: boolean;
@@ -79,20 +79,19 @@ const PaperVoucherDialog = ({
   onCancel,
   onApply
 }: PaperVoucherDialogProps) => {
-  // Dữ liệu thật: đọc lô từ API để chọn và xem trước; chưa có API ghi nhận voucher vào đơn bán vé.
-  const isMock = isPaperVoucherMockMode();
+  // Đọc lô từ API để chọn; số tiền khách cần trả do backend báo giá sau khi áp dụng.
   // Bản nháp chỉ áp dụng khi xác nhận; hủy modal giữ nguyên lựa chọn trước đó.
+  const saleEnabled = isPaperVoucherSaleEnabled();
   const [draft, setDraft] = useState<PaperVoucherSelectionLine[]>(value);
   const [faceValueFilter, setFaceValueFilter] = useState<number | typeof ALL_FACE_VALUES>(
     ALL_FACE_VALUES
   );
   const { data: batches = EMPTY_BATCHES, error, isFetching } = usePaperVoucherBatches(open, true);
-  // Không fallback sang dữ liệu mẫu: lỗi API (vd. thiếu quyền xem voucher giấy) hiển thị nguyên.
+  // Lỗi API (vd. thiếu quyền xem voucher giấy) hiển thị nguyên.
   const loadError = error
     ? getApiErrorMessage(error, "Không tải được danh sách voucher giấy")
     : null;
   const today = getVietnamBusinessDate();
-  const eligibleAmount = Math.max(0, ticketAmount - discountAmount);
 
   const sortedBatches = useMemo(
     () => sortPaperVoucherBatchesForPos(batches, today),
@@ -117,9 +116,8 @@ const PaperVoucherDialog = ({
   );
 
   const draftByBatchId = new Map(draft.map((line) => [line.batchId, line]));
-  const voucherCount = draft.reduce((total, line) => total + line.quantity, 0);
+  const { voucherCount, faceValueTotal } = summarizePaperVoucherSelection(draft);
   const errors = validatePaperVoucherSelection({ lines: draft, batches, ticketCount, today });
-  const preview = calculatePaperVoucherPreview({ lines: draft, eligibleAmount });
 
   const setQuantity = (batch: PaperVoucherBatch, quantity: number) => {
     setDraft((current) => {
@@ -134,10 +132,8 @@ const PaperVoucherDialog = ({
   const renderBatch = (batch: PaperVoucherBatch) => {
     const { status, selectable, remainingQuantity } = getPaperVoucherAvailability(batch, today);
     const quantity = draftByBatchId.get(batch.id)?.quantity ?? 0;
-    const maxQuantity = Math.max(
-      0,
-      Math.min(remainingQuantity, ticketCount - (voucherCount - quantity))
-    );
+    // Không giới hạn theo số vé: chỉ giới hạn theo số voucher còn lại của lô.
+    const maxQuantity = Math.max(0, remainingQuantity);
     const isSelected = quantity > 0;
     const canAdd = selectable && maxQuantity > quantity;
     const hasImage = !!batch.images?.length;
@@ -223,12 +219,7 @@ const PaperVoucherDialog = ({
               />
             </Space.Compact>
           ) : (
-            <Button
-              size="small"
-              disabled={maxQuantity < 1}
-              title={maxQuantity < 1 ? "Số voucher đã bằng số vé đang chọn" : undefined}
-              onClick={() => setQuantity(batch, 1)}
-            >
+            <Button size="small" disabled={maxQuantity < 1} onClick={() => setQuantity(batch, 1)}>
               Chọn
             </Button>
           )}
@@ -245,7 +236,7 @@ const PaperVoucherDialog = ({
         <div className="flex items-center gap-2">
           <span>Áp dụng voucher giấy</span>
           <Tag color="warning" variant="outlined" className="m-0 font-normal">
-            {isMock ? "Dữ liệu mẫu · Chưa kết nối hệ thống" : "Chưa ghi nhận vào đơn bán vé"}
+            {saleEnabled ? "Chỉ thanh toán tiền mặt" : "Chưa ghi nhận vào đơn bán vé"}
           </Tag>
         </div>
       }
@@ -273,9 +264,9 @@ const PaperVoucherDialog = ({
             <span className="text-xs whitespace-nowrap text-slate-500 dark:text-slate-400">
               Đã chọn{" "}
               <b className="text-slate-800 tabular-nums dark:text-slate-100">
-                {formatNumber(voucherCount)}/{formatNumber(ticketCount)}
+                {formatNumber(voucherCount)}
               </b>{" "}
-              voucher theo số vé
+              voucher
             </span>
           </div>
 
@@ -321,22 +312,8 @@ const PaperVoucherDialog = ({
             <SummaryRow label="Giảm giá đang chọn" value={`−${formatMoney(discountAmount)}`} />
           )}
           <div className="my-1 border-t border-app-border" />
-          <SummaryRow label="Số voucher giấy" value={formatNumber(preview.voucherCount)} />
-          <SummaryRow label="Tổng mệnh giá voucher" value={formatMoney(preview.faceValueTotal)} />
-          <SummaryRow
-            label="Giá trị áp dụng dự kiến"
-            value={formatMoney(preview.appliedAmount)}
-            valueClassName="text-emerald-600 dark:text-emerald-300"
-          />
-          {preview.excessAmount > 0 && (
-            <p className="m-0 flex gap-1.5 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:bg-amber-400/10 dark:text-amber-200">
-              <TriangleAlert size={14} className="mt-px shrink-0" />
-              <span>
-                Mệnh giá vượt tiền vé {formatMoney(preview.excessAmount)}. Phần dư không được hoàn
-                lại hoặc quy đổi.
-              </span>
-            </p>
-          )}
+          <SummaryRow label="Số voucher giấy" value={formatNumber(voucherCount)} />
+          <SummaryRow label="Tổng mệnh giá voucher" value={formatMoney(faceValueTotal)} />
           {draft.length > 0 && errors.length > 0 && (
             <div
               role="alert"
@@ -350,21 +327,13 @@ const PaperVoucherDialog = ({
               </ul>
             </div>
           )}
-          <div className="mt-1 border-t border-app-border pt-3">
-            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Còn thanh toán dự kiến
-            </div>
-            <div
-              data-testid="paper-voucher-payable"
-              className="text-2xl leading-8 font-bold text-primary tabular-nums dark:text-indigo-300"
-            >
-              {formatMoney(preview.payableAmount)}
-            </div>
-          </div>
-          <p className="m-0 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
-            {isMock
-              ? "Phép tính minh họa, chưa phải quy tắc tài chính chính thức. Không thay đổi số tiền gửi lên hệ thống bán vé."
-              : "Số lượng lô lấy từ hệ thống. Số tiền chỉ để xem trước: chưa trừ vào đơn và chưa ghi nhận lượt sử dụng voucher."}
+          <p
+            data-testid="paper-voucher-dialog-note"
+            className="m-0 mt-1 border-t border-app-border pt-3 text-[11px] leading-4 text-slate-500 dark:text-slate-400"
+          >
+            {saleEnabled
+              ? "Hệ thống tính số tiền khách cần trả sau khi áp dụng, trừ voucher trên toàn đơn. Phần mệnh giá vượt giá trị đơn không được hoàn lại."
+              : "Số lượng lô lấy từ hệ thống. Hệ thống chưa ghi nhận voucher giấy vào đơn bán vé."}
           </p>
         </aside>
       </div>

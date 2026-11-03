@@ -1,5 +1,4 @@
 import Icon from "@ant-design/icons";
-import { isPaperVoucherMockMode } from "@renderer/api/paperVouchers.api";
 import RefreshButton from "@renderer/components/RefreshButton";
 import { paperVoucherKeys } from "@renderer/hooks/paperVouchers/keys";
 import {
@@ -15,7 +14,7 @@ import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import type { PaperVoucherBatch, PaperVoucherBatchQuery } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Empty, Tag } from "antd";
+import { Button, Empty } from "antd";
 import { PlusIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -32,10 +31,7 @@ import {
   toPaperVoucherBatchFilterQuery,
   type PaperVoucherFilterValues
 } from "./paperVoucher.utils";
-import {
-  getPaperVoucherResultMessage,
-  PAPER_VOUCHER_NO_PERMISSION_MESSAGE
-} from "./paperVoucherMessages";
+import { PAPER_VOUCHER_NO_PERMISSION_MESSAGE } from "./paperVoucherMessages";
 import type { PaperVoucherPermissions } from "./paperVoucherPermissions";
 
 interface PaperVouchersTabProps {
@@ -60,7 +56,6 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
   const [pageSize, setPageSize] = useState(20);
   const [sort, setSort] = useState<PaperVoucherTableSort>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
-  const isMock = isPaperVoucherMockMode();
 
   const query = useMemo<PaperVoucherBatchQuery>(
     () => ({
@@ -152,11 +147,7 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
         setLocked
           .mutateAsync({ id: batch.id, isLocked: nextLocked })
           .then(() => {
-            message.success(
-              getPaperVoucherResultMessage(
-                nextLocked ? "Đã khóa lô voucher" : "Đã mở khóa lô voucher"
-              )
-            );
+            message.success(nextLocked ? "Đã khóa lô voucher" : "Đã mở khóa lô voucher");
           })
           .catch((error: unknown) => {
             message.error(getApiErrorMessage(error, "Cập nhật trạng thái khóa thất bại"));
@@ -182,7 +173,7 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
         deleteBatch
           .mutateAsync(batch.id)
           .then(() => {
-            message.success(getPaperVoucherResultMessage("Đã xóa lô voucher"));
+            message.success("Đã xóa lô voucher");
           })
           .catch((error: unknown) => {
             message.error(getApiErrorMessage(error, "Xóa lô voucher thất bại"));
@@ -208,11 +199,6 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
   useEffect(() => {
     onActionsChange?.(
       <>
-        {isMock && (
-          <Tag className="m-0" color="warning" variant="outlined">
-            Dữ liệu mẫu
-          </Tag>
-        )}
         {permissions.list && (
           <>
             <PaperVoucherFilter
@@ -240,7 +226,6 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
     handleFiltersChange,
     hasNoExpiryBatch,
     isFetching,
-    isMock,
     onActionsChange,
     permissions.create,
     permissions.list,
@@ -299,7 +284,6 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
           onOpenChange={(open) => !open && setDialog(null)}
           batch={dialog.batch}
           today={today}
-          isMock={isMock}
         />
       )}
     </div>

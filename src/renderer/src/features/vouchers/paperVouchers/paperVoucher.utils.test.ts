@@ -1,10 +1,8 @@
 import type { PaperVoucherBatch } from "@shared/types";
 import { describe, expect, it } from "vitest";
-import { PAPER_VOUCHER_SEED } from "./paperVoucher.mock";
 import {
   comparePaperVoucherDate,
   countPaperVoucherFilters,
-  filterPaperVoucherBatches,
   getPaperVoucherAmounts,
   getPaperVoucherStatus,
   getVietnamBusinessDate,
@@ -12,9 +10,9 @@ import {
   summarizePaperVoucherBatches,
   toPaperVoucherBatchFilterQuery,
   validatePaperVoucherBatchDto,
-  validatePaperVoucherImageFile,
-  type PaperVoucherFilterValues
+  validatePaperVoucherImageFile
 } from "./paperVoucher.utils";
+import { PAPER_VOUCHER_FIXTURES } from "./paperVoucher.testUtils";
 
 const makeBatch = (overrides: Partial<PaperVoucherBatch> = {}): PaperVoucherBatch => ({
   id: 1,
@@ -82,8 +80,8 @@ describe("amounts and summary", () => {
     });
   });
 
-  it("totals quantities and face values across seed batches", () => {
-    expect(summarizePaperVoucherBatches(PAPER_VOUCHER_SEED)).toEqual({
+  it("totals quantities and face values across batches", () => {
+    expect(summarizePaperVoucherBatches(PAPER_VOUCHER_FIXTURES)).toEqual({
       totalBatches: 4,
       totalQuantity: 1100,
       usedCount: 654,
@@ -131,57 +129,6 @@ describe("toPaperVoucherBatchFilterQuery", () => {
     expect(
       toPaperVoucherBatchFilterQuery({ keyword: "   ", expiresAt: PAPER_VOUCHER_NO_EXPIRY_FILTER })
     ).toEqual({ noExpiry: true });
-  });
-});
-
-describe("filterPaperVoucherBatches", () => {
-  const today = "2026-10-30";
-  const codes = (
-    filters: PaperVoucherFilterValues,
-    batches: PaperVoucherBatch[] = PAPER_VOUCHER_SEED
-  ) =>
-    filterPaperVoucherBatches(batches, toPaperVoucherBatchFilterQuery(filters), today).map(
-      (item) => item.batchCode
-    );
-
-  it("searches by code or name without diacritics", () => {
-    expect(codes({ keyword: "lo-003" })).toEqual(["LÔ-003"]);
-    expect(codes({ keyword: "giay 95" })).toEqual(["LÔ-004"]);
-  });
-
-  it("filters batches without an expiry date", () => {
-    const batches = [
-      ...PAPER_VOUCHER_SEED,
-      { ...PAPER_VOUCHER_SEED[3], id: 5, batchCode: "LÔ-005", expiresAt: null }
-    ];
-
-    expect(codes({ expiresAt: PAPER_VOUCHER_NO_EXPIRY_FILTER }, batches)).toEqual(["LÔ-005"]);
-    expect(codes({ expiresAt: "2026-12-31" }, batches)).toEqual(["LÔ-003", "LÔ-004"]);
-  });
-
-  it("filters by an inclusive expiry range and excludes batches without expiry", () => {
-    const batches = [
-      ...PAPER_VOUCHER_SEED,
-      { ...PAPER_VOUCHER_SEED[3], id: 5, batchCode: "LÔ-005", expiresAt: null }
-    ];
-    const range = (expiresFrom?: string, expiresTo?: string) =>
-      filterPaperVoucherBatches(batches, { expiresFrom, expiresTo }, today).map(
-        (item) => item.batchCode
-      );
-
-    expect(range("2025-12-31", "2025-12-31")).toEqual(["LÔ-001", "LÔ-002"]);
-    expect(range("2026-01-01")).toEqual(["LÔ-003", "LÔ-004"]);
-    expect(range(undefined, "2026-12-30")).toEqual(["LÔ-001", "LÔ-002"]);
-    expect(
-      filterPaperVoucherBatches(batches, { noExpiry: false }, today).map((item) => item.batchCode)
-    ).toEqual(["LÔ-001", "LÔ-002", "LÔ-003", "LÔ-004"]);
-  });
-
-  it("filters by face value, computed status and expiry date", () => {
-    expect(codes({ faceValue: 100000 })).toEqual(["LÔ-001", "LÔ-003"]);
-    expect(codes({ status: "expired" })).toEqual(["LÔ-001", "LÔ-002"]);
-    expect(codes({ status: "active" })).toEqual(["LÔ-003", "LÔ-004"]);
-    expect(codes({ expiresAt: "2026-12-31", faceValue: 95000 })).toEqual(["LÔ-004"]);
   });
 });
 

@@ -40,9 +40,15 @@ export const sortPaperVoucherBatchesForPos = (
     );
   });
 
+/** Backend nhận tối đa 20 dòng (mỗi lô một dòng) trong một đơn. */
+export const PAPER_VOUCHER_MAX_LINES = 20;
+
 /**
  * Kiểm tra lựa chọn voucher giấy với dữ liệu lô mới nhất.
  * Trả về danh sách lỗi tiếng Việt; rỗng nghĩa là hợp lệ.
+ *
+ * Không giới hạn số tờ theo số vé: voucher trừ theo mệnh giá trên toàn đơn. Số tiền áp dụng, phần
+ * vượt (không hoàn lại) và số tiền khách cần trả do backend tính qua báo giá đơn.
  */
 export const validatePaperVoucherSelection = ({
   lines,
@@ -60,6 +66,9 @@ export const validatePaperVoucherSelection = ({
   const seenBatchIds = new Set<number>();
 
   if (ticketCount <= 0) errors.push("Chưa chọn ghế để áp dụng voucher giấy");
+  if (lines.length > PAPER_VOUCHER_MAX_LINES) {
+    errors.push(`Mỗi đơn dùng tối đa ${PAPER_VOUCHER_MAX_LINES} lô voucher giấy`);
+  }
 
   lines.forEach((line) => {
     const batch = batchesById.get(line.batchId);
@@ -96,56 +105,11 @@ export const validatePaperVoucherSelection = ({
     }
   });
 
-  const voucherCount = lines.reduce((total, line) => total + line.quantity, 0);
-  if (ticketCount > 0 && voucherCount > ticketCount) {
-    errors.push(`Số voucher (${voucherCount}) vượt số vé đang chọn (${ticketCount})`);
-  }
-
   return errors;
 };
 
-/**
- * PHÉP TÍNH MINH HỌA cho giai đoạn mock: voucher giấy trừ theo mệnh giá.
- * Chưa phải quy tắc tài chính được NCC phê duyệt; khi có backend, thay bằng kết quả backend trả về.
- *
- * - Giá trị áp dụng = min(tổng mệnh giá, tiền vé đủ điều kiện), phân bổ lần lượt theo từng dòng.
- * - Còn thanh toán = max(0, tiền vé đủ điều kiện - giá trị áp dụng); không phát sinh tiền thừa.
- */
-export const calculatePaperVoucherPreview = ({
-  lines,
-  eligibleAmount
-}: {
-  lines: Pick<PaperVoucherSelectionLine, "batchId" | "quantity" | "faceValue">[];
-  eligibleAmount: number;
-}) => {
-  const safeEligibleAmount = Math.max(0, eligibleAmount);
-  let remainingEligible = safeEligibleAmount;
-
-  const previewLines = lines.map((line) => {
-    const faceValueTotal = line.faceValue * line.quantity;
-    const appliedAmount = Math.min(faceValueTotal, remainingEligible);
-    remainingEligible -= appliedAmount;
-    return { ...line, faceValueTotal, appliedAmount };
-  });
-
-  const voucherCount = lines.reduce((total, line) => total + line.quantity, 0);
-  const faceValueTotal = previewLines.reduce((total, line) => total + line.faceValueTotal, 0);
-  const appliedAmount = Math.min(faceValueTotal, safeEligibleAmount);
-
-  return {
-    lines: previewLines,
-    voucherCount,
-    faceValueTotal,
-    appliedAmount,
-    payableAmount: Math.max(0, safeEligibleAmount - appliedAmount),
-    excessAmount: Math.max(0, faceValueTotal - safeEligibleAmount)
-  };
-};
-
-export type PaperVoucherPreview = ReturnType<typeof calculatePaperVoucherPreview>;
-
-export const createMockPaperVoucherTransactionId = () =>
-  `MOCK-VG-${Date.now().toString(36).toUpperCase()}-${Math.random()
-    .toString(36)
-    .slice(2, 6)
-    .toUpperCase()}`;
+/** Số tờ và tổng mệnh giá của lựa chọn (chỉ để đối chiếu phiếu, không phải số tiền được trừ). */
+export const summarizePaperVoucherSelection = (lines: PaperVoucherSelectionLine[]) => ({
+  voucherCount: lines.reduce((total, line) => total + line.quantity, 0),
+  faceValueTotal: lines.reduce((total, line) => total + line.faceValue * line.quantity, 0)
+});

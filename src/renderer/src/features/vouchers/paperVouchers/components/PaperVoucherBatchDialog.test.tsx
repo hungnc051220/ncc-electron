@@ -1,12 +1,14 @@
 import type { PaperVoucherBatch } from "@shared/types";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { paperVoucherMockRepository } from "../paperVoucher.mock";
 import {
   createImageFile,
+  createPaperVoucherImage,
   getButtonByText,
+  PAPER_VOUCHER_FIXTURES,
   PaperVoucherTestProviders,
   selectImageFile,
+  setupPaperVoucherServer,
   stubObjectUrls
 } from "../paperVoucher.testUtils";
 import { PAPER_VOUCHER_MAX_IMAGES, PAPER_VOUCHER_TOO_MANY_IMAGES_MESSAGE } from "../paperVoucher.utils";
@@ -48,38 +50,32 @@ const getImageNames = (dialog: HTMLElement) =>
     .queryAllByTestId("paper-voucher-image-item")
     .map((item) => item.querySelector("span[title]")?.getAttribute("title"));
 
-const getBatch = async (id: number) => {
-  const batch = (await paperVoucherMockRepository.list()).find((item) => item.id === id);
+const getFixture = (id: number) => {
+  const batch = PAPER_VOUCHER_FIXTURES.find((item) => item.id === id);
   if (!batch) throw new Error(`Không tìm thấy lô ${id}`);
   return batch;
 };
 
-const toDto = (batch: PaperVoucherBatch) => ({
-  name: batch.name,
-  faceValue: batch.faceValue,
-  totalQuantity: batch.totalQuantity,
-  validFrom: batch.validFrom,
-  expiresAt: batch.expiresAt,
-  note: batch.note
+const withImages = (id: number, names: string[]): PaperVoucherBatch => ({
+  ...getFixture(id),
+  images: names.map(createPaperVoucherImage)
 });
-
-const withImages = async (id: number, names: string[]) =>
-  paperVoucherMockRepository.update({
-    id,
-    dto: { ...toDto(await getBatch(id)), images: names.map((name) => ({ file: createImageFile(name) })) }
-  });
 
 describe("PaperVoucherBatchDialog images", () => {
   let urls: ReturnType<typeof stubObjectUrls>;
+  let paperVoucherServer: Awaited<ReturnType<typeof setupPaperVoucherServer>>;
 
-  beforeEach(() => {
-    // Reset trước khi stub để URL của test trước không bị ghi nhận vào spy mới.
-    paperVoucherMockRepository.reset();
+  /** Server giữ sẵn lô đang sửa để `PATCH` trả về dữ liệu đã lưu. */
+  const startServer = (batches = PAPER_VOUCHER_FIXTURES) =>
+    setupPaperVoucherServer({ batches }).then((started) => (paperVoucherServer = started));
+
+  beforeEach(async () => {
     urls = stubObjectUrls();
+    await startServer();
   });
 
   it("adds several images in one selection and saves them in the chosen order", async () => {
-    const { dialog, onOpenChange } = renderDialog({ editingBatch: await getBatch(4) });
+    const { dialog, onOpenChange } = renderDialog({ editingBatch: getFixture(4) });
 
     selectImageFile(
       getImageSection(dialog),
@@ -95,9 +91,10 @@ describe("PaperVoucherBatchDialog images", () => {
     fireEvent.click(getButtonByText(dialog, "Lưu thay đổi"));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    const saved = await getBatch(4);
-    expect(saved.images?.map((image) => image.fileName)).toEqual(["a.png", "c.jpg", "b.webp"]);
-    expect(saved.images?.every((image) => image.url.startsWith("blob:"))).toBe(true);
+    // Ảnh mới upload qua `POST /images` rồi gửi URL đã lưu theo đúng thứ tự.
+    expect(paperVoucherServer.getBatch(4)?.images).toEqual(
+      ["a.png", "c.jpg", "b.webp"].map(createPaperVoucherImage)
+    );
   });
 
   it("removes a selected image and revokes its preview", async () => {
@@ -143,7 +140,8 @@ describe("PaperVoucherBatchDialog images", () => {
   });
 
   it("does not save image changes when the dialog is cancelled", async () => {
-    const original = await withImages(4, ["goc.png", "phu.png"]);
+    const original = withImages(4, ["goc.png", "phu.png"]);
+    await startServer([original]);
     const { dialog, onOpenChange } = renderDialog({ editingBatch: original });
 
     fireEvent.click(within(dialog).getByLabelText("Xóa ảnh 1"));
@@ -153,11 +151,13 @@ describe("PaperVoucherBatchDialog images", () => {
     fireEvent.click(getButtonByText(dialog, /^(Hủy|Cancel)$/));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect((await getBatch(4)).images).toEqual(original.images);
+    expect(paperVoucherServer.requestBodies).toEqual([]);
+    expect(paperVoucherServer.getBatch(4)?.images).toEqual(original.images);
   });
 
   it("keeps existing images when only other fields are edited", async () => {
-    const original = await withImages(3, ["sau.png"]);
+    const original = withImages(3, ["sau.png"]);
+    await startServer([original]);
     const { dialog, onOpenChange } = renderDialog({ editingBatch: original });
 
     expect(within(dialog).getByAltText("Ảnh 1 voucher")).toHaveAttribute(
@@ -171,14 +171,14 @@ describe("PaperVoucherBatchDialog images", () => {
     fireEvent.click(getButtonByText(dialog, "Lưu thay đổi"));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    const stored = await getBatch(3);
-    expect(stored.name).toBe("Voucher giấy 100K - đổi tên");
-    expect(stored.images).toEqual(original.images);
+    const stored = paperVoucherServer.getBatch(3);
+    expect(stored?.name).toBe("Voucher giấy 100K - đổi tên");
+    expect(stored?.images).toEqual(original.images);
     expect(urls.revokeObjectURL).not.toHaveBeenCalledWith(original.images?.[0].url);
   });
 
   it("disables image changes without create/update permission", async () => {
-    const original = await withImages(4, ["goc.png"]);
+    const original = withImages(4, ["goc.png"]);
     const { dialog } = renderDialog({ editingBatch: original, canSubmit: false });
 
     expect(within(dialog).getByAltText("Ảnh 1 voucher")).toBeInTheDocument();

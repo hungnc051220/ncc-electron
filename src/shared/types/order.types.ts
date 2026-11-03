@@ -1,5 +1,6 @@
 import { DiscountProps } from "./discount.types";
 import { FilmProps } from "./film.types";
+import { OrderPaperVoucherResult } from "./paperVoucher.types";
 import { RoomProps } from "./room.types";
 import { PlanScreeningDetailProps } from "./screening.types";
 
@@ -105,6 +106,8 @@ export interface OrderResponseProps {
   invitationTickets: InvitationTicketProps;
   campaign?: CampaignProps;
   orderPaymentTransactions: OrderPaymentTransactionProps[];
+  /** Chỉ có khi đơn tạo tại POS dùng voucher giấy; `orderTotal` đã trừ voucher. */
+  paperVoucher?: OrderPaperVoucherResult;
 }
 
 export interface CampaignProps {

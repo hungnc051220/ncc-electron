@@ -6,6 +6,7 @@ import { ordersApi } from "@renderer/api/orders.api";
 import { invoicesApi } from "@renderer/api/invoice.api";
 import { PaymentType } from "@shared/types";
 import { invoicesKeys } from "@renderer/hooks/invoices/keys";
+import { paperVoucherKeys } from "@renderer/hooks/paperVouchers/keys";
 import { ordersKeys } from "./keys";
 import { useCancelOrder } from "./useCancelOrder";
 import { useCreateOrder } from "./useCreateOrder";
@@ -69,6 +70,40 @@ describe("order and invoice mutations", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ordersKeys.all
     });
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: paperVoucherKeys.all });
+  });
+
+  it("refreshes paper voucher batches after an order with paper vouchers settles", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    vi.spyOn(ordersApi, "create")
+      .mockResolvedValueOnce({ id: 102 })
+      .mockRejectedValueOnce(new Error("Báo giá đã thay đổi"));
+    const dto = {
+      planScreenId: 22,
+      floorNo: 1,
+      paymentMethodSystemName: "POS",
+      posName: "POS A",
+      posShortName: "A1",
+      listChairIndexF1: "1",
+      listChairValueF1: "A1",
+      paperVouchers: [{ batchId: 3, quantity: 1, faceValue: 100000 }],
+      paperVoucherRequestId: "6f1c2a8e-1d2b-4c3d-8e4f-5a6b7c8d9e0f",
+      paperVoucherQuoteHash: "a".repeat(64),
+      expectedFinalOrderTotal: 0
+    };
+
+    const { result } = renderHook(() => useCreateOrder(), { wrapper });
+
+    result.current.mutate(dto);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ordersKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: paperVoucherKeys.all });
+
+    invalidateSpy.mockClear();
+    result.current.mutate(dto);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: paperVoucherKeys.all });
   });
 
   it("creates a QR order and invalidates the orders cache", async () => {

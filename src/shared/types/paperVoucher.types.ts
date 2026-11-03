@@ -31,7 +31,7 @@ export interface PaperVoucherBatch {
 
 export type PaperVoucherBatchStatus = "active" | "upcoming" | "expired" | "locked" | "depleted";
 
-/** Ảnh voucher đã lưu. Mock dùng object URL trong phiên; API thật trả URL file đã upload. */
+/** Ảnh voucher đã lưu; API trả URL file đã upload. */
 export interface PaperVoucherImage {
   url: string;
   fileName?: string | null;
@@ -72,17 +72,59 @@ export interface PaperVoucherRedemptionLine {
   faceValue: number;
 }
 
-/** Giao dịch sử dụng voucher giấy mô phỏng; không gắn với đơn hàng thật. */
-export interface SimulatePaperVoucherRedemptionDto {
-  transactionId: string;
-  lines: PaperVoucherRedemptionLine[];
-  ticketCount: number;
-  eligibleAmount: number;
-  staffName?: string | null;
+/** Một dòng voucher giấy trong báo giá/đơn bán vé: số tiền do backend phân bổ. */
+export interface PaperVoucherQuoteLine extends PaperVoucherRedemptionLine {
+  batchCode: string;
+  faceValueTotal: number;
+  appliedAmount: number;
+  /** Phần mệnh giá vượt giá trị đơn: không hoàn lại. */
+  excessAmount: number;
 }
 
-/** `simulated` chỉ có ở mock; API thật trả `applied`/`reversed`. */
-export type PaperVoucherUsageStatus = "simulated" | "applied" | "reversed";
+/** Tổng hợp voucher giấy của một đơn, do backend tính sau mọi khuyến mãi hiện có. */
+export interface PaperVoucherOrderBreakdown {
+  lines: PaperVoucherQuoteLine[];
+  voucherQuantity: number;
+  faceValueTotal: number;
+  voucherApplied: number;
+  excessAmount: number;
+}
+
+export interface PaperVoucherQuoteWarning {
+  code: string;
+  message: string;
+}
+
+/** Kết quả `POST /api/pos/order/quote`. FE chỉ hiển thị, không tự tính lại số tiền. */
+export interface PaperVoucherOrderQuote {
+  businessDate: string;
+  /** Tổng đơn sau các khuyến mãi hiện có, trước voucher giấy. */
+  baseTotal: number;
+  /** Chỉ gồm khuyến mãi hiện có (không gồm voucher giấy). */
+  orderDiscount: number;
+  /** Số tiền khách cần trả (tiền mặt). */
+  finalOrderTotal: number;
+  paperVoucher: PaperVoucherOrderBreakdown;
+  allowedPaymentMethods: string[];
+  warnings: PaperVoucherQuoteWarning[];
+  quoteHash: string;
+}
+
+/** `paperVoucher` trong response tạo đơn có dùng voucher giấy. */
+export interface OrderPaperVoucherResult {
+  redemptionId: number;
+  requestId: string;
+  baseTotal: number;
+  voucherQuantity: number;
+  faceValueTotal: number;
+  voucherApplied: number;
+  finalOrderTotal: number;
+  excessAmount: number;
+  /** `true` khi backend trả lại đơn đã tạo ở lần gửi trước cùng `paperVoucherRequestId`. */
+  replayed: boolean;
+}
+
+export type PaperVoucherUsageStatus = "applied" | "reversed";
 
 export interface PaperVoucherUsage {
   id: number;

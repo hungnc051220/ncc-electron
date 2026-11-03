@@ -1,4 +1,3 @@
-import { paperVoucherMockRepository } from "@renderer/features/vouchers/paperVouchers/paperVoucher.mock";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { server } from "@renderer/test/msw/server";
 import { useAuthStore } from "@renderer/store/auth.store";
@@ -6,12 +5,7 @@ import type { PaperVoucherBatch, PaperVoucherSummary } from "@shared/types";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, initApi } from "./client";
-import {
-  getPaperVoucherDataSource,
-  isPaperVoucherMockMode,
-  PAPER_VOUCHER_POS_UNAVAILABLE_MESSAGE,
-  paperVouchersApi
-} from "./paperVouchers.api";
+import { paperVouchersApi } from "./paperVouchers.api";
 
 vi.mock("@renderer/socket/socket", () => ({
   connectSocket: vi.fn(),
@@ -89,43 +83,16 @@ const businessError = (status: number, code: string, message: string) =>
     { status }
   );
 
-describe("paperVouchersApi data source", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("uses mock data unless HTTP mode is configured explicitly", async () => {
-    vi.stubEnv("VITE_PAPER_VOUCHER_DATA_SOURCE", "");
-    expect(getPaperVoucherDataSource()).toBe("mock");
-    vi.stubEnv("VITE_PAPER_VOUCHER_DATA_SOURCE", "HTTP");
-    expect(isPaperVoucherMockMode()).toBe(true);
-    vi.stubEnv("VITE_PAPER_VOUCHER_DATA_SOURCE", "true");
-    expect(isPaperVoucherMockMode()).toBe(true);
-
-    // Không có handler MSW: nếu gọi HTTP, setup test sẽ báo lỗi unhandled request.
-    expect((await paperVouchersApi.getAll()).map((item) => item.batchCode)).toContain("LÔ-001");
-  });
-
-  it("switches to HTTP only for the exact value http", () => {
-    vi.stubEnv("VITE_PAPER_VOUCHER_DATA_SOURCE", "http");
-    expect(getPaperVoucherDataSource()).toBe("http");
-    expect(isPaperVoucherMockMode()).toBe(false);
-  });
-});
-
-describe("paperVouchersApi in HTTP mode", () => {
+describe("paperVouchersApi", () => {
   let requests: ReturnType<typeof recordRequests>;
 
   beforeEach(async () => {
-    vi.stubEnv("VITE_PAPER_VOUCHER_DATA_SOURCE", "http");
     await initApi(API);
     useAuthStore.getState().login("staff-token", "staff-refresh", 12);
-    paperVoucherMockRepository.reset();
     requests = recordRequests();
   });
 
   afterEach(() => {
-    vi.unstubAllEnvs();
     server.events.removeAllListeners();
   });
 
@@ -412,9 +379,7 @@ describe("paperVouchersApi in HTTP mode", () => {
     expect(useAuthStore.getState().token).toBeNull();
   });
 
-  it("never falls back to mock data when the API fails", async () => {
-    const listSpy = vi.spyOn(paperVoucherMockRepository, "list");
-    const pageSpy = vi.spyOn(paperVoucherMockRepository, "listPage");
+  it("rejects with the API failure", async () => {
     server.use(
       http.get(`${BASE}/batches`, () => HttpResponse.error()),
       http.get(`${BASE}/summary`, () =>
@@ -427,25 +392,5 @@ describe("paperVouchersApi in HTTP mode", () => {
     await expect(paperVouchersApi.getSummary()).rejects.toMatchObject({
       response: { status: 500 }
     });
-    expect(listSpy).not.toHaveBeenCalled();
-    expect(pageSpy).not.toHaveBeenCalled();
-  });
-
-  it("refuses simulated POS redemption without touching mock data or the network", async () => {
-    const simulateSpy = vi.spyOn(paperVoucherMockRepository, "simulateRedemption");
-
-    await expect(
-      paperVouchersApi.simulateRedemption({
-        transactionId: "MOCK-1",
-        lines: [{ batchId: 3, quantity: 1, faceValue: 100000 }],
-        ticketCount: 1,
-        eligibleAmount: 90000
-      })
-    ).rejects.toThrow(PAPER_VOUCHER_POS_UNAVAILABLE_MESSAGE);
-    expect(simulateSpy).not.toHaveBeenCalled();
-    expect(requests).toHaveLength(0);
-    expect((await paperVoucherMockRepository.list()).find((item) => item.id === 3)?.usedCount).toBe(
-      86
-    );
   });
 });

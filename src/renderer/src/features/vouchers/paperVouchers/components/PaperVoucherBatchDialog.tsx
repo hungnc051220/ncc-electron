@@ -20,10 +20,7 @@ import {
   PAPER_VOUCHER_DISPLAY_DATE_FORMAT,
   validatePaperVoucherBatchDto
 } from "../paperVoucher.utils";
-import {
-  getPaperVoucherResultMessage,
-  PAPER_VOUCHER_NO_PERMISSION_MESSAGE
-} from "../paperVoucherMessages";
+import { PAPER_VOUCHER_NO_PERMISSION_MESSAGE } from "../paperVoucherMessages";
 import PaperVoucherImageInput from "./PaperVoucherImageInput";
 
 type FormValues = {
@@ -116,9 +113,7 @@ const PaperVoucherBatchDialog = ({
 
     const handlers = {
       onSuccess: () => {
-        message.success(
-          getPaperVoucherResultMessage(isEdit ? "Đã cập nhật lô voucher" : "Đã tạo lô voucher")
-        );
+        message.success(isEdit ? "Đã cập nhật lô voucher" : "Đã tạo lô voucher");
         onCancel();
       },
       onError: (mutationError: unknown) => {

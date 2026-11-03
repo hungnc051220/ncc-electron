@@ -4,8 +4,10 @@ import type { PermissionAssignment } from "@shared/types";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { paperVoucherMockRepository } from "./paperVouchers/paperVoucher.mock";
-import { PaperVoucherTestProviders } from "./paperVouchers/paperVoucher.testUtils";
+import {
+  PaperVoucherTestProviders,
+  setupPaperVoucherServer
+} from "./paperVouchers/paperVoucher.testUtils";
 import VouchersPage from "./VouchersPage";
 
 vi.mock("@renderer/hooks/vouchers/useVouchers", () => ({
@@ -43,8 +45,8 @@ const renderPage = () =>
 const getTab = (name: string) => screen.queryByRole("tab", { name });
 
 describe("VouchersPage", () => {
-  beforeEach(() => {
-    paperVoucherMockRepository.reset();
+  beforeEach(async () => {
+    await setupPaperVoucherServer();
     vi.mocked(useVouchers).mockReturnValue({
       data: {
         data: {

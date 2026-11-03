@@ -2,7 +2,7 @@
  * E2E Voucher giấy: Electron → NestJS (pvtest, local) → SQL Server `NCC_PaperVoucher_Test`.
  *
  * Opt-in, chỉ chạy với backend local và DB test. Cần:
- *   - App build với `VITE_PAPER_VOUCHER_DATA_SOURCE=http` (vd. `npx electron-vite build`).
+ *   - App đã build (vd. `npx electron-vite build`).
  *   - Backend: `test/paper-voucher/pvtest-server.js` của ncc-online-be-nestjs (xem README cùng thư mục;
  *     tài khoản được seed và cấp quyền qua API bằng `seed-staff.pvtest.js`, `grant-permissions.pvtest.js`).
  *   - `sqlcmd` + Windows auth tới SQL Server local để đối chiếu dữ liệu đã ghi.
@@ -325,9 +325,6 @@ test.describe("Voucher giấy với API thật (pvtest local)", () => {
     try {
       await login(page, ACCOUNTS.manager);
       await openVouchers(page);
-
-      // Dữ liệu thật: không có nhãn dữ liệu mẫu.
-      await expect(page.getByText("Dữ liệu mẫu")).toHaveCount(0);
 
       // Summary từ API, khớp 4 thẻ.
       const summary = await apiCall<{ totalBatches: number; totalQuantity: number }>(

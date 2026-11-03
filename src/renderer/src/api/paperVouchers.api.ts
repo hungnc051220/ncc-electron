@@ -1,4 +1,3 @@
-import { paperVoucherMockRepository } from "@renderer/features/vouchers/paperVouchers/paperVoucher.mock";
 import type {
   ApiResponse,
   PaperVoucherBatch,
@@ -10,27 +9,10 @@ import type {
   PaperVoucherSummary,
   PaperVoucherUsage,
   SetPaperVoucherBatchLockedDto,
-  SimulatePaperVoucherRedemptionDto,
   UpdatePaperVoucherBatchDto
 } from "@shared/types";
 import axios from "axios";
 import { api } from "./client";
-
-export type PaperVoucherDataSource = "mock" | "http";
-
-/**
- * Nguồn dữ liệu Voucher giấy chọn lúc build qua `VITE_PAPER_VOUCHER_DATA_SOURCE`.
- * Chỉ giá trị `http` mới gọi API thật; không khai báo hoặc giá trị khác đều dùng mock.
- * Không fallback: khi đã chọn HTTP, lỗi API trả nguyên cho UI, không đọc dữ liệu mock.
- */
-export const getPaperVoucherDataSource = (): PaperVoucherDataSource =>
-  import.meta.env.VITE_PAPER_VOUCHER_DATA_SOURCE === "http" ? "http" : "mock";
-
-export const isPaperVoucherMockMode = () => getPaperVoucherDataSource() === "mock";
-
-/** Backend chưa có API ghi nhận sử dụng voucher giấy tại POS. */
-export const PAPER_VOUCHER_POS_UNAVAILABLE_MESSAGE =
-  "Hệ thống chưa hỗ trợ thanh toán bằng voucher giấy tại quầy. Vui lòng bán vé theo luồng thông thường.";
 
 const PAPER_VOUCHER_IMAGE_TOO_LARGE_MESSAGE = "Ảnh phải có dung lượng tối đa 5 MB";
 
@@ -46,7 +28,6 @@ interface PaperVoucherApi {
   setLocked: (dto: SetPaperVoucherBatchLockedDto) => Promise<PaperVoucherBatch>;
   delete: (id: number) => Promise<void>;
   getUsages: (batchId: number) => Promise<PaperVoucherUsage[]>;
-  simulateRedemption: (dto: SimulatePaperVoucherRedemptionDto) => Promise<PaperVoucherUsage[]>;
 }
 
 const uploadImage = async (file: File): Promise<PaperVoucherImageUpload> => {
@@ -87,7 +68,7 @@ const toBatchBody = async ({ images, ...fields }: PaperVoucherBatchDto) => {
   );
 };
 
-export const paperVoucherHttpApi: PaperVoucherApi = {
+export const paperVouchersApi: PaperVoucherApi = {
   getAll: async () => {
     const res = await api.get<ApiResponse<PaperVoucherBatch>>(`${BASE_URL}/batches`, {
       params: { pageSize: 0 }
@@ -134,39 +115,5 @@ export const paperVoucherHttpApi: PaperVoucherApi = {
       { params: { pageSize: 0 } }
     );
     return res.data.data;
-  },
-  // Không có API thật; tuyệt đối không ghi vào mock khi đang dùng dữ liệu thật.
-  simulateRedemption: async () => {
-    throw new Error(PAPER_VOUCHER_POS_UNAVAILABLE_MESSAGE);
   }
-};
-
-/** Mock in-memory, reset khi reload ứng dụng. Không gọi API bán vé/thanh toán. */
-export const paperVoucherMockApi: PaperVoucherApi = {
-  getAll: () => paperVoucherMockRepository.list(),
-  getPage: (query) => paperVoucherMockRepository.listPage(query),
-  getSummary: (filters) => paperVoucherMockRepository.summary(filters),
-  getById: (id) => paperVoucherMockRepository.get(id),
-  create: (dto) => paperVoucherMockRepository.create(dto),
-  update: (dto) => paperVoucherMockRepository.update(dto),
-  setLocked: (dto) => paperVoucherMockRepository.setLocked(dto),
-  delete: (id) => paperVoucherMockRepository.remove(id),
-  getUsages: (batchId) => paperVoucherMockRepository.listUsages(batchId),
-  /** Chỉ ghi nhận giao dịch mô phỏng; không tạo đơn, không gọi API bán vé/thanh toán. */
-  simulateRedemption: (dto) => paperVoucherMockRepository.simulateRedemption(dto)
-};
-
-const getAdapter = () => (isPaperVoucherMockMode() ? paperVoucherMockApi : paperVoucherHttpApi);
-
-export const paperVouchersApi: PaperVoucherApi = {
-  getAll: () => getAdapter().getAll(),
-  getPage: (query) => getAdapter().getPage(query),
-  getSummary: (filters) => getAdapter().getSummary(filters),
-  getById: (id) => getAdapter().getById(id),
-  create: (dto) => getAdapter().create(dto),
-  update: (dto) => getAdapter().update(dto),
-  setLocked: (dto) => getAdapter().setLocked(dto),
-  delete: (id) => getAdapter().delete(id),
-  getUsages: (batchId) => getAdapter().getUsages(batchId),
-  simulateRedemption: (dto) => getAdapter().simulateRedemption(dto)
 };
