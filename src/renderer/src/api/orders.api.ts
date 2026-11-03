@@ -5,6 +5,7 @@ import {
   OrderResponseProps,
   PaperVoucherOrderQuote,
   PaperVoucherRedemptionLine,
+  PaperVoucherRequestStatus,
   PaymentStatus,
   QrCodeResponseProps,
   RefundStatus
@@ -52,12 +53,16 @@ export interface OrderDto {
   note?: string;
   customerId?: number;
   hasManualInvoice?: boolean;
-  /** Voucher giấy (chỉ thanh toán tiền mặt `POS`): gửi kèm 3 field xác nhận báo giá bên dưới. */
+  /**
+   * Voucher giấy (một nguồn thanh toán, không phải giảm giá): gửi kèm 3 field xác nhận báo giá bên
+   * dưới; `paymentMethodSystemName` phải thuộc `allowedPaymentMethods` của báo giá.
+   */
   paperVouchers?: PaperVoucherRedemptionLine[];
   /** UUID v4 của một lần bán; giữ nguyên khi gửi lại (lỗi mạng/5xx, báo giá đổi). */
   paperVoucherRequestId?: string;
   paperVoucherQuoteHash?: string;
-  expectedFinalOrderTotal?: number;
+  /** `remainingPayable` của báo giá thu ngân đã xác nhận. */
+  expectedRemainingPayable?: number;
 }
 
 /** Body `POST /api/pos/order/quote`: cùng body tạo đơn kèm các dòng voucher giấy. */
@@ -67,7 +72,7 @@ export type OrderQuoteDto = Omit<
   | "paperVouchers"
   | "paperVoucherRequestId"
   | "paperVoucherQuoteHash"
-  | "expectedFinalOrderTotal"
+  | "expectedRemainingPayable"
 > & {
   paperVouchers: PaperVoucherRedemptionLine[];
 };
@@ -304,6 +309,13 @@ export const ordersApi = {
   },
   quote: async (dto: OrderQuoteDto, signal?: AbortSignal): Promise<PaperVoucherOrderQuote> => {
     const res = await api.post<PaperVoucherOrderQuote>("/api/pos/order/quote", dto, { signal });
+    return res.data;
+  },
+  /** Chỉ đọc: lần bán có voucher giấy với mã request này đã tạo đơn chưa (không bao giờ tạo đơn). */
+  getPaperVoucherRequestStatus: async (requestId: string): Promise<PaperVoucherRequestStatus> => {
+    const res = await api.get<PaperVoucherRequestStatus>(
+      `/api/pos/order/paper-voucher-requests/${encodeURIComponent(requestId)}`
+    );
     return res.data;
   },
   update: async (id: number, dto: OrderUpdateStatusDto) => {

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { formatMoney } from "@renderer/lib/utils";
 import { OrderStatus, PaymentStatus, PaymentType } from "@shared/types";
 import QrCodeDialog from "./QrCodeDialog";
 
@@ -109,5 +110,55 @@ describe("QrCodeDialog", () => {
     );
 
     expect(screen.getByRole("img", { name: "VNPayQR" })).toBeInTheDocument();
+  });
+});
+
+const textOf = (testId: string) => screen.getByTestId(testId).textContent?.replace(/\s/g, "");
+const money = (amount: number) => formatMoney(amount).replace(/\s/g, "");
+
+describe("QrCodeDialog with a paper voucher", () => {
+  const voucherQrData = {
+    ...baseQrData,
+    orderTotal: 100000,
+    orderDiscount: 0,
+    transactionAmount: 20000,
+    paperVoucher: { orderTotal: 100000, voucherApplied: 80000, remainingPayable: 20000 }
+  };
+
+  it("shows the ticket total, the voucher payment and the QR amount from create-qr", () => {
+    render(<QrCodeDialog open dataQr={voucherQrData} />);
+
+    expect(screen.getByText("Tổng tiền vé:")).toBeInTheDocument();
+    expect(textOf("qr-ticket-total")).toBe(money(100000));
+    expect(screen.getByText("Thanh toán bằng Voucher giấy:")).toBeInTheDocument();
+    expect(textOf("qr-paper-voucher-applied")).toBe(money(80000));
+    expect(screen.getByText("Cần thanh toán thêm")).toBeInTheDocument();
+    expect(textOf("qr-payable-amount")).toBe(money(20000));
+    expect(screen.queryByText("Tổng thanh toán")).not.toBeInTheDocument();
+  });
+
+  it("uses the transaction amount of create-qr even if it differs from the order remaining", () => {
+    render(<QrCodeDialog open dataQr={{ ...voucherQrData, transactionAmount: 25000 }} />);
+
+    expect(textOf("qr-payable-amount")).toBe(money(25000));
+  });
+
+  it("falls back to the remaining payable when create-qr has no transaction amount", () => {
+    render(<QrCodeDialog open dataQr={{ ...voucherQrData, transactionAmount: undefined }} />);
+
+    expect(textOf("qr-payable-amount")).toBe(money(20000));
+  });
+
+  it("keeps the discount display of an order without paper voucher", () => {
+    render(<QrCodeDialog open dataQr={baseQrData} />);
+
+    expect(screen.getByText("Giảm giá:")).toBeInTheDocument();
+    expect(screen.getByText("Tổng thanh toán")).toBeInTheDocument();
+    // Tổng tiền vé = 120.000 + 20.000 giảm giá; thanh toán = tổng đơn.
+    expect(
+      screen.getByText((content) => content.replace(/\s/g, "") === money(140000))
+    ).toBeInTheDocument();
+    expect(textOf("qr-payable-amount")).toBe(money(120000));
+    expect(screen.queryByText(/Voucher giấy/)).not.toBeInTheDocument();
   });
 });

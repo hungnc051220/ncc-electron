@@ -118,7 +118,7 @@ describe("ordersApi", () => {
   });
 
   it("posts the order body with paper vouchers to the quote endpoint", async () => {
-    const quote = { quoteHash: "a".repeat(64), finalOrderTotal: 0 };
+    const quote = { quoteHash: "a".repeat(64), orderTotal: 100000, remainingPayable: 20000 };
     const postSpy = vi.spyOn(api, "post").mockResolvedValue({ data: quote });
     const controller = new AbortController();
     const dto = {

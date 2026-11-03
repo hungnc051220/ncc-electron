@@ -360,6 +360,26 @@ const MODEL_REGISTRY_VALUE: Record<string, AuditModelDefinition> = {
       deleted: COMMON_FIELDS.deleted
     }
   },
+  PaperVoucherBatch: {
+    label: "Voucher giấy",
+    sentenceLabel: "lô voucher giấy",
+    entityNamePaths: ["batchCode", "name"],
+    allowCommonFields: false,
+    fields: {
+      batchCode: field("Mã lô", "text", 1),
+      name: field("Tên lô", "text", 2),
+      faceValue: field("Mệnh giá", "money", 3),
+      totalQuantity: field("Số lượng phát hành", "number", 4),
+      validFrom: field("Ngày bắt đầu hiệu lực", "date", 5),
+      expiresAt: field("Hạn sử dụng", "date", 6),
+      isLocked: field("Trạng thái khóa", "boolean", 7, {
+        booleanLabels: { true: "Đã khóa", false: "Đang mở" }
+      }),
+      note: field("Ghi chú", "text", 30, { omitWhenEmpty: true }),
+      images: field("Ảnh voucher", "text", 40, { omitWhenEmpty: true }),
+      deleted: COMMON_FIELDS.deleted
+    }
+  },
   CancelReason: {
     label: "Lý do hủy vé",
     sentenceLabel: "lý do hủy vé",

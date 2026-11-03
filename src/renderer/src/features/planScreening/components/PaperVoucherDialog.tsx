@@ -236,7 +236,7 @@ const PaperVoucherDialog = ({
         <div className="flex items-center gap-2">
           <span>Áp dụng voucher giấy</span>
           <Tag color="warning" variant="outlined" className="m-0 font-normal">
-            {saleEnabled ? "Chỉ thanh toán tiền mặt" : "Chưa ghi nhận vào đơn bán vé"}
+            {saleEnabled ? "Tương đương tiền mặt" : "Chưa ghi nhận vào đơn bán vé"}
           </Tag>
         </div>
       }
@@ -332,7 +332,7 @@ const PaperVoucherDialog = ({
             className="m-0 mt-1 border-t border-app-border pt-3 text-[11px] leading-4 text-slate-500 dark:text-slate-400"
           >
             {saleEnabled
-              ? "Hệ thống tính số tiền khách cần trả sau khi áp dụng, trừ voucher trên toàn đơn. Phần mệnh giá vượt giá trị đơn không được hoàn lại."
+              ? "Voucher giấy dùng như tiền mặt để thanh toán đơn, không làm giảm giá vé. Sau khi áp dụng, hệ thống tính số tiền khách cần thanh toán thêm. Phần mệnh giá vượt giá trị đơn không được hoàn lại."
               : "Số lượng lô lấy từ hệ thống. Hệ thống chưa ghi nhận voucher giấy vào đơn bán vé."}
           </p>
         </aside>

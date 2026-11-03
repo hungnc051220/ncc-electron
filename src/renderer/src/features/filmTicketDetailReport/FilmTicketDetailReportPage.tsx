@@ -4,6 +4,7 @@ import FullHeightTabs from "@renderer/components/FullHeightTabs";
 import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import {
+  buildRevenueByFilmRows,
   getActualRemittance,
   getRevenueColumnMode,
   getTotalTicketAndContract
@@ -58,83 +59,10 @@ const FilmTicketDetailReportPage = () => {
   const { data, isFetching, refetch } = useReportRevenueByFilm(params, hasRequiredFilter);
   const reportData = hasRequiredFilter ? data : undefined;
 
+  // Dùng chung cách dựng dòng với báo cáo doanh thu nhân viên (gồm các trường voucher giấy dùng để
+  // tính "Thực nộp").
   const tableData = useMemo<Row[]>(
-    () =>
-      reportData?.revenuesByFilm.map((film) => {
-        const sortedScreens = [...film.planScreens].sort((a, b) => {
-          if (a.projectDate !== b.projectDate) {
-            return a.projectDate.localeCompare(b.projectDate);
-          }
-          if (a.projectTime !== b.projectTime) {
-            return new Date(a.projectTime).getTime() - new Date(b.projectTime).getTime();
-          }
-          return Number(a.isOnline) - Number(b.isOnline);
-        });
-
-        const children = sortedScreens.map((p) => {
-          const pricesMap: Record<number, number> = {};
-          p.prices.forEach((pr) => {
-            pricesMap[pr.price] = pr.totalQuantity;
-          });
-
-          const crmDiscount = p.crmDiscount ?? {};
-          const internalDiscount = p.internalDiscount ?? {};
-
-          return {
-            key: `${film.filmId}-${p.planScreenId}-${p.isOnline}`,
-            filmName: film.filmName,
-            projectDate: p.projectDate,
-            projectTime: p.projectTime,
-            roomName: p.roomName,
-            isOnline: p.isOnline,
-            pricesMap,
-            totalInvitationQuantity: p.totalInvitationQuantity,
-            totalContractQuantity: p.totalContractQuantity,
-            totalQuantity: p.totalQuantity,
-            totalSale: p.totalSale,
-            saleVnPayQr: p.saleVnPayQr,
-            saleVietQr: p.saleVietQr,
-            actualSale: p.actualSale || 0,
-            discountOffline: crmDiscount.discountOffline ?? p.discountOffline ?? 0,
-            discountOnline: crmDiscount.discountOnline ?? p.discountOnline ?? 0,
-            discountPartner: crmDiscount.discountPartner ?? p.discountPartner ?? 0,
-            discountTotal: crmDiscount.discountTotal ?? p.discountTotal ?? 0,
-            internalDiscountTotal: internalDiscount.discountTotal ?? 0
-          };
-        });
-
-        const pricesMap = children.reduce<Record<number, number>>((acc, row) => {
-          Object.entries(row.pricesMap).forEach(([price, quantity]) => {
-            const numericPrice = Number(price);
-            acc[numericPrice] = (acc[numericPrice] ?? 0) + quantity;
-          });
-          return acc;
-        }, {});
-
-        return {
-          key: `film-${film.filmId}`,
-          filmName: film.filmName,
-          isSummary: true,
-          projectDate: "",
-          projectTime: "",
-          roomName: "",
-          isOnline: false,
-          pricesMap,
-          totalInvitationQuantity: film.totalInvitationQuantity,
-          totalContractQuantity: film.totalContractQuantity,
-          totalQuantity: film.totalQuantity,
-          totalSale: film.totalSale,
-          saleVnPayQr: film.saleVnPayQr,
-          saleVietQr: film.saleVietQr,
-          actualSale: film.actualSale || 0,
-          discountOffline: children.reduce((sum, row) => sum + row.discountOffline, 0),
-          discountOnline: children.reduce((sum, row) => sum + row.discountOnline, 0),
-          discountPartner: children.reduce((sum, row) => sum + row.discountPartner, 0),
-          discountTotal: children.reduce((sum, row) => sum + row.discountTotal, 0),
-          internalDiscountTotal: children.reduce((sum, row) => sum + row.internalDiscountTotal, 0),
-          children
-        };
-      }) || [],
+    () => buildRevenueByFilmRows(reportData?.revenuesByFilm),
     [reportData?.revenuesByFilm]
   );
 

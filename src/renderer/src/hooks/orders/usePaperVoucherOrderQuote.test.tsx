@@ -5,7 +5,10 @@ import { AxiosError, AxiosHeaders, type AxiosResponse } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ordersApi, type OrderQuoteDto } from "@renderer/api/orders.api";
 import type { PaperVoucherOrderQuote } from "@shared/types";
-import { usePaperVoucherOrderQuote } from "./usePaperVoucherOrderQuote";
+import {
+  PAPER_VOUCHER_QUOTE_DEBOUNCE_MS,
+  usePaperVoucherOrderQuote
+} from "./usePaperVoucherOrderQuote";
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -31,18 +34,17 @@ const createDto = (quantity: number): OrderQuoteDto => ({
   paperVouchers: [{ batchId: 3, quantity, faceValue: 100000 }]
 });
 
-const createQuote = (finalOrderTotal: number, hash = "a"): PaperVoucherOrderQuote => ({
+/** Vé 100.000đ; voucher trả `100.000 − remainingPayable`, khách trả thêm `remainingPayable`. */
+const createQuote = (remainingPayable: number, hash = "a"): PaperVoucherOrderQuote => ({
   businessDate: "2026-10-30",
-  baseTotal: 100000,
+  orderTotal: 100000,
   orderDiscount: 0,
-  finalOrderTotal,
-  paperVoucher: {
-    lines: [],
-    voucherQuantity: 1,
-    faceValueTotal: 100000,
-    voucherApplied: 100000 - finalOrderTotal,
-    excessAmount: 0
-  },
+  voucherQuantity: 1,
+  faceValueTotal: 100000,
+  voucherApplied: 100000 - remainingPayable,
+  remainingPayable,
+  excessAmount: 0,
+  lines: [],
   allowedPaymentMethods: ["POS"],
   warnings: [],
   quoteHash: hash.repeat(64)
@@ -113,6 +115,81 @@ describe("usePaperVoucherOrderQuote", () => {
     expect(result.current.quote?.quoteHash).toBe("c".repeat(64));
   });
 
+  it("waits for the selection to settle before quoting, even with rapid changes", async () => {
+    vi.useFakeTimers();
+    try {
+      const quoteSpy = vi.spyOn(ordersApi, "quote").mockResolvedValue(createQuote(0));
+      const { result, rerender } = renderHook(
+        ({ dto }: { dto: OrderQuoteDto | null }) => usePaperVoucherOrderQuote(dto),
+        { wrapper: createWrapper(), initialProps: { dto: null as OrderQuoteDto | null } }
+      );
+
+      // Thu ngân đổi số tờ liên tục (mỗi lần cách nhau < debounce): chưa gọi API.
+      for (const quantity of [1, 2, 3, 2, 3]) {
+        rerender({ dto: createDto(quantity) });
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(PAPER_VOUCHER_QUOTE_DEBOUNCE_MS - 50);
+        });
+      }
+      expect(quoteSpy).not.toHaveBeenCalled();
+      expect(result.current).toMatchObject({ isLoading: true, quote: undefined });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PAPER_VOUCHER_QUOTE_DEBOUNCE_MS);
+      });
+      expect(quoteSpy).toHaveBeenCalledTimes(1);
+      expect(quoteSpy).toHaveBeenCalledWith(createDto(3), expect.anything());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels the pending request as soon as the selection changes", async () => {
+    const stale = deferred<PaperVoucherOrderQuote>();
+    const quoteSpy = vi.spyOn(ordersApi, "quote").mockReturnValue(stale.promise);
+    const { result, rerender } = renderHook(
+      ({ dto }: { dto: OrderQuoteDto | null }) => usePaperVoucherOrderQuote(dto),
+      { wrapper: createWrapper(), initialProps: { dto: createDto(1) as OrderQuoteDto | null } }
+    );
+    await waitFor(() => expect(quoteSpy).toHaveBeenCalledTimes(1));
+    const staleSignal = quoteSpy.mock.calls[0][1];
+
+    // Không chờ hết debounce của lựa chọn mới mới hủy request cũ.
+    rerender({ dto: createDto(2) });
+    expect(staleSignal?.aborted).toBe(true);
+    expect(result.current).toMatchObject({ isLoading: true, quote: undefined });
+  });
+
+  it("aborts the request and does not quote again when the voucher is cleared", async () => {
+    const pending = deferred<PaperVoucherOrderQuote>();
+    const quoteSpy = vi.spyOn(ordersApi, "quote").mockReturnValue(pending.promise);
+    const { result, rerender } = renderHook(
+      ({ dto }: { dto: OrderQuoteDto | null }) => usePaperVoucherOrderQuote(dto),
+      { wrapper: createWrapper(), initialProps: { dto: createDto(1) as OrderQuoteDto | null } }
+    );
+    await waitFor(() => expect(quoteSpy).toHaveBeenCalledTimes(1));
+    const signal = quoteSpy.mock.calls[0][1];
+
+    rerender({ dto: null });
+    expect(signal?.aborted).toBe(true);
+    expect(result.current).toMatchObject({
+      isLoading: false,
+      isReady: false,
+      quote: undefined,
+      errorMessage: undefined
+    });
+
+    await act(async () => pending.resolve(createQuote(0)));
+    expect(result.current.quote).toBeUndefined();
+
+    // Chọn lựa chọn khác ngay sau khi bỏ: chỉ báo giá lựa chọn mới.
+    quoteSpy.mockResolvedValue(createQuote(20000, "n"));
+    rerender({ dto: createDto(2) });
+    await waitFor(() => expect(result.current.quote?.quoteHash).toBe("n".repeat(64)));
+    expect(quoteSpy).toHaveBeenCalledTimes(2);
+    expect(quoteSpy).toHaveBeenLastCalledWith(createDto(2), expect.anything());
+  });
+
   it("shows the backend error message", async () => {
     const config = { headers: new AxiosHeaders() };
     vi.spyOn(ordersApi, "quote").mockRejectedValue(
@@ -142,13 +219,15 @@ describe("usePaperVoucherOrderQuote", () => {
 
     act(() => result.current.replaceQuote(createQuote(10000, "b"), result.current.requestKey));
     expect(result.current.quote).toMatchObject({
-      finalOrderTotal: 10000,
+      remainingPayable: 10000,
       quoteHash: "b".repeat(64)
     });
+    expect(result.current.isReplaced).toBe(true);
 
     rerender({ dto: createDto(2) });
     await waitFor(() => expect(result.current.isReady).toBe(true));
     expect(result.current.quote?.quoteHash).toBe("a".repeat(64));
+    expect(result.current.isReplaced).toBe(false);
 
     // Quay lại lựa chọn cũ: báo giá thay thế đã bỏ, lấy báo giá mới từ backend.
     rerender({ dto: createDto(1) });

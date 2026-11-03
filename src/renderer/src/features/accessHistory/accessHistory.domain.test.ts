@@ -185,10 +185,12 @@ describe("access history registry", () => {
       "DayPart",
       "Room",
       "Position",
+      "PaperVoucherBatch",
       "CancelReason",
       "Customer",
       "User"
     ]);
+    expect(getModelDefinition("PaperVoucherBatch")?.label).toBe("Voucher giấy");
     expect(getModelDefinition("PlanScreenings")?.label).toBe("Lịch chiếu phim");
     expect(getModelDefinition("PlanCinemaFlying")?.label).toBe("Kế hoạch chiếu phim");
     expect(getModelDefinition("Position")?.label).toBe("Hạng ghế");
@@ -725,5 +727,78 @@ describe("activity view-model presenter", () => {
       changedFields: ["[Đã ẩn]", "username"]
     });
     expect(JSON.stringify(result.technicalData)).not.toContain("changed-field-secret");
+  });
+});
+
+describe("paper voucher batch activity (StaffAuditLog rows written by the backend)", () => {
+  const baseRecord = {
+    userId: 7,
+    username: "admin",
+    model: "PaperVoucherBatch",
+    entityId: "3",
+    timestamp: "2026-11-04T09:30:00+07:00"
+  };
+
+  it("shows a CREATE with the batch code as name and business fields only", () => {
+    const result = buildActivityViewModel({
+      ...baseRecord,
+      id: 101,
+      action: "CREATE",
+      newValues: JSON.stringify({
+        batchCode: "LÔ-003",
+        name: "Voucher 100k",
+        faceValue: 100000,
+        totalQuantity: 200,
+        validFrom: "2026-11-01",
+        expiresAt: "2026-12-31",
+        isLocked: false,
+        note: null,
+        images: "front.jpg, back.jpg"
+      })
+    });
+
+    expect(result.title).toBe("Tạo lô voucher giấy");
+    expect(result.modelLabel).toBe("Voucher giấy");
+    expect(result.entityLabel).toBe("LÔ-003");
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_MODEL");
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_FIELDS");
+    expect(result.snapshotItems.find((item) => item.path === "faceValue")?.valueText).toBe(
+      formatAuditMoney(100000)
+    );
+    expect(result.snapshotItems.find((item) => item.path === "expiresAt")?.valueText).toBe(
+      "31/12/2026"
+    );
+  });
+
+  it("shows only the real changes of an UPDATE, not the identity written on both sides", () => {
+    const result = buildActivityViewModel({
+      ...baseRecord,
+      id: 102,
+      action: "UPDATE",
+      oldValues: JSON.stringify({ batchCode: "LÔ-003", name: "Voucher 100k", isLocked: false }),
+      newValues: JSON.stringify({ batchCode: "LÔ-003", name: "Voucher 100k", isLocked: true }),
+      changedFields: "isLocked"
+    });
+
+    expect(result.entityLabel).toBe("LÔ-003");
+    expect(result.changes.map((change) => change.path)).toEqual(["isLocked"]);
+    expect(result.changes[0]).toMatchObject({
+      label: "Trạng thái khóa",
+      beforeText: "Đang mở",
+      afterText: "Đã khóa"
+    });
+  });
+
+  it("shows a soft DELETE with the state before deletion", () => {
+    const result = buildActivityViewModel({
+      ...baseRecord,
+      id: 103,
+      action: "DELETE",
+      oldValues: JSON.stringify({ batchCode: "LÔ-003", name: "Voucher 100k", faceValue: 100000 })
+    });
+
+    expect(result.title).toBe("Xóa lô voucher giấy");
+    expect(result.detailTitle).toBe("Thông tin đã xóa");
+    expect(result.entityLabel).toBe("LÔ-003");
   });
 });

@@ -81,47 +81,117 @@ export interface PaperVoucherQuoteLine extends PaperVoucherRedemptionLine {
   excessAmount: number;
 }
 
-/** Tổng hợp voucher giấy của một đơn, do backend tính sau mọi khuyến mãi hiện có. */
-export interface PaperVoucherOrderBreakdown {
-  lines: PaperVoucherQuoteLine[];
-  voucherQuantity: number;
-  faceValueTotal: number;
-  voucherApplied: number;
-  excessAmount: number;
-}
-
+/** `code` của cảnh báo báo giá, vd. `PAPER_VOUCHER_EXCESS`, `PAPER_VOUCHER_FULLY_PAID`. */
 export interface PaperVoucherQuoteWarning {
   code: string;
   message: string;
 }
 
-/** Kết quả `POST /api/pos/order/quote`. FE chỉ hiển thị, không tự tính lại số tiền. */
+/**
+ * Kết quả `POST /api/pos/order/quote` (và `details.quote` của lỗi 409 `QUOTE_CHANGED`).
+ * FE chỉ hiển thị, không tự tính lại số tiền.
+ *
+ * Voucher giấy là một nguồn thanh toán (tương đương tiền mặt), không phải giảm giá: tổng đơn, giá
+ * vé, doanh thu giữ nguyên; voucher trả `voucherApplied`, khách trả thêm `remainingPayable`.
+ * Bất biến: `orderTotal = voucherApplied + remainingPayable`,
+ * `faceValueTotal = voucherApplied + excessAmount`.
+ */
 export interface PaperVoucherOrderQuote {
   businessDate: string;
-  /** Tổng đơn sau các khuyến mãi hiện có, trước voucher giấy. */
-  baseTotal: number;
+  /** Tổng đơn sau mọi khuyến mãi; voucher giấy không làm thay đổi. */
+  orderTotal: number;
   /** Chỉ gồm khuyến mãi hiện có (không gồm voucher giấy). */
   orderDiscount: number;
-  /** Số tiền khách cần trả (tiền mặt). */
-  finalOrderTotal: number;
-  paperVoucher: PaperVoucherOrderBreakdown;
+  voucherQuantity: number;
+  faceValueTotal: number;
+  /** Phần đơn trả bằng voucher giấy = min(orderTotal, faceValueTotal). */
+  voucherApplied: number;
+  /** Khách cần thanh toán thêm (tiền mặt hoặc VietQR). */
+  remainingPayable: number;
+  /** Phần mệnh giá vượt giá trị đơn: không hoàn lại. */
+  excessAmount: number;
+  lines: PaperVoucherQuoteLine[];
+  /** Phương thức trả phần còn lại: `POS` (tiền mặt), có thể thêm `Payments.VietQR`. */
   allowedPaymentMethods: string[];
   warnings: PaperVoucherQuoteWarning[];
   quoteHash: string;
 }
 
-/** `paperVoucher` trong response tạo đơn có dùng voucher giấy. */
+/** Trạng thái ghi nhận voucher của đơn: `held` = đang giữ chờ thanh toán QR. */
+export type PaperVoucherRedemptionStatus = "held" | "applied" | "released" | "cancelled";
+
+/** `paperVoucher` trong response tạo đơn có dùng voucher giấy (`orderTotal` của đơn không đổi). */
 export interface OrderPaperVoucherResult {
   redemptionId: number;
   requestId: string;
-  baseTotal: number;
+  status: PaperVoucherRedemptionStatus;
+  /** Phương thức trả phần còn lại (`POS` hoặc `Payments.VietQR`). */
+  paymentMethodSystemName: string;
+  orderTotal: number;
   voucherQuantity: number;
   faceValueTotal: number;
   voucherApplied: number;
-  finalOrderTotal: number;
+  remainingPayable: number;
   excessAmount: number;
+  /** Tiền khách đã trả thêm; `null` khi chưa thu (đơn QR đang chờ thanh toán). */
+  collectedAmount: number | null;
   /** `true` khi backend trả lại đơn đã tạo ở lần gửi trước cùng `paperVoucherRequestId`. */
   replayed: boolean;
+}
+
+/**
+ * Trạng thái từng lô voucher của đơn: `applied` = đang tính vào số đã dùng của lô,
+ * `reversed` = đã trả tờ về lô (QR chưa thanh toán), `cancelled` = đơn đã hủy (tờ vô hiệu, không trả về lô).
+ */
+export type OrderPaperVoucherLineStatus = "applied" | "reversed" | "cancelled";
+
+/** Một lô voucher giấy đã dùng cho đơn (một dòng mỗi lô). */
+export interface OrderPaperVoucherDetailLine {
+  batchId: number;
+  batchCode: string;
+  batchName: string | null;
+  quantity: number;
+  /** Mệnh giá ghi nhận lúc bán. */
+  faceValue: number;
+  faceValueTotal: number;
+  /** Phần tiền đơn được trả bằng lô này. */
+  appliedAmount: number;
+  /** Phần mệnh giá của lô vượt giá trị đơn: không hoàn lại. */
+  excessAmount: number;
+  status: OrderPaperVoucherLineStatus;
+}
+
+/**
+ * `paperVoucher` trong `GET /api/pos/order/:id`; `null` với đơn không dùng voucher giấy.
+ * `order.orderTotal` vẫn là tổng tiền vé trước voucher (voucher là nguồn thanh toán, không phải giảm giá).
+ */
+export interface OrderPaperVoucherDetail {
+  redemptionId: number;
+  requestId: string;
+  status: PaperVoucherRedemptionStatus;
+  /** Phương thức trả phần còn lại (`POS` hoặc `Payments.VietQR`). */
+  paymentMethodSystemName: string;
+  orderTotal: number;
+  voucherQuantity: number;
+  faceValueTotal: number;
+  voucherApplied: number;
+  remainingPayable: number;
+  excessAmount: number;
+  /** Tiền khách đã trả thêm; `null` khi chưa thu (QR đang chờ hoặc chưa từng thanh toán). */
+  collectedAmount: number | null;
+  appliedAt: string | null;
+  reversedAt: string | null;
+  reversedBy: string | null;
+  reversalSource: string | null;
+  reversalReason: string | null;
+  lines: OrderPaperVoucherDetailLine[];
+}
+
+/** `paperVoucher` trong response `create-qr` của đơn có voucher giấy. */
+export interface QrPaperVoucherAmounts {
+  orderTotal: number;
+  voucherApplied: number;
+  remainingPayable: number;
 }
 
 export type PaperVoucherUsageStatus = "applied" | "reversed";

@@ -112,11 +112,12 @@ describe("PaperVoucherDialog", () => {
     const { dialog } = renderDialog();
     await screen.findByTestId("paper-voucher-option-LÔ-003");
 
-    expect(within(dialog).getByText("Chỉ thanh toán tiền mặt")).toBeInTheDocument();
+    expect(within(dialog).getByText("Tương đương tiền mặt")).toBeInTheDocument();
     expect(within(dialog).queryByText("Chưa ghi nhận vào đơn bán vé")).toBeNull();
-    expect(screen.getByTestId("paper-voucher-dialog-note")).toHaveTextContent(
-      /không được hoàn lại/
-    );
+    const note = screen.getByTestId("paper-voucher-dialog-note");
+    expect(note).toHaveTextContent(/không làm giảm giá vé/);
+    expect(note).toHaveTextContent(/cần thanh toán thêm/);
+    expect(note).toHaveTextContent(/không được hoàn lại/);
   });
 
   it("selects several batches without a ticket cap and does not compute order amounts", async () => {

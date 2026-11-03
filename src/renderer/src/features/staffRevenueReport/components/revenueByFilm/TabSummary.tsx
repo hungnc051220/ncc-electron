@@ -5,7 +5,9 @@ import {
   Row,
   SummaryGroup,
   RevenueColumnMode,
+  buildPaperVoucherColumns,
   getActualRemittance,
+  getPaperVoucherReportAmounts,
   getTotalRevenue,
   getTotalRevenueAfterDiscount,
   getTotalTicketAndContract
@@ -32,6 +34,9 @@ export type SummaryRow = {
   discountPartner: number;
   discountTotal: number;
   internalDiscountTotal: number;
+  paperVoucherQuantity: number;
+  paperVoucherExcess: number;
+  paperVoucherApplied: number;
 };
 
 interface TabSummaryProps {
@@ -41,6 +46,8 @@ interface TabSummaryProps {
   totalRevenueOnline?: TotalRevenueOnlineProps;
   totalRevenueOffline?: TotalRevenueOnlineProps;
   columnMode: RevenueColumnMode;
+  /** Thêm 2 cột voucher giấy (khi không lọc theo hãng phim). */
+  showPaperVoucherColumns?: boolean;
 }
 
 const TabSummary = ({
@@ -49,8 +56,11 @@ const TabSummary = ({
   totalRevenue,
   totalRevenueOnline,
   totalRevenueOffline,
-  columnMode
+  columnMode,
+  showPaperVoucherColumns = false
 }: TabSummaryProps) => {
+  const hasPaperVoucherColumns = showPaperVoucherColumns && columnMode !== "manufacturer";
+  const paperVoucherColumns = hasPaperVoucherColumns ? buildPaperVoucherColumns<SummaryRow>() : [];
   const sumGroup = (rows: Row[]) => {
     const prices: Record<number, number> = {};
     let totalPlanScreen = 0;
@@ -66,6 +76,9 @@ const TabSummary = ({
     let discountPartner = 0;
     let discountTotal = 0;
     let internalDiscountTotal = 0;
+    let paperVoucherQuantity = 0;
+    let paperVoucherExcess = 0;
+    let paperVoucherApplied = 0;
 
     rows.forEach((r) => {
       totalPlanScreen += 1;
@@ -81,6 +94,9 @@ const TabSummary = ({
       discountPartner += r.discountPartner;
       discountTotal += r.discountTotal;
       internalDiscountTotal += r.internalDiscountTotal;
+      paperVoucherQuantity += r.paperVoucherQuantity;
+      paperVoucherExcess += r.paperVoucherExcess;
+      paperVoucherApplied += r.paperVoucherApplied;
 
       Object.entries(r.pricesMap).forEach(([price, qty]) => {
         const p = Number(price);
@@ -102,7 +118,10 @@ const TabSummary = ({
       discountOnline,
       discountPartner,
       discountTotal,
-      internalDiscountTotal
+      internalDiscountTotal,
+      paperVoucherQuantity,
+      paperVoucherExcess,
+      paperVoucherApplied
     };
   };
 
@@ -129,7 +148,10 @@ const TabSummary = ({
       discountOnline: offSum.discountOnline,
       discountPartner: offSum.discountPartner,
       discountTotal: offSum.discountTotal,
-      internalDiscountTotal: offSum.internalDiscountTotal
+      internalDiscountTotal: offSum.internalDiscountTotal,
+      paperVoucherQuantity: offSum.paperVoucherQuantity,
+      paperVoucherExcess: offSum.paperVoucherExcess,
+      paperVoucherApplied: offSum.paperVoucherApplied
     });
 
     tableData.push({
@@ -149,7 +171,10 @@ const TabSummary = ({
       discountOnline: onSum.discountOnline,
       discountPartner: onSum.discountPartner,
       discountTotal: onSum.discountTotal,
-      internalDiscountTotal: onSum.internalDiscountTotal
+      internalDiscountTotal: onSum.internalDiscountTotal,
+      paperVoucherQuantity: onSum.paperVoucherQuantity,
+      paperVoucherExcess: onSum.paperVoucherExcess,
+      paperVoucherApplied: onSum.paperVoucherApplied
     });
   });
 
@@ -254,6 +279,7 @@ const TabSummary = ({
                   align: "right" as const,
                   render: (value: number) => formatMoney(value)
                 },
+                ...paperVoucherColumns,
                 {
                   title: "Thực nộp",
                   key: "actualRemittance",
@@ -270,7 +296,8 @@ const TabSummary = ({
                   align: "right" as const,
                   render: (_: number, row: SummaryRow) =>
                     formatMoney(getTotalRevenueAfterDiscount(row))
-                }
+                },
+                ...paperVoucherColumns
               ])
         ])
   ];
@@ -312,8 +339,26 @@ const TabSummary = ({
                     discountTotal: crmDiscountTotal
                   });
                   const totalRevenueAfterDiscount = getTotalRevenueAfterDiscount({ actualSale });
-                  const actualRemittance =
-                    actualSale - (value?.saleVietQr || 0) - (value?.saleVnPayQr || 0);
+                  const paperVoucher = getPaperVoucherReportAmounts(value);
+                  const actualRemittance = getActualRemittance({
+                    actualSale,
+                    saleVietQr: value?.saleVietQr || 0,
+                    saleVnPayQr: value?.saleVnPayQr || 0,
+                    paperVoucherApplied: paperVoucher.paperVoucherApplied
+                  });
+                  // Hai ô voucher giấy: trước "Thực nộp" (lọc theo nhân viên), sau "Tổng doanh thu sau KM".
+                  const paperVoucherCellIndex = columnMode === "user" ? 12 : 11;
+                  const paperVoucherCellCount = hasPaperVoucherColumns ? 2 : 0;
+                  const paperVoucherCells = hasPaperVoucherColumns && (
+                    <>
+                      <Table.Summary.Cell index={paperVoucherCellIndex} align="right">
+                        <strong>{formatNumber(paperVoucher.paperVoucherQuantity)}</strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={paperVoucherCellIndex + 1} align="right">
+                        <strong>{formatMoney(paperVoucher.paperVoucherExcess)}</strong>
+                      </Table.Summary.Cell>
+                    </>
+                  );
 
                   return (
                     <>
@@ -358,14 +403,21 @@ const TabSummary = ({
                               <Table.Summary.Cell index={11} align="right">
                                 <strong>{formatMoney(value?.saleVietQr || 0)}</strong>
                               </Table.Summary.Cell>
-                              <Table.Summary.Cell index={12} align="right">
+                              {paperVoucherCells}
+                              <Table.Summary.Cell
+                                index={paperVoucherCellIndex + paperVoucherCellCount}
+                                align="right"
+                              >
                                 <strong>{formatMoney(actualRemittance)}</strong>
                               </Table.Summary.Cell>
                             </>
                           ) : (
-                            <Table.Summary.Cell index={10} align="right">
-                              <strong>{formatMoney(totalRevenueAfterDiscount)}</strong>
-                            </Table.Summary.Cell>
+                            <>
+                              <Table.Summary.Cell index={10} align="right">
+                                <strong>{formatMoney(totalRevenueAfterDiscount)}</strong>
+                              </Table.Summary.Cell>
+                              {paperVoucherCells}
+                            </>
                           )}
                         </>
                       )}

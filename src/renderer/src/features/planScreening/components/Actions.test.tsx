@@ -10,17 +10,23 @@ import { useSettingPosStore } from "@renderer/store/settingPos.store";
 import {
   DiscountProps,
   ListSeat,
+  OrderPaperVoucherResult,
   OrderStatus,
+  PaperVoucherBatch,
   PaperVoucherOrderQuote,
+  PaperVoucherQuoteLine,
   PaymentType,
   PlanScreeningDetailProps
 } from "@shared/types";
 import type { OrderDto } from "@renderer/api/orders.api";
 import {
   PAPER_VOUCHER_NETWORK_ERROR_MESSAGE,
-  PAPER_VOUCHER_QUOTE_CHANGED_MESSAGE
+  PAPER_VOUCHER_PREVIOUS_NOT_RECORDED_MESSAGE,
+  PAPER_VOUCHER_QUOTE_CHANGED_MESSAGE,
+  PAPER_VOUCHER_REQUEST_IN_PROGRESS_MESSAGE
 } from "./paperVoucherSale";
 import {
+  PAPER_VOUCHER_FIXTURES,
   setupPaperVoucherServer,
   stubObjectUrls
 } from "@renderer/features/vouchers/paperVouchers/paperVoucher.testUtils";
@@ -44,6 +50,7 @@ const mocks = vi.hoisted(() => ({
   updateOrderMutate: vi.fn(),
   cancelReserve: vi.fn(),
   quoteOrder: vi.fn(),
+  getPaperVoucherRequestStatus: vi.fn(),
   messageSuccess: vi.fn(),
   messageError: vi.fn(),
   messageWarning: vi.fn(),
@@ -259,12 +266,14 @@ vi.mock("../../invoices/components/InvoiceDialog", () => ({
 vi.mock("@renderer/api/orders.api", () => ({
   ordersApi: {
     cancelReserve: mocks.cancelReserve,
-    quote: mocks.quoteOrder
+    quote: mocks.quoteOrder,
+    getPaperVoucherRequestStatus: mocks.getPaperVoucherRequestStatus
   }
 }));
 
 const queryClientMock = {
-  invalidateQueries: mocks.invalidateQueries
+  invalidateQueries: mocks.invalidateQueries,
+  fetchQuery: ({ queryFn }: { queryFn: () => Promise<unknown> }) => queryFn()
 };
 
 vi.mock("@tanstack/react-query", async () => {
@@ -1104,43 +1113,70 @@ describe("Actions paper vouchers (sale flag off)", () => {
 });
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const TICKET_PRICE_UNDETERMINED_MESSAGE =
-  "Đơn nhiều vé chưa được voucher giấy trả hết hiện chưa được hỗ trợ";
 
+/** Lô 80.000đ đang áp dụng (ngày nghiệp vụ test 2026-10-30), thêm vào dữ liệu lô mặc định. */
+const BATCH_80K: PaperVoucherBatch = {
+  id: 5,
+  batchCode: "LÔ-005",
+  name: "Voucher giấy 80.000đ - 2026",
+  faceValue: 80000,
+  totalQuantity: 100,
+  usedCount: 0,
+  validFrom: "2026-01-01",
+  expiresAt: "2026-12-31",
+  isLocked: false,
+  note: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z"
+};
+
+const createQuoteLine = (
+  overrides: Partial<PaperVoucherQuoteLine> = {}
+): PaperVoucherQuoteLine => ({
+  batchId: 5,
+  batchCode: "LÔ-005",
+  quantity: 1,
+  faceValue: 80000,
+  faceValueTotal: 80000,
+  appliedAmount: 80000,
+  excessAmount: 0,
+  ...overrides
+});
+
+/** Báo giá rev 7 mặc định: vé 100.000đ, voucher 80.000đ trả 80.000đ, khách trả thêm 20.000đ. */
 const createQuote = (overrides: Partial<PaperVoucherOrderQuote> = {}): PaperVoucherOrderQuote => ({
   businessDate: "2026-10-30",
-  baseTotal: 190000,
+  orderTotal: 100000,
   orderDiscount: 0,
-  finalOrderTotal: 0,
-  paperVoucher: {
-    lines: [
-      {
-        batchId: 3,
-        batchCode: "LÔ-003",
-        quantity: 1,
-        faceValue: 100000,
-        faceValueTotal: 100000,
-        appliedAmount: 100000,
-        excessAmount: 0
-      },
-      {
-        batchId: 4,
-        batchCode: "LÔ-004",
-        quantity: 1,
-        faceValue: 95000,
-        faceValueTotal: 95000,
-        appliedAmount: 90000,
-        excessAmount: 5000
-      }
-    ],
-    voucherQuantity: 2,
-    faceValueTotal: 195000,
-    voucherApplied: 190000,
-    excessAmount: 5000
-  },
+  voucherQuantity: 1,
+  faceValueTotal: 80000,
+  voucherApplied: 80000,
+  remainingPayable: 20000,
+  excessAmount: 0,
+  lines: [createQuoteLine()],
   allowedPaymentMethods: ["POS"],
-  warnings: [{ code: "PAPER_VOUCHER_EXCESS", message: "Mệnh giá vượt 5.000 ₫ không hoàn lại" }],
+  warnings: [],
   quoteHash: "a".repeat(64),
+  ...overrides
+});
+
+/** `paperVoucher` của response tạo đơn tương ứng báo giá. */
+const createOrderPaperVoucher = (
+  quote: PaperVoucherOrderQuote,
+  overrides: Partial<OrderPaperVoucherResult> = {}
+): OrderPaperVoucherResult => ({
+  redemptionId: 1,
+  requestId: "6f1c2a8e-1d2b-4c3d-8e4f-5a6b7c8d9e0f",
+  status: "applied",
+  paymentMethodSystemName: "POS",
+  orderTotal: quote.orderTotal,
+  voucherQuantity: quote.voucherQuantity,
+  faceValueTotal: quote.faceValueTotal,
+  voucherApplied: quote.voucherApplied,
+  remainingPayable: quote.remainingPayable,
+  excessAmount: quote.excessAmount,
+  collectedAmount: quote.remainingPayable,
+  replayed: false,
   ...overrides
 });
 
@@ -1176,10 +1212,12 @@ const money = (amount: number) => formatMoney(amount).replace(/\s/g, "");
 const QUOTE_WAIT = { timeout: 10000 };
 const waitForQuote = (assertion: () => void) => waitFor(assertion, QUOTE_WAIT);
 
+const oneSeat = [createSeat()];
+
 describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", () => {
   beforeEach(async () => {
     vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", "true");
-    await setupPaperVoucherServer();
+    await setupPaperVoucherServer({ batches: [...PAPER_VOUCHER_FIXTURES, BATCH_80K] });
     stubObjectUrls();
     useSettingPosStore.setState({ posName: "POS Machine 1", posShortName: "M11" });
   });
@@ -1188,17 +1226,52 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     vi.unstubAllEnvs();
   });
 
-  it("requests a backend quote with the full order body and shows its amounts", async () => {
-    mocks.quoteOrder.mockResolvedValue(createQuote());
-    renderPaperVoucherActions();
+  it("does not quote nor change the sale when no paper voucher is selected", async () => {
+    mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onSuccess({ id: 130, orderTotal: 100000, orderDiscount: 0 })
+    );
+    renderPaperVoucherActions(oneSeat);
 
-    fireEvent.click(screen.getByTestId("apply-discount"));
-    const summary = await applyVouchers(["LÔ-003", "LÔ-004"]);
+    expect(textOf("order-final-amount")).toBe(money(100000));
+    fireEvent.click(getPrintButton());
 
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1));
+    expect(submittedOrders()[0]).not.toHaveProperty("paperVouchers");
+    expect(submittedOrders()[0]).not.toHaveProperty("expectedRemainingPayable");
+    await waitFor(() => expect(sessionStorage.getItem("lastTotal")).toBe("100000"));
+    expect(screen.queryByTestId("last-sale-paper-voucher")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("last-sale-collected")).not.toBeInTheDocument();
+    expect(mocks.quoteOrder).not.toHaveBeenCalled();
+  });
+
+  it("ignores the voucher part of a last sale cleared by another screen", () => {
+    sessionStorage.setItem("lastPaperVoucher", "80000");
+    sessionStorage.setItem("lastPaperVoucherCollected", "20000");
+    renderPaperVoucherActions(oneSeat);
+
+    expect(screen.queryByTestId("last-sale-paper-voucher")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("last-sale-collected")).not.toBeInTheDocument();
+  });
+
+  it("100.000đ ticket, 80.000đ voucher: customer pays 20.000đ cash, ticket total stays", async () => {
+    const quote = createQuote();
+    mocks.quoteOrder.mockResolvedValue(quote);
+    mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onSuccess({
+        id: 131,
+        orderTotal: 100000,
+        orderDiscount: 0,
+        orderStatusId: OrderStatus.COMPLETED,
+        paperVoucher: createOrderPaperVoucher(quote)
+      })
+    );
+    renderPaperVoucherActions(oneSeat);
+
+    const summary = await applyVouchers(["LÔ-005"]);
     expect(within(summary).getByTestId("paper-voucher-quote-loading")).toBeInTheDocument();
     expect(getPrintButton()).toBeDisabled();
 
-    await within(summary).findByTestId("paper-voucher-final-total", {}, QUOTE_WAIT);
+    await within(summary).findByTestId("paper-voucher-remaining", {}, QUOTE_WAIT);
     expect(mocks.quoteOrder).toHaveBeenCalledTimes(1);
     expect(mocks.quoteOrder).toHaveBeenCalledWith(
       {
@@ -1208,66 +1281,313 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
         posName: "POS Machine 1",
         posShortName: "M11",
         isInvitation: false,
-        discountGroups: [{ discountId: 1, chairIndices: ["1", "2"] }],
         hasManualInvoice: false,
-        listChairIndexF1: "1,2",
-        listChairValueF1: "A1,A2",
-        paperVouchers: [
-          { batchId: 3, quantity: 1, faceValue: 100000 },
-          { batchId: 4, quantity: 1, faceValue: 95000 }
-        ]
+        listChairIndexF1: "1",
+        listChairValueF1: "A1",
+        paperVouchers: [{ batchId: 5, quantity: 1, faceValue: 80000 }]
       },
       expect.anything()
     );
-
-    expect(within(summary).getByText("Chỉ thanh toán tiền mặt")).toBeInTheDocument();
-    expect(textOf("paper-voucher-base-total")).toBe(money(190000));
-    expect(textOf("paper-voucher-applied")).toBe(`−${money(190000)}`);
-    expect(textOf("paper-voucher-excess")).toBe(money(5000));
-    expect(summary).toHaveTextContent("(không hoàn lại)");
-    expect(textOf("paper-voucher-final-total")).toBe(money(0));
-    expect(screen.getByTestId("paper-voucher-quote-warning")).toHaveTextContent(
-      "Mệnh giá vượt 5.000 ₫ không hoàn lại"
-    );
-    // Ô "Thành tiền" hiển thị số tiền backend báo giá thay vì tự tính.
-    expect(textOf("order-final-amount")).toBe(money(0));
+    expect(within(summary).getByText("Tương đương tiền mặt")).toBeInTheDocument();
+    expect(summary).toHaveTextContent("Tổng tiền vé:");
+    expect(textOf("paper-voucher-order-total")).toBe(money(100000));
+    expect(summary).toHaveTextContent("Thanh toán bằng Voucher giấy:");
+    expect(textOf("paper-voucher-applied")).toBe(money(80000));
+    expect(summary).toHaveTextContent("Cần thanh toán thêm:");
+    expect(textOf("paper-voucher-remaining")).toBe(money(20000));
+    expect(textOf("paper-voucher-payment-method")).toBe("(Tiềnmặt)");
+    expect(screen.queryByTestId("paper-voucher-excess-warning")).not.toBeInTheDocument();
+    // "Thành tiền" là tổng tiền vé (doanh thu), không phải số tiền còn lại.
+    expect(textOf("order-final-amount")).toBe(money(100000));
     expect(getPrintButton()).toBeEnabled();
+
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1));
+    expect(submittedOrders()[0]).toMatchObject({
+      paymentMethodSystemName: "POS",
+      paperVouchers: [{ batchId: 5, quantity: 1, faceValue: 80000 }],
+      paperVoucherQuoteHash: "a".repeat(64),
+      expectedRemainingPayable: 20000
+    });
+    expect(submittedOrders()[0].paperVoucherRequestId).toMatch(UUID_V4);
+    expect(submittedOrders()[0]).not.toHaveProperty("expectedFinalOrderTotal");
+    expect(mocks.createQrMutateAsync).not.toHaveBeenCalled();
+
+    // Tiền vừa bán = tổng đơn (doanh số giữ nguyên); kèm phần voucher và tiền mặt khách trả thêm.
+    await waitFor(() => expect(sessionStorage.getItem("lastTotal")).toBe("100000"));
+    expect(textOf("last-sale-paper-voucher")).toBe(`Vouchergiấy:${money(80000)}`);
+    expect(textOf("last-sale-collected")).toBe(`Kháchtrảthêm:${money(20000)}`);
+    expect(sessionStorage.getItem("lastPaperVoucherCollected")).toBe("20000");
+    await waitFor(() =>
+      expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument()
+    );
+    expect(mocks.messageSuccess).toHaveBeenCalledWith("Tạo đơn thành công");
   }, 30000);
 
-  it("allows only cash payment and blocks seat reservation while vouchers are selected", async () => {
-    mocks.quoteOrder.mockResolvedValue(createQuote());
-    renderPaperVoucherActions();
-
-    fireEvent.click(screen.getByLabelText("Quét VietQR"));
-    expect(screen.getByLabelText("Quét VietQR")).toBeChecked();
+  it("100.000đ ticket, 100.000đ voucher: fully paid by voucher, cash only", async () => {
+    mocks.quoteOrder.mockResolvedValue(
+      createQuote({
+        faceValueTotal: 100000,
+        voucherApplied: 100000,
+        remainingPayable: 0,
+        lines: [
+          createQuoteLine({
+            batchId: 3,
+            batchCode: "LÔ-003",
+            faceValue: 100000,
+            faceValueTotal: 100000,
+            appliedAmount: 100000
+          })
+        ],
+        warnings: [
+          { code: "PAPER_VOUCHER_FULLY_PAID", message: "Voucher giấy đã thanh toán đủ đơn" }
+        ]
+      })
+    );
+    renderPaperVoucherActions(oneSeat);
 
     const summary = await applyVouchers(["LÔ-003"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
-    await waitFor(() => expect(screen.getByLabelText("Quét VietQR")).not.toBeChecked());
+    expect(textOf("paper-voucher-remaining")).toBe(money(0));
+    expect(within(summary).getByText("Voucher giấy đã thanh toán đủ")).toBeInTheDocument();
+    expect(screen.queryByTestId("paper-voucher-quote-warning")).not.toBeInTheDocument();
+    expect(textOf("order-final-amount")).toBe(money(100000));
     expect(screen.getByLabelText("Quét VietQR")).toBeDisabled();
     expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
-    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
 
-    fireEvent.click(within(summary).getByText("Bỏ áp dụng").closest("button")!);
-    expect(screen.getByLabelText("Quét VietQR")).toBeEnabled();
-    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeEnabled();
-    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1));
+    expect(submittedOrders()[0]).toMatchObject({
+      paymentMethodSystemName: "POS",
+      expectedRemainingPayable: 0
+    });
   }, 30000);
 
-  it("keeps In vé disabled while the quote is loading", async () => {
+  it("100.000đ ticket, 200.000đ vouchers: warns that the excess is not refunded", async () => {
+    mocks.quoteOrder.mockResolvedValue(
+      createQuote({
+        voucherQuantity: 2,
+        faceValueTotal: 200000,
+        voucherApplied: 100000,
+        remainingPayable: 0,
+        excessAmount: 100000,
+        lines: [
+          createQuoteLine({
+            batchId: 3,
+            batchCode: "LÔ-003",
+            quantity: 2,
+            faceValue: 100000,
+            faceValueTotal: 200000,
+            appliedAmount: 100000,
+            excessAmount: 100000
+          })
+        ],
+        warnings: [
+          { code: "PAPER_VOUCHER_EXCESS", message: "Tổng mệnh giá vượt giá trị đơn 100.000đ" },
+          { code: "PAPER_VOUCHER_FULLY_PAID", message: "Voucher giấy đã thanh toán đủ đơn" }
+        ]
+      })
+    );
+    renderPaperVoucherActions(oneSeat);
+
+    await applyVouchers(["LÔ-003"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+
+    expect(textOf("paper-voucher-excess-warning")).toBe(
+      `Tiềnthừavoucher${money(100000)}khônghoànlại`
+    );
+    expect(textOf("paper-voucher-face-value-total")).toBe(money(200000));
+    expect(textOf("paper-voucher-order-total")).toBe(money(100000));
+    expect(textOf("paper-voucher-applied")).toBe(money(100000));
+    expect(textOf("paper-voucher-remaining")).toBe(money(0));
+    // Cảnh báo backend trùng nội dung đã hiển thị thì không lặp lại.
+    expect(screen.queryByTestId("paper-voucher-quote-warning")).not.toBeInTheDocument();
+  }, 30000);
+
+  it("190.000đ for two tickets, 80.000đ voucher: 110.000đ remaining, no multi-ticket block", async () => {
+    mocks.quoteOrder.mockResolvedValue(
+      createQuote({ orderTotal: 190000, voucherApplied: 80000, remainingPayable: 110000 })
+    );
+    renderPaperVoucherActions(twoSeats);
+
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+
+    expect(textOf("paper-voucher-order-total")).toBe(money(190000));
+    expect(textOf("paper-voucher-applied")).toBe(money(80000));
+    expect(textOf("paper-voucher-remaining")).toBe(money(110000));
+    expect(textOf("order-final-amount")).toBe(money(190000));
+    expect(screen.queryByTestId("paper-voucher-quote-error")).not.toBeInTheDocument();
+
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1));
+    expect(submittedOrders()[0]).toMatchObject({
+      listChairIndexF1: "1,2",
+      expectedRemainingPayable: 110000
+    });
+  }, 30000);
+
+  it("offers VietQR only when allowed and charges the QR with the remaining amount", async () => {
+    const quote = createQuote({ allowedPaymentMethods: ["POS", PaymentType.VIETQR] });
+    const setSelectedSeats = vi.fn();
+    mocks.quoteOrder.mockResolvedValue(quote);
+    mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onSuccess({
+        id: 140,
+        orderTotal: 100000,
+        orderDiscount: 0,
+        orderStatusId: OrderStatus.PENDING,
+        paymentStatusId: 10,
+        shippingStatusId: 0,
+        paymentMethodSystemName: PaymentType.VIETQR,
+        createdOnUtc: "2026-10-30T10:00:00.000Z",
+        paperVoucher: createOrderPaperVoucher(quote, {
+          status: "held",
+          paymentMethodSystemName: PaymentType.VIETQR,
+          collectedAmount: null
+        })
+      })
+    );
+    mocks.createQrMutateAsync.mockResolvedValue({
+      qrcode: "vietqr://payload",
+      referenceLabelCode: "REF-140",
+      accountName: "NCC",
+      accountNumber: "123456789",
+      accountBankName: "VietinBank",
+      transactionAmount: 20000,
+      paperVoucher: { orderTotal: 100000, voucherApplied: 80000, remainingPayable: 20000 }
+    });
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={oneSeat}
+        setSelectedSeats={setSelectedSeats}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    expect(screen.getByLabelText("Quét VietQR")).toBeEnabled();
+    expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Quét VietQR"));
+    expect(textOf("paper-voucher-payment-method")).toBe("(QuétVietQR)");
+    // Đổi phương thức không báo giá lại.
+    expect(mocks.quoteOrder).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.createQrMutateAsync).toHaveBeenCalledTimes(1));
+    expect(submittedOrders()[0]).toMatchObject({
+      paymentMethodSystemName: PaymentType.VIETQR,
+      expectedRemainingPayable: 20000
+    });
+    expect(mocks.createQrMutateAsync).toHaveBeenCalledWith({
+      orderId: 140,
+      paymentMethod: PaymentType.VIETQR,
+      shortName: "M11"
+    });
+    await waitFor(() => expect(screen.getByTestId("qr-dialog")).toBeInTheDocument());
+    expect(window.api.sendQrOpen).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: 140,
+        orderTotal: 100000,
+        transactionAmount: 20000,
+        paperVoucher: { orderTotal: 100000, voucherApplied: 80000, remainingPayable: 20000 }
+      })
+    );
+
+    // QR còn chờ thanh toán (kể cả sự kiện trạng thái khác PAID): chưa là lần bán đã thanh toán.
+    await act(async () => {
+      paymentUpdatedHandler?.({ paymentStatus: 10, orderId: "140" });
+    });
+    expect(screen.getByTestId("qr-dialog")).toBeInTheDocument();
+    expect(sessionStorage.getItem("lastTotal")).toBeNull();
+    expect(screen.queryByTestId("last-sale-paper-voucher")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("last-sale-collected")).not.toBeInTheDocument();
+
+    await act(async () => {
+      paymentUpdatedHandler?.({ paymentStatus: 30, orderId: "140" });
+    });
+
+    await waitFor(() => expect(screen.queryByTestId("qr-dialog")).not.toBeInTheDocument());
+    // Tiền vừa bán = tổng đơn 100.000đ (doanh số, như đơn thường); kèm phần voucher và số QR đã
+    // nhận 20.000đ, không đánh tráo hai số. Lựa chọn voucher được xóa.
+    expect(sessionStorage.getItem("lastTotal")).toBe("100000");
+    expect(textOf("last-sale-paper-voucher")).toBe(`Vouchergiấy:${money(80000)}`);
+    expect(textOf("last-sale-collected")).toBe(`Kháchtrảthêm:${money(20000)}`);
+    expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument();
+    expect(setSelectedSeats).toHaveBeenCalledWith([]);
+  }, 30000);
+
+  it("falls back to cash visibly when the selected payment method is not allowed", async () => {
     let resolveQuote: (quote: PaperVoucherOrderQuote) => void = () => undefined;
     mocks.quoteOrder.mockReturnValue(
       new Promise<PaperVoucherOrderQuote>((resolve) => {
         resolveQuote = resolve;
       })
     );
-    renderPaperVoucherActions();
+    renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-003"]);
+    fireEvent.click(screen.getByLabelText("Quét VNPayQR"));
+    await applyVouchers(["LÔ-005"]);
+
+    // VNPayQR không bao giờ dùng với voucher giấy.
+    await waitFor(() => expect(screen.getByLabelText("Quét VNPayQR")).not.toBeChecked());
+    expect(mocks.messageWarning).toHaveBeenCalledWith(
+      "Quét VNPayQR không dùng được cho đơn có voucher giấy này. Đã chuyển sang tiền mặt."
+    );
+    expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
+
+    // Đang báo giá: vẫn chọn được VietQR; báo giá không cho phép thì chuyển về tiền mặt.
+    fireEvent.click(screen.getByLabelText("Quét VietQR"));
+    expect(screen.getByLabelText("Quét VietQR")).toBeChecked();
+    await act(async () => resolveQuote(createQuote()));
+
+    await waitForQuote(() => expect(screen.getByLabelText("Quét VietQR")).not.toBeChecked());
+    expect(screen.getByLabelText("Quét VietQR")).toBeDisabled();
+    expect(mocks.messageWarning).toHaveBeenLastCalledWith(
+      "Quét VietQR không dùng được cho đơn có voucher giấy này. Đã chuyển sang tiền mặt."
+    );
+    expect(textOf("paper-voucher-payment-method")).toBe("(Tiềnmặt)");
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+  }, 30000);
+
+  it("blocks seat reservation while vouchers are selected", async () => {
+    mocks.quoteOrder.mockResolvedValue(createQuote());
+    renderPaperVoucherActions(oneSeat);
+
+    const summary = await applyVouchers(["LÔ-005"]);
+    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
+
+    fireEvent.click(within(summary).getByText("Bỏ áp dụng").closest("button")!);
+    expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeEnabled();
+    expect(screen.getByLabelText("Quét VNPayQR")).toBeEnabled();
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+  }, 30000);
+
+  it("keeps only In vé disabled while the quote is loading", async () => {
+    let resolveQuote: (quote: PaperVoucherOrderQuote) => void = () => undefined;
+    mocks.quoteOrder.mockReturnValue(
+      new Promise<PaperVoucherOrderQuote>((resolve) => {
+        resolveQuote = resolve;
+      })
+    );
+    renderPaperVoucherActions(oneSeat);
+
+    const summary = await applyVouchers(["LÔ-005"]);
     await waitForQuote(() => expect(mocks.quoteOrder).toHaveBeenCalledTimes(1));
     expect(within(summary).getByTestId("paper-voucher-quote-loading")).toBeInTheDocument();
     expect(getPrintButton()).toBeDisabled();
     expect(textOf("order-final-amount")).toBe("--");
+    // Các thao tác khác vẫn dùng được trong lúc báo giá.
+    expect(screen.getByLabelText("Quẹt thẻ VIP")).toBeEnabled();
+    expect(screen.getByLabelText("Quét VietQR")).toBeEnabled();
+    expect(within(summary).getByText("Sửa").closest("button")).toBeEnabled();
+    expect(within(summary).getByText("Bỏ áp dụng").closest("button")).toBeEnabled();
 
     await act(async () => resolveQuote(createQuote()));
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
@@ -1277,18 +1597,18 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     mocks.quoteOrder.mockRejectedValueOnce(
       createApiError(400, {
         statusCode: 400,
-        code: "PAPER_VOUCHER_TICKET_PRICE_UNDETERMINED",
-        message: TICKET_PRICE_UNDETERMINED_MESSAGE
+        code: "PAPER_VOUCHER_ORDER_TOTAL_ZERO",
+        message: "Đơn 0 đồng không dùng voucher giấy"
       })
     );
     mocks.quoteOrder.mockResolvedValue(createQuote());
-    renderPaperVoucherActions();
+    renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-003"]);
+    const summary = await applyVouchers(["LÔ-005"]);
 
     expect(
       await within(summary).findByTestId("paper-voucher-quote-error", {}, QUOTE_WAIT)
-    ).toHaveTextContent(TICKET_PRICE_UNDETERMINED_MESSAGE);
+    ).toHaveTextContent("Đơn 0 đồng không dùng voucher giấy");
     expect(getPrintButton()).toBeDisabled();
 
     fireEvent.click(within(summary).getByText("Thử lại").closest("button")!);
@@ -1296,36 +1616,73 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     expect(mocks.quoteOrder).toHaveBeenCalledTimes(2);
   }, 30000);
 
-  it("reuses the request id for network/5xx retries and a changed quote, renews it after a sale", async () => {
-    const changedQuote = createQuote({ finalOrderTotal: 10000, quoteHash: "b".repeat(64) });
+  it("shows the new amounts of a 409 quote change and requires a new confirmation", async () => {
+    const changedQuote = createQuote({
+      orderTotal: 110000,
+      remainingPayable: 30000,
+      quoteHash: "b".repeat(64)
+    });
+    mocks.quoteOrder.mockResolvedValue(createQuote());
+    mocks.createOrderMutate.mockImplementationOnce((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onError(
+        createApiError(409, {
+          statusCode: 409,
+          code: "PAPER_VOUCHER_QUOTE_CHANGED",
+          message: "Báo giá đã thay đổi",
+          details: { quote: changedQuote }
+        })
+      )
+    );
+    renderPaperVoucherActions(oneSeat);
+
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    fireEvent.click(getPrintButton());
+
+    await waitFor(() =>
+      expect(mocks.messageWarning).toHaveBeenCalledWith(PAPER_VOUCHER_QUOTE_CHANGED_MESSAGE)
+    );
+    await waitForQuote(() => expect(textOf("paper-voucher-remaining")).toBe(money(30000)));
+    expect(textOf("paper-voucher-order-total")).toBe(money(110000));
+    expect(screen.getByTestId("paper-voucher-quote-replaced")).toBeInTheDocument();
+    // Không tự gửi lại đơn với số tiền cũ hay mới.
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+    expect(mocks.quoteOrder).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(2));
+    const [first, confirmed] = submittedOrders();
+    expect(first).toMatchObject({ expectedRemainingPayable: 20000 });
+    expect(confirmed).toMatchObject({
+      paperVoucherQuoteHash: "b".repeat(64),
+      expectedRemainingPayable: 30000
+    });
+    // Backend không ghi gì khi trả 409 báo giá đổi; payload mới (số tiền mới) đi với mã request mới.
+    expect(confirmed.paperVoucherRequestId).toMatch(UUID_V4);
+    expect(confirmed.paperVoucherRequestId).not.toBe(first.paperVoucherRequestId);
+    expect(mocks.getPaperVoucherRequestStatus).not.toHaveBeenCalled();
+  }, 30000);
+
+  it("reuses the request id for network/5xx retries and renews it after a sale", async () => {
     const outcomes: Array<(options: CreateOrderOptions) => void> = [
       (options) => options.onError(createApiError()),
       (options) =>
         options.onError(createApiError(503, { statusCode: 503, message: "Hệ thống đang bận" })),
       (options) =>
-        options.onError(
-          createApiError(409, {
-            statusCode: 409,
-            code: "PAPER_VOUCHER_QUOTE_CHANGED",
-            message: "Báo giá đã thay đổi",
-            details: { quote: changedQuote }
-          })
-        ),
-      (options) =>
         void options.onSuccess({
           id: 120,
-          orderTotal: 10000,
+          orderTotal: 100000,
           orderDiscount: 0,
-          createdOnUtc: "2026-10-30T10:00:00.000Z"
+          paperVoucher: createOrderPaperVoucher(createQuote())
         })
     ];
     mocks.quoteOrder.mockResolvedValue(createQuote());
     mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
       outcomes.shift()?.(options)
     );
-    renderPaperVoucherActions();
+    renderPaperVoucherActions(oneSeat);
 
-    await applyVouchers(["LÔ-003", "LÔ-004"]);
+    await applyVouchers(["LÔ-005"]);
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
     fireEvent.click(getPrintButton());
@@ -1338,63 +1695,206 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
 
     fireEvent.click(getPrintButton());
     await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(3));
-    expect(mocks.messageWarning).toHaveBeenCalledWith(PAPER_VOUCHER_QUOTE_CHANGED_MESSAGE);
-    // Báo giá mới từ lỗi 409 thay báo giá đang hiển thị, không tự gửi lại đơn.
-    await waitForQuote(() => expect(textOf("paper-voucher-final-total")).toBe(money(10000)));
-    expect(textOf("order-final-amount")).toBe(money(10000));
-    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(3);
-    expect(mocks.quoteOrder).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(getPrintButton());
-    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(4));
-
-    const [network, serverError, quoteChanged, confirmed] = submittedOrders();
-    expect(network).toMatchObject({
-      paymentMethodSystemName: "POS",
-      paperVouchers: [
-        { batchId: 3, quantity: 1, faceValue: 100000 },
-        { batchId: 4, quantity: 1, faceValue: 95000 }
-      ],
-      paperVoucherQuoteHash: "a".repeat(64),
-      expectedFinalOrderTotal: 0
-    });
+    const [network, serverError, confirmed] = submittedOrders();
     expect(network.paperVoucherRequestId).toMatch(UUID_V4);
     expect(serverError.paperVoucherRequestId).toBe(network.paperVoucherRequestId);
-    expect(quoteChanged.paperVoucherRequestId).toBe(network.paperVoucherRequestId);
-    // Sau 409 báo giá đổi: cùng lần bán, gửi lại cùng mã request với hash/số tiền mới.
-    expect(confirmed).toMatchObject({
-      paperVoucherRequestId: network.paperVoucherRequestId,
-      paperVoucherQuoteHash: "b".repeat(64),
-      expectedFinalOrderTotal: 10000
-    });
+    expect(confirmed.paperVoucherRequestId).toBe(network.paperVoucherRequestId);
 
     await waitFor(() =>
       expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument()
     );
-    expect(mocks.messageSuccess).toHaveBeenCalledWith("Tạo đơn thành công");
-    expect(sessionStorage.getItem("lastTotal")).toBe("10000");
 
     // Lần bán tiếp theo (cùng lựa chọn) dùng mã request mới.
     mocks.createOrderMutate.mockImplementation(() => undefined);
-    await applyVouchers(["LÔ-003", "LÔ-004"]);
+    await applyVouchers(["LÔ-005"]);
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
     fireEvent.click(getPrintButton());
-    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(5));
-    expect(submittedOrders()[4].paperVoucherRequestId).toMatch(UUID_V4);
-    expect(submittedOrders()[4].paperVoucherRequestId).not.toBe(confirmed.paperVoucherRequestId);
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(4));
+    expect(submittedOrders()[3].paperVoucherRequestId).toMatch(UUID_V4);
+    expect(submittedOrders()[3].paperVoucherRequestId).not.toBe(confirmed.paperVoucherRequestId);
+  }, 30000);
+
+  /** Lần bán tiền mặt bị mất mạng (chưa biết đã tạo đơn chưa), rồi thu ngân chọn VietQR và bấm In vé. */
+  const loseCashResponseThenSwitchToQr = async () => {
+    mocks.quoteOrder.mockResolvedValue(
+      createQuote({ allowedPaymentMethods: ["POS", PaymentType.VIETQR] })
+    );
+    mocks.createOrderMutate.mockImplementationOnce((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onError(createApiError())
+    );
+    renderPaperVoucherActions(oneSeat);
+
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByLabelText("Quét VietQR"));
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.getPaperVoucherRequestStatus).toHaveBeenCalledTimes(1));
+    return submittedOrders()[0];
+  };
+
+  // Lỗi mạng: không biết đơn tiền mặt đã tạo chưa. Không gửi payload QR với cùng mã, cũng không tạo
+  // giao dịch QR mới trước khi tra cứu mã cũ.
+  it("does not switch a lost cash sale to QR: it looks the old request up and finds its order", async () => {
+    mocks.getPaperVoucherRequestStatus.mockImplementation(async (requestId: string) => ({
+      requestId,
+      state: "found",
+      order: {
+        id: 140,
+        orderTotal: 100000,
+        paymentMethodSystemName: "POS",
+        paperVoucher: createOrderPaperVoucher(createQuote(), { requestId, replayed: true })
+      }
+    }));
+
+    const cash = await loseCashResponseThenSwitchToQr();
+
+    expect(mocks.getPaperVoucherRequestStatus).toHaveBeenCalledWith(cash.paperVoucherRequestId);
+    await waitFor(() =>
+      expect(mocks.messageWarning).toHaveBeenCalledWith(
+        "Lần bán trước đã tạo đơn #140 (đã thanh toán, Tiền mặt). Không tạo đơn mới; kiểm tra đơn này trong lịch sử đơn hàng."
+      )
+    );
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+    expect(mocks.createQrMutateAsync).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument()
+    );
+  }, 30000);
+
+  it("starts the QR sale with a new request id only once the lost cash sale is known not recorded", async () => {
+    mocks.getPaperVoucherRequestStatus.mockImplementation(async (requestId: string) => ({
+      requestId,
+      state: "not_found"
+    }));
+
+    const cash = await loseCashResponseThenSwitchToQr();
+    await waitFor(() =>
+      expect(mocks.messageWarning).toHaveBeenCalledWith(PAPER_VOUCHER_PREVIOUS_NOT_RECORDED_MESSAGE)
+    );
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(2));
+    const qr = submittedOrders()[1];
+    expect(qr.paymentMethodSystemName).toBe(PaymentType.VIETQR);
+    expect(qr.paperVoucherRequestId).toMatch(UUID_V4);
+    expect(qr.paperVoucherRequestId).not.toBe(cash.paperVoucherRequestId);
+  }, 30000);
+
+  it("waits while the lost attempt is still running on the server, and keeps blocking", async () => {
+    mocks.getPaperVoucherRequestStatus.mockImplementation(async (requestId: string) => ({
+      requestId,
+      state: "in_progress"
+    }));
+
+    await loseCashResponseThenSwitchToQr();
+    await waitFor(() =>
+      expect(mocks.messageWarning).toHaveBeenCalledWith(PAPER_VOUCHER_REQUEST_IN_PROGRESS_MESSAGE)
+    );
+
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(mocks.getPaperVoucherRequestStatus).toHaveBeenCalledTimes(2));
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it("a lookup failure creates nothing", async () => {
+    mocks.getPaperVoucherRequestStatus.mockRejectedValue(createApiError());
+
+    await loseCashResponseThenSwitchToQr();
+
+    await waitFor(() =>
+      expect(mocks.messageError).toHaveBeenLastCalledWith(
+        "Chưa kiểm tra được kết quả lần bán trước. Thử lại sau; chưa tạo giao dịch mới."
+      )
+    );
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it("REQUEST_ID_CONFLICT: looks the request up instead of selling again with a new id", async () => {
+    mocks.quoteOrder.mockResolvedValue(createQuote());
+    mocks.createOrderMutate.mockImplementationOnce((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onError(
+        createApiError(409, {
+          statusCode: 409,
+          code: "PAPER_VOUCHER_REQUEST_ID_CONFLICT",
+          message: "Mã giao dịch đã dùng cho đơn khác"
+        })
+      )
+    );
+    mocks.getPaperVoucherRequestStatus.mockImplementation(async (requestId: string) => ({
+      requestId,
+      state: "found",
+      order: {
+        id: 141,
+        orderTotal: 100000,
+        paymentMethodSystemName: "POS",
+        paperVoucher: createOrderPaperVoucher(createQuote(), { requestId, replayed: true })
+      }
+    }));
+    renderPaperVoucherActions(oneSeat);
+
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    fireEvent.click(getPrintButton());
+
+    await waitFor(() =>
+      expect(mocks.messageError).toHaveBeenCalledWith("Mã giao dịch đã dùng cho đơn khác")
+    );
+    await waitFor(() =>
+      expect(mocks.getPaperVoucherRequestStatus).toHaveBeenCalledWith(
+        submittedOrders()[0].paperVoucherRequestId
+      )
+    );
+    await waitFor(() =>
+      expect(mocks.messageWarning).toHaveBeenCalledWith(expect.stringContaining("đơn #141"))
+    );
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it("falls back to cash and re-quotes when the backend rejects the payment method", async () => {
+    mocks.quoteOrder
+      .mockResolvedValueOnce(createQuote({ allowedPaymentMethods: ["POS", PaymentType.VIETQR] }))
+      .mockResolvedValue(createQuote());
+    mocks.createOrderMutate.mockImplementationOnce((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onError(
+        createApiError(400, {
+          statusCode: 400,
+          code: "PAPER_VOUCHER_PAYMENT_METHOD_NOT_ALLOWED",
+          message: "Phương thức thanh toán không được phép"
+        })
+      )
+    );
+    renderPaperVoucherActions(oneSeat);
+
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    fireEvent.click(screen.getByLabelText("Quét VietQR"));
+    fireEvent.click(getPrintButton());
+
+    await waitFor(() =>
+      expect(mocks.messageError).toHaveBeenCalledWith("Phương thức thanh toán không được phép")
+    );
+    await waitFor(() => expect(screen.getByLabelText("Quét VietQR")).not.toBeChecked());
+    await waitForQuote(() => expect(mocks.quoteOrder).toHaveBeenCalledTimes(2));
+    await waitForQuote(() => expect(screen.getByLabelText("Quét VietQR")).toBeDisabled());
+    expect(mocks.createQrMutateAsync).not.toHaveBeenCalled();
   }, 30000);
 
   it("shows the message of other rejected sales and uses a new request id next time", async () => {
     const rejections = [
       createApiError(400, {
         statusCode: 400,
-        code: "PAPER_VOUCHER_TICKET_PRICE_UNDETERMINED",
-        message: TICKET_PRICE_UNDETERMINED_MESSAGE
+        code: "PAPER_VOUCHER_POS_DISABLED",
+        message: "Chưa bật bán vé có voucher giấy"
       }),
       createApiError(409, {
         statusCode: 409,
-        code: "PAPER_VOUCHER_REQUEST_ID_CONFLICT",
-        message: "Mã giao dịch đã dùng cho đơn khác"
+        code: "PAPER_VOUCHER_REQUEST_ALREADY_CANCELLED",
+        message: "Đơn của giao dịch voucher này đã bị hủy"
       })
     ];
     mocks.quoteOrder.mockResolvedValue(createQuote());
@@ -1402,26 +1902,27 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
       const rejection = rejections.shift();
       if (rejection) options.onError(rejection);
     });
-    renderPaperVoucherActions();
+    renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-003"]);
+    const summary = await applyVouchers(["LÔ-005"]);
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
     fireEvent.click(getPrintButton());
     await waitFor(() =>
-      expect(mocks.messageError).toHaveBeenCalledWith(TICKET_PRICE_UNDETERMINED_MESSAGE)
+      expect(mocks.messageError).toHaveBeenCalledWith("Chưa bật bán vé có voucher giấy")
     );
     fireEvent.click(getPrintButton());
     await waitFor(() =>
-      expect(mocks.messageError).toHaveBeenCalledWith("Mã giao dịch đã dùng cho đơn khác")
+      expect(mocks.messageError).toHaveBeenCalledWith("Đơn của giao dịch voucher này đã bị hủy")
     );
     fireEvent.click(getPrintButton());
     await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(3));
+    expect(mocks.getPaperVoucherRequestStatus).not.toHaveBeenCalled();
 
     const [first, second, third] = submittedOrders().map((order) => order.paperVoucherRequestId);
     expect(new Set([first, second, third]).size).toBe(3);
     // Giữ nguyên lựa chọn voucher để thu ngân sửa; không báo giá lại.
-    expect(within(summary).getByText(/LÔ-003/)).toBeInTheDocument();
+    expect(within(summary).getByText(/LÔ-005/)).toBeInTheDocument();
     expect(mocks.quoteOrder).toHaveBeenCalledTimes(1);
   }, 30000);
 
@@ -1432,18 +1933,18 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
         createApiError(409, {
           statusCode: 409,
           code: "PAPER_VOUCHER_INSUFFICIENT_QUANTITY",
-          message: "LÔ-003 chỉ còn 0 voucher"
+          message: "LÔ-005 chỉ còn 0 voucher"
         })
       )
     );
-    renderPaperVoucherActions();
+    renderPaperVoucherActions(oneSeat);
 
-    await applyVouchers(["LÔ-003"]);
+    await applyVouchers(["LÔ-005"]);
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
     fireEvent.click(getPrintButton());
     await waitFor(() =>
-      expect(mocks.messageError).toHaveBeenCalledWith("LÔ-003 chỉ còn 0 voucher")
+      expect(mocks.messageError).toHaveBeenCalledWith("LÔ-005 chỉ còn 0 voucher")
     );
     await waitForQuote(() => expect(mocks.quoteOrder).toHaveBeenCalledTimes(2));
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
@@ -1456,10 +1957,10 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
 
   it("re-quotes with the swiped member card and books with it without reopening the dialog", async () => {
     mocks.quoteOrder.mockResolvedValue(createQuote());
-    renderPaperVoucherActions();
+    renderPaperVoucherActions(oneSeat);
 
     fireEvent.click(screen.getByLabelText("Quẹt thẻ VIP"));
-    const summary = await applyVouchers(["LÔ-003"]);
+    const summary = await applyVouchers(["LÔ-005"]);
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
     fireEvent.click(getPrintButton());
@@ -1483,7 +1984,7 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
       memberCardCode: "VIP007",
       pointReward: 10000,
       paymentMethodSystemName: "POS",
-      paperVouchers: [{ batchId: 3, quantity: 1, faceValue: 100000 }]
+      paperVouchers: [{ batchId: 5, quantity: 1, faceValue: 80000 }]
     });
   }, 30000);
 });

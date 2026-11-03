@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import { Hourglass } from "lucide-react";
 import { useEffect, useState } from "react";
 import Countdown from "./Countdown";
+import { getQrPayableAmount } from "./paperVoucherSale";
 
 interface QrCodeDialogProps {
   open: boolean;
@@ -52,6 +53,9 @@ const QrCodeDialog = ({
     : (dataQr.orderTotal || 0) + (dataQr.orderDiscount || 0);
   const displayDiscount = isU22Voucher ? 0 : dataQr.orderDiscount || 0;
   const qrBrand = getQrBrandAsset(dataQr.paymentMethodSystemName);
+  // Đơn có voucher giấy: QR chỉ thu phần còn lại sau voucher, tổng tiền vé giữ nguyên.
+  const paperVoucher = dataQr.paperVoucher;
+  const payableAmount = getQrPayableAmount(dataQr);
 
   useEffect(() => {
     if (!open) {
@@ -72,24 +76,49 @@ const QrCodeDialog = ({
         return (
           <div className="flex w-full gap-6">
             <div className="text-sm w-3/5 flex items-center justify-between">
-              <div className="text-left">
-                <div className="flex items-center justify-between">
-                  <p className="text-trunks w-25">Tổng tiền vé: </p>{" "}
-                  <p className="font-bold text-black dark:text-white">
-                    {formatMoney(displayTicketTotal)}
-                  </p>
+              {paperVoucher ? (
+                <div className="text-left">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-trunks">Tổng tiền vé: </p>
+                    <p
+                      data-testid="qr-ticket-total"
+                      className="font-bold text-black dark:text-white"
+                    >
+                      {formatMoney(dataQr.orderTotal || 0)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 mt-1">
+                    <p className="text-trunks">Thanh toán bằng Voucher giấy: </p>
+                    <p
+                      data-testid="qr-paper-voucher-applied"
+                      className="font-bold text-black dark:text-white"
+                    >
+                      {formatMoney(paperVoucher.voucherApplied)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-trunks w-25">Giảm giá: </p>
-                  <p className="font-bold text-black dark:text-white">
-                    {formatMoney(displayDiscount)}
-                  </p>
+              ) : (
+                <div className="text-left">
+                  <div className="flex items-center justify-between">
+                    <p className="text-trunks w-25">Tổng tiền vé: </p>{" "}
+                    <p className="font-bold text-black dark:text-white">
+                      {formatMoney(displayTicketTotal)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-trunks w-25">Giảm giá: </p>
+                    <p className="font-bold text-black dark:text-white">
+                      {formatMoney(displayDiscount)}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="min-w-40 pl-4 text-right">
-                <p className="text-sm text-trunks">Tổng thanh toán</p>
-                <p className="text-chichi font-bold text-xl mt-1">
-                  {formatMoney(dataQr.orderTotal || 0)}
+                <p className="text-sm text-trunks">
+                  {paperVoucher ? "Cần thanh toán thêm" : "Tổng thanh toán"}
+                </p>
+                <p data-testid="qr-payable-amount" className="text-chichi font-bold text-xl mt-1">
+                  {formatMoney(payableAmount)}
                 </p>
               </div>
             </div>

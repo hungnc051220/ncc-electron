@@ -49,6 +49,7 @@ import {
   ReceiptText,
   Send,
   Ticket,
+  TicketPercent,
   UserRound,
   UsersRound,
   WalletCards
@@ -58,6 +59,8 @@ import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { usePermission } from "@renderer/permissions/usePermission";
 import InvitationTicketPreview from "./InvitationTicketPreview";
+import { OrderPaperVoucherLines, OrderPaperVoucherPaymentRows } from "./OrderPaperVoucherPayment";
+import { PAPER_VOUCHER_PAYMENT_LABELS } from "./OrderPaperVoucherPayment.utils";
 import {
   canExportOrderETicket,
   getInvitationTicketIssuerName,
@@ -240,6 +243,8 @@ const OrderDetailDialog = ({
 
   const currentDetail = orderDetail ?? selectedItem ?? null;
   const currentOrder = currentDetail?.order;
+  /** Chỉ API chi tiết đơn trả; đơn không dùng voucher giấy là `null` và hiển thị như trước. */
+  const paperVoucher = currentDetail?.paperVoucher ?? null;
   const currentOrderId = currentOrder?.id ?? 0;
   const currentPlanScreeningId =
     currentDetail?.planScreening?.id ?? currentOrder?.planScreenId ?? 0;
@@ -616,6 +621,10 @@ const OrderDetailDialog = ({
     "Khuyến mãi đã áp dụng": <Gift />,
     "Điểm thưởng đã áp dụng": <CircleDollarSign />,
     "Khách cần thanh toán": <WalletCards />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.orderTotal]: <Ticket />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.voucherApplied]: <TicketPercent />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.paidByCustomer]: <WalletCards />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.excess]: <CircleDollarSign />,
     "Thời gian hủy": <Clock3 />,
     "Người hủy": <UserRound />,
     "Ghế hủy": <Armchair />,
@@ -1501,13 +1510,26 @@ const OrderDetailDialog = ({
                 {renderInfoRow("Điểm thưởng đã áp dụng", `-${formatMoney(pricePointReward)}`, {
                   valueClassName: "text-rose-600"
                 })}
-                {renderInfoRow("Khách cần thanh toán", formatMoney(currentOrder?.orderTotal || 0), {
-                  valueClassName: "text-emerald-700 text-base font-semibold"
-                })}
+                {paperVoucher ? (
+                  <OrderPaperVoucherPaymentRows
+                    paperVoucher={paperVoucher}
+                    renderRow={renderInfoRow}
+                  />
+                ) : (
+                  renderInfoRow(
+                    "Khách cần thanh toán",
+                    formatMoney(currentOrder?.orderTotal || 0),
+                    {
+                      valueClassName: "text-emerald-700 text-base font-semibold"
+                    }
+                  )
+                )}
               </div>
             </section>
           </div>
         )}
+
+        {paperVoucher && <OrderPaperVoucherLines paperVoucher={paperVoucher} />}
 
         {hasCancelTickets && (
           <section className="h-fit self-start rounded-xl border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-500/20 dark:bg-rose-500/5">

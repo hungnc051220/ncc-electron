@@ -1,6 +1,10 @@
 import { DiscountProps } from "./discount.types";
 import { FilmProps } from "./film.types";
-import { OrderPaperVoucherResult } from "./paperVoucher.types";
+import {
+  OrderPaperVoucherDetail,
+  OrderPaperVoucherResult,
+  QrPaperVoucherAmounts
+} from "./paperVoucher.types";
 import { RoomProps } from "./room.types";
 import { PlanScreeningDetailProps } from "./screening.types";
 
@@ -106,8 +110,22 @@ export interface OrderResponseProps {
   invitationTickets: InvitationTicketProps;
   campaign?: CampaignProps;
   orderPaymentTransactions: OrderPaymentTransactionProps[];
-  /** Chỉ có khi đơn tạo tại POS dùng voucher giấy; `orderTotal` đã trừ voucher. */
+  /**
+   * Chỉ có trong response tạo đơn tại POS có voucher giấy. `orderTotal` của đơn không trừ voucher;
+   * số tiền khách trả thêm là `paperVoucher.remainingPayable`.
+   */
   paperVoucher?: OrderPaperVoucherResult;
+}
+
+/**
+ * `GET /api/pos/order/paper-voucher-requests/:requestId` (chỉ đọc): kết quả của một lần bán có voucher
+ * giấy theo mã request, dù payload hay trạng thái nào. `in_progress`: lần gửi đó còn đang xử lý.
+ */
+export interface PaperVoucherRequestStatus {
+  requestId: string;
+  state: "found" | "in_progress" | "not_found";
+  /** Có khi `found`: đơn của lần bán, cùng dạng response tạo đơn (`paperVoucher.replayed = true`). */
+  order?: OrderResponseProps;
 }
 
 export interface CampaignProps {
@@ -182,6 +200,8 @@ export interface OrderDetailProps {
   film: FilmProps;
   room: RoomProps;
   planDetails: OrderDetailProps[];
+  /** Chỉ có ở API chi tiết đơn; `null` với đơn không dùng voucher giấy, thiếu ở danh sách đơn. */
+  paperVoucher?: OrderPaperVoucherDetail | null;
 }
 
 export interface CancellationTicketProps {
@@ -323,6 +343,10 @@ export interface QrCodeResponseProps {
   accountName: string;
   accountNumber: string;
   accountBankName: string;
+  /** Số tiền QR cần thu; đơn có voucher giấy chỉ thu phần còn lại sau voucher. */
+  transactionAmount?: number;
+  /** Chỉ có với đơn có voucher giấy. */
+  paperVoucher?: QrPaperVoucherAmounts;
 }
 
 export enum PaymentType {

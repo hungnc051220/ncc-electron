@@ -15,6 +15,10 @@ export interface PaperVoucherSummaryQuote {
   quote?: PaperVoucherOrderQuote;
   isLoading: boolean;
   errorMessage?: string;
+  /** Báo giá mới backend trả khi số tiền đổi lúc tạo đơn: thu ngân phải xác nhận lại. */
+  isReplaced?: boolean;
+  /** Tên phương thức thu phần còn lại (Tiền mặt/Quét VietQR). */
+  paymentMethodLabel: string;
   onRetry: () => void;
 }
 
@@ -28,7 +32,17 @@ interface PaperVoucherSummaryProps {
   onClear: () => void;
 }
 
-const QuoteAmounts = ({ quote, isLoading, errorMessage, onRetry }: PaperVoucherSummaryQuote) => {
+/** Cảnh báo đã hiển thị bằng dòng riêng bên dưới, không lặp lại. */
+const RENDERED_WARNING_CODES = new Set(["PAPER_VOUCHER_EXCESS", "PAPER_VOUCHER_FULLY_PAID"]);
+
+const QuoteAmounts = ({
+  quote,
+  isLoading,
+  errorMessage,
+  isReplaced,
+  paymentMethodLabel,
+  onRetry
+}: PaperVoucherSummaryQuote) => {
   if (isLoading) {
     return (
       <span
@@ -36,7 +50,7 @@ const QuoteAmounts = ({ quote, isLoading, errorMessage, onRetry }: PaperVoucherS
         className="inline-flex items-center gap-1 whitespace-nowrap text-slate-500 dark:text-stone-300"
       >
         <LoaderCircle size={13} className="animate-spin" />
-        Đang tính số tiền khách cần trả...
+        Đang tính số tiền khách cần thanh toán thêm...
       </span>
     );
   }
@@ -58,55 +72,69 @@ const QuoteAmounts = ({ quote, isLoading, errorMessage, onRetry }: PaperVoucherS
     );
   }
 
-  const { paperVoucher } = quote;
+  const isFullyPaid = quote.remainingPayable === 0;
 
   return (
     <>
       <span className="whitespace-nowrap">
-        Tổng mệnh giá <b className="tabular-nums">{formatMoney(paperVoucher.faceValueTotal)}</b>
-      </span>
-      <span className="whitespace-nowrap">
-        Tiền đơn{" "}
-        <b data-testid="paper-voucher-base-total" className="tabular-nums">
-          {formatMoney(quote.baseTotal)}
+        Tổng tiền vé:{" "}
+        <b data-testid="paper-voucher-order-total" className="tabular-nums">
+          {formatMoney(quote.orderTotal)}
         </b>
       </span>
       <span className="whitespace-nowrap">
-        Voucher áp dụng{" "}
+        Thanh toán bằng Voucher giấy:{" "}
         <b
           data-testid="paper-voucher-applied"
           className="tabular-nums text-emerald-700 dark:text-emerald-300"
         >
-          −{formatMoney(paperVoucher.voucherApplied)}
+          {formatMoney(quote.voucherApplied)}
         </b>
       </span>
-      {paperVoucher.excessAmount > 0 && (
-        <span className="whitespace-nowrap text-amber-700 dark:text-amber-200">
-          Vượt giá trị đơn{" "}
-          <b data-testid="paper-voucher-excess" className="tabular-nums">
-            {formatMoney(paperVoucher.excessAmount)}
-          </b>{" "}
-          (không hoàn lại)
-        </span>
-      )}
-      <span className="whitespace-nowrap">
-        Khách cần trả{" "}
+      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+        Cần thanh toán thêm:{" "}
         <b
-          data-testid="paper-voucher-final-total"
+          data-testid="paper-voucher-remaining"
           className="text-sm tabular-nums text-primary dark:text-indigo-300"
         >
-          {formatMoney(quote.finalOrderTotal)}
+          {formatMoney(quote.remainingPayable)}
         </b>
+        {isFullyPaid ? (
+          <Tag color="success" variant="outlined" className="m-0">
+            Voucher giấy đã thanh toán đủ
+          </Tag>
+        ) : (
+          <span data-testid="paper-voucher-payment-method">({paymentMethodLabel})</span>
+        )}
       </span>
-      {quote.warnings.map((warning) => (
+      {quote.excessAmount > 0 && (
         <span
-          key={warning.code}
-          data-testid="paper-voucher-quote-warning"
-          className="font-medium text-amber-700 dark:text-amber-200"
+          data-testid="paper-voucher-excess-warning"
+          className="whitespace-nowrap font-medium text-amber-700 dark:text-amber-200"
         >
-          {warning.message}
+          Tiền thừa voucher{" "}
+          <b data-testid="paper-voucher-excess" className="tabular-nums">
+            {formatMoney(quote.excessAmount)}
+          </b>{" "}
+          không hoàn lại
         </span>
-      ))}
+      )}
+      {isReplaced && (
+        <Tag data-testid="paper-voucher-quote-replaced" color="warning" className="m-0">
+          Số tiền vừa thay đổi, kiểm tra lại trước khi In vé
+        </Tag>
+      )}
+      {quote.warnings
+        .filter((warning) => !RENDERED_WARNING_CODES.has(warning.code))
+        .map((warning) => (
+          <span
+            key={warning.code}
+            data-testid="paper-voucher-quote-warning"
+            className="font-medium text-amber-700 dark:text-amber-200"
+          >
+            {warning.message}
+          </span>
+        ))}
     </>
   );
 };
@@ -140,7 +168,7 @@ const PaperVoucherSummary = ({
         <TicketPercent size={16} className="text-amber-600 dark:text-amber-300" />
         <span className="font-semibold">Voucher giấy</span>
         <Tag color="warning" variant="outlined" className="m-0">
-          {quote ? "Chỉ thanh toán tiền mặt" : "Chưa ghi nhận vào đơn"}
+          {quote ? "Tương đương tiền mặt" : "Chưa ghi nhận vào đơn"}
         </Tag>
       </div>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
@@ -151,13 +179,13 @@ const PaperVoucherSummary = ({
           </span>
         ))}
         {memberCardCode && <span className="whitespace-nowrap">Thẻ {memberCardCode}</span>}
-        {quote ? (
-          <QuoteAmounts {...quote} />
-        ) : (
-          <span className="whitespace-nowrap">
-            Tổng mệnh giá <b className="tabular-nums">{formatMoney(faceValueTotal)}</b>
-          </span>
-        )}
+        <span className="whitespace-nowrap">
+          Tổng mệnh giá{" "}
+          <b data-testid="paper-voucher-face-value-total" className="tabular-nums">
+            {formatMoney(quote?.quote?.faceValueTotal ?? faceValueTotal)}
+          </b>
+        </span>
+        {quote && <QuoteAmounts {...quote} />}
         {errors.length > 0 && (
           <span
             role="alert"

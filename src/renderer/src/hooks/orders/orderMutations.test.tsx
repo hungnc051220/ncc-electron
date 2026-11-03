@@ -12,6 +12,7 @@ import { useCancelOrder } from "./useCancelOrder";
 import { useCreateOrder } from "./useCreateOrder";
 import { useCreateQrOrder } from "./useCreateQrOrder";
 import { useSwapSeats } from "./useSwapSeats";
+import { useUpdateOrder } from "./useUpdateOrder";
 import { useUpdateRefundStatusOrder } from "./useUpdateRefundStatusOrder";
 import { useCreateInvoice } from "../invoices/useCreateInvoice";
 
@@ -90,7 +91,7 @@ describe("order and invoice mutations", () => {
       paperVouchers: [{ batchId: 3, quantity: 1, faceValue: 100000 }],
       paperVoucherRequestId: "6f1c2a8e-1d2b-4c3d-8e4f-5a6b7c8d9e0f",
       paperVoucherQuoteHash: "a".repeat(64),
-      expectedFinalOrderTotal: 0
+      expectedRemainingPayable: 0
     };
 
     const { result } = renderHook(() => useCreateOrder(), { wrapper });
@@ -162,6 +163,24 @@ describe("order and invoice mutations", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ordersKeys.all
     });
+    // Hủy đơn có voucher giấy đang chờ QR trả lại voucher cho lô.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: paperVoucherKeys.all });
+  });
+
+  it("refreshes paper voucher batches after closing a QR order", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    vi.spyOn(ordersApi, "update").mockResolvedValue({ success: true });
+
+    const { result } = renderHook(() => useUpdateOrder(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 140,
+      dto: { orderStatusId: 60, paymentStatusId: 10, shippingStatusId: 0, planScreenId: 1 }
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ordersKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: paperVoucherKeys.all });
   });
 
   it("creates an invoice and invalidates the invoices cache", async () => {

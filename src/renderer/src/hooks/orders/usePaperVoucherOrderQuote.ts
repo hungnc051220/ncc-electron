@@ -2,25 +2,36 @@ import { ordersApi, type OrderQuoteDto } from "@renderer/api/orders.api";
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import type { PaperVoucherOrderQuote } from "@shared/types";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
-import { useDebounce } from "../useDebounce";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ordersKeys } from "./keys";
 
 export const PAPER_VOUCHER_QUOTE_DEBOUNCE_MS = 300;
-const QUOTE_ERROR_FALLBACK = "Không tính được số tiền khách cần trả";
+const QUOTE_ERROR_FALLBACK = "Không tính được số tiền khách cần thanh toán thêm";
 
 /**
- * Báo giá đơn có voucher giấy do backend tính. `dto = null` khi không cần báo giá.
+ * Báo giá đơn có voucher giấy do backend tính. `dto = null` khi không cần báo giá (chưa chọn
+ * voucher giấy): không gọi API.
  *
- * - So sánh body theo nội dung và debounce trước khi gọi API; đổi lựa chọn thì React Query bỏ kết
- *   quả cũ và hủy request đang chạy qua `signal`.
+ * - So sánh body theo nội dung và debounce trước khi gọi API, nên đổi lựa chọn liên tục chỉ gọi một
+ *   lần. Mỗi lựa chọn là một query key: đổi lựa chọn thì React Query hủy request cũ qua `signal` và
+ *   chỉ hiển thị báo giá khớp lựa chọn hiện tại (response đến muộn của lựa chọn cũ bị bỏ qua).
+ * - Bỏ chọn voucher (`dto = null`) hủy request ngay, không chờ debounce.
  * - `replaceQuote`: hiển thị báo giá backend trả kèm lỗi 409 cho đúng lựa chọn đã gửi; đổi lựa
  *   chọn thì bỏ báo giá thay thế.
  */
 export const usePaperVoucherOrderQuote = (dto: OrderQuoteDto | null) => {
   const selectionKey = dto ? JSON.stringify(dto) : null;
-  const requestKey = useDebounce(selectionKey, PAPER_VOUCHER_QUOTE_DEBOUNCE_MS);
-  const isSettled = selectionKey === requestKey;
+  const [debouncedKey, setDebouncedKey] = useState(selectionKey);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedKey(selectionKey), PAPER_VOUCHER_QUOTE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [selectionKey]);
+
+  // Chỉ báo giá khi lựa chọn đã đứng yên. Đang đổi hoặc vừa bỏ chọn: không có query nào được theo
+  // dõi, nên request của lựa chọn cũ bị hủy ngay thay vì chờ hết debounce.
+  const isSettled = selectionKey === debouncedKey;
+  const requestKey = isSettled ? selectionKey : null;
   const requestDto = useMemo<OrderQuoteDto | null>(
     () => (requestKey ? JSON.parse(requestKey) : null),
     [requestKey]
@@ -69,6 +80,8 @@ export const usePaperVoucherOrderQuote = (dto: OrderQuoteDto | null) => {
     isLoading,
     errorMessage,
     isReady: !!quote,
+    /** Báo giá đang hiển thị là báo giá mới backend trả kèm lỗi 409 (số tiền vừa đổi). */
+    isReplaced: !!quote && !!replacedQuote,
     /** Khóa của lựa chọn ứng với báo giá đang hiển thị; truyền lại cho `replaceQuote`. */
     requestKey,
     /** Khóa lựa chọn hiện tại (chưa debounce); đổi nghĩa là thu ngân vừa đổi lựa chọn. */

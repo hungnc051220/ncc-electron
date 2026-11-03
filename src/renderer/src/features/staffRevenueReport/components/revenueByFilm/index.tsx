@@ -2,6 +2,7 @@ import { useReportRevenueByFilm } from "@renderer/hooks/reports/useReportRevenue
 import RefreshButton from "@renderer/components/RefreshButton";
 import { filterEmptyValues, formatMoney, formatNumber } from "@renderer/lib/utils";
 import FullHeightTabs from "@renderer/components/FullHeightTabs";
+import type { PlanScreen, RevenuesByFilmProps } from "@shared/types";
 import type { TabsProps } from "antd";
 import { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -49,10 +50,52 @@ export type Row = {
   discountPartner: number;
   discountTotal: number;
   internalDiscountTotal: number;
+  /** Số tờ voucher giấy (cột "Số lượng Voucher"). */
+  paperVoucherQuantity: number;
+  /** Mệnh giá voucher vượt giá trị đơn, không hoàn lại (cột "Tiền thừa Voucher"). */
+  paperVoucherExcess: number;
+  /** Phần đơn trả bằng voucher giấy: không phải cột, chỉ để tính "Thực nộp". */
+  paperVoucherApplied: number;
   children?: Row[];
 };
 
 export type RevenueColumnMode = "default" | "user" | "manufacturer";
+
+type PaperVoucherAmountSource = Pick<
+  PlanScreen,
+  "paperVoucherQuantity" | "paperVoucherExcess" | "paperVoucherApplied"
+>;
+
+/** Trường voucher giấy của báo cáo; backend cũ không trả thì coi như 0. */
+export const getPaperVoucherReportAmounts = (source?: PaperVoucherAmountSource) => ({
+  paperVoucherQuantity: source?.paperVoucherQuantity ?? 0,
+  paperVoucherExcess: source?.paperVoucherExcess ?? 0,
+  paperVoucherApplied: source?.paperVoucherApplied ?? 0
+});
+
+/** Hai cột voucher giấy (chỉ thêm đúng hai cột; `paperVoucherApplied` không hiển thị). */
+export const PAPER_VOUCHER_COLUMN_TITLES = ["Số lượng Voucher", "Tiền thừa Voucher"] as const;
+
+export const buildPaperVoucherColumns = <
+  T extends Pick<Row, "paperVoucherQuantity" | "paperVoucherExcess">
+>(): ColumnsType<T> => [
+  {
+    title: PAPER_VOUCHER_COLUMN_TITLES[0],
+    key: "paperVoucherQuantity",
+    dataIndex: "paperVoucherQuantity",
+    width: 140,
+    align: "right",
+    render: (value?: number) => formatNumber(value ?? 0)
+  },
+  {
+    title: PAPER_VOUCHER_COLUMN_TITLES[1],
+    key: "paperVoucherExcess",
+    dataIndex: "paperVoucherExcess",
+    width: 150,
+    align: "right",
+    render: (value?: number) => formatMoney(value ?? 0)
+  }
+];
 
 export const getRevenueColumnMode = (filterValues: ValuesProps): RevenueColumnMode => {
   if (filterValues.manufacturerId) {
@@ -66,8 +109,13 @@ export const getRevenueColumnMode = (filterValues: ValuesProps): RevenueColumnMo
   return "default";
 };
 
-export const getActualRemittance = (row: Pick<Row, "actualSale" | "saleVietQr" | "saleVnPayQr">) =>
-  row.actualSale - row.saleVietQr - row.saleVnPayQr;
+/**
+ * "Thực nộp" = tiền mặt vật lý: doanh thu trừ tiền QR thực nhận và phần đơn trả bằng voucher giấy.
+ * Thiếu `paperVoucherApplied` (backend cũ) thì giữ công thức cũ.
+ */
+export const getActualRemittance = (
+  row: Pick<Row, "actualSale" | "saleVietQr" | "saleVnPayQr"> & { paperVoucherApplied?: number }
+) => row.actualSale - row.saleVietQr - row.saleVnPayQr - (row.paperVoucherApplied ?? 0);
 
 export const getTotalRevenue = (row: Pick<Row, "actualSale" | "discountTotal">) =>
   row.actualSale + row.discountTotal;
@@ -77,6 +125,86 @@ export const getTotalRevenueAfterDiscount = (row: Pick<Row, "actualSale">) => ro
 export const getTotalTicketAndContract = (
   row: Pick<Row, "totalQuantity" | "totalContractQuantity">
 ) => row.totalQuantity + row.totalContractQuantity;
+
+/** Dòng phim (tổng của phim từ backend) kèm các dòng suất chiếu đã sắp xếp. */
+export const buildRevenueByFilmRows = (revenuesByFilm: RevenuesByFilmProps[] = []): Row[] =>
+  revenuesByFilm.map((film) => {
+    const sortedScreens = [...film.planScreens].sort((a, b) => {
+      if (a.projectDate !== b.projectDate) {
+        return a.projectDate.localeCompare(b.projectDate);
+      }
+      if (a.projectTime !== b.projectTime) {
+        return new Date(a.projectTime).getTime() - new Date(b.projectTime).getTime();
+      }
+      return Number(a.isOnline) - Number(b.isOnline);
+    });
+
+    const children: Row[] = sortedScreens.map((p) => {
+      const pricesMap: Record<number, number> = {};
+      p.prices.forEach((pr) => {
+        pricesMap[pr.price] = pr.totalQuantity;
+      });
+
+      const crmDiscount = p.crmDiscount ?? {};
+      const internalDiscount = p.internalDiscount ?? {};
+
+      return {
+        key: `${film.filmId}-${p.planScreenId}-${p.isOnline}`,
+        filmName: film.filmName,
+        projectDate: p.projectDate,
+        projectTime: p.projectTime,
+        roomName: p.roomName,
+        isOnline: p.isOnline,
+        pricesMap,
+        totalInvitationQuantity: p.totalInvitationQuantity,
+        totalContractQuantity: p.totalContractQuantity,
+        totalQuantity: p.totalQuantity,
+        totalSale: p.totalSale,
+        saleVnPayQr: p.saleVnPayQr,
+        saleVietQr: p.saleVietQr,
+        actualSale: p.actualSale || 0,
+        discountOffline: crmDiscount.discountOffline ?? p.discountOffline ?? 0,
+        discountOnline: crmDiscount.discountOnline ?? p.discountOnline ?? 0,
+        discountPartner: crmDiscount.discountPartner ?? p.discountPartner ?? 0,
+        discountTotal: crmDiscount.discountTotal ?? p.discountTotal ?? 0,
+        internalDiscountTotal: internalDiscount.discountTotal ?? 0,
+        ...getPaperVoucherReportAmounts(p)
+      };
+    });
+
+    const pricesMap = children.reduce<Record<number, number>>((acc, row) => {
+      Object.entries(row.pricesMap).forEach(([price, quantity]) => {
+        const numericPrice = Number(price);
+        acc[numericPrice] = (acc[numericPrice] ?? 0) + quantity;
+      });
+      return acc;
+    }, {});
+
+    return {
+      key: `film-${film.filmId}`,
+      filmName: film.filmName,
+      isSummary: true,
+      projectDate: "",
+      projectTime: "",
+      roomName: "",
+      isOnline: false,
+      pricesMap,
+      totalInvitationQuantity: film.totalInvitationQuantity,
+      totalContractQuantity: film.totalContractQuantity,
+      totalQuantity: film.totalQuantity,
+      totalSale: film.totalSale,
+      saleVnPayQr: film.saleVnPayQr,
+      saleVietQr: film.saleVietQr,
+      actualSale: film.actualSale || 0,
+      discountOffline: children.reduce((sum, row) => sum + row.discountOffline, 0),
+      discountOnline: children.reduce((sum, row) => sum + row.discountOnline, 0),
+      discountPartner: children.reduce((sum, row) => sum + row.discountPartner, 0),
+      discountTotal: children.reduce((sum, row) => sum + row.discountTotal, 0),
+      internalDiscountTotal: children.reduce((sum, row) => sum + row.internalDiscountTotal, 0),
+      ...getPaperVoucherReportAmounts(film),
+      children
+    };
+  });
 
 const RevenueByFilm = ({ dateType }: { dateType: number }) => {
   const defaultFilterValues = useMemo<ValuesProps>(
@@ -116,82 +244,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
     )
   ).sort((a, b) => b - a);
 
-  const tableData: Row[] =
-    reportData?.revenuesByFilm.map((film) => {
-      const sortedScreens = [...film.planScreens].sort((a, b) => {
-        if (a.projectDate !== b.projectDate) {
-          return a.projectDate.localeCompare(b.projectDate);
-        }
-        if (a.projectTime !== b.projectTime) {
-          return new Date(a.projectTime).getTime() - new Date(b.projectTime).getTime();
-        }
-        return Number(a.isOnline) - Number(b.isOnline);
-      });
-
-      const children = sortedScreens.map((p) => {
-        const pricesMap: Record<number, number> = {};
-        p.prices.forEach((pr) => {
-          pricesMap[pr.price] = pr.totalQuantity;
-        });
-
-        const crmDiscount = p.crmDiscount ?? {};
-        const internalDiscount = p.internalDiscount ?? {};
-
-        return {
-          key: `${film.filmId}-${p.planScreenId}-${p.isOnline}`,
-          filmName: film.filmName,
-          projectDate: p.projectDate,
-          projectTime: p.projectTime,
-          roomName: p.roomName,
-          isOnline: p.isOnline,
-          pricesMap,
-          totalInvitationQuantity: p.totalInvitationQuantity,
-          totalContractQuantity: p.totalContractQuantity,
-          totalQuantity: p.totalQuantity,
-          totalSale: p.totalSale,
-          saleVnPayQr: p.saleVnPayQr,
-          saleVietQr: p.saleVietQr,
-          actualSale: p.actualSale || 0,
-          discountOffline: crmDiscount.discountOffline ?? p.discountOffline ?? 0,
-          discountOnline: crmDiscount.discountOnline ?? p.discountOnline ?? 0,
-          discountPartner: crmDiscount.discountPartner ?? p.discountPartner ?? 0,
-          discountTotal: crmDiscount.discountTotal ?? p.discountTotal ?? 0,
-          internalDiscountTotal: internalDiscount.discountTotal ?? 0
-        };
-      });
-
-      const pricesMap = children.reduce<Record<number, number>>((acc, row) => {
-        Object.entries(row.pricesMap).forEach(([price, quantity]) => {
-          const numericPrice = Number(price);
-          acc[numericPrice] = (acc[numericPrice] ?? 0) + quantity;
-        });
-        return acc;
-      }, {});
-
-      return {
-        key: `film-${film.filmId}`,
-        filmName: film.filmName,
-        isSummary: true,
-        projectDate: "",
-        projectTime: "",
-        roomName: "",
-        isOnline: false,
-        pricesMap,
-        totalInvitationQuantity: film.totalInvitationQuantity,
-        totalContractQuantity: film.totalContractQuantity,
-        totalQuantity: film.totalQuantity,
-        totalSale: film.totalSale,
-        saleVnPayQr: film.saleVnPayQr,
-        saleVietQr: film.saleVietQr,
-        actualSale: film.actualSale || 0,
-        discountOffline: children.reduce((sum, row) => sum + row.discountOffline, 0),
-        discountOnline: children.reduce((sum, row) => sum + row.discountOnline, 0),
-        discountPartner: children.reduce((sum, row) => sum + row.discountPartner, 0),
-        discountTotal: children.reduce((sum, row) => sum + row.discountTotal, 0),
-        internalDiscountTotal: children.reduce((sum, row) => sum + row.internalDiscountTotal, 0),
-        children
-      };
-    }) || [];
+  const tableData: Row[] = buildRevenueByFilmRows(reportData?.revenuesByFilm);
 
   const detailRows = tableData.flatMap((row) => row.children || []);
   const columnMode = getRevenueColumnMode(filterValues);
@@ -313,6 +366,8 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
                   align: "right" as const,
                   render: (value: number) => formatMoney(value)
                 },
+                // Voucher giấy là một nguồn thanh toán: cạnh QR, trước cột tổng kết tiền mặt.
+                ...buildPaperVoucherColumns<Row>(),
                 {
                   title: "Thực nộp",
                   key: "actualRemittance",
@@ -328,7 +383,9 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
                   width: 180,
                   align: "right" as const,
                   render: (_: number, row: Row) => formatMoney(getTotalRevenueAfterDiscount(row))
-                }
+                },
+                // Không có nhóm thanh toán: sau cột tổng kết, không chen giữa doanh thu và khuyến mại.
+                ...buildPaperVoucherColumns<Row>()
               ])
         ])
   ];
@@ -359,6 +416,7 @@ const RevenueByFilm = ({ dateType }: { dateType: number }) => {
             totalRevenueOnline={reportData?.totalRevenueOnline}
             totalRevenueOffline={reportData?.totalRevenueOffline}
             columnMode={columnMode}
+            showPaperVoucherColumns
           />
         </div>
       ) : (
