@@ -5,7 +5,7 @@ import {
   getApiErrorStatus,
   isRetryableApiError
 } from "@renderer/lib/apiError";
-import { formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
+import { formatMoney, formatPaymentMethod, resolvePaymentType } from "@renderer/lib/utils";
 import {
   PaymentType,
   type OrderDetailProps,
@@ -17,15 +17,15 @@ import {
 
 /**
  * Voucher giấy là một nguồn thanh toán (tương đương tiền mặt), không phải giảm giá: tổng đơn giữ
- * nguyên, voucher trả một phần, phần còn lại trả bằng tiền mặt (`POS`) hoặc VietQR khi backend cho
- * phép (`allowedPaymentMethods` của báo giá). Không bao giờ dùng VNPayQR.
+ * nguyên, voucher trả một phần, phần còn lại trả bằng tiền mặt (`POS`), VietQR hoặc VNPayQR khi
+ * backend cho phép (`allowedPaymentMethods` của báo giá).
  *
  * Báo giá không phụ thuộc phương thức thanh toán nên luôn gửi `POS`; đổi phương thức không báo giá lại.
  */
 export const PAPER_VOUCHER_CASH_METHOD: string = PaymentType.POS;
 
 export const PAPER_VOUCHER_PAYMENT_HINT =
-  "Đơn có voucher giấy: phần còn lại trả bằng tiền mặt, hoặc VietQR khi hệ thống cho phép. Không dùng VNPayQR.";
+  "Đơn có voucher giấy: phần còn lại trả bằng tiền mặt, VietQR hoặc VNPayQR khi hệ thống cho phép.";
 export const PAPER_VOUCHER_RESERVE_BLOCKED_MESSAGE =
   "Không thể giữ chỗ khi đang áp dụng voucher giấy. Bỏ áp dụng voucher hoặc in vé ngay.";
 export const PAPER_VOUCHER_QUOTE_PENDING_MESSAGE =
@@ -128,13 +128,17 @@ export const getPaperVoucherQrClosedMessage = (
 };
 
 /** Thanh toán QR của đơn có voucher giấy xong: số tiền QR đã thu, voucher và các lô đã dùng. */
-export const getPaperVoucherQrPaidMessage = (paperVoucher: QrDialogData["paperVoucher"]) => {
+export const getPaperVoucherQrPaidMessage = (
+  paperVoucher: QrDialogData["paperVoucher"],
+  paymentMethodSystemName?: string
+) => {
   if (!paperVoucher) return "Thanh toán thành công!";
+  const qrName = resolvePaymentType(paymentMethodSystemName) === PaymentType.VNPAY ? "VNPayQR" : "VietQR";
   const lines = (paperVoucher.lines ?? [])
     .map((line) => `${line.batchCode} ×${line.quantity}`)
     .join(", ");
   const voucher = `Voucher giấy ${formatMoney(paperVoucher.voucherApplied)}${lines ? ` (${lines})` : ""}`;
-  return `Thanh toán VietQR thành công ${formatMoney(paperVoucher.remainingPayable)}. ${voucher}.`;
+  return `Thanh toán ${qrName} thành công ${formatMoney(paperVoucher.remainingPayable)}. ${voucher}.`;
 };
 
 /** Lô/số lượng đã đổi so với lúc báo giá: tải lại danh sách lô và báo giá lại. */
@@ -168,15 +172,21 @@ const isPaperVoucherOrderQuote = (value: unknown): value is PaperVoucherOrderQuo
 };
 
 /**
- * Phương thức thanh toán phần còn lại có dùng được với voucher giấy không. VNPayQR không bao giờ;
- * chưa có báo giá (`allowedMethods` trống) thì chưa loại tiền mặt/VietQR, báo giá về sẽ kiểm lại.
+ * Phương thức thanh toán phần còn lại có dùng được với voucher giấy không: chỉ theo `allowedPaymentMethods`
+ * backend trả về (VietQR/VNPayQR khi còn tiền phải thu). Chưa có báo giá (`allowedMethods` trống) thì chưa
+ * loại phương thức nào, báo giá về sẽ kiểm lại và lúc bán luôn kiểm theo báo giá đã xác nhận.
  */
 export const isPaperVoucherPaymentMethodAllowed = (
   paymentMethod: string,
   allowedMethods?: readonly string[]
-) =>
-  paymentMethod !== PaymentType.VNPAY &&
-  (!allowedMethods || allowedMethods.includes(paymentMethod));
+) => !allowedMethods || allowedMethods.includes(paymentMethod);
+
+/**
+ * "Kiểm tra lại giao dịch" có hỏi được nhà cung cấp không: `check-transaction` chỉ hỏi VietQR. Đơn
+ * VNPayQR có voucher giấy đọc thẳng trạng thái đơn ở backend (do IPN VNPay xác nhận).
+ */
+export const canRecheckQrTransactionWithProvider = (paymentMethodSystemName?: string) =>
+  resolvePaymentType(paymentMethodSystemName) !== PaymentType.VNPAY;
 
 /**
  * Số tiền khách trả qua QR: đơn có voucher giấy chỉ trả phần còn lại (`transactionAmount` của

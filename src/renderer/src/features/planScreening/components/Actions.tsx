@@ -52,6 +52,7 @@ import { TicketPercent } from "lucide-react";
 import PaperVoucherDialog from "./PaperVoucherDialog";
 import {
   buildPaperVoucherPayloadKey,
+  canRecheckQrTransactionWithProvider,
   classifyPaperVoucherOrderError,
   createPaperVoucherRequestId,
   getPaperVoucherExistingOrderMessage,
@@ -431,7 +432,7 @@ const Actions = ({
       );
       if (paidQr.paperVoucher) {
         clearPaperVoucherSale();
-        message.success(getPaperVoucherQrPaidMessage(paidQr.paperVoucher));
+        message.success(getPaperVoucherQrPaidMessage(paidQr.paperVoucher, paidQr.paymentMethodSystemName));
       } else {
         message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
       }
@@ -598,7 +599,7 @@ const Actions = ({
   // Phương thức thu tiền (đơn có voucher giấy: thu phần còn lại); không chọn QR = tiền mặt.
   const selectedPaymentMethod = paymentMethod[0] ?? PAPER_VOUCHER_CASH_METHOD;
 
-  // Voucher giấy chỉ đi với phương thức backend cho phép (không bao giờ VNPayQR). Phương thức đang
+  // Voucher giấy chỉ đi với phương thức backend cho phép (tiền mặt, VietQR, VNPayQR). Phương thức đang
   // chọn không còn hợp lệ: chuyển về tiền mặt và báo thu ngân, không bán âm thầm.
   useEffect(() => {
     if (!hasPaperVoucher || paymentMethod.length === 0) return;
@@ -1054,7 +1055,7 @@ const Actions = ({
     }
   ];
 
-  // Đơn có voucher giấy chỉ dùng phương thức backend cho phép; VNPayQR không bao giờ.
+  // Đơn có voucher giấy chỉ dùng phương thức backend cho phép (`allowedPaymentMethods` của báo giá).
   const paymentOptions = hasPaperVoucher
     ? paymentTypes.map((option) => ({
         ...option,
@@ -1066,9 +1067,12 @@ const Actions = ({
     ? (paperVoucherQuote.errorMessage ?? PAPER_VOUCHER_QUOTE_PENDING_MESSAGE)
     : undefined;
 
+  // Chỉ một phương thức QR: giữ phương thức vừa chọn. Checkbox.Group trả giá trị theo thứ tự options,
+  // nên phần tử cuối không phải lúc nào cũng là lựa chọn mới (VNPayQR → VietQR).
   const onChange: GetProp<typeof Checkbox.Group, "onChange"> = (checkedValues) => {
-    const last = checkedValues.slice(-1) as string[];
-    setPaymentMethod(last);
+    const values = checkedValues as string[];
+    const added = values.find((value) => !paymentMethod.includes(value));
+    setPaymentMethod(added ? [added] : values.slice(-1));
   };
 
   const onUpdateOrder = (
@@ -1154,6 +1158,12 @@ const Actions = ({
 
     try {
       setIsCheckingQrTransaction(true);
+      // `check-transaction` chỉ hỏi VietQR: đơn VNPayQR có voucher giấy đọc thẳng trạng thái đơn ở backend.
+      if (qrData.paperVoucher && !canRecheckQrTransactionWithProvider(qrData.paymentMethodSystemName)) {
+        await settlePaperVoucherQr(qrData);
+        return;
+      }
+
       await ordersApi.checkTransaction({ orderId: qrData.orderId });
 
       if (qrData.paperVoucher) {

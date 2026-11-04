@@ -10,6 +10,7 @@ import {
   getQrPayableAmount,
   isPaperVoucherOutcomeUnknown,
   isPaperVoucherPaymentMethodAllowed,
+  canRecheckQrTransactionWithProvider,
   loadPaperVoucherAttempt,
   PAPER_VOUCHER_NETWORK_ERROR_MESSAGE,
   PAPER_VOUCHER_REQUEST_IN_PROGRESS_MESSAGE,
@@ -175,11 +176,18 @@ describe("classifyPaperVoucherOrderError", () => {
 });
 
 describe("isPaperVoucherPaymentMethodAllowed", () => {
-  it("never allows VNPayQR with a paper voucher", () => {
-    expect(isPaperVoucherPaymentMethodAllowed(PaymentType.VNPAY)).toBe(false);
-    expect(isPaperVoucherPaymentMethodAllowed(PaymentType.VNPAY, ["POS", PaymentType.VNPAY])).toBe(
+  it("allows VNPayQR only when the quote allows it (P6 VNPayQR for the remaining amount)", () => {
+    expect(
+      isPaperVoucherPaymentMethodAllowed(PaymentType.VNPAY, [
+        "POS",
+        PaymentType.VIETQR,
+        PaymentType.VNPAY
+      ])
+    ).toBe(true);
+    expect(isPaperVoucherPaymentMethodAllowed(PaymentType.VNPAY, ["POS", PaymentType.VIETQR])).toBe(
       false
     );
+    expect(isPaperVoucherPaymentMethodAllowed(PaymentType.VNPAY, ["POS"])).toBe(false);
   });
 
   it("follows the allowed methods of the quote", () => {
@@ -413,5 +421,19 @@ describe("voucher QR state (P6: backend state, never a bare transaction success)
     ).toBe(
       `Thanh toán VietQR thành công ${formatMoney(110000)}. Voucher giấy ${formatMoney(80000)} (LÔ-007 ×1, LÔ-008 ×2).`
     );
+  });
+
+  it("paid message names VNPayQR for a VNPayQR voucher order", () => {
+    expect(
+      getPaperVoucherQrPaidMessage(
+        { orderTotal: 100000, voucherApplied: 80000, remainingPayable: 20000 },
+        PaymentType.VNPAY
+      )
+    ).toBe(`Thanh toán VNPayQR thành công ${formatMoney(20000)}. Voucher giấy ${formatMoney(80000)}.`);
+  });
+
+  it("asks the provider again only for VietQR (check-transaction is VietQR only)", () => {
+    expect(canRecheckQrTransactionWithProvider(PaymentType.VIETQR)).toBe(true);
+    expect(canRecheckQrTransactionWithProvider(PaymentType.VNPAY)).toBe(false);
   });
 });

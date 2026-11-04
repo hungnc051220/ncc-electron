@@ -516,6 +516,18 @@ describe("Actions", () => {
 
     expect(screen.getByLabelText("Quét VietQR")).not.toBeChecked();
     expect(screen.getByLabelText("Quét VNPayQR")).toBeChecked();
+
+    // Ngược lại (option sau → option trước) cũng chuyển sang lựa chọn mới.
+    fireEvent.click(screen.getByLabelText("Quét VietQR"));
+
+    expect(screen.getByLabelText("Quét VietQR")).toBeChecked();
+    expect(screen.getByLabelText("Quét VNPayQR")).not.toBeChecked();
+
+    // Bỏ chọn phương thức đang chọn: về tiền mặt.
+    fireEvent.click(screen.getByLabelText("Quét VietQR"));
+
+    expect(screen.getByLabelText("Quét VietQR")).not.toBeChecked();
+    expect(screen.getByLabelText("Quét VNPayQR")).not.toBeChecked();
   });
 
   it("keeps selected seats until screening data is refreshed after creating an order", async () => {
@@ -1585,20 +1597,18 @@ describe("Actions paper voucher sale", () => {
     fireEvent.click(screen.getByLabelText("Quét VNPayQR"));
     await applyVouchers(["LÔ-005"]);
 
-    // VNPayQR không bao giờ dùng với voucher giấy.
-    await waitFor(() => expect(screen.getByLabelText("Quét VNPayQR")).not.toBeChecked());
-    expect(mocks.messageWarning).toHaveBeenCalledWith(
-      "Quét VNPayQR không dùng được cho đơn có voucher giấy này. Đã chuyển sang tiền mặt."
-    );
-    expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
+    // Đang báo giá: VNPayQR/VietQR vẫn chọn được, chỉ báo giá của backend quyết định.
+    expect(screen.getByLabelText("Quét VNPayQR")).toBeChecked();
+    expect(mocks.messageWarning).not.toHaveBeenCalled();
 
-    // Đang báo giá: vẫn chọn được VietQR; báo giá không cho phép thì chuyển về tiền mặt.
+    // Báo giá không cho phép phương thức đang chọn thì chuyển về tiền mặt.
     fireEvent.click(screen.getByLabelText("Quét VietQR"));
     expect(screen.getByLabelText("Quét VietQR")).toBeChecked();
     await act(async () => resolveQuote(createQuote()));
 
     await waitForQuote(() => expect(screen.getByLabelText("Quét VietQR")).not.toBeChecked());
     expect(screen.getByLabelText("Quét VietQR")).toBeDisabled();
+    expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
     expect(mocks.messageWarning).toHaveBeenLastCalledWith(
       "Quét VietQR không dùng được cho đơn có voucher giấy này. Đã chuyển sang tiền mặt."
     );
@@ -2235,5 +2245,194 @@ describe("Actions paper voucher VietQR (P6)", () => {
 
     expect(paidMessages()).toHaveLength(1);
     expect(mocks.updateOrderMutateAsync).not.toHaveBeenCalled();
+  }, 30000);
+});
+
+describe("Actions paper voucher VNPayQR (P6)", () => {
+  beforeEach(async () => {
+    await setupPaperVoucherServer({ batches: [...PAPER_VOUCHER_FIXTURES, BATCH_80K] });
+    stubObjectUrls();
+    useSettingPosStore.setState({ posName: "POS Machine 1", posShortName: "M11" });
+  });
+
+  const ALL_QR_METHODS = ["POS", PaymentType.VIETQR, PaymentType.VNPAY];
+
+  /** Bán 1 vé với voucher 80.000đ bằng VNPayQR, đến lúc màn QR 20.000đ đang mở. */
+  const openVoucherVnpayQr = async (setSelectedSeats = vi.fn()) => {
+    const quote = createQuote({ allowedPaymentMethods: ALL_QR_METHODS });
+    mocks.quoteOrder.mockResolvedValue(quote);
+    mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onSuccess({
+        id: VOUCHER_QR_ORDER_ID,
+        orderTotal: 100000,
+        orderDiscount: 0,
+        orderStatusId: OrderStatus.PENDING,
+        paymentStatusId: 10,
+        shippingStatusId: 0,
+        paymentMethodSystemName: PaymentType.VNPAY,
+        createdOnUtc: "2026-11-04T10:00:00.000Z",
+        paperVoucher: createOrderPaperVoucher(quote, {
+          status: "held",
+          paymentMethodSystemName: PaymentType.VNPAY,
+          collectedAmount: null
+        })
+      })
+    );
+    mocks.createQrMutateAsync.mockResolvedValue({
+      qrcode: "000201VNPAY",
+      referenceLabelCode: "qr-150",
+      terminalId: "NCC12",
+      transactionAmount: 20000,
+      paperVoucher: { orderTotal: 100000, voucherApplied: 80000, remainingPayable: 20000 }
+    });
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={oneSeat}
+        setSelectedSeats={setSelectedSeats}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    fireEvent.click(screen.getByLabelText("Quét VNPayQR"));
+    fireEvent.click(getPrintButton());
+    await waitFor(() => expect(screen.getByTestId("qr-dialog")).toBeInTheDocument());
+    return { setSelectedSeats };
+  };
+
+  const paidMessages = () =>
+    mocks.messageSuccess.mock.calls.filter(([text]) =>
+      String(text).startsWith("Thanh toán VNPayQR thành công")
+    );
+
+  it("P6-VNPAY-01 offers VNPayQR when the backend allows it and charges the QR with the 20.000 left", async () => {
+    await openVoucherVnpayQr();
+
+    expect(submittedOrders()[0]).toMatchObject({
+      paymentMethodSystemName: PaymentType.VNPAY,
+      expectedRemainingPayable: 20000
+    });
+    expect(mocks.createQrMutateAsync).toHaveBeenCalledWith({
+      orderId: VOUCHER_QR_ORDER_ID,
+      paymentMethod: PaymentType.VNPAY,
+      shortName: "M11"
+    });
+    expect(window.api.sendQrOpen).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderTotal: 100000,
+        transactionAmount: 20000,
+        paymentMethodSystemName: PaymentType.VNPAY,
+        paperVoucher: expect.objectContaining({ voucherApplied: 80000, remainingPayable: 20000 })
+      })
+    );
+    // QR đã tạo nhưng chưa thanh toán: chưa báo thành công.
+    expect(paidMessages()).toHaveLength(0);
+  }, 30000);
+
+  it("P6-VNPAY-02 keeps VNPayQR disabled when the voucher pays everything (backend allows cash only)", async () => {
+    mocks.quoteOrder.mockResolvedValue(createQuote({ allowedPaymentMethods: ["POS"] }));
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={oneSeat}
+        setSelectedSeats={vi.fn()}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+
+    await applyVouchers(["LÔ-005"]);
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+
+    expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
+    expect(screen.getByLabelText("Quét VietQR")).toBeDisabled();
+  }, 30000);
+
+  it("P6-VNPAY-05 a paid socket event is shown once, only after the backend applied the voucher", async () => {
+    mocks.getOrderDetail.mockResolvedValue(createVoucherQrDetail("applied", "success"));
+    const { setSelectedSeats } = await openVoucherVnpayQr();
+
+    await act(async () => {
+      paymentUpdatedHandler?.({ paymentStatus: 30, orderId: String(VOUCHER_QR_ORDER_ID) });
+      paymentUpdatedHandler?.({ paymentStatus: 30, orderId: String(VOUCHER_QR_ORDER_ID) });
+    });
+
+    await waitFor(() => expect(screen.queryByTestId("qr-dialog")).not.toBeInTheDocument());
+    expect(paidMessages()).toHaveLength(1);
+    expect(paidMessages()[0][0]).toBe(
+      `Thanh toán VNPayQR thành công ${formatMoney(20000)}. Voucher giấy ${formatMoney(80000)} (LÔ-005 ×1).`
+    );
+    expect(
+      setSelectedSeats.mock.calls.filter(([seats]) => Array.isArray(seats) && seats.length === 0)
+    ).toHaveLength(1);
+  }, 30000);
+
+  it("check transaction never calls the VietQR check for VNPayQR: it reads the order (still waiting)", async () => {
+    mocks.getOrderDetail.mockResolvedValue(createVoucherQrDetail("held"));
+    await openVoucherVnpayQr();
+
+    fireEvent.click(screen.getByRole("button", { name: "Kiem tra QR" }));
+
+    await waitFor(() => expect(mocks.messageWarning).toHaveBeenCalled());
+    expect(mocks.checkTransaction).not.toHaveBeenCalled();
+    expect(screen.getByTestId("qr-dialog")).toBeInTheDocument();
+    expect(mocks.updateOrderMutateAsync).not.toHaveBeenCalled();
+    expect(paidMessages()).toHaveLength(0);
+  }, 30000);
+
+  it("P6-VNPAY-12 check transaction: IPN recorded but confirmation failed → completes via the backend once", async () => {
+    mocks.updateOrderMutateAsync.mockResolvedValue({});
+    mocks.getOrderDetail.mockResolvedValue(createVoucherQrDetail("held", "success"));
+    await openVoucherVnpayQr();
+
+    fireEvent.click(screen.getByRole("button", { name: "Kiem tra QR" }));
+
+    await waitFor(() => expect(paidMessages()).toHaveLength(1));
+    expect(mocks.checkTransaction).not.toHaveBeenCalled();
+    expect(mocks.updateOrderMutateAsync).toHaveBeenCalledWith({
+      id: VOUCHER_QR_ORDER_ID,
+      dto: expect.objectContaining({ orderStatusId: OrderStatus.COMPLETED })
+    });
+  }, 30000);
+
+  it("P6-VNPAY-11 closing an unpaid VNPayQR waits for the backend to release the voucher", async () => {
+    mocks.updateOrderMutateAsync.mockResolvedValue({});
+    await openVoucherVnpayQr();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dong QR" }));
+
+    await waitFor(() => expect(screen.queryByTestId("qr-dialog")).not.toBeInTheDocument());
+    expect(mocks.updateOrderMutateAsync).toHaveBeenCalledWith({
+      id: VOUCHER_QR_ORDER_ID,
+      dto: expect.objectContaining({ orderStatusId: OrderStatus.FAIL })
+    });
+    expect(paidMessages()).toHaveLength(0);
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it("P6-VNPAY-13 keeps the VNPayQR open when the backend is unreachable while closing", async () => {
+    mocks.updateOrderMutateAsync.mockRejectedValue(createApiError());
+    await openVoucherVnpayQr();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dong QR" }));
+
+    await waitFor(() => expect(mocks.messageError).toHaveBeenCalled());
+    expect(screen.getByTestId("qr-dialog")).toBeInTheDocument();
+    expect(paidMessages()).toHaveLength(0);
+  }, 30000);
+
+  it("P6-VNPAY-10 a VNPay success on a released order (late payment) is never shown as paid", async () => {
+    mocks.getOrderDetail.mockResolvedValue(createVoucherQrDetail("released", "success"));
+    await openVoucherVnpayQr();
+
+    fireEvent.click(screen.getByRole("button", { name: "Kiem tra QR" }));
+
+    await waitFor(() => expect(screen.queryByTestId("qr-dialog")).not.toBeInTheDocument());
+    expect(paidMessages()).toHaveLength(0);
+    expect(String(mocks.messageError.mock.calls.at(-1)?.[0])).toContain("báo quản lý đối soát");
   }, 30000);
 });
