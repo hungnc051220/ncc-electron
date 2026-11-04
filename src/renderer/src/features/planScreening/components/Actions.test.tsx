@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders, type AxiosResponse } from "axios";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formatMoney } from "@renderer/lib/utils";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
@@ -29,7 +29,7 @@ import {
   PAPER_VOUCHER_FIXTURES,
   setupPaperVoucherServer,
   stubObjectUrls
-} from "@renderer/features/vouchers/paperVouchers/paperVoucher.testUtils";
+} from "@renderer/features/paperVouchers/paperVoucher.testUtils";
 import Actions from "./Actions";
 
 let paymentUpdatedHandler:
@@ -58,10 +58,8 @@ const mocks = vi.hoisted(() => ({
   modalConfirm: vi.fn()
 }));
 
-vi.mock("@renderer/features/vouchers/paperVouchers/paperVoucher.utils", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@renderer/features/vouchers/paperVouchers/paperVoucher.utils")
-  >()),
+vi.mock("@renderer/features/paperVouchers/paperVoucher.utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@renderer/features/paperVouchers/paperVoucher.utils")>()),
   getVietnamBusinessDate: () => "2026-10-30"
 }));
 
@@ -1031,18 +1029,29 @@ const applyVouchers = async (batchCodes: string[]) => {
     fireEvent.click(within(option).getByText("Chọn").closest("button")!);
   }
   fireEvent.click(screen.getByText("Áp dụng").closest("button")!);
+  await waitFor(() => expect(screen.queryByText("Áp dụng voucher giấy")).not.toBeInTheDocument());
+};
+
+/** Phần voucher đang áp dụng (báo giá) nằm trong popup Voucher giấy, không ở footer. */
+const openVoucherSummary = () => {
+  fireEvent.click(screen.getByText("Voucher giấy").closest("button")!);
   return screen.findByTestId("paper-voucher-pos-summary");
+};
+
+/** Chi tiết voucher giấy của lần bán gần nhất nằm trong tooltip của "Tiền vừa bán". */
+const showLastSaleDetail = async () => {
+  fireEvent.mouseEnter(screen.getByTestId("last-sale-total"));
+  await screen.findByTestId("last-sale-paper-voucher");
 };
 
 // Test voucher giấy mở dialog antd và chờ báo giá: khi chạy song song toàn bộ test có thể chậm hơn
 // mặc định 5 s, nên các test bên dưới đặt timeout 30 s.
 const getPrintButton = () => screen.getByRole("button", { name: /in vé/i });
 
-describe("Actions paper vouchers (sale flag off)", () => {
+describe("Actions paper vouchers (selection)", () => {
   let paperVoucherServer: Awaited<ReturnType<typeof setupPaperVoucherServer>>;
 
   beforeEach(async () => {
-    vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", "false");
     paperVoucherServer = await setupPaperVoucherServer();
     stubObjectUrls();
     mocks.createOrderMutate.mockReset();
@@ -1052,28 +1061,55 @@ describe("Actions paper vouchers (sale flag off)", () => {
     useSettingPosStore.setState({ posName: "POS Machine 1", posShortName: "M11" });
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("applies several batches and blocks the real sale while they are selected", async () => {
+  it("always sends selected batches to the paper voucher POS quote, never as a plain order", async () => {
+    mocks.quoteOrder.mockReturnValue(new Promise(() => {}));
     renderPaperVoucherActions();
 
-    const summary = await applyVouchers(["LÔ-003", "LÔ-004"]);
+    await applyVouchers(["LÔ-003", "LÔ-004"]);
+    // Footer không có dòng voucher giấy riêng; xem trong popup.
+    expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument();
+    const summary = await openVoucherSummary();
 
-    expect(within(summary).getByText(/LÔ-003/)).toBeInTheDocument();
-    expect(within(summary).getByText(/LÔ-004/)).toBeInTheDocument();
-    expect(within(summary).getByText("Chưa ghi nhận vào đơn")).toBeInTheDocument();
-    expect(within(summary).queryByText(/Mô phỏng/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Số lượng LÔ-003")).toHaveValue("1");
+    expect(screen.getByLabelText("Số lượng LÔ-004")).toHaveValue("1");
+    expect(summary).toHaveTextContent("Khách cần trả thêm");
+    expect(within(summary).queryByText("Chưa ghi nhận vào đơn")).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.quoteOrder).toHaveBeenCalledTimes(1), { timeout: 10000 });
+    expect(mocks.quoteOrder.mock.calls[0][0].paperVouchers).toEqual([
+      expect.objectContaining({ batchId: 3, quantity: 1 }),
+      expect.objectContaining({ batchId: 4, quantity: 1 })
+    ]);
     expect(getPrintButton()).toBeDisabled();
 
     fireEvent.click(getPrintButton());
     expect(mocks.createOrderMutate).not.toHaveBeenCalled();
-    expect(mocks.quoteOrder).not.toHaveBeenCalled();
     expect(paperVoucherServer.requestBodies).toEqual([]);
 
-    fireEvent.click(within(summary).getByText("Bỏ áp dụng").closest("button")!);
+    fireEvent.click(screen.getByText("Bỏ áp dụng").closest("button")!);
+    // Bỏ áp dụng đóng luôn popup.
+    expect(screen.queryByText("Áp dụng voucher giấy")).not.toBeInTheDocument();
     expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument();
+    expect(getPrintButton()).toBeEnabled();
+  }, 30000);
+
+  it("quotes the selection while choosing, before Áp dụng, and keeps nothing on Hủy", async () => {
+    mocks.quoteOrder.mockResolvedValue(createQuote());
+    renderPaperVoucherActions();
+
+    fireEvent.click(screen.getByText("Voucher giấy").closest("button")!);
+    const option = await screen.findByTestId("paper-voucher-option-LÔ-003");
+    fireEvent.click(within(option).getByText("Chọn").closest("button")!);
+
+    // Chưa bấm Áp dụng đã thấy số tiền khách cần trả thêm theo báo giá backend.
+    const summary = await screen.findByTestId("paper-voucher-pos-summary");
+    await within(summary).findByTestId("paper-voucher-remaining", {}, { timeout: 10000 });
+    expect(mocks.quoteOrder.mock.calls[0][0].paperVouchers).toEqual([
+      expect.objectContaining({ batchId: 3, quantity: 1 })
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Hủy" }));
+    await waitFor(() => expect(screen.queryByText("Áp dụng voucher giấy")).not.toBeInTheDocument());
+    expect(screen.getByText("Voucher giấy").closest(".ant-badge")).not.toHaveTextContent(/\d/);
     expect(getPrintButton()).toBeEnabled();
   }, 30000);
 
@@ -1082,9 +1118,9 @@ describe("Actions paper vouchers (sale flag off)", () => {
     await applyVouchers(["LÔ-003", "LÔ-004"]);
 
     rerenderSeats([createSeat()]);
-    const summary = screen.getByTestId("paper-voucher-pos-summary");
-    expect(within(summary).getByText(/LÔ-004/)).toBeInTheDocument();
-    expect(within(summary).queryByTestId("paper-voucher-selection-error")).toBeNull();
+    await openVoucherSummary();
+    expect(await screen.findByLabelText("Số lượng LÔ-004")).toHaveValue("1");
+    expect(screen.queryByTestId("paper-voucher-selection-error")).toBeNull();
 
     rerenderSeats([]);
     await waitFor(() =>
@@ -1214,16 +1250,11 @@ const waitForQuote = (assertion: () => void) => waitFor(assertion, QUOTE_WAIT);
 
 const oneSeat = [createSeat()];
 
-describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", () => {
+describe("Actions paper voucher sale", () => {
   beforeEach(async () => {
-    vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", "true");
     await setupPaperVoucherServer({ batches: [...PAPER_VOUCHER_FIXTURES, BATCH_80K] });
     stubObjectUrls();
     useSettingPosStore.setState({ posName: "POS Machine 1", posShortName: "M11" });
-  });
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
   });
 
   it("does not quote nor change the sale when no paper voucher is selected", async () => {
@@ -1267,7 +1298,8 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     );
     renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-005"]);
+    await applyVouchers(["LÔ-005"]);
+    const summary = await openVoucherSummary();
     expect(within(summary).getByTestId("paper-voucher-quote-loading")).toBeInTheDocument();
     expect(getPrintButton()).toBeDisabled();
 
@@ -1288,17 +1320,14 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
       },
       expect.anything()
     );
-    expect(within(summary).getByText("Tương đương tiền mặt")).toBeInTheDocument();
-    expect(summary).toHaveTextContent("Tổng tiền vé:");
+    expect(summary).toHaveTextContent("Khách cần trả thêm");
     expect(textOf("paper-voucher-order-total")).toBe(money(100000));
-    expect(summary).toHaveTextContent("Thanh toán bằng Voucher giấy:");
-    expect(textOf("paper-voucher-applied")).toBe(money(80000));
-    expect(summary).toHaveTextContent("Cần thanh toán thêm:");
+    expect(textOf("paper-voucher-applied")).toBe(`−${money(80000)}`);
     expect(textOf("paper-voucher-remaining")).toBe(money(20000));
-    expect(textOf("paper-voucher-payment-method")).toBe("(Tiềnmặt)");
+    expect(textOf("paper-voucher-payment-method")).toBe("Tiềnmặt");
     expect(screen.queryByTestId("paper-voucher-excess-warning")).not.toBeInTheDocument();
-    // "Thành tiền" là tổng tiền vé (doanh thu), không phải số tiền còn lại.
-    expect(textOf("order-final-amount")).toBe(money(100000));
+    // "Thành tiền" là số tiền khách phải trả: tổng tiền vé trừ phần voucher giấy.
+    expect(textOf("order-final-amount")).toBe(money(20000));
     expect(getPrintButton()).toBeEnabled();
 
     fireEvent.click(getPrintButton());
@@ -1315,6 +1344,7 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
 
     // Tiền vừa bán = tổng đơn (doanh số giữ nguyên); kèm phần voucher và tiền mặt khách trả thêm.
     await waitFor(() => expect(sessionStorage.getItem("lastTotal")).toBe("100000"));
+    await showLastSaleDetail();
     expect(textOf("last-sale-paper-voucher")).toBe(`Vouchergiấy:${money(80000)}`);
     expect(textOf("last-sale-collected")).toBe(`Kháchtrảthêm:${money(20000)}`);
     expect(sessionStorage.getItem("lastPaperVoucherCollected")).toBe("20000");
@@ -1346,13 +1376,14 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     );
     renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-003"]);
+    await applyVouchers(["LÔ-003"]);
+    const summary = await openVoucherSummary();
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
     expect(textOf("paper-voucher-remaining")).toBe(money(0));
-    expect(within(summary).getByText("Voucher giấy đã thanh toán đủ")).toBeInTheDocument();
+    expect(within(summary).getByText("Đã thanh toán đủ")).toBeInTheDocument();
     expect(screen.queryByTestId("paper-voucher-quote-warning")).not.toBeInTheDocument();
-    expect(textOf("order-final-amount")).toBe(money(100000));
+    expect(textOf("order-final-amount")).toBe(money(0));
     expect(screen.getByLabelText("Quét VietQR")).toBeDisabled();
     expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
 
@@ -1393,13 +1424,13 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
 
     await applyVouchers(["LÔ-003"]);
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    await openVoucherSummary();
 
-    expect(textOf("paper-voucher-excess-warning")).toBe(
-      `Tiềnthừavoucher${money(100000)}khônghoànlại`
-    );
+    expect(textOf("paper-voucher-excess-warning")).toBe(`Tiềnthừa${money(100000)}khônghoànlại`);
+    expect(textOf("paper-voucher-excess")).toBe(money(100000));
     expect(textOf("paper-voucher-face-value-total")).toBe(money(200000));
     expect(textOf("paper-voucher-order-total")).toBe(money(100000));
-    expect(textOf("paper-voucher-applied")).toBe(money(100000));
+    expect(textOf("paper-voucher-applied")).toBe(`−${money(100000)}`);
     expect(textOf("paper-voucher-remaining")).toBe(money(0));
     // Cảnh báo backend trùng nội dung đã hiển thị thì không lặp lại.
     expect(screen.queryByTestId("paper-voucher-quote-warning")).not.toBeInTheDocument();
@@ -1413,11 +1444,12 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
 
     await applyVouchers(["LÔ-005"]);
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    await openVoucherSummary();
 
     expect(textOf("paper-voucher-order-total")).toBe(money(190000));
-    expect(textOf("paper-voucher-applied")).toBe(money(80000));
+    expect(textOf("paper-voucher-applied")).toBe(`−${money(80000)}`);
     expect(textOf("paper-voucher-remaining")).toBe(money(110000));
-    expect(textOf("order-final-amount")).toBe(money(190000));
+    expect(textOf("order-final-amount")).toBe(money(110000));
     expect(screen.queryByTestId("paper-voucher-quote-error")).not.toBeInTheDocument();
 
     fireEvent.click(getPrintButton());
@@ -1475,7 +1507,8 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     expect(screen.getByLabelText("Quét VNPayQR")).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText("Quét VietQR"));
-    expect(textOf("paper-voucher-payment-method")).toBe("(QuétVietQR)");
+    await openVoucherSummary();
+    expect(textOf("paper-voucher-payment-method")).toBe("QuétVietQR");
     // Đổi phương thức không báo giá lại.
     expect(mocks.quoteOrder).toHaveBeenCalledTimes(1);
 
@@ -1517,6 +1550,7 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     // Tiền vừa bán = tổng đơn 100.000đ (doanh số, như đơn thường); kèm phần voucher và số QR đã
     // nhận 20.000đ, không đánh tráo hai số. Lựa chọn voucher được xóa.
     expect(sessionStorage.getItem("lastTotal")).toBe("100000");
+    await showLastSaleDetail();
     expect(textOf("last-sale-paper-voucher")).toBe(`Vouchergiấy:${money(80000)}`);
     expect(textOf("last-sale-collected")).toBe(`Kháchtrảthêm:${money(20000)}`);
     expect(screen.queryByTestId("paper-voucher-pos-summary")).not.toBeInTheDocument();
@@ -1552,7 +1586,8 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     expect(mocks.messageWarning).toHaveBeenLastCalledWith(
       "Quét VietQR không dùng được cho đơn có voucher giấy này. Đã chuyển sang tiền mặt."
     );
-    expect(textOf("paper-voucher-payment-method")).toBe("(Tiềnmặt)");
+    await openVoucherSummary();
+    expect(textOf("paper-voucher-payment-method")).toBe("Tiềnmặt");
     expect(mocks.createOrderMutate).not.toHaveBeenCalled();
   }, 30000);
 
@@ -1560,10 +1595,11 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     mocks.quoteOrder.mockResolvedValue(createQuote());
     renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-005"]);
+    await applyVouchers(["LÔ-005"]);
+    await openVoucherSummary();
     expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeDisabled();
 
-    fireEvent.click(within(summary).getByText("Bỏ áp dụng").closest("button")!);
+    fireEvent.click(screen.getByText("Bỏ áp dụng").closest("button")!);
     expect(screen.getByRole("button", { name: /giữ chỗ/i })).toBeEnabled();
     expect(screen.getByLabelText("Quét VNPayQR")).toBeEnabled();
     expect(mocks.createOrderMutate).not.toHaveBeenCalled();
@@ -1578,7 +1614,8 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     );
     renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-005"]);
+    await applyVouchers(["LÔ-005"]);
+    const summary = await openVoucherSummary();
     await waitForQuote(() => expect(mocks.quoteOrder).toHaveBeenCalledTimes(1));
     expect(within(summary).getByTestId("paper-voucher-quote-loading")).toBeInTheDocument();
     expect(getPrintButton()).toBeDisabled();
@@ -1586,8 +1623,7 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     // Các thao tác khác vẫn dùng được trong lúc báo giá.
     expect(screen.getByLabelText("Quẹt thẻ VIP")).toBeEnabled();
     expect(screen.getByLabelText("Quét VietQR")).toBeEnabled();
-    expect(within(summary).getByText("Sửa").closest("button")).toBeEnabled();
-    expect(within(summary).getByText("Bỏ áp dụng").closest("button")).toBeEnabled();
+    expect(screen.getByText("Bỏ áp dụng").closest("button")).toBeEnabled();
 
     await act(async () => resolveQuote(createQuote()));
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
@@ -1604,7 +1640,8 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     mocks.quoteOrder.mockResolvedValue(createQuote());
     renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-005"]);
+    await applyVouchers(["LÔ-005"]);
+    const summary = await openVoucherSummary();
 
     expect(
       await within(summary).findByTestId("paper-voucher-quote-error", {}, QUOTE_WAIT)
@@ -1642,7 +1679,9 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     await waitFor(() =>
       expect(mocks.messageWarning).toHaveBeenCalledWith(PAPER_VOUCHER_QUOTE_CHANGED_MESSAGE)
     );
+    await openVoucherSummary();
     await waitForQuote(() => expect(textOf("paper-voucher-remaining")).toBe(money(30000)));
+    expect(textOf("order-final-amount")).toBe(money(30000));
     expect(textOf("paper-voucher-order-total")).toBe(money(110000));
     expect(screen.getByTestId("paper-voucher-quote-replaced")).toBeInTheDocument();
     // Không tự gửi lại đơn với số tiền cũ hay mới.
@@ -1904,7 +1943,8 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     });
     renderPaperVoucherActions(oneSeat);
 
-    const summary = await applyVouchers(["LÔ-005"]);
+    await applyVouchers(["LÔ-005"]);
+    const summary = await openVoucherSummary();
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
     fireEvent.click(getPrintButton());
@@ -1921,8 +1961,14 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
 
     const [first, second, third] = submittedOrders().map((order) => order.paperVoucherRequestId);
     expect(new Set([first, second, third]).size).toBe(3);
+    // Backend từ chối: không bao giờ gửi lại thành đơn thường (thiếu voucher giấy).
+    for (const order of submittedOrders()) {
+      expect(order.paperVouchers).toEqual([{ batchId: 5, quantity: 1, faceValue: 80000 }]);
+      expect(order.paperVoucherRequestId).toMatch(UUID_V4);
+    }
     // Giữ nguyên lựa chọn voucher để thu ngân sửa; không báo giá lại.
-    expect(within(summary).getByText(/LÔ-005/)).toBeInTheDocument();
+    expect(summary).toBeInTheDocument();
+    expect(screen.getByLabelText("Số lượng LÔ-005")).toHaveValue("1");
     expect(mocks.quoteOrder).toHaveBeenCalledTimes(1);
   }, 30000);
 
@@ -1960,7 +2006,8 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
     renderPaperVoucherActions(oneSeat);
 
     fireEvent.click(screen.getByLabelText("Quẹt thẻ VIP"));
-    const summary = await applyVouchers(["LÔ-005"]);
+    await applyVouchers(["LÔ-005"]);
+    await openVoucherSummary();
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
 
     fireEvent.click(getPrintButton());
@@ -1972,7 +2019,9 @@ describe("Actions paper voucher sale (VITE_PAPER_VOUCHER_SALE_ENABLED=true)", ()
         expect.anything()
       )
     );
-    expect(within(summary).getByText("Thẻ VIP007")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("paper-voucher-summary")).getByText("VIP007")
+    ).toBeInTheDocument();
     expect(mocks.createOrderMutate).not.toHaveBeenCalled();
 
     await waitForQuote(() => expect(getPrintButton()).toBeEnabled());

@@ -9,25 +9,29 @@ interface PaperVoucherStatsProps {
   activeBatchCount: number;
 }
 
-type StatTone = "indigo" | "blue" | "emerald" | "amber";
+export type StatTone = "indigo" | "blue" | "emerald" | "amber";
 
 /** Màu nhận diện từng chỉ số, có biến thể riêng cho dark theme. */
-const STAT_TONES: Record<StatTone, { icon: string; accent: string }> = {
+export const STAT_TONES: Record<StatTone, { icon: string; accent: string; bar: string }> = {
   indigo: {
     icon: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-400/20",
-    accent: "text-indigo-600 dark:text-indigo-300"
+    accent: "text-indigo-600 dark:text-indigo-300",
+    bar: "bg-indigo-500 dark:bg-indigo-400"
   },
   blue: {
     icon: "bg-blue-50 text-blue-600 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-400/20",
-    accent: "text-blue-600 dark:text-blue-300"
+    accent: "text-blue-600 dark:text-blue-300",
+    bar: "bg-blue-500 dark:bg-blue-400"
   },
   emerald: {
     icon: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/20",
-    accent: "text-emerald-600 dark:text-emerald-300"
+    accent: "text-emerald-600 dark:text-emerald-300",
+    bar: "bg-emerald-500 dark:bg-emerald-400"
   },
   amber: {
     icon: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/20",
-    accent: "text-amber-600 dark:text-amber-300"
+    accent: "text-amber-600 dark:text-amber-300",
+    bar: "bg-amber-500 dark:bg-amber-400"
   }
 };
 

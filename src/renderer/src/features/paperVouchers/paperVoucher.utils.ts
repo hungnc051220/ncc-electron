@@ -69,6 +69,19 @@ export const isValidPaperVoucherDate = (value?: string | null): value is string 
   dayjs(value).format(PAPER_VOUCHER_DATE_FORMAT) === value;
 
 export const PAPER_VOUCHER_NO_EXPIRY_LABEL = "Không thời hạn";
+
+/** Hạn sử dụng của lô dạng câu đọc được, không để `--` khi thiếu một đầu. */
+export const formatPaperVoucherValidity = (
+  validFrom?: string | null,
+  expiresAt?: string | null
+) => {
+  if (validFrom && expiresAt) {
+    return `${formatPaperVoucherDate(validFrom)} – ${formatPaperVoucherDate(expiresAt)}`;
+  }
+  if (validFrom) return `Từ ${formatPaperVoucherDate(validFrom)}, không thời hạn`;
+  if (expiresAt) return `Đến hết ${formatPaperVoucherDate(expiresAt)}`;
+  return PAPER_VOUCHER_NO_EXPIRY_LABEL;
+};
 /** Giá trị bộ lọc HSD cho lô không có thời hạn. */
 export const PAPER_VOUCHER_NO_EXPIRY_FILTER = "no-expiry";
 

@@ -24,6 +24,7 @@ import OnlineSeatBookingDetailPage from "./features/onlineSeatBooking/OnlineSeat
 import OnlineShowtimeBookingPage from "./features/onlineShowtimeBooking/OnlineShowtimeBookingPage";
 import OrderHistoryPage from "./features/orderHistory/OrderHistoryPage";
 import OrderHistorySwapSeatsPage from "./features/orderHistory/OrderHistorySwapSeatsPage";
+import PaperVouchersPage from "./features/paperVouchers/PaperVouchersPage";
 import PlanCinemaPage from "./features/planCinema/PlanCinemaPage";
 import PlanScreeningPage from "./features/planScreening/PlanScreeningPage";
 import PrintOnlineTicketsPage from "./features/printOnlineTickets/PrintOnlineTicketsPage";
@@ -147,15 +148,11 @@ export const router = createHashRouter([
           },
           {
             path: "/vouchers",
-            element: (
-              <PermissionGuard
-                permissionKey="vouchers"
-                alternatePermissions={[{ permissionKey: "paper_vouchers" }]}
-                fallbackPath="/403"
-              >
-                <VouchersPage />
-              </PermissionGuard>
-            )
+            element: withAccess("vouchers", <VouchersPage />)
+          },
+          {
+            path: "/paper-vouchers",
+            element: withAccess("paper_vouchers", <PaperVouchersPage />)
           },
           {
             path: "/plan-cinema",

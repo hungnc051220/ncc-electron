@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   comparePaperVoucherDate,
   countPaperVoucherFilters,
+  formatPaperVoucherValidity,
   getPaperVoucherAmounts,
   getPaperVoucherStatus,
   getPaperVoucherUsageStatusMeta,
@@ -36,6 +37,15 @@ describe("getVietnamBusinessDate", () => {
   it("uses the Vietnam calendar day regardless of UTC date", () => {
     expect(getVietnamBusinessDate("2026-12-31T16:59:59.999Z")).toBe("2026-12-31");
     expect(getVietnamBusinessDate("2026-12-31T17:00:00.000Z")).toBe("2027-01-01");
+  });
+});
+
+describe("formatPaperVoucherValidity", () => {
+  it("describes every combination of start and expiry dates", () => {
+    expect(formatPaperVoucherValidity("2026-01-01", "2026-12-31")).toBe("01/01/2026 – 31/12/2026");
+    expect(formatPaperVoucherValidity("2026-01-01", null)).toBe("Từ 01/01/2026, không thời hạn");
+    expect(formatPaperVoucherValidity(null, "2026-12-31")).toBe("Đến hết 31/12/2026");
+    expect(formatPaperVoucherValidity(null, null)).toBe("Không thời hạn");
   });
 });
 

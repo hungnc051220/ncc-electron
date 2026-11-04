@@ -1,4 +1,4 @@
-import { formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
+import { formatMoney } from "@renderer/lib/utils";
 import type {
   OrderPaperVoucherDetail,
   OrderPaperVoucherLineStatus,
@@ -40,19 +40,6 @@ export const PAPER_VOUCHER_LINE_STATUS_DISPLAY: Record<OrderPaperVoucherLineStat
     cancelled: { label: "Đã hủy, không dùng lại", color: "error" }
   };
 
-/** Số khách đã trả thêm ngoài voucher (backend ghi `collectedAmount`), kèm cách trả hoặc lý do chưa thu. */
-const describePaidByCustomer = (paperVoucher: OrderPaperVoucherDetail) => {
-  const amount = formatMoney(paperVoucher.collectedAmount ?? 0);
-  const method = formatPaymentMethod(paperVoucher.paymentMethodSystemName);
-
-  if (paperVoucher.status === "held") {
-    return `${amount} (chờ thanh toán ${formatMoney(paperVoucher.remainingPayable)} qua ${method})`;
-  }
-  if (paperVoucher.status === "released") return `${amount} (chưa thu, voucher đã trả lại lô)`;
-  if (paperVoucher.remainingPayable === 0) return `${amount} (voucher giấy thanh toán đủ)`;
-  return `${amount} (${method})`;
-};
-
 /**
  * Các dòng thanh toán của đơn có voucher giấy. Voucher là nguồn thanh toán, không phải giảm giá:
  * giá vé trước voucher = `orderTotal` của đơn = voucher đã áp dụng + phần khách trả thêm.
@@ -76,7 +63,8 @@ export const buildPaperVoucherPaymentRows = (
     {
       key: "paidByCustomer",
       label: PAPER_VOUCHER_PAYMENT_LABELS.paidByCustomer,
-      value: describePaidByCustomer(paperVoucher),
+      // Số khách đã trả thêm ngoài voucher (backend ghi `collectedAmount`).
+      value: formatMoney(paperVoucher.collectedAmount ?? 0),
       tone: "paid"
     }
   ];
@@ -88,7 +76,7 @@ export const buildPaperVoucherPaymentRows = (
     {
       key: "excess",
       label: PAPER_VOUCHER_PAYMENT_LABELS.excess,
-      value: `${formatMoney(paperVoucher.excessAmount)} (không hoàn lại)`,
+      value: formatMoney(paperVoucher.excessAmount),
       tone: "warning"
     }
   ];

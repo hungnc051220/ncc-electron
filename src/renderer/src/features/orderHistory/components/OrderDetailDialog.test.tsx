@@ -152,7 +152,7 @@ describe("OrderDetailDialog — dữ liệu của đúng đơn đang mở", { ti
 
     expect(
       await within(getDialog()).findByTestId("paper-voucher-paidByCustomer")
-    ).toHaveTextContent(asText(`${formatMoney(20000)} (Tiền mặt)`));
+    ).toHaveTextContent(asText(formatMoney(20000)));
     expect(within(getDialog()).getByTestId("order-paper-voucher-lines")).toBeInTheDocument();
     expect(within(getDialog()).queryByTestId("order-payment-pending")).not.toBeInTheDocument();
   });

@@ -27,11 +27,7 @@ const NavItems = () => {
           return null;
         }
 
-        if (
-          item.permissionKey &&
-          !can(item.permissionKey, "access") &&
-          !item.alternatePermissionKeys?.some((key) => can(key, "access"))
-        ) {
+        if (item.permissionKey && !can(item.permissionKey, "access")) {
           return null;
         }
 

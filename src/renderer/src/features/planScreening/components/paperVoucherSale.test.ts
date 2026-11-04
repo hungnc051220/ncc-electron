@@ -1,5 +1,5 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from "axios";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { PaymentType } from "@shared/types";
 import {
   buildPaperVoucherPayloadKey,
@@ -10,7 +10,6 @@ import {
   getQrPayableAmount,
   isPaperVoucherOutcomeUnknown,
   isPaperVoucherPaymentMethodAllowed,
-  isPaperVoucherSaleEnabled,
   loadPaperVoucherAttempt,
   PAPER_VOUCHER_NETWORK_ERROR_MESSAGE,
   PAPER_VOUCHER_REQUEST_IN_PROGRESS_MESSAGE,
@@ -45,26 +44,6 @@ const quote = {
   warnings: [],
   quoteHash: "b".repeat(64)
 };
-
-describe("isPaperVoucherSaleEnabled", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("is enabled only when VITE_PAPER_VOUCHER_SALE_ENABLED is true", () => {
-    vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", "true");
-    expect(isPaperVoucherSaleEnabled()).toBe(true);
-    vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", " TRUE ");
-    expect(isPaperVoucherSaleEnabled()).toBe(true);
-
-    vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", "false");
-    expect(isPaperVoucherSaleEnabled()).toBe(false);
-    vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", "1");
-    expect(isPaperVoucherSaleEnabled()).toBe(false);
-    vi.stubEnv("VITE_PAPER_VOUCHER_SALE_ENABLED", "");
-    expect(isPaperVoucherSaleEnabled()).toBe(false);
-  });
-});
 
 describe("classifyPaperVoucherOrderError", () => {
   it("returns the new quote of a 409 quote change", () => {

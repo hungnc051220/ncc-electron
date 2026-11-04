@@ -1,10 +1,10 @@
 import { SERVER_ERROR_HINT } from "@renderer/lib/apiError";
+import { usePermissionStore } from "@renderer/store/permission.store";
 import { server } from "@renderer/test/msw/server";
 import type { PaperVoucherBatch, PaperVoucherUsage } from "@shared/types";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import type { ReactNode } from "react";
-import { useState } from "react";
+import { Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearPaperVoucherFilters,
@@ -18,13 +18,23 @@ import {
   setupPaperVoucherServer,
   stubObjectUrls
 } from "./paperVoucher.testUtils";
-import type { PaperVoucherPermissions } from "./paperVoucherPermissions";
-import PaperVouchersTab from "./PaperVouchersTab";
+import {
+  PAPER_VOUCHER_PERMISSION_KEY,
+  type PaperVoucherPermissions
+} from "./paperVoucherPermissions";
+import PaperVouchersPage from "./PaperVouchersPage";
 
 // Cố định ngày nghiệp vụ VN để trạng thái lô ổn định (không fake Date vì ảnh hưởng timer của antd).
 vi.mock("./paperVoucher.utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./paperVoucher.utils")>()),
   getVietnamBusinessDate: () => "2026-10-30"
+}));
+
+// Popup "Thông tin bán vé" có test riêng; ở đây chỉ cần biết mã đơn nào được mở.
+vi.mock("@renderer/features/orderHistory/components/OrderDetailDialog", () => ({
+  default: ({ selectedOrderId }: { selectedOrderId?: number | null }) => (
+    <div data-testid="order-detail-dialog">{selectedOrderId}</div>
+  )
 }));
 
 const FULL_ACCESS: PaperVoucherPermissions = {
@@ -36,24 +46,22 @@ const FULL_ACCESS: PaperVoucherPermissions = {
   delete: true
 };
 
-/** Hiển thị nút thao tác mà tab đẩy lên thanh tab, giống `VouchersPage`. */
-const TabHarness = ({ permissions }: { permissions: PaperVoucherPermissions }) => {
-  const [actions, setActions] = useState<ReactNode>(null);
+const renderPage = (permissions: Partial<PaperVoucherPermissions> = FULL_ACCESS) => {
+  usePermissionStore.setState({
+    assignments: [
+      { permissionKey: PAPER_VOUCHER_PERMISSION_KEY, actions: { ...FULL_ACCESS, ...permissions } }
+    ]
+  });
 
-  return (
-    <>
-      <div>{actions}</div>
-      <PaperVouchersTab permissions={permissions} onActionsChange={setActions} />
-    </>
-  );
-};
-
-const renderTab = (permissions: Partial<PaperVoucherPermissions> = FULL_ACCESS) =>
-  render(
+  return render(
     <PaperVoucherTestProviders>
-      <TabHarness permissions={{ ...FULL_ACCESS, ...permissions }} />
+      <Routes>
+        <Route path="/paper-vouchers" element={<PaperVouchersPage />} />
+        <Route path="/403" element={<div>Trang 403</div>} />
+      </Routes>
     </PaperVoucherTestProviders>
   );
+};
 
 const getRow = (batchCode: string) => {
   const row = screen.getByText(batchCode).closest("tr");
@@ -101,14 +109,14 @@ const RAW_SQL_MESSAGE =
 // Validate form antd + gọi API chậm hơn 1s mặc định khi chạy song song nhiều file.
 const slow = { timeout: 4000 };
 
-describe("PaperVouchersTab", { timeout: 20_000 }, () => {
+describe("PaperVouchersPage", { timeout: 20_000 }, () => {
   beforeEach(() => {
     stubObjectUrls();
   });
 
   it("renders summary cards and computed statuses from the API", async () => {
     await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
 
     expect(await screen.findByText("LÔ-001")).toBeInTheDocument();
     expect(screen.queryByText("Dữ liệu mẫu")).not.toBeInTheDocument();
@@ -126,7 +134,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("groups validity dates under one Hạn sử dụng header", async () => {
     await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-001");
 
     expect(getHeaderCell("Hạn sử dụng")).toHaveAttribute("colspan", "2");
@@ -140,7 +148,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("requests the first page in the backend default order", async () => {
     const { pageQueries } = await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-001");
 
     expect(getBatchCodesInOrder()).toEqual(["LÔ-004", "LÔ-003", "LÔ-002", "LÔ-001"]);
@@ -149,7 +157,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("sends column sorts and the popup search to the server", async () => {
     const { pageQueries } = await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-001");
 
     fireEvent.click(getHeaderCell("Từ ngày"));
@@ -175,7 +183,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
         batch.id === 4 ? { ...batch, expiresAt: null } : batch
       )
     });
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-004");
 
     expect(within(getRow("LÔ-004")).getByText("Không thời hạn")).toBeInTheDocument();
@@ -184,7 +192,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("searches from the filter popup, shows empty state and clears filters", async () => {
     await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-001");
     // Cộng thời gian render bảng khi chạy song song nhiều file test.
     const searchWait = { timeout: 4000 };
@@ -209,7 +217,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
     await setupPaperVoucherServer({
       batches: withImages({ 4: ["mot.png"], 3: ["dau.png", "hai.png", "ba.png"] })
     });
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-001");
 
     expect(within(getRow("LÔ-001")).getByLabelText("Lô LÔ-001 chưa có ảnh")).toBeInTheDocument();
@@ -232,7 +240,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("validates and creates a new batch through the API", async () => {
     const { requestBodies } = await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-001");
 
     fireEvent.click(getButtonByText(document.body, "Tạo lô Voucher"));
@@ -284,7 +292,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
     const { requestBodies } = await setupPaperVoucherServer({
       batches: withImages({ 3: ["truoc.png"] })
     });
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-003");
 
     fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Chỉnh sửa"));
@@ -319,7 +327,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("locks a batch after confirmation without losing usage", async () => {
     const { requestBodies } = await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-003");
 
     fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Khóa lô"));
@@ -338,7 +346,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
         batch.id === 3 ? { ...batch, isLocked: true } : batch
       )
     });
-    renderTab();
+    renderPage();
     expect(await screen.findByText("Đã khóa")).toBeInTheDocument();
 
     fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Mở khóa"));
@@ -353,7 +361,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("blocks deleting used batches and deletes unused ones", async () => {
     const { getBatch } = await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-003");
 
     const usedMenu = await openRowMenu("LÔ-003");
@@ -374,22 +382,40 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
   it("shows every image in its stored order in details and previews them", async () => {
     const fileNames = ["truoc.png", "sau.png", "phu-luc.png"];
     await setupPaperVoucherServer({ batches: withImages({ 3: fileNames }) });
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-003");
 
     fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Xem chi tiết"));
     const dialog = await findModalByTitle("Chi tiết lô LÔ-003");
 
     const images = fileNames.map(createPaperVoucherImage);
-    images.forEach((image, index) =>
-      expect(within(dialog).getByAltText(`Ảnh ${index + 1} voucher LÔ-003`)).toHaveAttribute(
-        "src",
-        image.url
-      )
+    expect(within(dialog).getByAltText("Ảnh 1 voucher LÔ-003")).toHaveAttribute(
+      "src",
+      images[0].url
     );
-    expect(within(dialog).getByText("Ảnh 3 · phu-luc.png")).toBeInTheDocument();
+    expect(within(dialog).getByText("Ảnh 1 · truoc.png")).toBeInTheDocument();
+    expect(within(dialog).getByText("1/3")).toBeInTheDocument();
+    // Dải thumbnail giữ đúng thứ tự ảnh đã lưu.
+    images.forEach((image, index) =>
+      expect(
+        within(dialog)
+          .getByRole("button", { name: `Xem ảnh ${index + 1}` })
+          .querySelector("img")
+      ).toHaveAttribute("src", image.url)
+    );
     expect(dialog.querySelector("a[href]")).not.toBeInTheDocument();
 
+    fireEvent.click(within(dialog).getByRole("button", { name: "Xem ảnh 3" }));
+    expect(within(dialog).getByAltText("Ảnh 3 voucher LÔ-003")).toHaveAttribute(
+      "src",
+      images[2].url
+    );
+    expect(within(dialog).getByText("Ảnh 3 · phu-luc.png")).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ảnh sau" }));
+    expect(within(dialog).getByText("Ảnh 1 · truoc.png")).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Xem ảnh 2" }));
     fireEvent.click(within(dialog).getByAltText("Ảnh 2 voucher LÔ-003"));
     await waitFor(() =>
       expect(
@@ -409,18 +435,23 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
       appliedAmount: 180000,
       staffName: "Thu ngân A",
       createdAt: "2026-10-29T03:00:00.000Z",
-      status: "applied"
+      status: "applied",
+      orderId: 10206500
     };
     await setupPaperVoucherServer({ usages: [usage] });
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-003");
 
     fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Xem chi tiết"));
     const dialog = await findModalByTitle("Chi tiết lô LÔ-003");
 
-    expect(await within(dialog).findByText("HD-0001")).toBeInTheDocument();
+    const orderLink = await within(dialog).findByRole("button", { name: "10206500" });
+    expect(within(dialog).queryByText("HD-0001")).not.toBeInTheDocument();
     expect(within(dialog).getByText("Đã áp dụng")).toBeInTheDocument();
     expect(within(dialog).getByText("Thu ngân A")).toBeInTheDocument();
+
+    fireEvent.click(orderLink);
+    expect(await screen.findByTestId("order-detail-dialog")).toHaveTextContent("10206500");
   });
 
   it("shows cancelled, reversed and unknown usage statuses without breaking the history", async () => {
@@ -444,13 +475,13 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
       { ...baseUsage, id: 3, orderId: 10206513, status: "held" as PaperVoucherUsage["status"] }
     ];
     await setupPaperVoucherServer({ usages });
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-003");
 
     fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Xem chi tiết"));
     const dialog = await findModalByTitle("Chi tiết lô LÔ-003");
 
-    expect(await within(dialog).findByText("#10206511")).toBeInTheDocument();
+    expect(await within(dialog).findByRole("button", { name: "10206511" })).toBeInTheDocument();
     expect(within(dialog).getByText("Đã hủy, không dùng lại")).toBeInTheDocument();
     expect(within(dialog).getByText("Đã trả lại lô")).toBeInTheDocument();
     expect(within(dialog).getByText("Không xác định (held)")).toBeInTheDocument();
@@ -459,7 +490,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("shows empty image and usage states in details", async () => {
     await setupPaperVoucherServer();
-    renderTab();
+    renderPage();
     await screen.findByText("LÔ-001");
 
     fireEvent.click(within(await openRowMenu("LÔ-001")).getByText("Xem chi tiết"));
@@ -479,7 +510,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
         HttpResponse.json({ statusCode: 500, message: RAW_SQL_MESSAGE }, { status: 500 })
       )
     );
-    renderTab();
+    renderPage();
 
     expect(
       await screen.findByText(
@@ -514,7 +545,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
     it("shows a friendly message for a 500 on delete, sends it once and keeps the batch", async () => {
       await setupPaperVoucherServer();
       const calls = failWrite("delete", "/batches/4", 500, { message: RAW_SQL_MESSAGE });
-      renderTab();
+      renderPage();
       await screen.findByText("LÔ-004");
 
       fireEvent.click(within(await openRowMenu("LÔ-004")).getByText("Xóa lô"));
@@ -535,7 +566,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
         code: "PAPER_VOUCHER_BATCH_IN_USE",
         message: "Lô đã có lượt sử dụng, không thể xóa"
       });
-      renderTab();
+      renderPage();
       await screen.findByText("LÔ-004");
 
       fireEvent.click(within(await openRowMenu("LÔ-004")).getByText("Xóa lô"));
@@ -553,7 +584,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
         code: "INTERNAL_SERVER_ERROR",
         message: "Hệ thống gặp lỗi khi xử lý yêu cầu."
       });
-      renderTab();
+      renderPage();
       await screen.findByText("LÔ-003");
 
       fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Chỉnh sửa"));
@@ -571,7 +602,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("hides CRUD actions that are not granted", async () => {
     await setupPaperVoucherServer();
-    renderTab({ view: false, create: false, update: false, delete: false });
+    renderPage({ view: false, create: false, update: false, delete: false });
     await screen.findByText("LÔ-001");
 
     expect(screen.queryByText("Tạo lô Voucher")).not.toBeInTheDocument();
@@ -580,7 +611,7 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
 
   it("only offers viewing when update permission is missing", async () => {
     await setupPaperVoucherServer();
-    renderTab({ create: false, update: false, delete: false });
+    renderPage({ create: false, update: false, delete: false });
     await screen.findByText("LÔ-003");
 
     const menu = await openRowMenu("LÔ-003");
@@ -590,10 +621,17 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
   });
 
   it("does not load the list without the list permission", () => {
-    // Không đăng ký handler: nếu tab gọi API, MSW báo unhandled request.
-    renderTab({ list: false });
+    // Không đăng ký handler: nếu trang gọi API, MSW báo unhandled request.
+    renderPage({ list: false });
 
     expect(screen.getByText("Bạn không có quyền xem danh sách voucher giấy")).toBeInTheDocument();
     expect(screen.queryByText("LÔ-001")).not.toBeInTheDocument();
+  });
+
+  it("redirects to 403 without the access permission", () => {
+    renderPage({ access: false });
+
+    expect(screen.getByText("Trang 403")).toBeInTheDocument();
+    expect(screen.queryByText("Tạo lô Voucher")).not.toBeInTheDocument();
   });
 });

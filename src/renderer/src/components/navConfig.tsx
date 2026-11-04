@@ -4,7 +4,6 @@ export type NavConfigItem = {
   label: ReactNode;
   key: string;
   permissionKey?: string;
-  alternatePermissionKeys?: string[];
   onClickKey?: "showVersionInfo";
   to?: string;
   matchPaths?: string[];
@@ -124,8 +123,13 @@ export const navConfig: NavConfigItem[] = [
         label: "Danh sách chương trình khuyến mãi",
         key: "vouchers",
         permissionKey: "vouchers",
-        alternatePermissionKeys: ["paper_vouchers"],
         to: "/vouchers"
+      },
+      {
+        label: "Danh sách voucher giấy",
+        key: "paper-vouchers",
+        permissionKey: "paper_vouchers",
+        to: "/paper-vouchers"
       }
     ]
   },

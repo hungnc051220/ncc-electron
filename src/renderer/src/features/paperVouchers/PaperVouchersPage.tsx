@@ -1,4 +1,6 @@
 import Icon from "@ant-design/icons";
+import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
+import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import { paperVoucherKeys } from "@renderer/hooks/paperVouchers/keys";
 import {
@@ -12,12 +14,13 @@ import {
 } from "@renderer/hooks/paperVouchers/usePaperVoucherBatches";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getSafeApiErrorMessage } from "@renderer/lib/apiError";
+import { usePermission } from "@renderer/permissions/usePermission";
 import type { PaperVoucherBatch, PaperVoucherBatchQuery } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Empty } from "antd";
 import { PlusIcon } from "lucide-react";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Navigate } from "react-router";
 import PaperVoucherBatchDialog from "./components/PaperVoucherBatchDialog";
 import PaperVoucherDetailDialog from "./components/PaperVoucherDetailDialog";
 import PaperVoucherFilter from "./components/PaperVoucherFilter";
@@ -32,12 +35,7 @@ import {
   type PaperVoucherFilterValues
 } from "./paperVoucher.utils";
 import { PAPER_VOUCHER_NO_PERMISSION_MESSAGE } from "./paperVoucherMessages";
-import type { PaperVoucherPermissions } from "./paperVoucherPermissions";
-
-interface PaperVouchersTabProps {
-  permissions: PaperVoucherPermissions;
-  onActionsChange?: (actions: ReactNode) => void;
-}
+import { resolvePaperVoucherPermissions } from "./paperVoucherPermissions";
 
 type DialogState =
   | { type: "form"; batch: PaperVoucherBatch | null }
@@ -48,7 +46,9 @@ const EMPTY_SUMMARY = summarizePaperVoucherBatches([]);
 // Tham chiếu cố định: mảng mặc định mới mỗi lần render làm các memo/effect phía dưới chạy lại liên tục.
 const EMPTY_BATCHES: PaperVoucherBatch[] = [];
 
-const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProps) => {
+const PaperVouchersPage = () => {
+  const { can } = usePermission();
+  const permissions = useMemo(() => resolvePaperVoucherPermissions(can), [can]);
   const { message, modal } = useAntdApp();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<PaperVoucherFilterValues>({});
@@ -196,81 +196,75 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
     setCurrent(1);
   };
 
-  useEffect(() => {
-    onActionsChange?.(
-      <>
-        {permissions.list && (
-          <>
-            <PaperVoucherFilter
-              filters={filters}
-              onChange={handleFiltersChange}
-              faceValues={faceValues}
-              expiryDates={expiryDates}
-              hasNoExpiryBatch={hasNoExpiryBatch}
-            />
-            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
-          </>
-        )}
-        {permissions.create && (
-          <Button type="primary" onClick={handleCreate} icon={<Icon component={PlusIcon} />}>
-            Tạo lô Voucher
-          </Button>
-        )}
-      </>
-    );
-  }, [
-    expiryDates,
-    faceValues,
-    filters,
-    handleCreate,
-    handleFiltersChange,
-    hasNoExpiryBatch,
-    isFetching,
-    onActionsChange,
-    permissions.create,
-    permissions.list,
-    refetch
-  ]);
-
-  if (!permissions.list) {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center">
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Bạn không có quyền xem danh sách voucher giấy"
-        />
-      </div>
-    );
+  // Route guard đã chặn khi thiếu quyền truy cập; đây là lớp phòng thủ cuối.
+  if (!permissions.access) {
+    return <Navigate to="/403" replace />;
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <PaperVoucherStats
-        summary={summary ?? EMPTY_SUMMARY}
-        activeBatchCount={summary?.countByStatus.active ?? 0}
-      />
-      <PaperVoucherTable
-        dataSource={page?.data ?? []}
-        total={page?.total ?? 0}
-        loading={isFetchingPage}
-        today={today}
-        permissions={permissions}
-        hasFilters={hasPaperVoucherFilters(filters)}
-        loadError={
-          pageError
-            ? getSafeApiErrorMessage(pageError, "Không tải được danh sách lô voucher")
-            : null
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4 pb-3">
+      <PageHeader
+        left={<AppBreadcrumb />}
+        right={
+          <>
+            {permissions.list && (
+              <>
+                <PaperVoucherFilter
+                  filters={filters}
+                  onChange={handleFiltersChange}
+                  faceValues={faceValues}
+                  expiryDates={expiryDates}
+                  hasNoExpiryBatch={hasNoExpiryBatch}
+                />
+                <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+              </>
+            )}
+            {permissions.create && (
+              <Button type="primary" onClick={handleCreate} icon={<Icon component={PlusIcon} />}>
+                Tạo lô Voucher
+              </Button>
+            )}
+          </>
         }
-        current={current}
-        pageSize={pageSize}
-        sort={sort}
-        onSortChange={handleSortChange}
-        onPaginationChange={handlePaginationChange}
-        onView={handleView}
-        onEdit={handleEdit}
-        onToggleLock={handleToggleLock}
-        onDelete={handleDelete}
       />
+
+      {permissions.list ? (
+        <>
+          <PaperVoucherStats
+            summary={summary ?? EMPTY_SUMMARY}
+            activeBatchCount={summary?.countByStatus.active ?? 0}
+          />
+          <PaperVoucherTable
+            dataSource={page?.data ?? []}
+            total={page?.total ?? 0}
+            loading={isFetchingPage}
+            today={today}
+            permissions={permissions}
+            hasFilters={hasPaperVoucherFilters(filters)}
+            loadError={
+              pageError
+                ? getSafeApiErrorMessage(pageError, "Không tải được danh sách lô voucher")
+                : null
+            }
+            current={current}
+            pageSize={pageSize}
+            sort={sort}
+            onSortChange={handleSortChange}
+            onPaginationChange={handlePaginationChange}
+            onView={handleView}
+            onEdit={handleEdit}
+            onToggleLock={handleToggleLock}
+            onDelete={handleDelete}
+          />
+        </>
+      ) : (
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="Bạn không có quyền xem danh sách voucher giấy"
+          />
+        </div>
+      )}
 
       {dialog?.type === "form" && (
         <PaperVoucherBatchDialog
@@ -292,4 +286,4 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
   );
 };
 
-export default PaperVouchersTab;
+export default PaperVouchersPage;

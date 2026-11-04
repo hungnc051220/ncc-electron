@@ -67,7 +67,12 @@ const ImageTile = ({ draft, index, total, disabled, onMove, onRemove }: ImageTil
     <li className="flex min-w-0 flex-col gap-1.5" data-testid="paper-voucher-image-item">
       <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-lg border border-app-border bg-slate-50 dark:bg-white/5">
         {src && (
-          <Image src={src} alt={`Ảnh ${position} voucher`} height={110} className="object-contain" />
+          <Image
+            src={src}
+            alt={`Ảnh ${position} voucher`}
+            height={110}
+            className="object-contain"
+          />
         )}
         <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 text-[11px] font-semibold text-white">
           {position}
@@ -152,7 +157,10 @@ const PaperVoucherImageInput = ({
   return (
     <div className="flex flex-col gap-2">
       <Image.PreviewGroup>
-        <ul className="m-0 grid list-none grid-cols-4 gap-3 p-0" aria-label="Danh sách ảnh voucher">
+        <ul
+          className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-3 p-0"
+          aria-label="Danh sách ảnh voucher"
+        >
           {value.map((draft, index) => (
             <ImageTile
               key={getDraftKey(draft)}
@@ -187,8 +195,8 @@ const PaperVoucherImageInput = ({
         </ul>
       </Image.PreviewGroup>
       <span className="text-xs text-slate-400 dark:text-slate-500">
-        {value.length}/{PAPER_VOUCHER_MAX_IMAGES} ảnh · JPG, PNG, WebP · tối đa 5 MB mỗi ảnh · ảnh đầu
-        tiên là ảnh đại diện
+        {value.length}/{PAPER_VOUCHER_MAX_IMAGES} ảnh · JPG, PNG, WebP · tối đa 5 MB mỗi ảnh · ảnh
+        đầu tiên là ảnh đại diện
       </span>
     </div>
   );

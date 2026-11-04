@@ -46,11 +46,10 @@ import VipCardDialog from "./VipCardDialog";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { CancelOrderSelection, formatCancelSeatList } from "./cancelOrderSelection";
-import type { PaperVoucherSelectionLine } from "@renderer/features/vouchers/paperVouchers/paperVoucherRedemption";
+import type { PaperVoucherSelectionLine } from "@renderer/features/paperVouchers/paperVoucherRedemption";
 import { usePaperVoucherOrderQuote } from "@renderer/hooks/orders/usePaperVoucherOrderQuote";
 import { TicketPercent } from "lucide-react";
 import PaperVoucherDialog from "./PaperVoucherDialog";
-import PaperVoucherSummary from "./PaperVoucherSummary";
 import {
   buildPaperVoucherPayloadKey,
   classifyPaperVoucherOrderError,
@@ -59,9 +58,7 @@ import {
   getPaperVoucherPaymentFallbackMessage,
   isPaperVoucherOutcomeUnknown,
   isPaperVoucherPaymentMethodAllowed,
-  isPaperVoucherSaleEnabled,
   loadPaperVoucherAttempt,
-  PAPER_VOUCHER_BLOCKS_SALE_MESSAGE,
   PAPER_VOUCHER_CASH_METHOD,
   PAPER_VOUCHER_NO_PAYMENT_METHOD_MESSAGE,
   PAPER_VOUCHER_PAYMENT_HINT,
@@ -237,13 +234,18 @@ const Actions = ({
     readLastSaleAmount(LAST_SALE_COLLECTED_KEY)
   );
   const [isCheckingQrTransaction, setIsCheckingQrTransaction] = useState(false);
-  // Tắt cờ bán vé có voucher giấy: chỉ lưu lựa chọn tại màn hình và chặn in vé.
-  // Bật cờ: voucher giấy là một nguồn thanh toán; khách trả thêm phần còn lại theo báo giá backend.
+  // Đơn có voucher giấy luôn đi luồng bán vé voucher giấy tại POS: voucher giấy là một nguồn thanh
+  // toán; khách trả thêm phần còn lại theo báo giá backend. Không bao giờ chuyển sang đơn thường.
   const [paperVoucherLines, setPaperVoucherLines] = useState<PaperVoucherSelectionLine[]>([]);
   const [openPaperVoucherDialog, setOpenPaperVoucherDialog] = useState(false);
+  // Bản nháp trong popup voucher giấy (`null` khi chưa đổi): đang mở popup thì báo giá theo bản
+  // nháp để thu ngân thấy ngay số tiền trừ; đóng popup thì báo giá lại theo lựa chọn đã áp dụng.
+  const [paperVoucherDraft, setPaperVoucherDraft] = useState<PaperVoucherSelectionLine[] | null>(
+    null
+  );
+  const quotedPaperVoucherLines =
+    openPaperVoucherDialog && paperVoucherDraft ? paperVoucherDraft : paperVoucherLines;
   const hasPaperVoucher = paperVoucherLines.length > 0;
-  const paperVoucherSaleEnabled = isPaperVoucherSaleEnabled();
-  const isPaperVoucherSale = paperVoucherSaleEnabled && hasPaperVoucher;
   // Thẻ thành viên đã quẹt cho đơn có voucher giấy: phải có trong báo giá trước khi thu tiền.
   const [vipSelection, setVipSelection] = useState<BookingParams | null>(null);
   // Lần gửi tạo đơn có voucher giấy gần nhất: mã request gắn với đúng một payload. Chưa rõ kết quả
@@ -331,6 +333,7 @@ const Actions = ({
   /** Bỏ lựa chọn voucher giấy và thẻ đã quẹt sau khi bán xong. */
   const clearPaperVoucherSale = useCallback(() => {
     setPaperVoucherLines((current) => (current.length ? [] : current));
+    setOpenPaperVoucherDialog(false);
     setVipSelection(null);
   }, []);
 
@@ -486,10 +489,14 @@ const Actions = ({
     }
   }, [cancelMode, selectedSeats.length]);
 
+  useEffect(() => {
+    if (!openPaperVoucherDialog) setPaperVoucherDraft(null);
+  }, [openPaperVoucherDialog]);
+
   // Đổi ghế/giảm giá/thẻ VIP hoặc rời luồng voucher giấy: phải quẹt lại thẻ cho đơn mới.
   useEffect(() => {
     setVipSelection(null);
-  }, [isPaperVoucherSale, planScreenId, selectedDiscountGroups, selectedSeats, vipCard]);
+  }, [hasPaperVoucher, planScreenId, selectedDiscountGroups, selectedSeats, vipCard]);
 
   useEffect(() => {
     const allowedKeys = new Set(selectedSeats.map((seat) => getSeatDiscountKey(seat)));
@@ -534,7 +541,9 @@ const Actions = ({
   // Body báo giá = body tạo đơn + voucher giấy; số tiền khách trả thêm do backend tính. Báo giá
   // không phụ thuộc phương thức thanh toán nên luôn gửi tiền mặt, đổi phương thức không báo giá lại.
   const paperVoucherQuoteDto = useMemo<OrderQuoteDto | null>(() => {
-    if (!isPaperVoucherSale || cancelMode || selectedSeats.length === 0) return null;
+    if (quotedPaperVoucherLines.length === 0 || cancelMode || selectedSeats.length === 0) {
+      return null;
+    }
     if (!posName || !posShortName) return null;
 
     return {
@@ -552,7 +561,7 @@ const Actions = ({
       discountGroups: discountGroupsPayload,
       hasManualInvoice: exportInvoice,
       ...buildSeatFieldsByFloor(selectedSeats),
-      paperVouchers: paperVoucherLines.map(({ batchId, quantity, faceValue }) => ({
+      paperVouchers: quotedPaperVoucherLines.map(({ batchId, quantity, faceValue }) => ({
         batchId,
         quantity,
         faceValue
@@ -562,8 +571,7 @@ const Actions = ({
     cancelMode,
     discountGroupsPayload,
     exportInvoice,
-    isPaperVoucherSale,
-    paperVoucherLines,
+    quotedPaperVoucherLines,
     planScreenId,
     posName,
     posShortName,
@@ -580,12 +588,12 @@ const Actions = ({
   // Voucher giấy chỉ đi với phương thức backend cho phép (không bao giờ VNPayQR). Phương thức đang
   // chọn không còn hợp lệ: chuyển về tiền mặt và báo thu ngân, không bán âm thầm.
   useEffect(() => {
-    if (!isPaperVoucherSale || paymentMethod.length === 0) return;
+    if (!hasPaperVoucher || paymentMethod.length === 0) return;
     if (isPaperVoucherPaymentMethodAllowed(paymentMethod[0], paperVoucherAllowedMethods)) return;
 
     setPaymentMethod([]);
     message.warning(getPaperVoucherPaymentFallbackMessage(paymentMethod[0]));
-  }, [isPaperVoucherSale, message, paperVoucherAllowedMethods, paymentMethod]);
+  }, [hasPaperVoucher, message, paperVoucherAllowedMethods, paymentMethod]);
 
   /** Body tạo đơn có voucher giấy (chưa có mã request) từ báo giá đang hiển thị; `null` khi chưa thể bán. */
   const preparePaperVoucherOrder = () => {
@@ -735,18 +743,13 @@ const Actions = ({
       return;
     }
 
-    if (hasPaperVoucher && !paperVoucherSaleEnabled) {
-      message.error(PAPER_VOUCHER_BLOCKS_SALE_MESSAGE);
-      return;
-    }
-
     if (!posName || !posShortName) {
       message.error("Chưa cấu hình máy POS, không thể thao tác");
       return;
     }
 
-    const paperVoucherDraft = isPaperVoucherSale ? preparePaperVoucherOrder() : null;
-    if (isPaperVoucherSale && !paperVoucherDraft) {
+    const paperVoucherDraft = hasPaperVoucher ? preparePaperVoucherOrder() : null;
+    if (hasPaperVoucher && !paperVoucherDraft) {
       return;
     }
 
@@ -888,7 +891,7 @@ const Actions = ({
   };
 
   const onVipCardConfirm = (params?: BookingParams) => {
-    if (!isPaperVoucherSale) {
+    if (!hasPaperVoucher) {
       void onBooking(params);
       return;
     }
@@ -904,7 +907,7 @@ const Actions = ({
       return;
     }
 
-    if (isPaperVoucherSale) {
+    if (hasPaperVoucher) {
       message.error(PAPER_VOUCHER_RESERVE_BLOCKED_MESSAGE);
       return;
     }
@@ -976,7 +979,9 @@ const Actions = ({
       key: "2",
       label: <span className="text-xs font-semibold">Tiền vé</span>,
       children: (
-        <p className="text-right flex-1 font-bold text-xs self-center">{formatMoney(totalPrice)}</p>
+        <p className="text-right flex-1 font-bold text-xs self-center whitespace-nowrap tabular-nums">
+          {formatMoney(totalPrice)}
+        </p>
       )
     },
     {
@@ -990,8 +995,9 @@ const Actions = ({
             }
           }}
           className={cn(
-            "text-right flex-1 font-bold text-xs self-center",
-            cancelMode ? "cursor-not-allowed text-slate-400 dark:text-slate-500" : "cursor-pointer"
+            "text-right flex-1 font-bold text-xs self-center whitespace-nowrap tabular-nums",
+            cancelMode ? "cursor-not-allowed text-slate-400 dark:text-slate-500" : "cursor-pointer",
+            !cancelMode && priceDiscount > 0 && "text-red-600 dark:text-red-400"
           )}
         >
           {priceDiscount > 0 || Object.keys(selectedDiscountGroups).length > 0
@@ -1004,37 +1010,40 @@ const Actions = ({
       key: "4",
       label: <span className="text-xs font-semibold">Thành tiền</span>,
       children: (
-        <p
-          data-testid="order-final-amount"
-          className="text-right flex-1 font-bold text-blue-600 self-center dark:text-amber-200"
+        <Tooltip
+          title={
+            paperVoucherQuote.quote && hasPaperVoucher
+              ? `Tổng tiền vé ${formatMoney(paperVoucherQuote.quote.orderTotal)} − voucher giấy ${formatMoney(paperVoucherQuote.quote.voucherApplied)}`
+              : undefined
+          }
         >
-          {/* Đơn có voucher giấy: tổng tiền vé (sau khuyến mãi) do backend báo giá, không tự tính.
-              Voucher giấy không làm giảm số này; số tiền khách trả thêm nằm ở dòng voucher giấy. */}
-          {isPaperVoucherSale
-            ? paperVoucherQuote.quote
-              ? formatMoney(paperVoucherQuote.quote.orderTotal)
-              : "--"
-            : formatMoney(totalPrice - priceDiscount)}
-        </p>
+          <p
+            data-testid="order-final-amount"
+            className="text-right flex-1 font-bold whitespace-nowrap tabular-nums text-blue-600 self-center dark:text-amber-200"
+          >
+            {/* Số tiền khách phải trả. Đơn có voucher giấy: phần còn lại do backend báo giá. */}
+            {hasPaperVoucher
+              ? paperVoucherQuote.quote
+                ? formatMoney(paperVoucherQuote.quote.remainingPayable)
+                : "--"
+              : formatMoney(totalPrice - priceDiscount)}
+          </p>
+        </Tooltip>
       )
     }
   ];
 
   // Đơn có voucher giấy chỉ dùng phương thức backend cho phép; VNPayQR không bao giờ.
-  const paymentOptions = isPaperVoucherSale
+  const paymentOptions = hasPaperVoucher
     ? paymentTypes.map((option) => ({
         ...option,
         disabled: !isPaperVoucherPaymentMethodAllowed(option.value, paperVoucherAllowedMethods)
       }))
     : paymentTypes;
 
-  const printBlockedReason = !hasPaperVoucher
-    ? undefined
-    : !paperVoucherSaleEnabled
-      ? PAPER_VOUCHER_BLOCKS_SALE_MESSAGE
-      : isPaperVoucherQuotePending
-        ? (paperVoucherQuote.errorMessage ?? PAPER_VOUCHER_QUOTE_PENDING_MESSAGE)
-        : undefined;
+  const printBlockedReason = isPaperVoucherQuotePending
+    ? (paperVoucherQuote.errorMessage ?? PAPER_VOUCHER_QUOTE_PENDING_MESSAGE)
+    : undefined;
 
   const onChange: GetProp<typeof Checkbox.Group, "onChange"> = (checkedValues) => {
     const last = checkedValues.slice(-1) as string[];
@@ -1223,28 +1232,6 @@ const Actions = ({
         isCustomerView && "hidden"
       )}
     >
-      {hasPaperVoucher && (
-        <PaperVoucherSummary
-          lines={paperVoucherLines}
-          ticketCount={selectedSeats.length}
-          quote={
-            isPaperVoucherSale
-              ? {
-                  quote: paperVoucherQuote.quote,
-                  isLoading: paperVoucherQuote.isLoading,
-                  errorMessage: paperVoucherQuote.errorMessage,
-                  isReplaced: paperVoucherQuote.isReplaced,
-                  paymentMethodLabel: formatPaymentMethod(selectedPaymentMethod),
-                  onRetry: paperVoucherQuote.retry
-                }
-              : undefined
-          }
-          memberCardCode={vipSelection?.memberCardCode}
-          disabled={disableNonCancelActions}
-          onEdit={() => setOpenPaperVoucherDialog(true)}
-          onClear={() => setPaperVoucherLines([])}
-        />
-      )}
       <div className="p-2 flex gap-2 items-center justify-center">
         <div className="flex flex-col gap-2">
           <Checkbox checked={cancelMode} onChange={(e) => setCancelMode(e.target.checked)}>
@@ -1358,30 +1345,38 @@ const Actions = ({
             <span className="text-xs">Xuất hóa đơn</span>
           </Checkbox>
           <p className="text-slate-500 dark:text-stone-300">Tiền vừa bán:</p>
-          <p className="font-bold text-emerald-700 dark:text-amber-200 text-sm">
-            {formatMoney(lastSaleTotal)}
-          </p>
-          {lastSalePaperVoucher > 0 && (
-            <>
-              <p
-                data-testid="last-sale-paper-voucher"
-                className="text-amber-700 dark:text-amber-200"
-                title="Phần đơn vừa bán được trả bằng voucher giấy"
-              >
-                Voucher giấy: {formatMoney(lastSalePaperVoucher)}
-              </p>
-              <p
-                data-testid="last-sale-collected"
-                className="text-slate-600 dark:text-stone-300"
-                title="Số tiền khách trả thêm bằng tiền mặt hoặc QR (đã xác nhận)"
-              >
-                Khách trả thêm: {formatMoney(lastSaleCollected)}
-              </p>
-            </>
-          )}
+          {/* Phần voucher giấy của lần bán nằm trong tooltip để footer không cao thêm. */}
+          <Tooltip
+            title={
+              lastSalePaperVoucher > 0 ? (
+                <>
+                  <p data-testid="last-sale-paper-voucher">
+                    Voucher giấy: {formatMoney(lastSalePaperVoucher)}
+                  </p>
+                  <p data-testid="last-sale-collected">
+                    Khách trả thêm: {formatMoney(lastSaleCollected)}
+                  </p>
+                </>
+              ) : undefined
+            }
+          >
+            <p
+              data-testid="last-sale-total"
+              className="flex items-center gap-1 whitespace-nowrap font-bold tabular-nums text-emerald-700 dark:text-amber-200 text-sm"
+            >
+              {formatMoney(lastSaleTotal)}
+              {lastSalePaperVoucher > 0 && (
+                <TicketPercent
+                  size={14}
+                  aria-label="Có thanh toán bằng voucher giấy"
+                  className="text-orange-500 dark:text-orange-300"
+                />
+              )}
+            </p>
+          </Tooltip>
         </div>
-        <div className="grid grid-cols-1 gap-1.5">
-          <Tooltip title={isPaperVoucherSale ? PAPER_VOUCHER_RESERVE_BLOCKED_MESSAGE : undefined}>
+        <div className="grid grid-flow-col grid-rows-2 gap-1.5">
+          <Tooltip title={hasPaperVoucher ? PAPER_VOUCHER_RESERVE_BLOCKED_MESSAGE : undefined}>
             <Button
               variant="outlined"
               color="green"
@@ -1390,7 +1385,7 @@ const Actions = ({
                 disableNonCancelActions ||
                 !canUpdate ||
                 selectedSeats.length === 0 ||
-                isPaperVoucherSale
+                hasPaperVoucher
               }
               onClick={() => void onReserveSeats()}
             >
@@ -1405,23 +1400,28 @@ const Actions = ({
           >
             Hủy giữ
           </Button>
-        </div>
-
-        <div className="flex gap-3">
           {canCreate && !isPlanScreeningPast && (
-            <Badge count={paperVoucherLines.reduce((total, line) => total + line.quantity, 0)}>
+            <Badge
+              className="row-span-2"
+              size="small"
+              count={paperVoucherLines.reduce((total, line) => total + line.quantity, 0)}
+            >
               <Button
-                className="flex flex-col gap-0.5"
-                style={{ height: 72 }}
-                icon={<TicketPercent size={22} />}
+                variant="outlined"
+                color="orange"
+                className="h-full! w-16 flex-col gap-0.5 px-1!"
+                icon={<TicketPercent size={18} />}
                 aria-busy={isSeatSelectionPending}
                 disabled={disableNonCancelActions || selectedSeats.length === 0}
                 onClick={() => setOpenPaperVoucherDialog(true)}
               >
-                <span className="text-xs font-semibold">Voucher giấy</span>
+                <span className="text-xs leading-tight whitespace-normal">Voucher giấy</span>
               </Button>
             </Badge>
           )}
+        </div>
+
+        <div className="flex gap-3">
           <div className="flex flex-col">
             <Checkbox
               checked={vipCard}
@@ -1430,7 +1430,7 @@ const Actions = ({
             >
               Quẹt thẻ VIP
             </Checkbox>
-            <Tooltip title={isPaperVoucherSale ? PAPER_VOUCHER_PAYMENT_HINT : undefined}>
+            <Tooltip title={hasPaperVoucher ? PAPER_VOUCHER_PAYMENT_HINT : undefined}>
               <Checkbox.Group
                 className="flex flex-col"
                 value={paymentMethod}
@@ -1449,7 +1449,7 @@ const Actions = ({
                 style={{ height: 72 }}
                 onClick={() => {
                   // Đơn có voucher giấy đã quẹt thẻ: thẻ đã nằm trong báo giá, bấm In vé để thu tiền.
-                  if (vipCard && !(isPaperVoucherSale && vipSelection)) {
+                  if (vipCard && !(hasPaperVoucher && vipSelection)) {
                     setOpenVipCardDialog(true);
                     return;
                   }
@@ -1466,7 +1466,6 @@ const Actions = ({
                   cancelMode ||
                   !canCreate ||
                   isPlanScreeningPast ||
-                  (hasPaperVoucher && !paperVoucherSaleEnabled) ||
                   isPaperVoucherQuotePending
                 }
               >
@@ -1528,6 +1527,21 @@ const Actions = ({
           ticketCount={selectedSeats.length}
           ticketAmount={totalPrice}
           discountAmount={priceDiscount}
+          draftQuote={{
+            quote: paperVoucherQuote.quote,
+            isLoading: paperVoucherQuote.isLoading,
+            errorMessage: paperVoucherQuote.errorMessage,
+            isReplaced: paperVoucherQuote.isReplaced,
+            paymentMethodLabel: formatPaymentMethod(selectedPaymentMethod),
+            onRetry: paperVoucherQuote.retry
+          }}
+          memberCardCode={vipSelection?.memberCardCode}
+          clearDisabled={disableNonCancelActions}
+          onDraftChange={setPaperVoucherDraft}
+          onClear={() => {
+            setPaperVoucherLines([]);
+            setOpenPaperVoucherDialog(false);
+          }}
           onCancel={() => setOpenPaperVoucherDialog(false)}
           onApply={(lines) => {
             setPaperVoucherLines(lines);

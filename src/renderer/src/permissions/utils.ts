@@ -62,7 +62,7 @@ export const mergePermissionAssignments = (
   }));
 };
 
-// Nhiều permission có thể dùng chung route (vd. `/vouchers`); chỉ permission đầu tiên của route
+// Nhiều permission có thể dùng chung route (vd. `/settings`); chỉ permission đầu tiên của route
 // được khớp legacy menu theo route để quyền mới không tự kế thừa quyền cũ.
 const isRouteOwner = (definition: Pick<PermissionDefinition, "key" | "route">) =>
   !!definition.route &&

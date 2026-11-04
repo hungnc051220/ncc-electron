@@ -254,7 +254,7 @@ export const PaperVoucherTestProviders = ({ children }: { children: ReactNode })
   <QueryClientProvider client={queryClient}>
     <ConfigProvider theme={{ token: { motion: false } }}>
       <App>
-        <MemoryRouter initialEntries={["/vouchers"]}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={["/paper-vouchers"]}>{children}</MemoryRouter>
       </App>
     </ConfigProvider>
   </QueryClientProvider>

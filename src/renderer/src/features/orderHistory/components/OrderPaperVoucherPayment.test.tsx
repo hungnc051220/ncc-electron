@@ -80,22 +80,18 @@ describe("buildPaperVoucherPaymentRows", () => {
     expect(actualRows.map(({ label, value }) => [label, value])).toEqual([
       ["Giá vé trước voucher", formatMoney(190000)],
       ["Voucher giấy đã áp dụng", `-${formatMoney(95000)}`],
-      ["Tiền khách thực trả", `${formatMoney(95000)} (Tiền mặt)`]
+      ["Tiền khách thực trả", formatMoney(95000)]
     ]);
   });
 
-  it("thêm tiền thừa voucher khi mệnh giá vượt giá trị đơn và ghi rõ voucher trả đủ", () => {
+  it("thêm tiền thừa voucher khi mệnh giá vượt giá trị đơn, chỉ hiển thị số tiền", () => {
     const actualRows = buildPaperVoucherPaymentRows(buildPaperVoucher());
 
-    expect(actualRows.find((row) => row.key === "paidByCustomer")?.value).toBe(
-      `${formatMoney(0)} (voucher giấy thanh toán đủ)`
-    );
-    expect(actualRows.find((row) => row.key === "excess")?.value).toBe(
-      `${formatMoney(10000)} (không hoàn lại)`
-    );
+    expect(actualRows.find((row) => row.key === "paidByCustomer")?.value).toBe(formatMoney(0));
+    expect(actualRows.find((row) => row.key === "excess")?.value).toBe(formatMoney(10000));
   });
 
-  it("không ghi là đã thu khi đơn QR còn chờ thanh toán hoặc voucher đã trả lại lô", () => {
+  it("hiển thị 0 khi đơn QR còn chờ thanh toán hoặc voucher đã trả lại lô", () => {
     const pendingQr = buildPaperVoucher({
       status: "held",
       paymentMethodSystemName: "Payments.VietQR",
@@ -105,11 +101,9 @@ describe("buildPaperVoucherPaymentRows", () => {
       collectedAmount: null
     });
 
-    expect(buildPaperVoucherPaymentRows(pendingQr)[2].value).toBe(
-      `${formatMoney(0)} (chờ thanh toán ${formatMoney(20000)} qua Quét VietQR)`
-    );
+    expect(buildPaperVoucherPaymentRows(pendingQr)[2].value).toBe(formatMoney(0));
     expect(buildPaperVoucherPaymentRows({ ...pendingQr, status: "released" })[2].value).toBe(
-      `${formatMoney(0)} (chưa thu, voucher đã trả lại lô)`
+      formatMoney(0)
     );
   });
 });

@@ -209,7 +209,7 @@ const openVouchers = async (page: Page) => {
       response.url().includes(`${PV_API}/batches?`) && response.request().method() === "GET"
   );
   await page.evaluate(() => {
-    window.location.hash = "#/vouchers";
+    window.location.hash = "#/paper-vouchers";
   });
   expect((await listed).status()).toBe(200);
   await expect(page.getByText("Tổng số lô")).toBeVisible();
@@ -635,12 +635,12 @@ test.describe("Voucher giấy với API thật (pvtest local)", () => {
     }
   });
 
-  test("không có quyền paper_vouchers: bị chặn khỏi trang Voucher", async () => {
+  test("không có quyền paper_vouchers: bị chặn khỏi trang Voucher giấy", async () => {
     const session = await launch(path.join(profileRoot, "noaccess"));
     try {
       await login(session.page, ACCOUNTS.noAccess);
       await session.page.evaluate(() => {
-        window.location.hash = "#/vouchers";
+        window.location.hash = "#/paper-vouchers";
       });
       await expect(session.page).toHaveURL(/#\/403/, { timeout: 15000 });
       expect(session.responses.filter((r) => r.url().includes(`${PV_API}/batches`))).toHaveLength(

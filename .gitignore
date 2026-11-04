@@ -16,7 +16,6 @@ e2e/**/screenshots/
 e2e/**/videos/
 e2e/**/traces/
 
-# Biến môi trường local (Vite đọc .env, .env.local, .env.[mode]...); chỉ commit file mẫu
+# Biến môi trường local (Vite đọc .env, .env.local, .env.[mode]...); không commit
 .env
 .env.*
-!.env.example

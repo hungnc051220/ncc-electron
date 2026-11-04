@@ -150,7 +150,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     key: "paper_vouchers",
     module: "Quản lý danh sách",
     label: "Voucher giấy",
-    route: "/vouchers",
+    route: "/paper-vouchers",
     description: "Quản lý lô voucher giấy, độc lập với quyền chương trình khuyến mãi",
     actions: ["access", "list", "view", "create", "update", "delete"]
   },

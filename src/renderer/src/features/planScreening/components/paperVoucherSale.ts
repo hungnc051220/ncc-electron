@@ -15,13 +15,6 @@ import {
 } from "@shared/types";
 
 /**
- * Bật bán vé có voucher giấy tại POS (`VITE_PAPER_VOUCHER_SALE_ENABLED=true` lúc build).
- * Không khai báo hoặc giá trị khác: vẫn chặn in vé khi đang chọn voucher giấy.
- */
-export const isPaperVoucherSaleEnabled = () =>
-  import.meta.env.VITE_PAPER_VOUCHER_SALE_ENABLED?.trim().toLowerCase() === "true";
-
-/**
  * Voucher giấy là một nguồn thanh toán (tương đương tiền mặt), không phải giảm giá: tổng đơn giữ
  * nguyên, voucher trả một phần, phần còn lại trả bằng tiền mặt (`POS`) hoặc VietQR khi backend cho
  * phép (`allowedPaymentMethods` của báo giá). Không bao giờ dùng VNPayQR.
@@ -30,8 +23,6 @@ export const isPaperVoucherSaleEnabled = () =>
  */
 export const PAPER_VOUCHER_CASH_METHOD: string = PaymentType.POS;
 
-export const PAPER_VOUCHER_BLOCKS_SALE_MESSAGE =
-  "Hệ thống chưa ghi nhận voucher giấy vào đơn bán vé. Bỏ áp dụng voucher trước khi in vé.";
 export const PAPER_VOUCHER_PAYMENT_HINT =
   "Đơn có voucher giấy: phần còn lại trả bằng tiền mặt, hoặc VietQR khi hệ thống cho phép. Không dùng VNPayQR.";
 export const PAPER_VOUCHER_RESERVE_BLOCKED_MESSAGE =
