@@ -194,7 +194,8 @@ export interface QrPaperVoucherAmounts {
   remainingPayable: number;
 }
 
-export type PaperVoucherUsageStatus = "applied" | "reversed";
+/** Cùng ý nghĩa với `OrderPaperVoucherLineStatus` (BE `PaperVoucherUsage.Status` 10/20/30). */
+export type PaperVoucherUsageStatus = "applied" | "reversed" | "cancelled";
 
 export interface PaperVoucherUsage {
   id: number;

@@ -3,7 +3,7 @@ import {
   useUpdatePaperVoucherBatch
 } from "@renderer/hooks/paperVouchers/usePaperVoucherBatchMutations";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { getSafeApiErrorMessage } from "@renderer/lib/apiError";
 import { formatMoney, formatNumber, formatter } from "@renderer/lib/utils";
 import type {
   PaperVoucherBatch,
@@ -118,7 +118,7 @@ const PaperVoucherBatchDialog = ({
       },
       onError: (mutationError: unknown) => {
         message.error(
-          getApiErrorMessage(
+          getSafeApiErrorMessage(
             mutationError,
             isEdit ? "Cập nhật lô voucher thất bại" : "Tạo lô voucher thất bại"
           )

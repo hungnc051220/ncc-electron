@@ -2,7 +2,8 @@ import type {
   PaperVoucherBatch,
   PaperVoucherBatchDto,
   PaperVoucherBatchFilterQuery,
-  PaperVoucherBatchStatus
+  PaperVoucherBatchStatus,
+  PaperVoucherUsageStatus
 } from "@shared/types";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
@@ -31,6 +32,29 @@ export const PAPER_VOUCHER_STATUS_META: Record<
 export const PAPER_VOUCHER_STATUS_OPTIONS = (
   Object.keys(PAPER_VOUCHER_STATUS_META) as PaperVoucherStatus[]
 ).map((status) => ({ value: status, label: PAPER_VOUCHER_STATUS_META[status].label }));
+
+/**
+ * Trạng thái lượt sử dụng theo contract BE (`PaperVoucherUsage.Status`): 10 `applied`,
+ * 20 `reversed` (QR chưa thanh toán, tờ trả lại lô), 30 `cancelled` (đơn hủy, tờ vô hiệu,
+ * vẫn tính vào số đã dùng). Cùng nhãn với khối "Voucher giấy" ở chi tiết đơn.
+ */
+export const PAPER_VOUCHER_USAGE_STATUS_META: Record<
+  PaperVoucherUsageStatus,
+  { label: string; color: string }
+> = {
+  applied: { label: "Đã áp dụng", color: "success" },
+  reversed: { label: "Đã trả lại lô", color: "default" },
+  cancelled: { label: "Đã hủy, không dùng lại", color: "error" }
+};
+
+const isKnownUsageStatus = (status: string): status is PaperVoucherUsageStatus =>
+  Object.prototype.hasOwnProperty.call(PAPER_VOUCHER_USAGE_STATUS_META, status);
+
+/** Trạng thái BE trả mà FE chưa biết vẫn hiển thị (kèm mã gốc) thay vì làm hỏng bảng. */
+export const getPaperVoucherUsageStatusMeta = (status?: string | null) => {
+  if (status && isKnownUsageStatus(status)) return PAPER_VOUCHER_USAGE_STATUS_META[status];
+  return { label: status ? `Không xác định (${status})` : "Không xác định", color: "warning" };
+};
 
 /** Ngày nghiệp vụ hiện tại theo giờ Việt Nam, dạng `YYYY-MM-DD`. */
 export const getVietnamBusinessDate = (now?: dayjs.ConfigType) =>

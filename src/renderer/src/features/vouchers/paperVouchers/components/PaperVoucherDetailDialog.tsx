@@ -1,13 +1,8 @@
 import { usePaperVoucherBatch } from "@renderer/hooks/paperVouchers/usePaperVoucherBatches";
 import { usePaperVoucherUsages } from "@renderer/hooks/paperVouchers/usePaperVoucherUsages";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { getSafeApiErrorMessage } from "@renderer/lib/apiError";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
-import type {
-  PaperVoucherBatch,
-  PaperVoucherImage,
-  PaperVoucherUsage,
-  PaperVoucherUsageStatus
-} from "@shared/types";
+import type { PaperVoucherBatch, PaperVoucherImage, PaperVoucherUsage } from "@shared/types";
 import type { DescriptionsProps, TableProps } from "antd";
 import { Alert, Button, Descriptions, Empty, Image, Modal, Table, Tag } from "antd";
 import dayjs from "dayjs";
@@ -15,6 +10,7 @@ import {
   formatPaperVoucherDate,
   getPaperVoucherAmounts,
   getPaperVoucherStatus,
+  getPaperVoucherUsageStatusMeta,
   PAPER_VOUCHER_NO_EXPIRY_LABEL,
   PAPER_VOUCHER_STATUS_META
 } from "../paperVoucher.utils";
@@ -29,9 +25,13 @@ interface PaperVoucherDetailDialogProps {
 const formatDateTime = (value?: string | null) =>
   value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "--";
 
-const USAGE_STATUS_META: Record<PaperVoucherUsageStatus, { label: string; color: string }> = {
-  applied: { label: "Đã áp dụng", color: "success" },
-  reversed: { label: "Đã hoàn", color: "default" }
+const UsageStatusTag = ({ status }: { status: PaperVoucherUsage["status"] }) => {
+  const meta = getPaperVoucherUsageStatusMeta(status);
+  return (
+    <Tag color={meta.color} variant="outlined" className="m-0">
+      {meta.label}
+    </Tag>
+  );
 };
 
 const USAGE_COLUMNS: TableProps<PaperVoucherUsage>["columns"] = [
@@ -49,9 +49,7 @@ const USAGE_COLUMNS: TableProps<PaperVoucherUsage>["columns"] = [
     render: (value: string | null, record) => (
       <span className="flex items-center gap-1.5">
         <span className="truncate">{value || (record.orderId ? `#${record.orderId}` : "--")}</span>
-        <Tag color={USAGE_STATUS_META[record.status].color} variant="outlined" className="m-0">
-          {USAGE_STATUS_META[record.status].label}
-        </Tag>
+        <UsageStatusTag status={record.status} />
       </span>
     )
   },
@@ -179,7 +177,7 @@ const PaperVoucherDetailDialog = ({
           <Alert
             type="error"
             showIcon
-            title={getApiErrorMessage(loadError, "Không tải được thông tin lô voucher")}
+            title={getSafeApiErrorMessage(loadError, "Không tải được thông tin lô voucher")}
           />
         )}
         <Descriptions size="small" bordered column={2} items={infoItems} />

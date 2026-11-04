@@ -5,8 +5,10 @@ import {
   countPaperVoucherFilters,
   getPaperVoucherAmounts,
   getPaperVoucherStatus,
+  getPaperVoucherUsageStatusMeta,
   getVietnamBusinessDate,
   PAPER_VOUCHER_NO_EXPIRY_FILTER,
+  PAPER_VOUCHER_USAGE_STATUS_META,
   summarizePaperVoucherBatches,
   toPaperVoucherBatchFilterQuery,
   validatePaperVoucherBatchDto,
@@ -220,5 +222,39 @@ describe("validatePaperVoucherImageFile", () => {
     expect(validatePaperVoucherImageFile({ type: "image/png", size: 5 * 1024 * 1024 + 1 })).toMatch(
       /5 MB/
     );
+  });
+});
+
+describe("getPaperVoucherUsageStatusMeta", () => {
+  it.each([
+    ["applied", "Đã áp dụng", "success"],
+    ["reversed", "Đã trả lại lô", "default"],
+    ["cancelled", "Đã hủy, không dùng lại", "error"]
+  ])("maps BE status %s to its label", (inputStatus, expectedLabel, expectedColor) => {
+    expect(getPaperVoucherUsageStatusMeta(inputStatus)).toEqual({
+      label: expectedLabel,
+      color: expectedColor
+    });
+  });
+
+  it("covers every usage status of the BE contract (10/20/30)", () => {
+    expect(Object.keys(PAPER_VOUCHER_USAGE_STATUS_META).sort()).toEqual([
+      "applied",
+      "cancelled",
+      "reversed"
+    ]);
+  });
+
+  it.each([
+    ["held", "Không xác định (held)"],
+    ["toString", "Không xác định (toString)"],
+    ["", "Không xác định"],
+    [null, "Không xác định"],
+    [undefined, "Không xác định"]
+  ])("falls back for unknown status %p instead of throwing", (inputStatus, expectedLabel) => {
+    expect(getPaperVoucherUsageStatusMeta(inputStatus)).toEqual({
+      label: expectedLabel,
+      color: "warning"
+    });
   });
 });

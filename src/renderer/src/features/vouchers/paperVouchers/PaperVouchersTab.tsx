@@ -11,7 +11,7 @@ import {
   usePaperVoucherSummary
 } from "@renderer/hooks/paperVouchers/usePaperVoucherBatches";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { getSafeApiErrorMessage } from "@renderer/lib/apiError";
 import type { PaperVoucherBatch, PaperVoucherBatchQuery } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Empty } from "antd";
@@ -150,7 +150,7 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
             message.success(nextLocked ? "Đã khóa lô voucher" : "Đã mở khóa lô voucher");
           })
           .catch((error: unknown) => {
-            message.error(getApiErrorMessage(error, "Cập nhật trạng thái khóa thất bại"));
+            message.error(getSafeApiErrorMessage(error, "Cập nhật trạng thái khóa thất bại"));
           })
     });
   };
@@ -176,7 +176,7 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
             message.success("Đã xóa lô voucher");
           })
           .catch((error: unknown) => {
-            message.error(getApiErrorMessage(error, "Xóa lô voucher thất bại"));
+            message.error(getSafeApiErrorMessage(error, "Xóa lô voucher thất bại"));
           })
     });
   };
@@ -257,7 +257,9 @@ const PaperVouchersTab = ({ permissions, onActionsChange }: PaperVouchersTabProp
         permissions={permissions}
         hasFilters={hasPaperVoucherFilters(filters)}
         loadError={
-          pageError ? getApiErrorMessage(pageError, "Không tải được danh sách lô voucher") : null
+          pageError
+            ? getSafeApiErrorMessage(pageError, "Không tải được danh sách lô voucher")
+            : null
         }
         current={current}
         pageSize={pageSize}

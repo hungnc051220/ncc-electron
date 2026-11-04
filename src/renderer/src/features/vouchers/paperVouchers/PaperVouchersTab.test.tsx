@@ -1,3 +1,4 @@
+import { SERVER_ERROR_HINT } from "@renderer/lib/apiError";
 import { server } from "@renderer/test/msw/server";
 import type { PaperVoucherBatch, PaperVoucherUsage } from "@shared/types";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -91,6 +92,10 @@ const withImages = (imagesById: Record<number, string[]>): PaperVoucherBatch[] =
     ...batch,
     images: (imagesById[batch.id] ?? []).map(createPaperVoucherImage)
   }));
+
+/** Body 500 của backend cũ: `HttpExceptionFilter` trả nguyên văn lỗi driver SQL. */
+const RAW_SQL_MESSAGE =
+  "The INSERT permission was denied on the object 'StaffAuditLog', database 'CinemaTicketDev', schema 'dbo'.";
 
 // Bảng antd trong jsdom render chậm; mỗi luồng gồm nhiều lần tải lại trang, thống kê và bộ lọc.
 // Validate form antd + gọi API chậm hơn 1s mặc định khi chạy song song nhiều file.
@@ -418,6 +423,40 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
     expect(within(dialog).getByText("Thu ngân A")).toBeInTheDocument();
   });
 
+  it("shows cancelled, reversed and unknown usage statuses without breaking the history", async () => {
+    const baseUsage: PaperVoucherUsage = {
+      id: 1,
+      transactionId: null,
+      batchId: 3,
+      batchCode: "LÔ-003",
+      quantity: 1,
+      faceValue: 100000,
+      appliedAmount: 100000,
+      staffName: "Thu ngân A",
+      createdAt: "2026-10-29T03:00:00.000Z",
+      status: "applied",
+      orderId: 10206511
+    };
+    const usages: PaperVoucherUsage[] = [
+      { ...baseUsage, id: 1, orderId: 10206511, status: "cancelled" },
+      { ...baseUsage, id: 2, orderId: 10206512, status: "reversed" },
+      // Trạng thái BE có thể thêm sau này: không được làm hỏng bảng.
+      { ...baseUsage, id: 3, orderId: 10206513, status: "held" as PaperVoucherUsage["status"] }
+    ];
+    await setupPaperVoucherServer({ usages });
+    renderTab();
+    await screen.findByText("LÔ-003");
+
+    fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Xem chi tiết"));
+    const dialog = await findModalByTitle("Chi tiết lô LÔ-003");
+
+    expect(await within(dialog).findByText("#10206511")).toBeInTheDocument();
+    expect(within(dialog).getByText("Đã hủy, không dùng lại")).toBeInTheDocument();
+    expect(within(dialog).getByText("Đã trả lại lô")).toBeInTheDocument();
+    expect(within(dialog).getByText("Không xác định (held)")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Chưa có lượt sử dụng")).not.toBeInTheDocument();
+  });
+
   it("shows empty image and usage states in details", async () => {
     await setupPaperVoucherServer();
     renderTab();
@@ -430,21 +469,104 @@ describe("PaperVouchersTab", { timeout: 20_000 }, () => {
     expect(await within(dialog).findByText("Chưa có lượt sử dụng")).toBeInTheDocument();
   });
 
-  it("shows the API failure instead of an empty list", async () => {
+  it("shows the API failure instead of an empty list without the raw server text", async () => {
     await setupPaperVoucherServer();
     server.use(
       http.get(`${PAPER_VOUCHER_TEST_BASE}/batches`, () =>
-        HttpResponse.json({ statusCode: 500, message: "Lỗi máy chủ" }, { status: 500 })
+        HttpResponse.json({ statusCode: 500, message: RAW_SQL_MESSAGE }, { status: 500 })
       ),
       http.get(`${PAPER_VOUCHER_TEST_BASE}/summary`, () =>
-        HttpResponse.json({ statusCode: 500, message: "Lỗi máy chủ" }, { status: 500 })
+        HttpResponse.json({ statusCode: 500, message: RAW_SQL_MESSAGE }, { status: 500 })
       )
     );
     renderTab();
 
-    expect(await screen.findByText("Lỗi máy chủ", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        `Không tải được danh sách lô voucher. ${SERVER_ERROR_HINT}`,
+        {},
+        { timeout: 5000 }
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/StaffAuditLog/)).not.toBeInTheDocument();
     expect(screen.queryByText("Chưa có lô voucher giấy")).not.toBeInTheDocument();
     expect(screen.getByTestId("paper-voucher-stat-batches")).toHaveTextContent("0");
+  });
+
+  describe("write errors (QA01-F1)", () => {
+    /** Ghi đè một endpoint ghi, đếm số lần FE gửi để chứng minh không tự gửi lại. */
+    const failWrite = (
+      method: "patch" | "delete",
+      path: string,
+      status: number,
+      body: Record<string, unknown>
+    ) => {
+      const calls = { count: 0 };
+      server.use(
+        http[method](`${PAPER_VOUCHER_TEST_BASE}${path}`, () => {
+          calls.count += 1;
+          return HttpResponse.json(body, { status });
+        })
+      );
+      return calls;
+    };
+
+    it("shows a friendly message for a 500 on delete, sends it once and keeps the batch", async () => {
+      await setupPaperVoucherServer();
+      const calls = failWrite("delete", "/batches/4", 500, { message: RAW_SQL_MESSAGE });
+      renderTab();
+      await screen.findByText("LÔ-004");
+
+      fireEvent.click(within(await openRowMenu("LÔ-004")).getByText("Xóa lô"));
+      fireEvent.click(getButtonByText(await findModalByTitle("Xác nhận xóa lô voucher"), "Xóa"));
+
+      expect(
+        await screen.findByText(`Xóa lô voucher thất bại. ${SERVER_ERROR_HINT}`, {}, slow)
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/StaffAuditLog/)).not.toBeInTheDocument();
+      expect(screen.getByText("LÔ-004")).toBeInTheDocument();
+      expect(calls.count).toBe(1);
+    });
+
+    it("keeps the backend message of a 409 business error", async () => {
+      await setupPaperVoucherServer();
+      failWrite("delete", "/batches/4", 409, {
+        statusCode: 409,
+        code: "PAPER_VOUCHER_BATCH_IN_USE",
+        message: "Lô đã có lượt sử dụng, không thể xóa"
+      });
+      renderTab();
+      await screen.findByText("LÔ-004");
+
+      fireEvent.click(within(await openRowMenu("LÔ-004")).getByText("Xóa lô"));
+      fireEvent.click(getButtonByText(await findModalByTitle("Xác nhận xóa lô voucher"), "Xóa"));
+
+      expect(
+        await screen.findByText("Lô đã có lượt sử dụng, không thể xóa", {}, slow)
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the edit dialog open on a 500 and does not resend the update", async () => {
+      await setupPaperVoucherServer();
+      const calls = failWrite("patch", "/batches/3", 500, {
+        statusCode: 500,
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Hệ thống gặp lỗi khi xử lý yêu cầu."
+      });
+      renderTab();
+      await screen.findByText("LÔ-003");
+
+      fireEvent.click(within(await openRowMenu("LÔ-003")).getByText("Chỉnh sửa"));
+      const dialog = await findModalByTitle("Chỉnh sửa lô voucher giấy");
+      changeInput(dialog, "Tên lô", "Voucher giấy 100K - sửa");
+      fireEvent.click(getButtonByText(dialog, "Lưu thay đổi"));
+
+      expect(
+        await screen.findByText(`Cập nhật lô voucher thất bại. ${SERVER_ERROR_HINT}`, {}, slow)
+      ).toBeInTheDocument();
+      expect(screen.getByText("Chỉnh sửa lô voucher giấy")).toBeInTheDocument();
+      expect(calls.count).toBe(1);
+    });
   });
 
   it("hides CRUD actions that are not granted", async () => {
