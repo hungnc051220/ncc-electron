@@ -1,5 +1,5 @@
 import { CancelOrderDto, OrderDto, OrderQuoteDto, ordersApi } from "@renderer/api/orders.api";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { getApiErrorCode, getApiErrorMessage } from "@renderer/lib/apiError";
 import ticketIcon from "@renderer/assets/icons/confirmation_number.svg";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
@@ -56,6 +56,8 @@ import {
   createPaperVoucherRequestId,
   getPaperVoucherExistingOrderMessage,
   getPaperVoucherPaymentFallbackMessage,
+  getPaperVoucherQrClosedMessage,
+  getPaperVoucherQrPaidMessage,
   isPaperVoucherOutcomeUnknown,
   isPaperVoucherPaymentMethodAllowed,
   loadPaperVoucherAttempt,
@@ -63,12 +65,16 @@ import {
   PAPER_VOUCHER_NO_PAYMENT_METHOD_MESSAGE,
   PAPER_VOUCHER_PAYMENT_HINT,
   PAPER_VOUCHER_PREVIOUS_NOT_RECORDED_MESSAGE,
+  PAPER_VOUCHER_QR_CLOSE_FAILED_MESSAGE,
+  PAPER_VOUCHER_QR_ERROR_CODES,
+  PAPER_VOUCHER_QR_WAITING_MESSAGE,
   PAPER_VOUCHER_QUOTE_CHANGED_MESSAGE,
   PAPER_VOUCHER_QUOTE_PENDING_MESSAGE,
   PAPER_VOUCHER_RECONCILE_FAILED_MESSAGE,
   PAPER_VOUCHER_REQUEST_IN_PROGRESS_MESSAGE,
   PAPER_VOUCHER_RESERVE_BLOCKED_MESSAGE,
   savePaperVoucherAttempt,
+  resolvePaperVoucherQrState,
   toPaperVoucherReconcileDecision,
   type PaperVoucherAttempt
 } from "./paperVoucherSale";
@@ -409,6 +415,11 @@ const Actions = ({
   const handleQrPaymentSuccess = useCallback(
     async (paidQr: QrDialogData) => {
       const { orderId } = paidQr;
+      // Một lần cho mỗi QR: socket lặp (callback + polling), hoặc socket đua với "Kiểm tra lại", không
+      // in vé/ghi nhận hai lần.
+      const currentQr = qrDataRef.current;
+      if (!currentQr || String(currentQr.orderId) !== String(orderId)) return;
+      qrDataRef.current = undefined;
       // Chỉ gọi khi QR đã PAID. Tổng đơn giữ nguyên; đơn có voucher giấy: QR chỉ thu phần còn lại
       // (`remainingPayable` backend đã xác nhận cho mã QR này).
       syncLastSaleTotal(
@@ -420,8 +431,10 @@ const Actions = ({
       );
       if (paidQr.paperVoucher) {
         clearPaperVoucherSale();
+        message.success(getPaperVoucherQrPaidMessage(paidQr.paperVoucher));
+      } else {
+        message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
       }
-      message.success("Thanh toán thành công! Đang cập nhật dữ liệu...");
       if (canPrint) {
         void handlePrint(orderId);
       }
@@ -809,10 +822,18 @@ const Actions = ({
                 voucherApplied: order.paperVoucher.voucherApplied,
                 remainingPayable: order.paperVoucher.remainingPayable
               });
+            const paperVoucherLines = paperVoucherOrder?.quote.lines.map(
+              ({ batchCode, quantity }) => ({
+                batchCode,
+                quantity
+              })
+            );
 
             const qrBody: QrDialogData = {
               ...responseQr,
-              ...(paperVoucherAmounts && { paperVoucher: paperVoucherAmounts }),
+              ...(paperVoucherAmounts && {
+                paperVoucher: { ...paperVoucherAmounts, lines: paperVoucherLines }
+              }),
               orderId: order.id,
               orderTotal: order.orderTotal,
               orderDiscount: order.orderDiscount,
@@ -1086,12 +1107,59 @@ const Actions = ({
     );
   };
 
+  const finishPaperVoucherQr = () => {
+    setOpenQrDialog(false);
+    qrDataRef.current = undefined;
+    window.api?.sendQrClose();
+  };
+
+  /**
+   * Đơn có voucher giấy: chỉ in vé khi backend đã áp dụng voucher (đơn hoàn tất). Giao dịch đã báo
+   * thành công nhưng đơn còn chờ (xác nhận lỗi): chuyển đơn sang thành công, backend kiểm số tiền.
+   */
+  const settlePaperVoucherQr = async (paidQr: QrDialogData) => {
+    const orderDetail = await queryClient.fetchQuery({
+      queryKey: ordersKeys.getDetail(paidQr.orderId),
+      queryFn: () => ordersApi.getDetail(paidQr.orderId),
+      staleTime: 0
+    });
+    const state = resolvePaperVoucherQrState(orderDetail);
+    if (state === "paid") {
+      await handleQrPaymentSuccess(paidQr);
+      return;
+    }
+    if (state === "received") {
+      await updateOrder.mutateAsync({
+        id: paidQr.orderId,
+        dto: {
+          orderStatusId: OrderStatus.COMPLETED,
+          shippingStatusId: paidQr.shippingStatusId,
+          paymentStatusId: paidQr.paymentStatusId,
+          planScreenId
+        }
+      });
+      await handleQrPaymentSuccess(paidQr);
+      return;
+    }
+    if (state === "waiting") {
+      message.warning(PAPER_VOUCHER_QR_WAITING_MESSAGE);
+      return;
+    }
+    message.error(getPaperVoucherQrClosedMessage(paidQr.orderId, state, orderDetail));
+    finishPaperVoucherQr();
+  };
+
   const onCheckQrTransaction = async () => {
     if (!qrData) return;
 
     try {
       setIsCheckingQrTransaction(true);
       await ordersApi.checkTransaction({ orderId: qrData.orderId });
+
+      if (qrData.paperVoucher) {
+        await settlePaperVoucherQr(qrData);
+        return;
+      }
 
       const orderDetail = await queryClient.fetchQuery({
         queryKey: ordersKeys.getDetail(qrData.orderId),
@@ -1113,8 +1181,48 @@ const Actions = ({
       }
 
       message.warning("Giao dịch chưa được ghi nhận thành công. Vui lòng kiểm tra lại.");
-    } catch {
-      message.error("Kiểm tra lại giao dịch thanh toán thất bại");
+    } catch (error: unknown) {
+      message.error(
+        qrData.paperVoucher
+          ? getApiErrorMessage(error, "Kiểm tra lại giao dịch thanh toán thất bại")
+          : "Kiểm tra lại giao dịch thanh toán thất bại"
+      );
+    } finally {
+      setIsCheckingQrTransaction(false);
+    }
+  };
+
+  /**
+   * "Kết thúc" QR của đơn có voucher giấy: chờ backend trả voucher rồi mới đóng. Nếu QR vừa được thanh
+   * toán (đơn đã hoàn tất / tiền đã nhận) thì tra lại trạng thái thay vì báo thất bại; lỗi khác giữ
+   * màn QR để thu ngân kiểm tra lại, không coi đóng màn hình là kết thúc giao dịch.
+   */
+  const onClosePaperVoucherQr = async (closingQr: QrDialogData) => {
+    try {
+      setIsCheckingQrTransaction(true);
+      await updateOrder.mutateAsync({
+        id: closingQr.orderId,
+        dto: {
+          orderStatusId: OrderStatus.FAIL,
+          shippingStatusId: closingQr.shippingStatusId,
+          paymentStatusId: closingQr.paymentStatusId,
+          planScreenId
+        }
+      });
+      finishPaperVoucherQr();
+      message.warning(getPaperVoucherQrClosedMessage(closingQr.orderId, "released"));
+    } catch (error: unknown) {
+      const code = getApiErrorCode(error);
+      const isPaidMeanwhile =
+        code === PAPER_VOUCHER_QR_ERROR_CODES.qrPaymentReceived ||
+        code === PAPER_VOUCHER_QR_ERROR_CODES.orderLocked;
+      if (!isPaidMeanwhile) {
+        message.error(getApiErrorMessage(error, PAPER_VOUCHER_QR_CLOSE_FAILED_MESSAGE));
+        return;
+      }
+      await settlePaperVoucherQr(closingQr).catch((settleError: unknown) => {
+        message.error(getApiErrorMessage(settleError, PAPER_VOUCHER_QR_CLOSE_FAILED_MESSAGE));
+      });
     } finally {
       setIsCheckingQrTransaction(false);
     }
@@ -1490,6 +1598,10 @@ const Actions = ({
         <QrCodeDialog
           open={openQrDialog}
           onCancel={() => {
+            if (qrData.paperVoucher) {
+              if (!isCheckingQrTransaction) void onClosePaperVoucherQr(qrData);
+              return;
+            }
             onUpdateOrder(
               qrData.orderId,
               qrData.shippingStatusId,

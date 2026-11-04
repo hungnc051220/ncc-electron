@@ -5,9 +5,10 @@ import {
   getApiErrorStatus,
   isRetryableApiError
 } from "@renderer/lib/apiError";
-import { formatPaymentMethod } from "@renderer/lib/utils";
+import { formatMoney, formatPaymentMethod } from "@renderer/lib/utils";
 import {
   PaymentType,
+  type OrderDetailProps,
   type OrderResponseProps,
   type PaperVoucherOrderQuote,
   type PaperVoucherRequestStatus,
@@ -72,6 +73,69 @@ export const PAPER_VOUCHER_ERROR_CODES = {
   paymentMethodNotAllowed: "PAPER_VOUCHER_PAYMENT_METHOD_NOT_ALLOWED",
   qrPaymentNotConfirmed: "PAPER_VOUCHER_QR_PAYMENT_NOT_CONFIRMED"
 } as const;
+
+/** `code` lỗi của các thao tác QR trên đơn có voucher giấy (đóng QR, chuyển thành công). */
+export const PAPER_VOUCHER_QR_ERROR_CODES = {
+  orderLocked: "PAPER_VOUCHER_ORDER_LOCKED",
+  qrPaymentReceived: "PAPER_VOUCHER_QR_PAYMENT_RECEIVED"
+} as const;
+
+/**
+ * Trạng thái thanh toán QR của đơn có voucher giấy theo dữ liệu backend. Không suy ra "đã thanh toán"
+ * chỉ vì giao dịch QR có `success` (QR trả thiếu, thanh toán đến muộn sau khi đơn đã kết thúc):
+ * - `paid`: voucher đã áp dụng, đơn hoàn tất; được in vé.
+ * - `received`: nhà cung cấp đã báo thành công nhưng đơn còn chờ (xác nhận lỗi): backend kiểm số tiền
+ *   khi chuyển đơn sang thành công.
+ * - `waiting`: chưa nhận thanh toán.
+ * - `released` / `cancelled`: đơn đã kết thúc / đã hủy, voucher không được dùng; không in vé.
+ */
+export type PaperVoucherQrState = "paid" | "received" | "waiting" | "released" | "cancelled";
+
+const hasSuccessfulQrTransaction = (order?: Pick<OrderResponseProps, "orderPaymentTransactions">) =>
+  (order?.orderPaymentTransactions ?? []).some(
+    (transaction) => transaction.status?.trim().toLowerCase() === "success"
+  );
+
+export const resolvePaperVoucherQrState = (
+  detail: Pick<OrderDetailProps, "order" | "paperVoucher">
+): PaperVoucherQrState => {
+  const status = detail.paperVoucher?.status;
+  if (status === "applied") return "paid";
+  if (status === "released") return "released";
+  if (status === "cancelled") return "cancelled";
+  return hasSuccessfulQrTransaction(detail.order) ? "received" : "waiting";
+};
+
+export const PAPER_VOUCHER_QR_WAITING_MESSAGE =
+  "Chưa nhận được thanh toán QR. Voucher giấy vẫn đang được giữ cho đơn này; kiểm tra lại sau.";
+export const PAPER_VOUCHER_QR_CLOSE_FAILED_MESSAGE =
+  "Chưa kết thúc được QR. Đơn và voucher giấy chưa đổi; kiểm tra lại giao dịch trước khi bán lại.";
+
+/** Đơn QR có voucher giấy đã kết thúc/hủy: không in vé, không báo voucher đã dùng. */
+export const getPaperVoucherQrClosedMessage = (
+  orderId: number,
+  state: "released" | "cancelled",
+  detail?: Pick<OrderDetailProps, "order">
+) => {
+  const outcome =
+    state === "cancelled"
+      ? `Đơn #${orderId} đã bị hủy`
+      : `Đơn #${orderId} đã kết thúc, voucher giấy đã được trả lại`;
+  const lateMoney = hasSuccessfulQrTransaction(detail?.order)
+    ? " Có giao dịch QR được ghi nhận (thiếu tiền hoặc đến muộn): báo quản lý đối soát, không tự hoàn tiền."
+    : "";
+  return `${outcome}. Không in vé.${lateMoney}`;
+};
+
+/** Thanh toán QR của đơn có voucher giấy xong: số tiền QR đã thu, voucher và các lô đã dùng. */
+export const getPaperVoucherQrPaidMessage = (paperVoucher: QrDialogData["paperVoucher"]) => {
+  if (!paperVoucher) return "Thanh toán thành công!";
+  const lines = (paperVoucher.lines ?? [])
+    .map((line) => `${line.batchCode} ×${line.quantity}`)
+    .join(", ");
+  const voucher = `Voucher giấy ${formatMoney(paperVoucher.voucherApplied)}${lines ? ` (${lines})` : ""}`;
+  return `Thanh toán VietQR thành công ${formatMoney(paperVoucher.remainingPayable)}. ${voucher}.`;
+};
 
 /** Lô/số lượng đã đổi so với lúc báo giá: tải lại danh sách lô và báo giá lại. */
 const STALE_BATCH_ERROR_CODES = new Set([

@@ -14,8 +14,12 @@ import {
   PAPER_VOUCHER_NETWORK_ERROR_MESSAGE,
   PAPER_VOUCHER_REQUEST_IN_PROGRESS_MESSAGE,
   savePaperVoucherAttempt,
-  toPaperVoucherReconcileDecision
+  toPaperVoucherReconcileDecision,
+  getPaperVoucherQrClosedMessage,
+  getPaperVoucherQrPaidMessage,
+  resolvePaperVoucherQrState
 } from "./paperVoucherSale";
+import { formatMoney } from "@renderer/lib/utils";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -351,5 +355,63 @@ describe("createPaperVoucherRequestId", () => {
       }
     }
     expect(typeof crypto.randomUUID).toBe("function");
+  });
+});
+
+describe("voucher QR state (P6: backend state, never a bare transaction success)", () => {
+  const detail = (
+    status?: "held" | "applied" | "released" | "cancelled",
+    transactionStatus?: string
+  ) =>
+    ({
+      order: { orderPaymentTransactions: transactionStatus ? [{ status: transactionStatus }] : [] },
+      paperVoucher: status ? { status } : null
+    }) as never;
+
+  it.each([
+    ["applied voucher", detail("applied", "success"), "paid"],
+    [
+      "held voucher, provider success recorded (confirmation failed)",
+      detail("held", " SUCCESS "),
+      "received"
+    ],
+    ["held voucher, nothing received", detail("held"), "waiting"],
+    ["held voucher, transaction still new", detail("held", "new"), "waiting"],
+    [
+      "released voucher with a success (short or late payment)",
+      detail("released", "success"),
+      "released"
+    ],
+    ["cancelled order", detail("cancelled", "success"), "cancelled"]
+  ])("%s → %s", (_, inputDetail, expectedState) => {
+    expect(resolvePaperVoucherQrState(inputDetail)).toBe(expectedState);
+  });
+
+  it("closed message never says the voucher was used, and flags money to reconcile", () => {
+    expect(getPaperVoucherQrClosedMessage(150, "released")).toBe(
+      "Đơn #150 đã kết thúc, voucher giấy đã được trả lại. Không in vé."
+    );
+    expect(
+      getPaperVoucherQrClosedMessage(150, "released", detail("released", "success"))
+    ).toContain("báo quản lý đối soát");
+    expect(getPaperVoucherQrClosedMessage(150, "cancelled")).toBe(
+      "Đơn #150 đã bị hủy. Không in vé."
+    );
+  });
+
+  it("paid message shows the QR amount, the voucher amount and the batches", () => {
+    expect(
+      getPaperVoucherQrPaidMessage({
+        orderTotal: 190000,
+        voucherApplied: 80000,
+        remainingPayable: 110000,
+        lines: [
+          { batchCode: "LÔ-007", quantity: 1 },
+          { batchCode: "LÔ-008", quantity: 2 }
+        ]
+      })
+    ).toBe(
+      `Thanh toán VietQR thành công ${formatMoney(110000)}. Voucher giấy ${formatMoney(80000)} (LÔ-007 ×1, LÔ-008 ×2).`
+    );
   });
 });

@@ -192,6 +192,8 @@ export interface QrPaperVoucherAmounts {
   orderTotal: number;
   voucherApplied: number;
   remainingPayable: number;
+  /** Lô voucher giấy của lần bán (từ báo giá đã xác nhận), để báo lại khi QR thanh toán xong. */
+  lines?: Pick<PaperVoucherQuoteLine, "batchCode" | "quantity">[];
 }
 
 /** Cùng ý nghĩa với `OrderPaperVoucherLineStatus` (BE `PaperVoucherUsage.Status` 10/20/30). */
