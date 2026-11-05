@@ -1109,7 +1109,12 @@ test("P6-E2E-12c [E09] response tạo đơn mất một lần: Chromium tự g�
   );
 });
 
-test("P6-E2E-13 [E05] Redis lỗi khi tạo QR: đơn tạo xong nhưng QR không mở; app đóng đơn → FAIL + RELEASED", async ({}, testInfo) => {
+/** Màn QR chưa có mã (create-qr lỗi tạm thời đã hết lượt tự thử lại, B3 / N6). */
+const qrUnavailable = (page: Page) => qrDialog(page).getByTestId("qr-unavailable");
+const createQrCalls = (pos: Pos) =>
+  pos.apiCalls.filter((call) => / POST \/api\/pos\/order\/create-qr → /.test(call)).length;
+
+test("P6-E2E-13 [E05 N6] Redis lỗi khi tạo QR: đơn và voucher được giữ, không tự đóng; chỉ Kết thúc mới trả voucher", async ({}, testInfo) => {
   pos = await startPos(testInfo);
   const before = usedCount("LÔ-901");
   await selectSeats(pos.page, ["B6"]);
@@ -1121,15 +1126,78 @@ test("P6-E2E-13 [E05] Redis lỗi khi tạo QR: đơn tạo xong nhưng QR khôn
   await printButton(pos.page).click();
   await expect.poll(() => qaOrderIds().length, { timeout: DB_TIMEOUT }).toBe(1);
   const [orderId] = qaOrderIds();
+  // 503 REQUEST_GUARD_UNAVAILABLE: tự thử lại 3 lần (1 s, 2 s, 4 s) rồi giữ màn QR chưa có mã.
+  await expect(qrUnavailable(pos.page)).toContainText("Máy chủ tạm thời chưa tạo được QR", {
+    timeout: 30000
+  });
+  await expect.poll(() => createQrCalls(pos!)).toBe(4);
+  const held = await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.HELD && snap.order?.orderStatusId === ORDER.PENDING,
+    "still HELD + PENDING after the QR could not be created"
+  );
+  expect(held.transactions).toHaveLength(0);
+  expect(qaOrderIds()).toHaveLength(1);
+
+  await qrDialog(pos.page).getByRole("button", { name: "Kết thúc" }).click();
+  await expect(qrDialog(pos.page)).toHaveCount(0);
   const released = await expectDb(
     orderId,
     (snap) => snap.header?.status === HEADER.RELEASED,
-    "RELEASED after the QR could not be created"
+    "RELEASED only after Kết thúc"
   );
+  expect(released.order!.orderStatusId).toBe(ORDER.FAIL);
   expect(released.transactions).toHaveLength(0);
-  await expect(qrDialog(pos.page)).toHaveCount(0);
   expect(usedCount("LÔ-901")).toBe(before);
   expect(await prints(pos)).toHaveLength(0);
+  // N7: sơ đồ ghế được tải lại, ghế đã trả không còn hiện "chờ thanh toán" (thu ngân vẫn đang chọn ghế).
+  await expect(pos.page.locator('[data-seat-code="B6"]')).not.toHaveClass(/\bbg-roshi\b/);
+  await evidence(testInfo, "db.json", { held, released, apiCalls: pos.apiCalls });
+});
+
+test("P6-E2E-28 [E05 N6] Redis hồi phục: Tạo lại QR cùng đơn → một QR, thanh toán → APPLIED, in một lần", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  await selectSeats(pos.page, ["B7"]);
+  await applyVouchers(pos.page, [{ code: "LÔ-901" }]);
+  await checkQr(pos.page, VIETQR);
+  await qaApi("POST", "/__qa/api/faults", {
+    redis: { mode: "error", keyPrefix: "paper-voucher:qr-creation:" }
+  });
+  await printButton(pos.page).click();
+  await expect(qrUnavailable(pos.page)).toBeVisible({ timeout: 30000 });
+  const [orderId] = qaOrderIds();
+
+  await qaApi("POST", "/__qa/api/faults", { clear: true });
+  const retry = qrDialog(pos.page).getByRole("button", { name: "Tạo lại QR" });
+  await retry.dblclick();
+  await expect(qrUnavailable(pos.page)).toHaveCount(0, { timeout: 20000 });
+  expect(await qrAmounts(pos.page)).toEqual({
+    ticketTotal: 100000,
+    voucherApplied: 80000,
+    payable: 20000
+  });
+  // Bấm đúp Tạo lại QR: một request, một giao dịch QR, không đơn mới.
+  await expect.poll(() => createQrCalls(pos!)).toBe(5);
+  const held = await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.HELD && snap.transactions.length === 1,
+    "one HELD order with one QR"
+  );
+  expect(qaOrderIds()).toEqual([orderId]);
+
+  expect((await pay(orderId)).status).toBe(201);
+  await expect(toast(pos.page, /Thanh toán VietQR thành công 20\.000/)).toBeVisible({
+    timeout: 20000
+  });
+  await expect(qrDialog(pos.page)).toHaveCount(0);
+  const applied = await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.APPLIED,
+    "APPLIED"
+  );
+  await expect.poll(async () => (await prints(pos!)).length).toBe(1);
+  expect(await toasts(pos, /Thanh toán VietQR thành công/)).toBe(1);
+  await evidence(testInfo, "db.json", { held, applied, apiCalls: pos.apiCalls });
 });
 
 test("P6-E2E-14 [F01] tiền mặt P5: 1 vé + LÔ-902 → thu 50.000, APPLIED, in một lần", async ({}, testInfo) => {
