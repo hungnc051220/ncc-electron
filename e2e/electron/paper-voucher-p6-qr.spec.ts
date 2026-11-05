@@ -748,6 +748,75 @@ test("P6-E2E-16 [D05 F06] bấm Kết thúc đúng lúc tiền về: báo thành
   expect(await prints(pos)).toHaveLength(1);
 });
 
+// ---------- O-8: hủy cả đơn đang chờ QR (sơ đồ ghế, chế độ "Hủy vé") đúng lúc tiền về ----------
+/** Đơn VNPay đang chờ QR: tạo QR rồi rời màn bán vé (không Kết thúc / Esc, cả hai đều đóng QR), quay lại sơ đồ ghế. */
+const leaveWaitingQrOrder = async (pos: Pos, seat: string) => {
+  await selectSeats(pos.page, [seat]);
+  await applyVouchers(pos.page, [{ code: "LÔ-901" }]);
+  const { orderId } = await printForQr(pos, VNPAY);
+  await pos.page.evaluate(() => {
+    window.location.hash = "#/order-history";
+  });
+  await expect(pos.page.locator("tr.ant-table-row").first()).toBeVisible({ timeout: 20000 });
+  await openScreening(pos.page);
+  await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.HELD,
+    "order still waiting (HELD)"
+  );
+  return orderId;
+};
+/** Chế độ "Hủy vé": bấm ghế của đơn, mở "Hủy toàn bộ đơn vé?", chọn lý do; trả về hộp thoại. */
+const openCancelDialog = async (page: Page, seat: string, orderId: number) => {
+  await page.getByRole("checkbox", { name: "Hủy vé", exact: true }).check();
+  await page.locator(`[data-seat-code="${seat}"]`).click();
+  await page.getByRole("button", { name: "Hủy vé", exact: true }).click();
+  const dialog = page.locator(".ant-modal").filter({ hasText: "Hủy toàn bộ đơn vé?" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(`Đơn #${orderId}`);
+  await dialog.getByRole("combobox").click();
+  await page.locator(".ant-select-item-option").filter({ hasText: "QA: khách đổi ý" }).click();
+  return dialog;
+};
+
+test("P6-E2E-20 [O8] hủy đơn đang chờ QR ở sơ đồ ghế đúng lúc tiền về: hủy bị từ chối, không báo hủy thành công, đơn vẫn đã thanh toán", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  const orderId = await leaveWaitingQrOrder(pos, "A1");
+  const dialog = await openCancelDialog(pos.page, "A1", orderId);
+  // Lệnh hủy dừng 2 s ngay trước UPDATE có điều kiện (sau bước kiểm "chưa nhận tiền"); IPN tới trong lúc đó.
+  await qaApi("POST", "/__qa/api/faults", { cancelDelayMs: 2000 });
+  const cancelled = pos.page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/pos/order/cancel"
+  );
+  await dialog.getByRole("button", { name: "Hủy toàn bộ đơn" }).click();
+  await pos.page.waitForTimeout(300);
+  expect((await pay(orderId)).body.code).toBe("00");
+  const cancelResponse = await cancelled;
+  const cancelBody = await cancelResponse.json().catch(() => null);
+  await pos.page.waitForTimeout(1500);
+  const after = snapshot(orderId);
+  const cancelSuccess = await toasts(pos, /Hủy vé thành công/);
+  const paidMeanwhile = await toasts(pos, /được thanh toán/);
+  await evidence(testInfo, "cancel-vs-payment.json", {
+    cancel: { status: cancelResponse.status(), body: cancelBody },
+    db: after,
+    cancelSuccess,
+    paidMeanwhile,
+    prints: await prints(pos),
+    apiCalls: pos.apiCalls.filter((call) => /cancel|status|order\/\d+/.test(call))
+  });
+  expect(cancelResponse.status(), JSON.stringify(cancelBody)).toBe(409);
+  expect(cancelBody?.code).toBe("PAPER_VOUCHER_QR_PAYMENT_RECEIVED");
+  expect(cancelSuccess, "never 'Hủy vé thành công' for a cancel that lost to the payment").toBe(0);
+  expect(paidMeanwhile, "the cashier is told the order was paid meanwhile").toBeGreaterThanOrEqual(
+    1
+  );
+  expect(after.issues).toEqual([]);
+  expect(after.snapshot.order!.orderStatusId).toBe(ORDER.COMPLETED);
+  expect(after.snapshot.header!.status).toBe(HEADER.APPLIED);
+  expect(after.snapshot.header!.collectedAmount).toBe(20000);
+});
+
 // ---------- O-3: server-side recovery job (một lần chạy job thật, như scheduler mỗi 30 s) ----------
 const runRecovery = async (minPaidAgeSeconds = 0) => {
   const answer = await qaApi<{ recovered: number[]; failed: number[] }>(
@@ -1136,4 +1205,245 @@ test("P6-E2E-15 [F05] Lịch sử bán vé hiển thị đúng trạng thái DB 
     snapshot(waiting.orderId).snapshot.header!.status,
     "leaving the sale screen does not close the waiting QR"
   ).toBe(HEADER.HELD);
+});
+
+// ---------- O-8 HTTP contract: trạng thái đơn lúc thu ngân BẮT ĐẦU hủy (chọn đơn trên sơ đồ ghế) ----------
+type CancelAttempt = {
+  sent: { orderIds?: number[]; expectedOrderStatusId?: number; isRefund?: boolean } | null;
+  status: number;
+  body: { code?: string; message?: string } | null;
+};
+/** Bấm "Hủy toàn bộ đơn": body đã gửi + câu trả lời của backend. */
+const confirmCancel = async (
+  pos: Pos,
+  dialog: ReturnType<Page["locator"]>
+): Promise<CancelAttempt> => {
+  const isCancel = (url: string) => new URL(url).pathname === "/api/pos/order/cancel";
+  const request = pos.page.waitForRequest(
+    (candidate) => isCancel(candidate.url()) && candidate.method() === "POST"
+  );
+  const response = pos.page.waitForResponse((candidate) => isCancel(candidate.url()));
+  await dialog.getByRole("button", { name: "Hủy toàn bộ đơn" }).click();
+  const sent = (await request).postDataJSON();
+  const answer = await response;
+  return { sent, status: answer.status(), body: await answer.json().catch(() => null) };
+};
+const cancelRequestCount = (pos: Pos) =>
+  pos.apiCalls.filter((call) => / POST \/api\/pos\/order\/cancel → /.test(call)).length;
+const CANCEL_PAID_MEANWHILE = /đã được thanh toán trong lúc bạn thao tác hủy/;
+
+/** Hủy bị từ chối vì đơn đã được thanh toán sau khi thu ngân bắt đầu hủy: kiểm UI + DB. */
+const expectPaidMeanwhileRefusal = async (
+  pos: Pos,
+  testInfo: TestInfo,
+  orderId: number,
+  attempt: CancelAttempt
+) => {
+  // Chờ câu trả lời được xử lý (tải lại đơn, thông báo) và đủ lâu để thấy nếu app tự gửi lại lệnh hủy.
+  await pos.page.waitForTimeout(3000);
+  const after = snapshot(orderId);
+  const shown = await pos.page.evaluate(() =>
+    (window as unknown as { qaToasts: { text: string }[] }).qaToasts.map((item) => item.text)
+  );
+  await evidence(testInfo, "cancel-refused.json", {
+    attempt,
+    db: after,
+    toasts: shown,
+    cancelRequests: cancelRequestCount(pos),
+    apiCalls: pos.apiCalls.filter((call) => /cancel|get-by-screens|order\/\d+/.test(call))
+  });
+  expect(attempt.sent?.expectedOrderStatusId, "status of the start of the cancel").toBe(
+    ORDER.PENDING
+  );
+  expect(attempt.status, JSON.stringify(attempt.body)).toBe(409);
+  expect(attempt.body?.code).toBe("PAPER_VOUCHER_QR_PAYMENT_RECEIVED");
+  expect(await toasts(pos, /Hủy vé thành công/), "no success for a refused cancel").toBe(0);
+  expect(shown.find((text) => CANCEL_PAID_MEANWHILE.test(text))).toContain("in lại vé");
+  expect(cancelRequestCount(pos), "the cancel is never re-sent").toBe(1);
+  // Hộp hủy dùng forceRender: đóng = ẩn (vẫn trong DOM), không phải bị gỡ.
+  await expect(
+    pos.page.locator(".ant-modal").filter({ hasText: "Hủy toàn bộ đơn vé?" })
+  ).toBeHidden();
+  expect(after.issues).toEqual([]);
+  expect(after.snapshot.order!.orderStatusId).toBe(ORDER.COMPLETED);
+  expect(after.snapshot.header!.status).toBe(HEADER.APPLIED);
+  expect(after.snapshot.header!.collectedAmount).toBe(20000);
+};
+
+test("P6-E2E-21 [O8] hộp hủy mở khi đơn đang chờ, IPN trả tiền trong lúc hộp mở rồi bấm hủy: không hủy, hướng dẫn in lại vé; hủy mới theo trạng thái mới thì được", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  const orderId = await leaveWaitingQrOrder(pos, "A1");
+  const dialog = await openCancelDialog(pos.page, "A1", orderId);
+  expect((await pay(orderId)).body.code).toBe("00");
+  await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.APPLIED,
+    "paid while the dialog is open"
+  );
+  await pos.page.waitForTimeout(1500); // sự kiện thanh toán làm POS tải lại danh sách đơn; hộp hủy vẫn mở
+  const refreshed = pos.page.waitForResponse((response) =>
+    new URL(response.url()).pathname.startsWith("/api/pos/order/get-by-screens/")
+  );
+  const attempt = await confirmCancel(pos, dialog);
+  await expectPaidMeanwhileRefusal(pos, testInfo, orderId, attempt);
+  await refreshed;
+  // Thu ngân vẫn muốn hủy đơn đã trả: một hành động hủy MỚI, theo trạng thái đã làm mới.
+  const again = await openCancelDialog(pos.page, "A1", orderId);
+  const second = await confirmCancel(pos, again);
+  await evidence(testInfo, "cancel-again.json", { second, db: snapshot(orderId) });
+  expect(second.sent?.expectedOrderStatusId).toBe(ORDER.COMPLETED);
+  expect(second.status, JSON.stringify(second.body)).toBe(201);
+  await expect(toast(pos.page, "Hủy vé thành công")).toBeVisible({ timeout: 10000 });
+  const cancelled = await expectDb(orderId, (snap) => snap.header?.status === 30, "CANCELLED");
+  expect(cancelled.order!.orderStatusId).toBe(ORDER.FAIL);
+});
+
+test("P6-E2E-22 [O8 R01] hộp hủy mở khi đơn đang chờ, IPN 99 rồi job O-3 hoàn tất trước khi bấm hủy: không hủy, hướng dẫn in lại vé", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  const orderId = await leaveWaitingQrOrder(pos, "A1");
+  const dialog = await openCancelDialog(pos.page, "A1", orderId);
+  await payWithDbFailure(orderId);
+  expect((await runRecovery()).recovered).toContain(orderId);
+  await expectDb(orderId, (snap) => snap.header?.status === HEADER.APPLIED, "completed by the job");
+  await pos.page.waitForTimeout(1500);
+  const attempt = await confirmCancel(pos, dialog);
+  await expectPaidMeanwhileRefusal(pos, testInfo, orderId, attempt);
+});
+
+test("P6-E2E-23 [O8] đơn đang chờ không nhận tiền: hủy thành công, gửi trạng thái lúc bắt đầu, voucher trả lại", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  const orderId = await leaveWaitingQrOrder(pos, "A1");
+  const dialog = await openCancelDialog(pos.page, "A1", orderId);
+  const attempt = await confirmCancel(pos, dialog);
+  await evidence(testInfo, "cancel-waiting.json", { attempt });
+  expect(attempt.sent).toMatchObject({ orderIds: [orderId], expectedOrderStatusId: ORDER.PENDING });
+  expect(attempt.status, JSON.stringify(attempt.body)).toBe(201);
+  await expect(toast(pos.page, "Hủy vé thành công")).toBeVisible({ timeout: 10000 });
+  const released = await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.RELEASED,
+    "RELEASED"
+  );
+  expect(released.order!.orderStatusId).toBe(ORDER.FAIL);
+  expect(await prints(pos)).toHaveLength(0);
+});
+
+test("P6-E2E-24 [O8 F03] hộp hủy mở khi đơn đã thanh toán: hủy + hoàn tiền theo nghiệp vụ hiện có (= tiền khách trả thêm)", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  await selectSeats(pos.page, ["A1"]);
+  await applyVouchers(pos.page, [{ code: "LÔ-901" }]);
+  const { orderId, dialog: qr } = await printForQr(pos, VNPAY);
+  expect((await pay(orderId)).body.code).toBe("00");
+  await expect(qr).toHaveCount(0, { timeout: 20000 });
+  await expectDb(orderId, (snap) => snap.header?.status === HEADER.APPLIED, "APPLIED");
+  const dialog = await openCancelDialog(pos.page, "A1", orderId);
+  await dialog.getByRole("checkbox", { name: "Hủy vé hoàn tiền" }).check();
+  const attempt = await confirmCancel(pos, dialog);
+  await evidence(testInfo, "cancel-paid.json", { attempt });
+  expect(attempt.sent).toMatchObject({
+    orderIds: [orderId],
+    expectedOrderStatusId: ORDER.COMPLETED,
+    isRefund: true
+  });
+  expect(attempt.status, JSON.stringify(attempt.body)).toBe(201);
+  await expect(toast(pos.page, "Hủy vé thành công")).toBeVisible({ timeout: 10000 });
+  const cancelled = await expectDb(orderId, (snap) => snap.header?.status === 30, "CANCELLED");
+  expect(cancelled.order!.orderStatusId).toBe(ORDER.FAIL);
+  expect(cancelled.header!.collectedAmount).toBe(20000);
+  expect((cancelled.order as unknown as { refundedAmount: number }).refundedAmount).toBe(20000);
+});
+
+test("P6-E2E-25 [O8 E04] IPN 99 rồi thu ngân hủy đơn đang chờ: không hủy, báo đã nhận tiền đang chờ hoàn tất, voucher vẫn giữ", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  const orderId = await leaveWaitingQrOrder(pos, "A1");
+  await payWithDbFailure(orderId);
+  await pos.page.reload();
+  await openScreening(pos.page);
+  const dialog = await openCancelDialog(pos.page, "A1", orderId);
+  const attempt = await confirmCancel(pos, dialog);
+  await pos.page.waitForTimeout(3000);
+  const after = snapshot(orderId);
+  const shown = await pos.page.evaluate(() =>
+    (window as unknown as { qaToasts: { text: string }[] }).qaToasts.map((item) => item.text)
+  );
+  await evidence(testInfo, "cancel-after-ipn99.json", {
+    attempt,
+    db: after,
+    toasts: shown,
+    cancelRequests: cancelRequestCount(pos)
+  });
+  expect(attempt.sent?.expectedOrderStatusId).toBe(ORDER.PENDING);
+  expect(attempt.status).toBe(409);
+  expect(attempt.body?.code).toBe("PAPER_VOUCHER_QR_PAYMENT_RECEIVED");
+  expect(shown.some((text) => /đã nhận tiền QR và đang chờ/.test(text))).toBe(true);
+  expect(await toasts(pos, /Hủy vé thành công/)).toBe(0);
+  expect(cancelRequestCount(pos)).toBe(1);
+  expect(after.issues).toEqual([]);
+  expect(after.snapshot.order!.orderStatusId).toBe(ORDER.PENDING);
+  expect(after.snapshot.header!.status).toBe(HEADER.HELD);
+  expect(after.snapshot.transactions[0].status).toBe("success");
+});
+
+test("P6-E2E-26 [O8] Lịch sử bán vé: mở 'Hủy vé' trên đơn đã nhận tiền (IPN 99), job O-3 hoàn tất trước khi xác nhận: không hủy, hướng dẫn in lại vé", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  const orderId = await leaveWaitingQrOrder(pos, "A1");
+  await payWithDbFailure(orderId);
+  await pos.page.evaluate(() => {
+    window.location.hash = "#/order-history";
+  });
+  const row = pos.page
+    .locator("tr.ant-table-row")
+    .filter({ has: pos.page.getByText(String(orderId), { exact: true }) });
+  await expect(row).toBeVisible({ timeout: 20000 });
+  // Danh sách đã tải trước IPN 99 nằm trong cache (staleTime 60 s): thu ngân bấm "Làm mới".
+  const listed = pos.page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/pos/order" && response.request().method() === "GET"
+  );
+  await pos.page.getByRole("button", { name: "Làm mới" }).click();
+  await listed;
+  await row.locator(".anticon-more").click();
+  await pos.page.getByRole("menuitem", { name: "Hủy vé" }).click();
+  const dialog = pos.page.locator(".ant-modal").filter({ hasText: "Xác nhận hủy vé" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("combobox").click();
+  await pos.page.locator(".ant-select-item-option").filter({ hasText: "QA: khách đổi ý" }).click();
+  // Hộp đang mở: job O-3 hoàn tất đơn (COMPLETED + APPLIED) trước khi thu ngân xác nhận.
+  expect((await runRecovery()).recovered).toContain(orderId);
+  await expectDb(orderId, (snap) => snap.header?.status === HEADER.APPLIED, "completed by the job");
+  const isCancel = (url: string) => new URL(url).pathname === "/api/pos/order/cancel";
+  const request = pos.page.waitForRequest(
+    (candidate) => isCancel(candidate.url()) && candidate.method() === "POST"
+  );
+  const response = pos.page.waitForResponse((candidate) => isCancel(candidate.url()));
+  await dialog.getByRole("button", { name: "Xác nhận" }).click();
+  const attempt: CancelAttempt = {
+    sent: (await request).postDataJSON(),
+    status: (await response).status(),
+    body: await (await response).json().catch(() => null)
+  };
+  await pos.page.waitForTimeout(3000);
+  const after = snapshot(orderId);
+  const shown = await pos.page.evaluate(() =>
+    (window as unknown as { qaToasts: { text: string }[] }).qaToasts.map((item) => item.text)
+  );
+  await evidence(testInfo, "history-cancel-refused.json", {
+    attempt,
+    db: after,
+    toasts: shown,
+    cancelRequests: cancelRequestCount(pos)
+  });
+  expect(attempt.sent?.expectedOrderStatusId, "status of the row when the dialog opened").toBe(
+    ORDER.PENDING
+  );
+  expect(attempt.status, JSON.stringify(attempt.body)).toBe(409);
+  expect(attempt.body?.code).toBe("PAPER_VOUCHER_QR_PAYMENT_RECEIVED");
+  expect(await toasts(pos, /Hủy vé thành công/)).toBe(0);
+  expect(shown.find((text) => CANCEL_PAID_MEANWHILE.test(text))).toContain("in lại vé");
+  expect(cancelRequestCount(pos)).toBe(1);
+  await expect(dialog).toBeHidden();
+  expect(after.issues).toEqual([]);
+  expect(after.snapshot.order!.orderStatusId).toBe(ORDER.COMPLETED);
+  expect(after.snapshot.header!.status).toBe(HEADER.APPLIED);
+  expect(after.snapshot.header!.collectedAmount).toBe(20000);
 });

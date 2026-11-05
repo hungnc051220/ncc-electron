@@ -19,6 +19,7 @@ import {
   PlanScreeningDetailProps
 } from "@shared/types";
 import type { OrderDto } from "@renderer/api/orders.api";
+import { ordersKeys } from "@renderer/hooks/orders/keys";
 import {
   PAPER_VOUCHER_NETWORK_ERROR_MESSAGE,
   PAPER_VOUCHER_PREVIOUS_NOT_RECORDED_MESSAGE,
@@ -957,7 +958,8 @@ describe("Actions", () => {
           directSeatKey: "1-2",
           seats,
           seatKeys: ["1-1", "1-2"],
-          isComplete: true
+          isComplete: true,
+          startedOrderStatusId: OrderStatus.COMPLETED
         }}
       />
     );
@@ -978,6 +980,106 @@ describe("Actions", () => {
         }),
         expect.any(Object)
       );
+    });
+  });
+
+  describe("O-8: the order changes while the cancel dialog is open", () => {
+    const seats = [
+      createSeat({ seat: "1", code: "A1", status: 1 }),
+      createSeat({ seat: "2", code: "A2", status: 1 })
+    ];
+    const startedOnWaitingOrder = {
+      orderId: 456,
+      directSeatKey: "1-2",
+      seats,
+      seatKeys: ["1-1", "1-2"],
+      isComplete: true,
+      startedOrderStatusId: 10
+    };
+    const confirmCancel = async (
+      overrides: {
+        setSelectedSeats?: ReturnType<typeof vi.fn>;
+        onClear?: ReturnType<typeof vi.fn>;
+      } = {}
+    ) => {
+      renderWithProviders(
+        <Actions
+          data={createPlanScreening()}
+          planScreenId={1}
+          selectedSeats={seats}
+          setSelectedSeats={overrides.setSelectedSeats ?? vi.fn()}
+          cancelMode
+          setCancelMode={vi.fn()}
+          cancelOrderSelection={startedOnWaitingOrder}
+          onCancelOrderSelectionClear={overrides.onClear ?? vi.fn()}
+        />
+      );
+      fireEvent.click(screen.getByRole("button", { name: /^hủy vé$/i }));
+      fireEvent.mouseDown(screen.getByRole("combobox"));
+      fireEvent.click(await screen.findByText("Khach doi y"));
+      fireEvent.click(screen.getByRole("button", { name: /hủy toàn bộ đơn/i }));
+    };
+
+    it("sends the status the cashier started the cancel on (not a refetched one)", async () => {
+      await confirmCancel();
+
+      await waitFor(() =>
+        expect(mocks.cancelOrderMutate).toHaveBeenCalledWith(
+          expect.objectContaining({ orderIds: [456], expectedOrderStatusId: 10 }),
+          expect.any(Object)
+        )
+      );
+    });
+
+    it("409 paid meanwhile: no success, no resend, refreshes the order, guides the cashier, clears the cancel", async () => {
+      const mockSetSelectedSeats = vi.fn();
+      const mockClear = vi.fn();
+      mocks.cancelOrderMutate.mockImplementation(
+        (_body, options: { onError: (error: unknown) => void }) =>
+          options.onError(
+            createApiError(409, {
+              statusCode: 409,
+              code: "PAPER_VOUCHER_QR_PAYMENT_RECEIVED",
+              message: "Đơn 456 vừa được thanh toán QR trong lúc hủy nên chưa bị hủy."
+            })
+          )
+      );
+      mocks.getOrderDetail.mockResolvedValue({
+        order: { id: 456, orderStatusId: 30, paymentStatusId: 30, orderPaymentTransactions: [] }
+      });
+
+      await confirmCancel({ setSelectedSeats: mockSetSelectedSeats, onClear: mockClear });
+
+      await waitFor(() =>
+        expect(mocks.messageWarning).toHaveBeenCalledWith(
+          expect.objectContaining({ content: expect.stringContaining("in lại vé") })
+        )
+      );
+      expect(mocks.getOrderDetail).toHaveBeenCalledWith(456);
+      expect(mocks.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ordersKeys.getOrdersByScreening(1)
+      });
+      expect(mocks.cancelOrderMutate).toHaveBeenCalledTimes(1);
+      expect(mocks.messageSuccess).not.toHaveBeenCalled();
+      expect(mocks.messageError).not.toHaveBeenCalled();
+      expect(mockSetSelectedSeats).toHaveBeenCalledWith([]);
+      expect(mockClear).toHaveBeenCalled();
+    });
+
+    it("any other cancel error keeps the plain error message", async () => {
+      mocks.cancelOrderMutate.mockImplementation(
+        (_body, options: { onError: (error: unknown) => void }) =>
+          options.onError(
+            createApiError(400, { statusCode: 400, message: "Đơn hàng 456 đã được hủy trước đó" })
+          )
+      );
+
+      await confirmCancel();
+
+      await waitFor(() =>
+        expect(mocks.messageError).toHaveBeenCalledWith("Đơn hàng 456 đã được hủy trước đó")
+      );
+      expect(mocks.messageWarning).not.toHaveBeenCalled();
     });
   });
 
