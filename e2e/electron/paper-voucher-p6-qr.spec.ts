@@ -1447,3 +1447,37 @@ test("P6-E2E-26 [O8] Lịch sử bán vé: mở 'Hủy vé' trên đơn đã nh�
   expect(after.snapshot.header!.status).toBe(HEADER.APPLIED);
   expect(after.snapshot.header!.collectedAmount).toBe(20000);
 });
+
+test("P6-E2E-27 [B1 E04] bấm Kết thúc đúng lúc tiền về nhưng xác nhận lỗi (IPN 99): không trả voucher; app hoàn tất, báo thành công và in một lần", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  await selectSeats(pos.page, ["C6"]);
+  await applyVouchers(pos.page, [{ code: "LÔ-901" }]);
+  const { orderId, dialog } = await printForQr(pos, VNPAY);
+  // Lệnh đóng QR dừng 2 s sau bước kiểm "chưa nhận tiền"; IPN ghi tiền nhưng xác nhận lỗi DB trong lúc đó.
+  await qaApi("POST", "/__qa/api/faults", { closeDelayMs: 2000 });
+  await dialog.getByRole("button", { name: "Kết thúc" }).click();
+  await pos.page.waitForTimeout(300);
+  await qaApi("POST", "/__qa/api/faults", { dbFailure: true });
+  expect((await pay(orderId)).body.code).toBe("99");
+  await expect(dialog).toHaveCount(0, { timeout: 20000 });
+  await pos.page.waitForTimeout(3000);
+  const after = snapshot(orderId);
+  const released = await toasts(pos, /voucher giấy đã được trả lại/);
+  const paid = await toasts(pos, /Thanh toán VNPayQR thành công 20\.000/);
+  await evidence(testInfo, "close-vs-ipn99.json", {
+    db: after,
+    released,
+    paid,
+    prints: await prints(pos),
+    apiCalls: pos.apiCalls.filter((call) => /status|order\/\d+/.test(call))
+  });
+  expect(
+    released,
+    "never 'voucher returned / no ticket' for an order whose money was received"
+  ).toBe(0);
+  expect(after.issues).toEqual([]);
+  expect(after.snapshot.header!.status).toBe(HEADER.APPLIED);
+  expect(after.snapshot.header!.collectedAmount).toBe(20000);
+  expect(paid).toBe(1);
+  expect(await prints(pos)).toHaveLength(1);
+});
