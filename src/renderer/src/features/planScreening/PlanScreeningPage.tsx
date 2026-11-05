@@ -32,6 +32,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import {
   buildCancelOrderSelection,
+  keepCancelOrderStart,
   CancelOrderSelection,
   isOrderCancellable
 } from "./components/cancelOrderSelection";
@@ -1122,7 +1123,8 @@ const PlanScreeningPage = () => {
     const currentKeys = cancelOrderSelection.seatKeys.join(",");
     const nextKeys = nextSelection.seatKeys.join(",");
     if (currentKeys !== nextKeys) {
-      handleCancelOrderSelectionChange(nextSelection);
+      // O-8: giữ trạng thái lúc thu ngân bắt đầu hủy, không lấy trạng thái vừa tải lại.
+      handleCancelOrderSelectionChange(keepCancelOrderStart(cancelOrderSelection, nextSelection));
     }
   }, [
     cancelMode,

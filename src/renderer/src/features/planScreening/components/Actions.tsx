@@ -45,7 +45,12 @@ import QrCodeDialog from "./QrCodeDialog";
 import VipCardDialog from "./VipCardDialog";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
-import { CancelOrderSelection, formatCancelSeatList } from "./cancelOrderSelection";
+import {
+  buildCancelOrderTarget,
+  CancelOrderSelection,
+  formatCancelSeatList
+} from "./cancelOrderSelection";
+import { getOrderCancelConflictMessage, isOrderCancelConflict } from "./paperVoucherCancelConflict";
 import type { PaperVoucherSelectionLine } from "@renderer/features/paperVouchers/paperVoucherRedemption";
 import { usePaperVoucherOrderQuote } from "@renderer/hooks/orders/usePaperVoucherOrderQuote";
 import { TicketPercent } from "lucide-react";
@@ -1252,7 +1257,7 @@ const Actions = ({
 
     const body: CancelOrderDto = {
       planScreenId,
-      orderIds: cancelOrderSelection ? [cancelOrderSelection.orderId] : undefined,
+      ...buildCancelOrderTarget(cancelOrderSelection),
       cancelReasonId: values?.cancelReasonId || 1,
       isRefund: values?.isRefund || false,
       ...selectedSeatIndicesByFloor
@@ -1269,8 +1274,36 @@ const Actions = ({
         message.success("Hủy vé thành công");
       },
       onError: (error: unknown) => {
-        message.error(getApiErrorMessage(error, "Hủy vé thất bại"));
+        if (!cancelOrderSelection || !isOrderCancelConflict(error)) {
+          message.error(getApiErrorMessage(error, "Hủy vé thất bại"));
+          return;
+        }
+        void onCancelConflict(cancelOrderSelection.orderId, error);
       }
+    });
+  };
+
+  /**
+   * O-8: đơn đã đổi trạng thái sau khi thu ngân bắt đầu hủy (vừa được thanh toán, đã nhận tiền QR, đã kết thúc):
+   * backend không hủy gì. Không gửi lại; đóng hộp hủy, bỏ chọn, tải lại đơn rồi hướng dẫn theo trạng thái mới.
+   * Muốn hủy tiếp thì thu ngân chọn lại đơn: một lệnh hủy mới, theo trạng thái mới.
+   */
+  const onCancelConflict = async (orderId: number, error: unknown) => {
+    setOpenCancelSeats(false);
+    form.resetFields();
+    setSelectedSeats([]);
+    onCancelOrderSelectionClear();
+    queryClient.invalidateQueries({ queryKey: planScreeningsKeys.getDetail(planScreenId) });
+    queryClient.invalidateQueries({ queryKey: ordersKeys.getOrdersByScreening(planScreenId) });
+    queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(orderId) });
+    const detail = await ordersApi.getDetail(orderId).catch(() => null);
+    message.warning({
+      content: getOrderCancelConflictMessage({
+        orderId,
+        order: detail?.order ?? null,
+        fallback: getApiErrorMessage(error, "Hủy vé thất bại")
+      }),
+      duration: 8
     });
   };
 

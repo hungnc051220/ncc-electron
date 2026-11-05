@@ -1,5 +1,6 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { cancellationReasonsApi } from "@renderer/api/cancellationReasons.api";
+import { ordersApi } from "@renderer/api/orders.api";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
@@ -39,6 +40,10 @@ import { usePrinterStore } from "@renderer/store/printer.store";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
 import { getCurrentDayDateRange, isCurrentDayDateRange } from "./dateFilter";
+import {
+  getOrderCancelConflictMessage,
+  isOrderCancelConflict
+} from "@renderer/features/planScreening/components/paperVoucherCancelConflict";
 
 const items: TabsProps["items"] = [
   {
@@ -226,25 +231,44 @@ const OrderHistoryPage = () => {
 
       const cancelledOrderId = selectedCancelOrder.order.id;
       const cancelledPlanScreenId = selectedCancelOrder.planScreening.id;
+      const refreshOrder = () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: ordersKeys.getAll(params) }),
+          queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(cancelledOrderId) })
+        ]);
 
       cancelOrder.mutate(
         {
           planScreenId: cancelledPlanScreenId,
           orderIds: [cancelledOrderId],
           cancelReasonId: values.cancelReasonId,
-          isRefund: values.isRefund
+          isRefund: values.isRefund,
+          // O-8: trạng thái của đơn khi thu ngân mở hộp hủy (dòng đã chọn), không tải lại trước khi gửi.
+          expectedOrderStatusId: selectedCancelOrder.order.orderStatusId
         },
         {
           onSuccess: async () => {
-            await Promise.all([
-              queryClient.invalidateQueries({ queryKey: ordersKeys.getAll(params) }),
-              queryClient.invalidateQueries({ queryKey: ordersKeys.getDetail(cancelledOrderId) })
-            ]);
+            await refreshOrder();
             handleCancelDialogClose(false);
             message.success("Hủy vé thành công");
           },
-          onError: (error: unknown) => {
-            message.error(getApiErrorMessage(error, "Hủy vé thất bại"));
+          onError: async (error: unknown) => {
+            if (!isOrderCancelConflict(error)) {
+              message.error(getApiErrorMessage(error, "Hủy vé thất bại"));
+              return;
+            }
+            // Đơn đã đổi trạng thái: không gửi lại; đóng hộp, tải lại, muốn hủy tiếp thì mở lại từ trạng thái mới.
+            handleCancelDialogClose(false);
+            await refreshOrder();
+            const detail = await ordersApi.getDetail(cancelledOrderId).catch(() => null);
+            message.warning({
+              content: getOrderCancelConflictMessage({
+                orderId: cancelledOrderId,
+                order: detail?.order ?? null,
+                fallback: getApiErrorMessage(error, "Hủy vé thất bại")
+              }),
+              duration: 8
+            });
           }
         }
       );

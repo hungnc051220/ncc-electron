@@ -92,6 +92,11 @@ export interface CancelOrderDto {
   notes?: string;
   isRefund?: boolean;
   cancelReasonMsg?: string;
+  /**
+   * O-8: trạng thái đơn lúc thu ngân BẮT ĐẦU hủy (chọn đơn), không phải trạng thái tải lại trước khi gửi.
+   * Đơn voucher giấy chỉ bị hủy nếu vẫn ở trạng thái này, không thì 409. Chỉ dùng khi `orderIds` có đúng một đơn.
+   */
+  expectedOrderStatusId?: number;
 }
 
 export interface CreateQrOrderDto {
