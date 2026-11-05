@@ -1,9 +1,19 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from "axios";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PaymentType } from "@shared/types";
 import {
   buildPaperVoucherPayloadKey,
   classifyPaperVoucherOrderError,
+  classifyPaperVoucherQrCreateError,
+  createPaperVoucherQrWithRetry,
+  getPaperVoucherQrShortPaymentMessage,
+  getPaperVoucherQrUnknownStateMessage,
+  isPaperVoucherQrCreateRetryable,
+  needsPaperVoucherQrReconciliation,
+  PAPER_VOUCHER_QR_CREATE_IN_PROGRESS_MESSAGE,
+  PAPER_VOUCHER_QR_GUARD_UNAVAILABLE_MESSAGE,
+  PAPER_VOUCHER_QR_OUTCOME_UNKNOWN_MESSAGE,
+  PAPER_VOUCHER_QR_RETRY_DELAYS_MS,
   createPaperVoucherRequestId,
   getPaperVoucherExistingOrderMessage,
   getPaperVoucherPaymentFallbackMessage,
@@ -429,11 +439,198 @@ describe("voucher QR state (P6: backend state, never a bare transaction success)
         { orderTotal: 100000, voucherApplied: 80000, remainingPayable: 20000 },
         PaymentType.VNPAY
       )
-    ).toBe(`Thanh toán VNPayQR thành công ${formatMoney(20000)}. Voucher giấy ${formatMoney(80000)}.`);
+    ).toBe(
+      `Thanh toán VNPayQR thành công ${formatMoney(20000)}. Voucher giấy ${formatMoney(80000)}.`
+    );
   });
 
   it("asks the provider again only for VietQR (check-transaction is VietQR only)", () => {
     expect(canRecheckQrTransactionWithProvider(PaymentType.VIETQR)).toBe(true);
     expect(canRecheckQrTransactionWithProvider(PaymentType.VNPAY)).toBe(false);
+  });
+});
+
+describe("create-qr of a paper voucher order (N6)", () => {
+  it.each([
+    [
+      "409 QR_CREATION_IN_PROGRESS",
+      createAxiosError(409, { code: "PAPER_VOUCHER_QR_CREATION_IN_PROGRESS" }),
+      "in-progress",
+      true
+    ],
+    [
+      "503 REQUEST_GUARD_UNAVAILABLE",
+      createAxiosError(503, { code: "PAPER_VOUCHER_REQUEST_GUARD_UNAVAILABLE" }),
+      "guard-unavailable",
+      true
+    ],
+    ["no response (network / timeout)", createAxiosError(), "outcome-unknown", true],
+    ["500 without a business code", createAxiosError(500, {}), "outcome-unknown", true],
+    [
+      "409 QR_TRANSACTION_NOT_REUSABLE",
+      createAxiosError(409, { code: "PAPER_VOUCHER_QR_TRANSACTION_NOT_REUSABLE" }),
+      "not-reusable",
+      false
+    ],
+    [
+      "400 rejected",
+      createAxiosError(400, { message: "Không tìm thấy đơn hàng" }),
+      "rejected",
+      false
+    ]
+  ])("%s → %s", (_, error, kind, isRetryable) => {
+    const failure = classifyPaperVoucherQrCreateError(error);
+    expect(failure.kind).toBe(kind);
+    expect(isPaperVoucherQrCreateRetryable(failure)).toBe(isRetryable);
+  });
+
+  it("uses the guidance messages for temporary errors and the backend message otherwise", () => {
+    expect(
+      classifyPaperVoucherQrCreateError(
+        createAxiosError(503, {
+          code: "PAPER_VOUCHER_REQUEST_GUARD_UNAVAILABLE",
+          message: "Chưa tạo được QR"
+        })
+      ).message
+    ).toBe(PAPER_VOUCHER_QR_GUARD_UNAVAILABLE_MESSAGE);
+    expect(classifyPaperVoucherQrCreateError(createAxiosError()).message).toBe(
+      PAPER_VOUCHER_QR_OUTCOME_UNKNOWN_MESSAGE
+    );
+    expect(
+      classifyPaperVoucherQrCreateError(
+        createAxiosError(400, { message: "Không tìm thấy đơn hàng" })
+      ).message
+    ).toBe("Không tìm thấy đơn hàng");
+  });
+
+  it("backs off 1 s, 2 s, 4 s between retries, then stops (no endless retry)", async () => {
+    const waits: number[] = [];
+    const create = vi
+      .fn()
+      .mockRejectedValue(createAxiosError(409, { code: "PAPER_VOUCHER_QR_CREATION_IN_PROGRESS" }));
+
+    const result = await createPaperVoucherQrWithRetry(create, {
+      wait: async (ms) => {
+        waits.push(ms);
+      }
+    });
+
+    expect(PAPER_VOUCHER_QR_RETRY_DELAYS_MS).toEqual([1000, 2000, 4000]);
+    expect(waits).toEqual([1000, 2000, 4000]);
+    expect(create).toHaveBeenCalledTimes(4);
+    expect(result).toEqual({
+      ok: false,
+      failure: { kind: "in-progress", message: PAPER_VOUCHER_QR_CREATE_IN_PROGRESS_MESSAGE }
+    });
+  });
+
+  it("returns the QR of the first successful retry and stops retrying", async () => {
+    const create = vi
+      .fn()
+      .mockRejectedValueOnce(createAxiosError())
+      .mockResolvedValueOnce({ qrcode: "vietqr://reused" });
+    const onRetry = vi.fn();
+
+    const result = await createPaperVoucherQrWithRetry(create, {
+      wait: async () => undefined,
+      onRetry
+    });
+
+    expect(result).toEqual({ ok: true, qr: { qrcode: "vietqr://reused" } });
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledWith(1, expect.objectContaining({ kind: "outcome-unknown" }));
+  });
+
+  it("never retries a definitive answer", async () => {
+    const create = vi
+      .fn()
+      .mockRejectedValue(
+        createAxiosError(409, { code: "PAPER_VOUCHER_QR_TRANSACTION_NOT_REUSABLE" })
+      );
+    const wait = vi.fn();
+
+    const result = await createPaperVoucherQrWithRetry(create, { wait });
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(wait).not.toHaveBeenCalled();
+    expect(result.ok).toBe(false);
+  });
+
+  it("runs the calls one after the other and stops when the screen is gone", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let isGone = false;
+    const create = vi.fn(async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await Promise.resolve();
+      inFlight -= 1;
+      throw createAxiosError(503, { code: "PAPER_VOUCHER_REQUEST_GUARD_UNAVAILABLE" });
+    });
+
+    const result = await createPaperVoucherQrWithRetry(create, {
+      wait: async () => {
+        isGone = true;
+      },
+      shouldStop: () => isGone
+    });
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(maxInFlight).toBe(1);
+    expect(result).toMatchObject({ ok: false, failure: { kind: "guard-unavailable" } });
+  });
+});
+
+describe("QR reconciliation messages (N9)", () => {
+  const withTransactions = (
+    status: "held" | "applied" | "released" | "cancelled",
+    transactions: Array<{ status: string; transactionAmount: number }>
+  ) =>
+    ({
+      order: { orderPaymentTransactions: transactions },
+      paperVoucher: { status, remainingPayable: 20000 }
+    }) as never;
+
+  it("flags a closed order that has money recorded, never a waiting or a paid one", () => {
+    const success = [{ status: "success", transactionAmount: 20000 }];
+    expect(needsPaperVoucherQrReconciliation(withTransactions("released", success))).toBe(true);
+    expect(needsPaperVoucherQrReconciliation(withTransactions("cancelled", success))).toBe(true);
+    expect(needsPaperVoucherQrReconciliation(withTransactions("released", []))).toBe(false);
+    expect(needsPaperVoucherQrReconciliation(withTransactions("held", success))).toBe(false);
+    expect(needsPaperVoucherQrReconciliation(withTransactions("applied", success))).toBe(false);
+  });
+
+  it("states the amount the backend recorded on a late payment", () => {
+    expect(
+      getPaperVoucherQrClosedMessage(
+        150,
+        "released",
+        withTransactions("released", [
+          { status: "success", transactionAmount: 20000 },
+          { status: "failed", transactionAmount: 20000 }
+        ])
+      )
+    ).toBe(
+      `Đơn #150 đã kết thúc, voucher giấy đã được trả lại. Không in vé. Có giao dịch QR được ghi nhận ${formatMoney(20000)} (thiếu tiền hoặc đến muộn): báo quản lý đối soát, không tự hoàn tiền.`
+    );
+  });
+
+  it("short payment: money recorded vs amount due, voucher kept, no refund promise", () => {
+    const message = getPaperVoucherQrShortPaymentMessage(
+      150,
+      withTransactions("held", [{ status: "success", transactionAmount: 15000 }])
+    );
+    expect(message).toBe(
+      `Đơn #150: có giao dịch QR được ghi nhận ${formatMoney(15000)} nhưng máy chủ chưa xác nhận đủ số tiền còn lại, cần thu ${formatMoney(20000)} (khách có thể đã trả thiếu). Đơn chưa hoàn tất, voucher giấy vẫn đang giữ. Không in vé. Báo quản lý đối soát, không tự hoàn tiền cho khách.`
+    );
+  });
+
+  it("unknown state: no print, no release, no paid claim", () => {
+    const message = getPaperVoucherQrUnknownStateMessage(150);
+    expect(message).toContain("Chưa xác định được trạng thái thanh toán của đơn #150");
+    expect(message).toContain("Không in vé");
+    expect(message).toContain("voucher giấy chưa thay đổi");
+    expect(message).not.toContain("thành công");
   });
 });

@@ -162,3 +162,67 @@ describe("QrCodeDialog with a paper voucher", () => {
     expect(screen.queryByText(/Voucher giấy/)).not.toBeInTheDocument();
   });
 });
+
+describe("QrCodeDialog without a QR yet (paper voucher, create-qr failed)", () => {
+  const pendingQrData = {
+    ...baseQrData,
+    qrcode: "",
+    paperVoucher: { orderTotal: 100000, voucherApplied: 80000, remainingPayable: 20000 }
+  };
+
+  it("shows the reason instead of a QR code and lets the cashier create it again", () => {
+    const onRetryCreateQr = vi.fn();
+
+    render(
+      <QrCodeDialog
+        open
+        dataQr={pendingQrData}
+        qrUnavailableMessage="Máy chủ tạm thời chưa tạo được QR."
+        onRetryCreateQr={onRetryCreateQr}
+      />
+    );
+
+    expect(screen.getByTestId("qr-unavailable")).toHaveTextContent("Chưa có mã QR");
+    expect(screen.getByTestId("qr-unavailable")).toHaveTextContent(
+      "Máy chủ tạm thời chưa tạo được QR."
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tạo lại QR" }));
+    expect(onRetryCreateQr).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Kết thúc" })).toBeEnabled();
+  });
+
+  it("never offers Tạo lại QR once the QR exists", () => {
+    render(<QrCodeDialog open dataQr={baseQrData} onRetryCreateQr={vi.fn()} />);
+
+    expect(screen.queryByTestId("qr-unavailable")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tạo lại QR" })).not.toBeInTheDocument();
+  });
+
+  it("locks the other actions while one is running", () => {
+    const { rerender } = render(
+      <QrCodeDialog
+        open
+        dataQr={pendingQrData}
+        qrUnavailableMessage="Chưa có QR"
+        onRetryCreateQr={vi.fn()}
+        isClosing
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Tạo lại QR" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Kiểm tra lại giao dịch TT" })).toBeDisabled();
+
+    rerender(
+      <QrCodeDialog
+        open
+        dataQr={pendingQrData}
+        qrUnavailableMessage="Chưa có QR"
+        onRetryCreateQr={vi.fn()}
+        isRetryingQr
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Kết thúc" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Kiểm tra lại giao dịch TT" })).toBeDisabled();
+  });
+});
