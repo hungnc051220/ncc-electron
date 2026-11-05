@@ -748,6 +748,108 @@ test("P6-E2E-16 [D05 F06] bấm Kết thúc đúng lúc tiền về: báo thành
   expect(await prints(pos)).toHaveLength(1);
 });
 
+// ---------- O-3: server-side recovery job (một lần chạy job thật, như scheduler mỗi 30 s) ----------
+const runRecovery = async (minPaidAgeSeconds = 0) => {
+  const answer = await qaApi<{ recovered: number[]; failed: number[] }>(
+    "POST",
+    "/__qa/api/recovery/run",
+    {
+      minPaidAgeSeconds
+    }
+  );
+  expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+  return answer.body;
+};
+/** Tiền đã ghi trên giao dịch QR nhưng xác nhận lỗi DB (VNPay IPN 99 / VietQR callback 500). */
+const payWithDbFailure = async (orderId: number) => {
+  await qaApi("POST", "/__qa/api/faults", { dbFailure: true });
+  const answer = await pay(orderId);
+  await expectDb(
+    orderId,
+    (snap) => snap.transactions[0]?.status === "success" && snap.header?.status === HEADER.HELD,
+    "money recorded, voucher still HELD"
+  );
+  return answer;
+};
+
+test("P6-E2E-17 [R01 F06] IPN 99, thu ngân không thao tác: job hoàn tất → POS nhận socket, báo thành công và in một lần", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  await selectSeats(pos.page, ["C7"]);
+  await applyVouchers(pos.page, [{ code: "LÔ-901" }]);
+  const { orderId, dialog } = await printForQr(pos, VNPAY);
+  expect((await payWithDbFailure(orderId)).body.code).toBe("99");
+  await pos.page.waitForTimeout(2000);
+  await expect(dialog).toBeVisible();
+  expect(await prints(pos)).toHaveLength(0);
+  expect((await runRecovery()).recovered).toEqual([orderId]);
+  await expect(toast(pos.page, /Thanh toán VNPayQR thành công 20\.000/)).toBeVisible({
+    timeout: 20000
+  });
+  await expect(dialog).toHaveCount(0);
+  const applied = await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.APPLIED,
+    "APPLIED by the job"
+  );
+  expect(applied.header!.collectedAmount).toBe(20000);
+  await pos.page.waitForTimeout(3000);
+  expect(await prints(pos)).toHaveLength(1);
+  expect(await toasts(pos, /Thanh toán VNPayQR thành công/)).toBe(1);
+});
+
+test("P6-E2E-18 [R04] job và thu ngân bấm Kiểm tra lại cùng lúc (VietQR): báo thành công một lần, in một lần", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  await selectSeats(pos.page, ["C8"]);
+  await applyVouchers(pos.page, [{ code: "LÔ-901" }]);
+  const { orderId, dialog } = await printForQr(pos, VIETQR);
+  expect((await payWithDbFailure(orderId)).status).toBe(500);
+  const recheck = dialog.getByRole("button", { name: /Kiểm tra lại giao dịch/ });
+  const [click, job] = await Promise.all([
+    recheck
+      .click({ timeout: 5000 })
+      .then(() => "recheck clicked")
+      .catch(() => "QR closed by the job's socket before the click"),
+    runRecovery()
+  ]);
+  await evidence(testInfo, "race.json", { click, job });
+  await expect
+    .poll(() => toasts(pos!, /Thanh toán VietQR thành công/), { timeout: 20000 })
+    .toBeGreaterThan(0);
+  await expect(dialog).toHaveCount(0);
+  await expectDb(orderId, (snap) => snap.header?.status === HEADER.APPLIED, "APPLIED");
+  await pos.page.waitForTimeout(3000);
+  expect(await prints(pos)).toHaveLength(1);
+  expect(await toasts(pos, /Thanh toán VietQR thành công/)).toBe(1);
+});
+
+test("P6-E2E-19 [R01] POS đã tắt khi IPN 99: job hoàn tất; mở lại app, Lịch sử bán vé thấy Hoàn thành", async ({}, testInfo) => {
+  pos = await startPos(testInfo);
+  await selectSeats(pos.page, ["F1"]);
+  await applyVouchers(pos.page, [{ code: "LÔ-901" }]);
+  const { orderId } = await printForQr(pos, VNPAY);
+  await pos.app.evaluate(({ app }) => app.exit(0)).catch(() => undefined);
+  await pos.app.close().catch(() => undefined);
+  expect((await payWithDbFailure(orderId)).body.code).toBe("99");
+  expect((await runRecovery()).recovered).toEqual([orderId]);
+  const applied = await expectDb(
+    orderId,
+    (snap) => snap.header?.status === HEADER.APPLIED,
+    "APPLIED by the job"
+  );
+  expect(applied.order!.orderStatusId).toBe(ORDER.COMPLETED);
+  pos = await launch(testInfo);
+  await login(pos.page);
+  await pos.page.evaluate(() => {
+    window.location.hash = "#/order-history";
+  });
+  const row = pos.page
+    .locator("tr.ant-table-row")
+    .filter({ has: pos.page.getByText(String(orderId), { exact: true }) });
+  await expect(row).toBeVisible({ timeout: 20000 });
+  await expect(row).toContainText("Hoàn thành");
+  await pos.page.screenshot({ path: testInfo.outputPath("history-after-recovery.png") });
+});
+
 test("P6-E2E-11 [E02 F06] mất kết nối khi chờ thanh toán: QR giữ nguyên; tiền về lúc offline; online → Kiểm tra lại → in một lần", async ({}, testInfo) => {
   pos = await startPos(testInfo);
   await selectSeats(pos.page, ["B3"]);
