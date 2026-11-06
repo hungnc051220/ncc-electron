@@ -1893,7 +1893,9 @@ const Actions = ({
                   isSeatSelectionPending ||
                   selectedSeats.length === 0 ||
                   createQr.isPending ||
-                  qrAction === "create" ||
+                  // Mọi thao tác QR (tạo / kiểm tra lại / kết thúc) giữ khóa tới khi xong: socket có thể đã đóng
+                  // màn QR trong lúc "Kiểm tra lại" còn chạy; bán tiếp lúc đó thì QR của đơn mới bị bỏ qua.
+                  qrAction !== null ||
                   cancelMode ||
                   !canCreate ||
                   isPlanScreeningPast ||
