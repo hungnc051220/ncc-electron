@@ -2,9 +2,11 @@ import { ListSeat, OrderResponseProps, OrderStatus, PaymentStatus } from "@share
 import { describe, expect, it } from "vitest";
 import {
   buildCancelOrderSelection,
+  buildCancelOrderTarget,
   buildSeatOrderMap,
   findSeatOrder,
-  formatCancelSeatList
+  formatCancelSeatList,
+  keepCancelOrderStart
 } from "./cancelOrderSelection";
 
 const createSeat = (seat: string, code: string, floor = 1): ListSeat => ({
@@ -77,6 +79,53 @@ describe("cancelOrderSelection", () => {
 
     expect(selection.isComplete).toBe(false);
     expect(selection.seatKeys).toEqual(["1-1"]);
+  });
+
+  it("O-8: remembers the order status when the cashier starts the cancel (picks the order)", () => {
+    const selection = buildCancelOrderSelection({
+      order: createOrder({
+        orderStatusId: OrderStatus.PENDING,
+        paymentStatusId: PaymentStatus.PENDING
+      }),
+      seats: [createSeat("1", "A1"), createSeat("2", "A2")],
+      planScreeningId: 9,
+      directSeatKey: "1-1"
+    });
+
+    expect(selection.startedOrderStatusId).toBe(OrderStatus.PENDING);
+  });
+
+  it("O-8: a refreshed selection keeps the status of the start, not the refetched one", () => {
+    const seats = [createSeat("1", "A1"), createSeat("2", "A2")];
+    const started = buildCancelOrderSelection({
+      order: createOrder({ orderStatusId: OrderStatus.PENDING }),
+      seats,
+      planScreeningId: 9,
+      directSeatKey: "1-1"
+    });
+    const refetched = buildCancelOrderSelection({
+      order: createOrder({ orderStatusId: OrderStatus.COMPLETED }),
+      seats,
+      planScreeningId: 9,
+      directSeatKey: "1-1"
+    });
+
+    expect(keepCancelOrderStart(started, refetched).startedOrderStatusId).toBe(OrderStatus.PENDING);
+  });
+
+  it("O-8: the cancel request names the picked order and the status the cashier started on", () => {
+    const selection = buildCancelOrderSelection({
+      order: createOrder({ orderStatusId: OrderStatus.PENDING }),
+      seats: [createSeat("1", "A1"), createSeat("2", "A2")],
+      planScreeningId: 9,
+      directSeatKey: "1-1"
+    });
+
+    expect(buildCancelOrderTarget(selection)).toEqual({
+      orderIds: [101],
+      expectedOrderStatusId: OrderStatus.PENDING
+    });
+    expect(buildCancelOrderTarget(null)).toEqual({ orderIds: undefined });
   });
 
   it("formats seats in floor and position order", () => {

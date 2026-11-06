@@ -5,7 +5,6 @@ import { OrderStatusBadge } from "@renderer/components/OrderStatusBadge";
 import RefreshButton from "@renderer/components/RefreshButton";
 import RefundStatusBadge from "@renderer/features/refunds/components/RefundStatusBadge";
 import { ordersKeys } from "@renderer/hooks/orders/keys";
-import { useOrderDetail } from "@renderer/hooks/orders/useOrderDetail";
 import { useOrdersByScreening } from "@renderer/hooks/orders/useOrdersByScreening";
 import { useUpdateOrder } from "@renderer/hooks/orders/useUpdateOrder";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
@@ -30,7 +29,7 @@ import {
   CancellationTicketProps
 } from "@shared/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Modal, Popover, Table, Tag, Typography } from "antd";
+import { Alert, Button, Empty, Modal, Popover, Spin, Table, Tag, Typography } from "antd";
 import type { PopoverProps, TableColumnsType } from "antd";
 import dayjs from "dayjs";
 import {
@@ -49,6 +48,7 @@ import {
   ReceiptText,
   Send,
   Ticket,
+  TicketPercent,
   UserRound,
   UsersRound,
   WalletCards
@@ -58,11 +58,14 @@ import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { usePermission } from "@renderer/permissions/usePermission";
 import InvitationTicketPreview from "./InvitationTicketPreview";
+import { OrderPaperVoucherLines, OrderPaperVoucherPaymentRows } from "./OrderPaperVoucherPayment";
+import { PAPER_VOUCHER_PAYMENT_LABELS } from "./OrderPaperVoucherPayment.utils";
 import {
   canExportOrderETicket,
   getInvitationTicketIssuerName,
   refreshOrderDetailData
 } from "./OrderDetailDialog.utils";
+import { useOrderDetailView } from "./useOrderDetailView";
 
 interface OrderDialogProps {
   open: boolean;
@@ -232,14 +235,20 @@ const OrderDetailDialog = ({
   const isCancellingEInvoiceRef = useRef(false);
   const isCancelEInvoiceConfirmOpenRef = useRef(false);
   const updateOrder = useUpdateOrder();
-  const {
-    data: orderDetail,
-    isFetching: isFetchingOrderDetail,
-    refetch: refetchOrderDetail
-  } = useOrderDetail(selectedOrderId ?? selectedItem?.order.id ?? 0);
+  const detailView = useOrderDetailView(
+    selectedOrderId ?? selectedItem?.order.id ?? 0,
+    selectedItem
+  );
+  const { isFetching: isFetchingOrderDetail, refetch: refetchOrderDetail } = detailView;
 
-  const currentDetail = orderDetail ?? selectedItem ?? null;
+  const currentDetail = detailView.detail;
   const currentOrder = currentDetail?.order;
+  const isDetailReady = detailView.status === "ready";
+  /**
+   * Chỉ API chi tiết đơn trả; đơn không dùng voucher giấy là `null` và hiển thị như trước. Khi chưa
+   * `ready` (dòng danh sách/cache cũ) chưa biết đơn có voucher hay không nên không hiện số tiền trả.
+   */
+  const paperVoucher = isDetailReady ? (currentDetail?.paperVoucher ?? null) : null;
   const currentOrderId = currentOrder?.id ?? 0;
   const currentPlanScreeningId =
     currentDetail?.planScreening?.id ?? currentOrder?.planScreenId ?? 0;
@@ -616,6 +625,10 @@ const OrderDetailDialog = ({
     "Khuyến mãi đã áp dụng": <Gift />,
     "Điểm thưởng đã áp dụng": <CircleDollarSign />,
     "Khách cần thanh toán": <WalletCards />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.orderTotal]: <Ticket />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.voucherApplied]: <TicketPercent />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.paidByCustomer]: <WalletCards />,
+    [PAPER_VOUCHER_PAYMENT_LABELS.excess]: <CircleDollarSign />,
     "Thời gian hủy": <Clock3 />,
     "Người hủy": <UserRound />,
     "Ghế hủy": <Armchair />,
@@ -995,6 +1008,51 @@ const OrderDetailDialog = ({
   const renderCopyInvoiceButton = (invoiceNo: string, label: string) =>
     renderCopyButton(invoiceNo, label, `Đã sao chép mã ${invoiceNo}`, "Không thể sao chép mã HĐĐT");
 
+  const retryLoadOrderDetail = (
+    <Button size="small" onClick={() => void refetchOrderDetail()}>
+      Thử lại
+    </Button>
+  );
+
+  /** Thay toàn bộ nội dung khi chưa có dữ liệu nào của đơn đang mở; `null` khi đã có dữ liệu. */
+  const renderDetailStatus = () => {
+    if (detailView.status === "loading") {
+      return (
+        <div
+          data-testid="order-detail-loading"
+          className="flex min-h-48 flex-col items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400"
+        >
+          <Spin />
+          <span>Đang tải thông tin đơn hàng...</span>
+        </div>
+      );
+    }
+    if (detailView.status === "error") {
+      return (
+        <Alert
+          data-testid="order-detail-error"
+          type="error"
+          showIcon
+          title="Không tải được thông tin đơn hàng"
+          description={getApiErrorMessage(detailView.error, "Vui lòng thử lại")}
+          action={retryLoadOrderDetail}
+        />
+      );
+    }
+    if (detailView.status === "empty") {
+      return (
+        <Empty
+          data-testid="order-detail-empty"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="Không tìm thấy thông tin đơn hàng"
+        />
+      );
+    }
+    return null;
+  };
+
+  const detailStatus = renderDetailStatus();
+
   return (
     <Modal
       title="Thông tin bán vé"
@@ -1057,7 +1115,19 @@ const OrderDetailDialog = ({
         </>
       )}
     >
-      <div className="space-y-3 text-slate-900 dark:text-slate-100">
+      {detailStatus}
+      {detailView.status === "preview" && !!detailView.error && (
+        <Alert
+          data-testid="order-detail-stale-warning"
+          className="mb-3"
+          type="warning"
+          showIcon
+          title="Chưa tải được thông tin mới nhất của đơn hàng"
+          description="Đang hiển thị dữ liệu tạm; số tiền khách thanh toán và voucher giấy chưa hiển thị."
+          action={retryLoadOrderDetail}
+        />
+      )}
+      <div className={cn("space-y-3 text-slate-900 dark:text-slate-100", detailStatus && "hidden")}>
         <div
           className={cn(
             "rounded-xl border border-slate-200 bg-white shadow-sm dark:border-app-border dark:bg-app-bg-container dark:shadow-none",
@@ -1501,13 +1571,34 @@ const OrderDetailDialog = ({
                 {renderInfoRow("Điểm thưởng đã áp dụng", `-${formatMoney(pricePointReward)}`, {
                   valueClassName: "text-rose-600"
                 })}
-                {renderInfoRow("Khách cần thanh toán", formatMoney(currentOrder?.orderTotal || 0), {
-                  valueClassName: "text-emerald-700 text-base font-semibold"
-                })}
+                {!isDetailReady ? (
+                  renderInfoRow(
+                    "Khách cần thanh toán",
+                    <span data-testid="order-payment-pending">
+                      {detailView.error ? "Chưa tải được" : "Đang tải..."}
+                    </span>,
+                    { valueClassName: "text-slate-500 dark:text-slate-400" }
+                  )
+                ) : paperVoucher ? (
+                  <OrderPaperVoucherPaymentRows
+                    paperVoucher={paperVoucher}
+                    renderRow={renderInfoRow}
+                  />
+                ) : (
+                  renderInfoRow(
+                    "Khách cần thanh toán",
+                    formatMoney(currentOrder?.orderTotal || 0),
+                    {
+                      valueClassName: "text-emerald-700 text-base font-semibold"
+                    }
+                  )
+                )}
               </div>
             </section>
           </div>
         )}
+
+        {paperVoucher && <OrderPaperVoucherLines paperVoucher={paperVoucher} />}
 
         {hasCancelTickets && (
           <section className="h-fit self-start rounded-xl border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-500/20 dark:bg-rose-500/5">

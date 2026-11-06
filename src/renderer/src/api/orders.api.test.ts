@@ -117,6 +117,29 @@ describe("ordersApi", () => {
     expect(patchSpy).toHaveBeenCalledWith("/api/pos/order/print?orderId=88");
   });
 
+  it("posts the order body with paper vouchers to the quote endpoint", async () => {
+    const quote = { quoteHash: "a".repeat(64), orderTotal: 100000, remainingPayable: 20000 };
+    const postSpy = vi.spyOn(api, "post").mockResolvedValue({ data: quote });
+    const controller = new AbortController();
+    const dto = {
+      planScreenId: 1,
+      floorNo: 1,
+      paymentMethodSystemName: "POS",
+      posName: "POS A",
+      posShortName: "A1",
+      isInvitation: false,
+      listChairIndexF1: "1,2",
+      listChairValueF1: "A1,A2",
+      paperVouchers: [{ batchId: 3, quantity: 2, faceValue: 100000 }]
+    };
+
+    await expect(ordersApi.quote(dto, controller.signal)).resolves.toEqual(quote);
+
+    expect(postSpy).toHaveBeenCalledWith("/api/pos/order/quote", dto, {
+      signal: controller.signal
+    });
+  });
+
   it("posts orderId when checking payment transaction", async () => {
     const postSpy = vi.spyOn(api, "post").mockResolvedValue({
       data: { code: "01", message: "PaymentId is callback" }

@@ -112,7 +112,21 @@ export interface Price2 {
   totalQuantity: number;
 }
 
-export interface RevenuesByFilmProps {
+/**
+ * Cột voucher giấy của báo cáo `revenue-by-film` (suất chiếu, phim, 3 dòng tổng). Backend cũ không
+ * trả các trường này: coi như 0. Voucher giấy là nguồn thanh toán nên doanh thu không đổi;
+ * `saleVietQr`/`saleVnPayQr` đã chỉ còn số tiền QR thực nhận.
+ */
+export interface PaperVoucherReportAmounts {
+  /** Số tờ voucher giấy đã dùng (cột "Số lượng Voucher"). */
+  paperVoucherQuantity?: number;
+  /** Mệnh giá vượt giá trị đơn, không hoàn lại (cột "Tiền thừa Voucher"). */
+  paperVoucherExcess?: number;
+  /** Phần đơn trả bằng voucher giấy; không phải cột UI, chỉ để tính "Thực nộp". */
+  paperVoucherApplied?: number;
+}
+
+export interface RevenuesByFilmProps extends PaperVoucherReportAmounts {
   filmId: number;
   filmName: string;
   filmOrderNo: number;
@@ -126,7 +140,7 @@ export interface RevenuesByFilmProps {
   saleVnPayQr: number;
 }
 
-export interface PlanScreen {
+export interface PlanScreen extends PaperVoucherReportAmounts {
   planScreenId: number;
   projectDate: string;
   projectTime: string;
@@ -153,7 +167,7 @@ export interface PriceProps {
   totalQuantity: number;
 }
 
-export interface TotalRevenueProps {
+export interface TotalRevenueProps extends PaperVoucherReportAmounts {
   totalInvitationQuantity: number;
   totalContractQuantity: number;
   totalQuantity: number;
@@ -169,7 +183,7 @@ export interface TotalRevenueProps {
   discountTotal?: number;
 }
 
-export interface TotalRevenueOnlineProps {
+export interface TotalRevenueOnlineProps extends PaperVoucherReportAmounts {
   isOnline: boolean;
   totalInvitationQuantity: number;
   totalContractQuantity: number;

@@ -7,6 +7,7 @@ import ExcelJS from "exceljs";
 import { DownloadIcon } from "lucide-react";
 import dayjs from "dayjs";
 import {
+  PAPER_VOUCHER_COLUMN_TITLES,
   RevenueColumnMode,
   getActualRemittance,
   getTotalRevenue,
@@ -15,7 +16,14 @@ import {
 } from ".";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 
-type Row = {
+type PaperVoucherAmounts = {
+  paperVoucherQuantity: number;
+  paperVoucherExcess: number;
+  /** Không xuất thành cột, chỉ để tính "Thực nộp". */
+  paperVoucherApplied: number;
+};
+
+type Row = PaperVoucherAmounts & {
   filmName: string;
   projectDate: string;
   projectTime: string;
@@ -39,7 +47,7 @@ type Row = {
   internalDiscountTotal: number;
 };
 
-type FilmGroup = {
+type FilmGroup = PaperVoucherAmounts & {
   filmName: string;
   pricesMap: Record<number, number>;
   totalInvitationQuantity: number;
@@ -81,6 +89,53 @@ const getReportTitleByDateType = (dateType: number) =>
     ? "Báo cáo doanh thu phim theo ngày bán"
     : "Báo cáo doanh thu phim theo lịch chiếu";
 
+/** Số liệu tiền của một dòng (suất chiếu, phim hoặc dòng tổng). */
+type RevenueAmounts = Pick<
+  Row,
+  | "actualSale"
+  | "saleVietQr"
+  | "saleVnPayQr"
+  | "discountTotal"
+  | "internalDiscountTotal"
+  | "paperVoucherQuantity"
+  | "paperVoucherExcess"
+  | "paperVoucherApplied"
+>;
+
+type TrailingColumn = { title: string; getValue: (row: RevenueAmounts) => number };
+
+/**
+ * Các cột sau "Tổng doanh thu" theo chế độ hiển thị, giống bảng trên màn hình. Hai cột voucher giấy
+ * đứng cạnh nhau: lọc theo nhân viên thì trong nhóm thanh toán, trước "Thực nộp"; còn lại sau
+ * "Tổng doanh thu sau KM". Lọc theo hãng phim thì không có cột nào.
+ */
+const getTrailingColumns = (columnMode: RevenueColumnMode): TrailingColumn[] => {
+  if (columnMode === "manufacturer") return [];
+
+  const paperVoucherColumns: TrailingColumn[] = [
+    { title: PAPER_VOUCHER_COLUMN_TITLES[0], getValue: (row) => row.paperVoucherQuantity },
+    { title: PAPER_VOUCHER_COLUMN_TITLES[1], getValue: (row) => row.paperVoucherExcess }
+  ];
+  const revenueColumns: TrailingColumn[] =
+    columnMode === "user"
+      ? [
+          { title: "VNPayQR", getValue: (row) => row.saleVnPayQr },
+          { title: "VietQR", getValue: (row) => row.saleVietQr },
+          ...paperVoucherColumns,
+          { title: "Thực nộp", getValue: getActualRemittance }
+        ]
+      : [
+          { title: "Tổng doanh thu sau KM", getValue: getTotalRevenueAfterDiscount },
+          ...paperVoucherColumns
+        ];
+
+  return [
+    { title: "KM", getValue: (row) => row.discountTotal },
+    { title: "Giảm giá", getValue: (row) => row.internalDiscountTotal },
+    ...revenueColumns
+  ];
+};
+
 const sumRows = (rows: Row[]) => {
   const prices: Record<number, number> = {};
   let totalPlanScreen = 0;
@@ -96,9 +151,15 @@ const sumRows = (rows: Row[]) => {
   let discountPartner = 0;
   let discountTotal = 0;
   let internalDiscountTotal = 0;
+  let paperVoucherQuantity = 0;
+  let paperVoucherExcess = 0;
+  let paperVoucherApplied = 0;
 
   rows.forEach((r) => {
     totalPlanScreen += 1;
+    paperVoucherQuantity += r.paperVoucherQuantity;
+    paperVoucherExcess += r.paperVoucherExcess;
+    paperVoucherApplied += r.paperVoucherApplied;
     totalQuantity += r.totalQuantity;
     totalInvitationQuantity += r.totalInvitationQuantity;
     totalContractQuantity += r.totalContractQuantity;
@@ -132,7 +193,10 @@ const sumRows = (rows: Row[]) => {
     discountOnline,
     discountPartner,
     discountTotal,
-    internalDiscountTotal
+    internalDiscountTotal,
+    paperVoucherQuantity,
+    paperVoucherExcess,
+    paperVoucherApplied
   };
 };
 
@@ -255,12 +319,18 @@ const ExportRevenueExcelButton = ({
           discountPartner: 0,
           discountTotal: 0,
           internalDiscountTotal: 0,
+          paperVoucherQuantity: 0,
+          paperVoucherExcess: 0,
+          paperVoucherApplied: 0,
           rows: []
         };
       }
 
       const target = acc[row.filmName];
       target.rows.push(row);
+      target.paperVoucherQuantity += row.paperVoucherQuantity;
+      target.paperVoucherExcess += row.paperVoucherExcess;
+      target.paperVoucherApplied += row.paperVoucherApplied;
       target.totalInvitationQuantity += row.totalInvitationQuantity;
       target.totalContractQuantity += row.totalContractQuantity;
       target.totalQuantity += row.totalQuantity;
@@ -318,12 +388,10 @@ const ExportRevenueExcelButton = ({
       const resolvedFileName =
         fileName ??
         `${reportTitle} ${dayjs(fromDate).format("DD.MM.YYYY")}-${dayjs(toDate).format("DD.MM.YYYY")}.xlsx`;
-      const showDiscountColumns = columnMode !== "manufacturer";
-      const showActualRemittance = columnMode === "user";
-      const lastRevenueColumnTitle = showActualRemittance ? "Thực nộp" : "Tổng doanh thu sau KM";
-      const userRevenueHeaders = showActualRemittance
-        ? ["VNPayQR", "VietQR", lastRevenueColumnTitle]
-        : [lastRevenueColumnTitle];
+      const trailingColumns = getTrailingColumns(columnMode);
+      const trailingHeaders = trailingColumns.map((column) => column.title);
+      const getTrailingValues = (row: RevenueAmounts) =>
+        trailingColumns.map((column) => column.getValue(row));
 
       const header = [
         "Phim",
@@ -337,7 +405,7 @@ const ExportRevenueExcelButton = ({
         "HĐ",
         "Vé bán + HĐ",
         "Tổng doanh thu",
-        ...(showDiscountColumns ? ["KM", "Giảm giá", ...userRevenueHeaders] : [])
+        ...trailingHeaders
       ];
 
       const totalColumns = header.length;
@@ -392,16 +460,8 @@ const ExportRevenueExcelButton = ({
       });
 
       const COL_AMOUNT = amountCol;
-      const COL_DISCOUNT_OFFLINE = showDiscountColumns ? amountCol + 1 : undefined;
-      const COL_INTERNAL_DISCOUNT = showDiscountColumns ? amountCol + 2 : undefined;
-      const COL_VNPAY_QR = showActualRemittance ? amountCol + 3 : undefined;
-      const COL_VIET_QR = showActualRemittance ? amountCol + 4 : undefined;
-      const COL_LAST_REVENUE = showDiscountColumns
-        ? showActualRemittance
-          ? amountCol + 5
-          : amountCol + 3
-        : undefined;
-      const totalEndCol = COL_LAST_REVENUE ?? COL_AMOUNT;
+      const trailingCols = trailingColumns.map((_, index) => amountCol + 1 + index);
+      const totalEndCol = COL_AMOUNT + trailingColumns.length;
       const detailHeaderTexts: Record<number, string> = {
         1: "Phim",
         2: "Ngày",
@@ -433,67 +493,17 @@ const ExportRevenueExcelButton = ({
         detailHeaderTexts[totalStartCol + index] = title;
       });
 
-      [
-        COL_AMOUNT,
-        COL_DISCOUNT_OFFLINE,
-        COL_INTERNAL_DISCOUNT,
-        COL_VNPAY_QR,
-        COL_VIET_QR,
-        COL_LAST_REVENUE
-      ]
-        .filter((col): col is number => typeof col === "number")
-        .forEach((col) => {
-          ws.getColumn(col).numFmt = moneyFormat;
-        });
+      [COL_AMOUNT, ...trailingCols].forEach((col) => {
+        ws.getColumn(col).numFmt = moneyFormat;
+      });
 
-      if (
-        showDiscountColumns &&
-        COL_DISCOUNT_OFFLINE &&
-        COL_INTERNAL_DISCOUNT &&
-        COL_LAST_REVENUE
-      ) {
-        ws.mergeCells(
-          headerGroupRowIndex,
-          COL_DISCOUNT_OFFLINE,
-          headerGroupRowIndex + 1,
-          COL_DISCOUNT_OFFLINE
-        );
-        ws.getCell(headerGroupRowIndex, COL_DISCOUNT_OFFLINE).value = "KM";
+      trailingColumns.forEach(({ title }, index) => {
+        const trailingCol = trailingCols[index];
 
-        ws.mergeCells(
-          headerGroupRowIndex,
-          COL_INTERNAL_DISCOUNT,
-          headerGroupRowIndex + 1,
-          COL_INTERNAL_DISCOUNT
-        );
-        ws.getCell(headerGroupRowIndex, COL_INTERNAL_DISCOUNT).value = "Giảm giá";
-
-        if (showActualRemittance && COL_VNPAY_QR && COL_VIET_QR) {
-          ws.mergeCells(headerGroupRowIndex, COL_VNPAY_QR, headerGroupRowIndex + 1, COL_VNPAY_QR);
-          ws.getCell(headerGroupRowIndex, COL_VNPAY_QR).value = "VNPayQR";
-
-          ws.mergeCells(headerGroupRowIndex, COL_VIET_QR, headerGroupRowIndex + 1, COL_VIET_QR);
-          ws.getCell(headerGroupRowIndex, COL_VIET_QR).value = "VietQR";
-        }
-
-        ws.mergeCells(
-          headerGroupRowIndex,
-          COL_LAST_REVENUE,
-          headerGroupRowIndex + 1,
-          COL_LAST_REVENUE
-        );
-        ws.getCell(headerGroupRowIndex, COL_LAST_REVENUE).value = lastRevenueColumnTitle;
-
-        detailHeaderTexts[COL_DISCOUNT_OFFLINE] = "KM";
-        detailHeaderTexts[COL_INTERNAL_DISCOUNT] = "Giảm giá";
-
-        if (showActualRemittance && COL_VNPAY_QR && COL_VIET_QR) {
-          detailHeaderTexts[COL_VNPAY_QR] = "VNPayQR";
-          detailHeaderTexts[COL_VIET_QR] = "VietQR";
-        }
-
-        detailHeaderTexts[COL_LAST_REVENUE] = lastRevenueColumnTitle;
-      }
+        ws.mergeCells(headerGroupRowIndex, trailingCol, headerGroupRowIndex + 1, trailingCol);
+        ws.getCell(headerGroupRowIndex, trailingCol).value = title;
+        detailHeaderTexts[trailingCol] = title;
+      });
 
       const headerRowIndex = headerGroupRowIndex + 1;
       const headerRow = ws.getRow(headerRowIndex);
@@ -534,16 +544,7 @@ const ExportRevenueExcelButton = ({
           sum.totalContractQuantity,
           getTotalTicketAndContract(sum),
           getTotalRevenue(sum),
-          ...(showDiscountColumns
-            ? [
-                sum.discountTotal,
-                sum.internalDiscountTotal,
-                ...(showActualRemittance ? [sum.saleVnPayQr, sum.saleVietQr] : []),
-                showActualRemittance
-                  ? getActualRemittance(sum)
-                  : getTotalRevenueAfterDiscount(sum)
-              ]
-            : [])
+          ...getTrailingValues(sum)
         ]);
 
         row.font = { bold: true };
@@ -571,16 +572,7 @@ const ExportRevenueExcelButton = ({
           film.totalContractQuantity,
           getTotalTicketAndContract(film),
           getTotalRevenue(film),
-          ...(showDiscountColumns
-            ? [
-                film.discountTotal,
-                film.internalDiscountTotal,
-                ...(showActualRemittance ? [film.saleVnPayQr, film.saleVietQr] : []),
-                showActualRemittance
-                  ? getActualRemittance(film)
-                  : getTotalRevenueAfterDiscount(film)
-              ]
-            : [])
+          ...getTrailingValues(film)
         ]);
 
         ws.mergeCells(summaryRow.number, 1, summaryRow.number, 5);
@@ -611,14 +603,7 @@ const ExportRevenueExcelButton = ({
             r.totalContractQuantity,
             getTotalTicketAndContract(r),
             getTotalRevenue(r),
-            ...(showDiscountColumns
-              ? [
-                  r.discountTotal,
-                  r.internalDiscountTotal,
-                  ...(showActualRemittance ? [r.saleVnPayQr, r.saleVietQr] : []),
-                  showActualRemittance ? getActualRemittance(r) : getTotalRevenueAfterDiscount(r)
-                ]
-              : [])
+            ...getTrailingValues(r)
           ]);
         });
       });
@@ -634,7 +619,7 @@ const ExportRevenueExcelButton = ({
         "HĐ",
         "Vé bán + HĐ",
         "Tổng doanh thu",
-        ...(showDiscountColumns ? ["KM", "Giảm giá", ...userRevenueHeaders] : [])
+        ...trailingHeaders
       ];
       const summaryHeaderDetail = [
         "",
@@ -644,7 +629,7 @@ const ExportRevenueExcelButton = ({
         "",
         "",
         "",
-        ...(showDiscountColumns ? ["", "", ""] : [])
+        ...trailingColumns.map(() => "")
       ];
       const summaryHeaderTexts: Record<number, string> = {
         1: "Ngày",
@@ -660,21 +645,9 @@ const ExportRevenueExcelButton = ({
       const summaryPriceStartCol = 4;
       const summaryPriceEndCol = summaryPriceStartCol + allPrices.length - 1;
       const summaryTotalStartCol = summaryPriceStartCol + allPrices.length;
-      const summaryDiscountStartCol = showDiscountColumns ? summaryTotalStartCol + 5 : undefined;
-      const summaryVnpayCol =
-        showDiscountColumns && showActualRemittance && summaryDiscountStartCol
-          ? summaryDiscountStartCol + 2
-          : undefined;
-      const summaryVietqrCol =
-        showDiscountColumns && showActualRemittance && summaryDiscountStartCol
-          ? summaryDiscountStartCol + 3
-          : undefined;
-      const summaryLastRevenueCol =
-        showDiscountColumns && summaryDiscountStartCol
-          ? showActualRemittance
-            ? summaryDiscountStartCol + 4
-            : summaryDiscountStartCol + 2
-          : undefined;
+      const summaryTrailingCols = trailingColumns.map(
+        (_, index) => summaryTotalStartCol + 5 + index
+      );
 
       allPrices.forEach((price, index) => {
         summaryHeaderTexts[summaryPriceStartCol + index] = (price / 1000).toString();
@@ -686,18 +659,9 @@ const ExportRevenueExcelButton = ({
       summaryHeaderTexts[summaryTotalStartCol + 3] = "Vé bán + HĐ";
       summaryHeaderTexts[summaryTotalStartCol + 4] = "Tổng doanh thu";
 
-      if (showDiscountColumns && summaryDiscountStartCol) {
-        summaryHeaderTexts[summaryDiscountStartCol] = "KM";
-        summaryHeaderTexts[summaryDiscountStartCol + 1] = "Giảm giá";
-
-        if (showActualRemittance && summaryVnpayCol && summaryVietqrCol && summaryLastRevenueCol) {
-          summaryHeaderTexts[summaryVnpayCol] = "VNPayQR";
-          summaryHeaderTexts[summaryVietqrCol] = "VietQR";
-          summaryHeaderTexts[summaryLastRevenueCol] = lastRevenueColumnTitle;
-        } else if (summaryLastRevenueCol) {
-          summaryHeaderTexts[summaryLastRevenueCol] = lastRevenueColumnTitle;
-        }
-      }
+      trailingColumns.forEach(({ title }, index) => {
+        summaryHeaderTexts[summaryTrailingCols[index]] = title;
+      });
       const summaryStaticMergeCols = [
         1,
         2,
@@ -707,15 +671,7 @@ const ExportRevenueExcelButton = ({
         summaryTotalStartCol + 2,
         summaryTotalStartCol + 3,
         summaryTotalStartCol + 4,
-        ...(showDiscountColumns && summaryDiscountStartCol
-          ? [
-              summaryDiscountStartCol,
-              summaryDiscountStartCol + 1,
-              ...(showActualRemittance && summaryVnpayCol && summaryVietqrCol
-                ? [summaryVnpayCol, summaryVietqrCol, summaryLastRevenueCol!]
-                : [summaryLastRevenueCol!])
-            ]
-          : [])
+        ...summaryTrailingCols
       ];
 
       summaryStaticMergeCols.forEach((col) => {
@@ -752,16 +708,7 @@ const ExportRevenueExcelButton = ({
           offSum.totalContractQuantity,
           getTotalTicketAndContract(offSum),
           getTotalRevenue(offSum),
-          ...(showDiscountColumns
-            ? [
-                offSum.discountTotal,
-                offSum.internalDiscountTotal,
-                ...(showActualRemittance ? [offSum.saleVnPayQr, offSum.saleVietQr] : []),
-                showActualRemittance
-                  ? getActualRemittance(offSum)
-                  : getTotalRevenueAfterDiscount(offSum)
-              ]
-            : [])
+          ...getTrailingValues(offSum)
         ]);
 
         wsSummary.addRow([
@@ -774,16 +721,7 @@ const ExportRevenueExcelButton = ({
           onSum.totalContractQuantity,
           getTotalTicketAndContract(onSum),
           getTotalRevenue(onSum),
-          ...(showDiscountColumns
-            ? [
-                onSum.discountTotal,
-                onSum.internalDiscountTotal,
-                ...(showActualRemittance ? [onSum.saleVnPayQr, onSum.saleVietQr] : []),
-                showActualRemittance
-                  ? getActualRemittance(onSum)
-                  : getTotalRevenueAfterDiscount(onSum)
-              ]
-            : [])
+          ...getTrailingValues(onSum)
         ]);
       });
 
@@ -804,16 +742,7 @@ const ExportRevenueExcelButton = ({
           sum.totalContractQuantity,
           getTotalTicketAndContract(sum),
           getTotalRevenue(sum),
-          ...(showDiscountColumns
-            ? [
-                sum.discountTotal,
-                sum.internalDiscountTotal,
-                ...(showActualRemittance ? [sum.saleVnPayQr, sum.saleVietQr] : []),
-                showActualRemittance
-                  ? getActualRemittance(sum)
-                  : getTotalRevenueAfterDiscount(sum)
-              ]
-            : [])
+          ...getTrailingValues(sum)
         ]);
 
         row.font = { bold: true };
@@ -827,18 +756,7 @@ const ExportRevenueExcelButton = ({
         summaryTotalStartCol + 2,
         summaryTotalStartCol + 3
       ];
-      const summaryMoneyCols = [
-        summaryTotalStartCol + 4,
-        ...(showDiscountColumns && summaryDiscountStartCol
-          ? [
-              summaryDiscountStartCol,
-              summaryDiscountStartCol + 1,
-              ...(showActualRemittance && summaryVnpayCol && summaryVietqrCol
-                ? [summaryVnpayCol, summaryVietqrCol, summaryLastRevenueCol!]
-                : [summaryLastRevenueCol!])
-            ]
-          : [])
-      ];
+      const summaryMoneyCols = [summaryTotalStartCol + 4, ...summaryTrailingCols];
 
       summaryCountCols.forEach((summaryCol) => {
         wsSummary.getColumn(summaryCol).numFmt = "#,##0";

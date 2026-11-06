@@ -62,6 +62,12 @@ export const mergePermissionAssignments = (
   }));
 };
 
+// Nhiều permission có thể dùng chung route (vd. `/settings`); chỉ permission đầu tiên của route
+// được khớp legacy menu theo route để quyền mới không tự kế thừa quyền cũ.
+const isRouteOwner = (definition: Pick<PermissionDefinition, "key" | "route">) =>
+  !!definition.route &&
+  PERMISSION_CATALOG.find((item) => item.route === definition.route)?.key === definition.key;
+
 export const legacyMenusToAssignments = (
   legacyMenus?: CustomerRoleMenuProps[]
 ): PermissionAssignment[] => {
@@ -80,7 +86,7 @@ export const legacyMenusToAssignments = (
     const legacy = legacyMenus.find(
       (item) =>
         item.menu === definition.key ||
-        item.menu === definition.route ||
+        (isRouteOwner(definition) && item.menu === definition.route) ||
         item.menuName === definition.label ||
         (isSplitSettingsPermission &&
           (item.menu === "settings" ||
@@ -116,7 +122,10 @@ export const permissionMatrixToLegacyMenus = (
 ): CustomerRoleMenuProps[] => {
   return rows.map((row, index) => {
     const legacy = legacyMenus?.find(
-      (item) => item.menu === row.key || item.menu === row.route || item.menuName === row.label
+      (item) =>
+        item.menu === row.key ||
+        (isRouteOwner(row) && item.menu === row.route) ||
+        item.menuName === row.label
     );
 
     return {

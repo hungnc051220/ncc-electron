@@ -2,11 +2,12 @@ import { formatMoney, resolvePaymentType } from "@renderer/lib/utils";
 import vietQrImage from "@renderer/assets/images/vietqr.png";
 import vnPayImage from "@renderer/assets/images/vnpay2.png";
 import { PaymentType, QrDialogData } from "@shared/types";
-import { Button, Modal, QRCode } from "antd";
+import { Alert, Button, Modal, QRCode } from "antd";
 import dayjs from "dayjs";
 import { Hourglass } from "lucide-react";
 import { useEffect, useState } from "react";
 import Countdown from "./Countdown";
+import { getQrPayableAmount } from "./paperVoucherSale";
 
 interface QrCodeDialogProps {
   open: boolean;
@@ -15,6 +16,15 @@ interface QrCodeDialogProps {
   dataQr: QrDialogData;
   isCustomerView?: boolean;
   isCheckingTransaction?: boolean;
+  /** Đang gửi "Kết thúc": khóa nút để không gửi hai lần. */
+  isClosing?: boolean;
+  /**
+   * Đơn có voucher giấy chưa có QR (tạo QR lỗi tạm thời / chưa rõ kết quả): hiện lý do thay cho mã QR
+   * và nút tạo lại QR cho cùng đơn. Không có giá trị = QR đã sẵn sàng.
+   */
+  qrUnavailableMessage?: string;
+  onRetryCreateQr?: () => void;
+  isRetryingQr?: boolean;
 }
 
 const getQrBrandAsset = (paymentMethodSystemName?: string) => {
@@ -43,7 +53,11 @@ const QrCodeDialog = ({
   onCheckTransaction,
   dataQr,
   isCustomerView,
-  isCheckingTransaction
+  isCheckingTransaction,
+  isClosing,
+  qrUnavailableMessage,
+  onRetryCreateQr,
+  isRetryingQr
 }: QrCodeDialogProps) => {
   const [expired, setExpired] = useState(false);
   const isU22Voucher = dataQr.voucherCode === "U22Ticket";
@@ -52,6 +66,11 @@ const QrCodeDialog = ({
     : (dataQr.orderTotal || 0) + (dataQr.orderDiscount || 0);
   const displayDiscount = isU22Voucher ? 0 : dataQr.orderDiscount || 0;
   const qrBrand = getQrBrandAsset(dataQr.paymentMethodSystemName);
+  // Đơn có voucher giấy: QR chỉ thu phần còn lại sau voucher, tổng tiền vé giữ nguyên.
+  const paperVoucher = dataQr.paperVoucher;
+  const payableAmount = getQrPayableAmount(dataQr);
+  const isQrUnavailable = !!qrUnavailableMessage;
+  const isBusy = !!(isCheckingTransaction || isClosing || isRetryingQr);
 
   useEffect(() => {
     if (!open) {
@@ -72,35 +91,72 @@ const QrCodeDialog = ({
         return (
           <div className="flex w-full gap-6">
             <div className="text-sm w-3/5 flex items-center justify-between">
-              <div className="text-left">
-                <div className="flex items-center justify-between">
-                  <p className="text-trunks w-25">Tổng tiền vé: </p>{" "}
-                  <p className="font-bold text-black dark:text-white">
-                    {formatMoney(displayTicketTotal)}
-                  </p>
+              {paperVoucher ? (
+                <div className="text-left">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-trunks">Tổng tiền vé: </p>
+                    <p
+                      data-testid="qr-ticket-total"
+                      className="font-bold text-black dark:text-white"
+                    >
+                      {formatMoney(dataQr.orderTotal || 0)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 mt-1">
+                    <p className="text-trunks">Thanh toán bằng Voucher giấy: </p>
+                    <p
+                      data-testid="qr-paper-voucher-applied"
+                      className="font-bold text-black dark:text-white"
+                    >
+                      {formatMoney(paperVoucher.voucherApplied)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-trunks w-25">Giảm giá: </p>
-                  <p className="font-bold text-black dark:text-white">
-                    {formatMoney(displayDiscount)}
-                  </p>
+              ) : (
+                <div className="text-left">
+                  <div className="flex items-center justify-between">
+                    <p className="text-trunks w-25">Tổng tiền vé: </p>{" "}
+                    <p className="font-bold text-black dark:text-white">
+                      {formatMoney(displayTicketTotal)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-trunks w-25">Giảm giá: </p>
+                    <p className="font-bold text-black dark:text-white">
+                      {formatMoney(displayDiscount)}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="min-w-40 pl-4 text-right">
-                <p className="text-sm text-trunks">Tổng thanh toán</p>
-                <p className="text-chichi font-bold text-xl mt-1">
-                  {formatMoney(dataQr.orderTotal || 0)}
+                <p className="text-sm text-trunks">
+                  {paperVoucher ? "Cần thanh toán thêm" : "Tổng thanh toán"}
+                </p>
+                <p data-testid="qr-payable-amount" className="text-chichi font-bold text-xl mt-1">
+                  {formatMoney(payableAmount)}
                 </p>
               </div>
             </div>
             <div className="w-2/5 flex items-center">
               {!isCustomerView && (
                 <div className="flex gap-2 justify-center w-full">
-                  <Button onClick={onCancel}>Kết thúc</Button>
+                  <Button onClick={onCancel} loading={isClosing} disabled={isBusy && !isClosing}>
+                    Kết thúc
+                  </Button>
+                  {isQrUnavailable && onRetryCreateQr && (
+                    <Button
+                      onClick={onRetryCreateQr}
+                      loading={isRetryingQr}
+                      disabled={isBusy && !isRetryingQr}
+                    >
+                      Tạo lại QR
+                    </Button>
+                  )}
                   <Button
                     type="primary"
                     onClick={onCheckTransaction}
                     loading={isCheckingTransaction}
+                    disabled={isBusy && !isCheckingTransaction}
                   >
                     Kiểm tra lại giao dịch TT
                   </Button>
@@ -164,15 +220,25 @@ const QrCodeDialog = ({
                   className="mb-4 w-25 h-auto object-contain"
                 />
               )}
-              <div className="p-5 relative">
-                <QRCode value={dataQr.qrcode} size={200} />
-                <div className="absolute inset-0 pointer-events-none flex justify-between items-between">
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-2xl"></div>
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-2xl"></div>
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-2xl"></div>
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-2xl"></div>
+              {isQrUnavailable ? (
+                <Alert
+                  data-testid="qr-unavailable"
+                  type="warning"
+                  showIcon
+                  title="Chưa có mã QR"
+                  description={qrUnavailableMessage}
+                />
+              ) : (
+                <div className="p-5 relative">
+                  <QRCode value={dataQr.qrcode} size={200} />
+                  <div className="absolute inset-0 pointer-events-none flex justify-between items-between">
+                    <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-2xl"></div>
+                    <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-2xl"></div>
+                    <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-2xl"></div>
+                    <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-2xl"></div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <p className="text-center font-bold text-base mt-4">{dataQr.orderId}</p>
             </div>

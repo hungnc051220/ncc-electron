@@ -1,3 +1,4 @@
+import type { CancelOrderDto } from "@renderer/api/orders.api";
 import { resolveOrderPaymentStatus } from "@renderer/lib/utils";
 import { ListSeat, OrderResponseProps, OrderStatus, PaymentStatus } from "@shared/types";
 
@@ -7,6 +8,11 @@ export type CancelOrderSelection = {
   seats: ListSeat[];
   seatKeys: string[];
   isComplete: boolean;
+  /**
+   * O-8: trạng thái đơn khi thu ngân chọn đơn để hủy (bắt đầu thao tác hủy). Giữ nguyên khi danh sách đơn
+   * được tải lại; gửi cho backend để đơn đổi trạng thái giữa chừng (vd. vừa được thanh toán) không bị hủy.
+   */
+  startedOrderStatusId: number;
 };
 
 export const getSeatUniqueKey = (seat: ListSeat) => `${seat.floor}-${seat.seat}`;
@@ -112,6 +118,7 @@ export const buildCancelOrderSelection = ({
 
   return {
     orderId: order.id,
+    startedOrderStatusId: order.orderStatusId,
     directSeatKey,
     seats: selectedSeats,
     seatKeys: selectedSeats.map(getSeatUniqueKey),
@@ -119,6 +126,23 @@ export const buildCancelOrderSelection = ({
       expectedSeatCount > 0 && missingSeatCount === 0 && selectedSeats.length === expectedSeatCount
   };
 };
+
+/** Lựa chọn dựng lại sau khi tải lại danh sách đơn vẫn mang trạng thái lúc thu ngân bắt đầu hủy đơn đó. */
+export const keepCancelOrderStart = (
+  previous: CancelOrderSelection,
+  next: CancelOrderSelection
+): CancelOrderSelection =>
+  previous.orderId === next.orderId
+    ? { ...next, startedOrderStatusId: previous.startedOrderStatusId }
+    : next;
+
+/** Đơn cần hủy và trạng thái lúc bắt đầu hủy (O-8); không có lựa chọn thì hủy theo ghế như trước. */
+export const buildCancelOrderTarget = (
+  selection?: CancelOrderSelection | null
+): Pick<CancelOrderDto, "orderIds" | "expectedOrderStatusId"> =>
+  selection
+    ? { orderIds: [selection.orderId], expectedOrderStatusId: selection.startedOrderStatusId }
+    : { orderIds: undefined };
 
 export const sortSeats = (seats: ListSeat[]) =>
   [...seats].sort(

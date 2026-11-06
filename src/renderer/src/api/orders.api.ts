@@ -3,6 +3,9 @@ import {
   ApiResponse,
   OrderDetailProps,
   OrderResponseProps,
+  PaperVoucherOrderQuote,
+  PaperVoucherRedemptionLine,
+  PaperVoucherRequestStatus,
   PaymentStatus,
   QrCodeResponseProps,
   RefundStatus
@@ -50,7 +53,29 @@ export interface OrderDto {
   note?: string;
   customerId?: number;
   hasManualInvoice?: boolean;
+  /**
+   * Voucher giấy (một nguồn thanh toán, không phải giảm giá): gửi kèm 3 field xác nhận báo giá bên
+   * dưới; `paymentMethodSystemName` phải thuộc `allowedPaymentMethods` của báo giá.
+   */
+  paperVouchers?: PaperVoucherRedemptionLine[];
+  /** UUID v4 của một lần bán; giữ nguyên khi gửi lại (lỗi mạng/5xx, báo giá đổi). */
+  paperVoucherRequestId?: string;
+  paperVoucherQuoteHash?: string;
+  /** `remainingPayable` của báo giá thu ngân đã xác nhận. */
+  expectedRemainingPayable?: number;
 }
+
+/** Body `POST /api/pos/order/quote`: cùng body tạo đơn kèm các dòng voucher giấy. */
+export type OrderQuoteDto = Omit<
+  OrderDto,
+  | "action"
+  | "paperVouchers"
+  | "paperVoucherRequestId"
+  | "paperVoucherQuoteHash"
+  | "expectedRemainingPayable"
+> & {
+  paperVouchers: PaperVoucherRedemptionLine[];
+};
 
 export interface DiscountGroup {
   discountId: number;
@@ -67,6 +92,11 @@ export interface CancelOrderDto {
   notes?: string;
   isRefund?: boolean;
   cancelReasonMsg?: string;
+  /**
+   * O-8: trạng thái đơn lúc thu ngân BẮT ĐẦU hủy (chọn đơn), không phải trạng thái tải lại trước khi gửi.
+   * Đơn voucher giấy chỉ bị hủy nếu vẫn ở trạng thái này, không thì 409. Chỉ dùng khi `orderIds` có đúng một đơn.
+   */
+  expectedOrderStatusId?: number;
 }
 
 export interface CreateQrOrderDto {
@@ -280,6 +310,17 @@ export const ordersApi = {
   },
   create: async (dto: OrderDto) => {
     const res = await api.post("/api/pos/order", dto);
+    return res.data;
+  },
+  quote: async (dto: OrderQuoteDto, signal?: AbortSignal): Promise<PaperVoucherOrderQuote> => {
+    const res = await api.post<PaperVoucherOrderQuote>("/api/pos/order/quote", dto, { signal });
+    return res.data;
+  },
+  /** Chỉ đọc: lần bán có voucher giấy với mã request này đã tạo đơn chưa (không bao giờ tạo đơn). */
+  getPaperVoucherRequestStatus: async (requestId: string): Promise<PaperVoucherRequestStatus> => {
+    const res = await api.get<PaperVoucherRequestStatus>(
+      `/api/pos/order/paper-voucher-requests/${encodeURIComponent(requestId)}`
+    );
     return res.data;
   },
   update: async (id: number, dto: OrderUpdateStatusDto) => {

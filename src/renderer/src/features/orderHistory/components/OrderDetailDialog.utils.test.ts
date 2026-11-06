@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   canExportOrderETicket,
   getInvitationTicketIssuerName,
-  refreshOrderDetailData
+  refreshOrderDetailData,
+  resolveOrderDetailView
 } from "./OrderDetailDialog.utils";
 
 describe("canExportOrderETicket", () => {
@@ -71,5 +72,85 @@ describe("refreshOrderDetailData", () => {
       })
     ).rejects.toBe(error);
     expect(invalidateOrders).not.toHaveBeenCalled();
+  });
+});
+
+describe("resolveOrderDetailView", () => {
+  const makeDetail = (id: number, paperVoucher?: OrderDetailProps["paperVoucher"]) =>
+    ({ order: { id, orderTotal: 100000 }, paperVoucher }) as OrderDetailProps;
+
+  it("is ready only with a fresh detail of the opened order", () => {
+    const inputDetail = makeDetail(2, null);
+
+    expect(
+      resolveOrderDetailView({ orderId: 2, detail: inputDetail, isDetailFresh: true })
+    ).toEqual({ status: "ready", detail: inputDetail, error: null });
+  });
+
+  it("never shows the list row or detail of another order", () => {
+    const actualView = resolveOrderDetailView({
+      orderId: 2,
+      detail: undefined,
+      isDetailFresh: false,
+      fallback: makeDetail(1)
+    });
+
+    expect(actualView).toEqual({ status: "loading", detail: null, error: null });
+  });
+
+  it("previews the list row of the opened order while its detail loads", () => {
+    const inputFallback = makeDetail(2);
+
+    expect(
+      resolveOrderDetailView({ orderId: 2, isDetailFresh: false, fallback: inputFallback })
+    ).toEqual({ status: "preview", detail: inputFallback, error: null });
+  });
+
+  it("treats a cached detail fetched before opening as a preview, not as ready", () => {
+    const inputCached = makeDetail(2, null);
+
+    expect(
+      resolveOrderDetailView({
+        orderId: 2,
+        detail: inputCached,
+        isDetailFresh: false,
+        fallback: makeDetail(2)
+      })
+    ).toEqual({ status: "preview", detail: inputCached, error: null });
+  });
+
+  it("keeps the preview and reports the error when loading the detail fails", () => {
+    const inputError = new Error("Network Error");
+    const inputFallback = makeDetail(2);
+
+    expect(
+      resolveOrderDetailView({
+        orderId: 2,
+        isDetailFresh: false,
+        fallback: inputFallback,
+        error: inputError
+      })
+    ).toEqual({ status: "preview", detail: inputFallback, error: inputError });
+  });
+
+  it("reports an error when nothing of the opened order is available", () => {
+    const inputError = new Error("Not found");
+
+    expect(resolveOrderDetailView({ orderId: 2, isDetailFresh: false, error: inputError })).toEqual(
+      { status: "error", detail: null, error: inputError }
+    );
+  });
+
+  it("is empty without an order id or when the API answers without that order", () => {
+    expect(resolveOrderDetailView({ orderId: 0, isDetailFresh: false })).toMatchObject({
+      status: "empty"
+    });
+    expect(
+      resolveOrderDetailView({
+        orderId: 2,
+        detail: {} as OrderDetailProps,
+        isDetailFresh: true
+      })
+    ).toMatchObject({ status: "empty", detail: null });
   });
 });

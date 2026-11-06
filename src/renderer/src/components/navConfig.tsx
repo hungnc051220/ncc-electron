@@ -124,6 +124,12 @@ export const navConfig: NavConfigItem[] = [
         key: "vouchers",
         permissionKey: "vouchers",
         to: "/vouchers"
+      },
+      {
+        label: "Danh sách voucher giấy",
+        key: "paper-vouchers",
+        permissionKey: "paper_vouchers",
+        to: "/paper-vouchers"
       }
     ]
   },
