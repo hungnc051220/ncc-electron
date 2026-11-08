@@ -55,5 +55,31 @@ export const holidaysApi = {
   delete: async (dateValue: string) => {
     const res = await api.delete(`/api/pos/date-in-year/${dateValue}`);
     return res.data;
+  },
+  /** Mọi ngày của một năm (tối đa 366 dòng); Quản lý ngày phân tab ở FE. */
+  getYear: async (year: number): Promise<HolidayProps[]> => {
+    const filter = { dateValue: { between: [`${year}-01-01`, `${year}-12-31`] } };
+    const query = queryString.stringify({
+      current: 1,
+      pageSize: 400,
+      filter: JSON.stringify(filter)
+    });
+    const res = await api.get<ApiResponse<HolidayProps>>(`/api/pos/date-in-year?${query}`);
+    return res.data.data ?? [];
+  },
+  /** Đánh dấu (hoặc đổi tên) ngày lễ; ngày phải có sẵn trong DateInYear (404 nếu chưa có). */
+  markHoliday: async (dateValue: string, holidayName: string): Promise<HolidayProps> => {
+    const res = await api.put(`/api/pos/date-in-year/${dateValue}/holiday`, { holidayName });
+    return res.data;
+  },
+  /** Bỏ đánh dấu ngày lễ, giữ nguyên dòng ngày và loại giá. */
+  unmarkHoliday: async (dateValue: string): Promise<HolidayProps> => {
+    const res = await api.delete(`/api/pos/date-in-year/${dateValue}/holiday`);
+    return res.data;
+  },
+  /** Tạo các ngày còn thiếu của năm (không đổi ngày đã có). */
+  populateYear: async (year: number): Promise<HolidayProps[]> => {
+    const res = await api.post(`/api/pos/date-in-year/populate/${year}`);
+    return res.data;
   }
 };

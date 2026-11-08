@@ -54,6 +54,12 @@ export interface OrderDto {
   customerId?: number;
   hasManualInvoice?: boolean;
   /**
+   * Giá U22 (đ) thu ngân đã thấy trong `VipCardDialog` (`validateVoucher` → `u22Price`). Bắt buộc khi
+   * `voucherCode = "U22Ticket"`: backend trả 400 `U22_PRICE_CONFIRMATION_REQUIRED` nếu thiếu, 409
+   * `U22_PRICE_CHANGED` (kèm `details.u22Price`) nếu giá đã đổi, và không tạo đơn.
+   */
+  expectedU22Price?: number;
+  /**
    * Voucher giấy (một nguồn thanh toán, không phải giảm giá): gửi kèm 3 field xác nhận báo giá bên
    * dưới; `paymentMethodSystemName` phải thuộc `allowedPaymentMethods` của báo giá.
    */
@@ -142,6 +148,10 @@ export interface ValidateVoucherResponse {
   isValid: boolean;
   discountAmount: number;
   reason?: string;
+  /** U22Ticket: giá U22 của ngày suất chiếu (cấu hình `U22PriceConfig`). Backend cũ không trả. */
+  u22Price?: number;
+  /** U22Ticket, `reason = "holiday"`: tên ngày lễ. */
+  holidayName?: string | null;
 }
 
 export interface OrderRefundDto {

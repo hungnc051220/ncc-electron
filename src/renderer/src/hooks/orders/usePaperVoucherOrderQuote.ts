@@ -1,5 +1,5 @@
 import { ordersApi, type OrderQuoteDto } from "@renderer/api/orders.api";
-import { getApiErrorMessage } from "@renderer/lib/apiError";
+import { getApiErrorCode, getApiErrorMessage } from "@renderer/lib/apiError";
 import type { PaperVoucherOrderQuote } from "@shared/types";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -64,6 +64,7 @@ export const usePaperVoucherOrderQuote = (dto: OrderQuoteDto | null) => {
     isActive && !isLoading && !replacedQuote && query.error
       ? getApiErrorMessage(query.error, QUOTE_ERROR_FALLBACK)
       : undefined;
+  const errorCode = errorMessage ? getApiErrorCode(query.error) : undefined;
   const quote = isActive && !isLoading && !errorMessage ? (replacedQuote ?? query.data) : undefined;
 
   const replaceQuote = useCallback((nextQuote: PaperVoucherOrderQuote, key: string | null) => {
@@ -79,6 +80,8 @@ export const usePaperVoucherOrderQuote = (dto: OrderQuoteDto | null) => {
     quote,
     isLoading,
     errorMessage,
+    /** Mã lỗi nghiệp vụ của lần báo giá lỗi (vd. `U22_PRICE_CHANGED`). */
+    errorCode,
     isReady: !!quote,
     /** Báo giá đang hiển thị là báo giá mới backend trả kèm lỗi 409 (số tiền vừa đổi). */
     isReplaced: !!quote && !!replacedQuote,

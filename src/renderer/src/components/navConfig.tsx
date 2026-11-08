@@ -96,7 +96,7 @@ export const navConfig: NavConfigItem[] = [
         matchPaths: ["/screening-rooms", "/screening-rooms/:id/seat-map"]
       },
       {
-        label: "Danh sách ngày lễ",
+        label: "Quản lý ngày",
         key: "holidays",
         permissionKey: "holidays",
         to: "/holidays"

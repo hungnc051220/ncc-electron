@@ -1,9 +1,10 @@
-import Icon, { MoreOutlined } from "@ant-design/icons";
+import Icon, { EditOutlined, MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import { useTicketPrices } from "@renderer/hooks/ticketPrices/useTicketPrices";
+import { useU22PriceConfig } from "@renderer/hooks/ticketPrices/useU22PriceConfig";
 import {
   formatMoney,
   formatNumber,
@@ -13,13 +14,22 @@ import {
 } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { TicketPriceProps } from "@shared/types";
-import type { PaginationProps, TableProps } from "antd";
-import { Button, Dropdown } from "antd";
+import type { PaginationProps, TableProps, TabsProps } from "antd";
+import { Button, Dropdown, Tabs } from "antd";
 import { PlusIcon, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import DeleteTicketPriceDialog from "./components/DeleteTicketPriceDialog";
 import TicketPriceDialog from "./components/TicketPriceDialog";
+import U22PriceEditDialog from "./components/u22/U22PriceEditDialog";
+import U22PriceTab from "./components/u22/U22PriceTab";
 import dayjs from "dayjs";
+
+type TicketPricesTab = "prices" | "u22";
+
+const TAB_ITEMS: TabsProps["items"] = [
+  { key: "prices", label: "Giá vé" },
+  { key: "u22", label: "Giá vé U22" }
+];
 
 const TicketPricesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -27,6 +37,8 @@ const TicketPricesPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedTicketPrice, setSelectedTicketPrice] = useState<TicketPriceProps | null>(null);
+  const [activeTab, setActiveTab] = useState<TicketPricesTab>("prices");
+  const [u22DialogOpen, setU22DialogOpen] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -37,6 +49,7 @@ const TicketPricesPage = () => {
   );
 
   const { data: ticketPrices, isFetching, refetch } = useTicketPrices(params);
+  const u22Config = useU22PriceConfig(activeTab === "u22");
   const { can } = usePermission();
   const canCreate = can("ticket_prices", "create");
   const canUpdate = can("ticket_prices", "update");
@@ -169,35 +182,64 @@ const TicketPricesPage = () => {
         left={<AppBreadcrumb />}
         right={
           <>
-            <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
-            {canCreate && (
+            {activeTab === "prices" ? (
+              <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
+            ) : (
+              <RefreshButton loading={u22Config.isFetching} onRefresh={() => u22Config.refetch()} />
+            )}
+            {activeTab === "prices" && canCreate && (
               <Button type="primary" onClick={handleAdd} icon={<Icon component={PlusIcon} />}>
                 Thêm giá vé
+              </Button>
+            )}
+            {activeTab === "u22" && canUpdate && u22Config.data && !u22Config.error && (
+              <Button type="primary" onClick={() => setU22DialogOpen(true)} icon={<EditOutlined />}>
+                Chỉnh sửa giá
               </Button>
             )}
           </>
         }
       />
 
-      <AutoHeightTable
-        rowKey={(record) => record.id}
-        dataSource={ticketPrices?.data || []}
-        columns={columns}
-        bordered
-        size="small"
-        loading={isFetching}
-        pagination={{
-          current,
-          onChange,
-          total: ticketPrices?.total || 0,
-          size: "middle",
-          pageSize,
-          pageSizeOptions: [20, 50, 100],
-          showSizeChanger: true,
-          onShowSizeChange,
-          showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
-        }}
+      <Tabs
+        activeKey={activeTab}
+        type="card"
+        onChange={(key) => setActiveTab(key as TicketPricesTab)}
+        items={TAB_ITEMS}
       />
+
+      {activeTab === "u22" ? (
+        <U22PriceTab
+          config={u22Config.data}
+          isLoading={u22Config.isLoading}
+          error={u22Config.error}
+          onRetry={() => u22Config.refetch()}
+        />
+      ) : (
+        <AutoHeightTable
+          rowKey={(record) => record.id}
+          dataSource={ticketPrices?.data || []}
+          columns={columns}
+          bordered
+          size="small"
+          loading={isFetching}
+          pagination={{
+            current,
+            onChange,
+            total: ticketPrices?.total || 0,
+            size: "middle",
+            pageSize,
+            pageSizeOptions: [20, 50, 100],
+            showSizeChanger: true,
+            onShowSizeChange,
+            showTotal: (total) => `Tổng ${formatNumber(total)} bản ghi`
+          }}
+        />
+      )}
+
+      {u22DialogOpen && u22Config.data && (
+        <U22PriceEditDialog config={u22Config.data} onClose={() => setU22DialogOpen(false)} />
+      )}
 
       {dialogOpen && (
         <TicketPriceDialog

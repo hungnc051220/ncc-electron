@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders, type AxiosResponse } from "axios";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatMoney } from "@renderer/lib/utils";
 import { usePrinterStore } from "@renderer/store/printer.store";
 import { useSettingPosStore } from "@renderer/store/settingPos.store";
@@ -65,8 +65,17 @@ const mocks = vi.hoisted(() => ({
   messageWarning: vi.fn(),
   invalidateQueries: vi.fn(),
   modalConfirm: vi.fn(),
-  modalWarning: vi.fn()
+  modalWarning: vi.fn(),
+  /** Lựa chọn `VipCardDialog` (mock) trả về khi bấm "Xác nhận thẻ". */
+  vipBooking: {
+    current: { customerId: 7, memberCardCode: "VIP007", pointReward: 10000 } as Record<
+      string,
+      unknown
+    >
+  }
 }));
+
+const DEFAULT_VIP_BOOKING = { customerId: 7, memberCardCode: "VIP007", pointReward: 10000 };
 
 vi.mock("./paperVoucherSale", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./paperVoucherSale")>()),
@@ -281,7 +290,7 @@ vi.mock("./VipCardDialog", () => ({
         type="button"
         data-testid="vip-card-confirm"
         onClick={() => {
-          onBooking({ customerId: 7, memberCardCode: "VIP007", pointReward: 10000 });
+          onBooking(mocks.vipBooking.current);
           onCancel();
         }}
       >
@@ -3241,4 +3250,146 @@ describe("Actions paper voucher QR hardening (B3)", () => {
       expect(window.api.sendQrClose).toHaveBeenCalledTimes(1);
     }, 30000);
   });
+});
+
+describe("Actions U22 price confirmation", () => {
+  const U22_BOOKING = {
+    customerId: 7,
+    memberCardCode: "U22CARD",
+    voucherCode: "U22Ticket",
+    expectedU22Price: 70000
+  };
+
+  beforeEach(async () => {
+    await setupPaperVoucherServer({ batches: [...PAPER_VOUCHER_FIXTURES, BATCH_80K] });
+    stubObjectUrls();
+    useSettingPosStore.setState({ posName: "POS Machine 1", posShortName: "M11" });
+    mocks.createOrderMutate.mockReset();
+    mocks.quoteOrder.mockReset();
+    mocks.messageError.mockReset();
+    mocks.messageWarning.mockReset();
+    mocks.messageSuccess.mockReset();
+    mocks.vipBooking.current = U22_BOOKING;
+  });
+
+  afterEach(() => {
+    mocks.vipBooking.current = DEFAULT_VIP_BOOKING;
+  });
+
+  const sellWithVipCard = async (setSelectedSeats = vi.fn()) => {
+    renderWithProviders(
+      <Actions
+        data={createPlanScreening()}
+        planScreenId={1}
+        selectedSeats={oneSeat}
+        setSelectedSeats={setSelectedSeats}
+        cancelMode={false}
+        setCancelMode={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByLabelText("Quẹt thẻ VIP"));
+    fireEvent.click(getPrintButton());
+    fireEvent.click(await screen.findByTestId("vip-card-confirm"));
+    await waitFor(() => expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1));
+    return setSelectedSeats;
+  };
+
+  it("sends the previewed U22 price with the cash order", async () => {
+    mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onSuccess({ id: 301, orderTotal: 70000, orderDiscount: 30000 })
+    );
+
+    await sellWithVipCard();
+
+    expect(submittedOrders()[0]).toMatchObject({
+      memberCardCode: "U22CARD",
+      voucherCode: "U22Ticket",
+      expectedU22Price: 70000,
+      paymentMethodSystemName: "POS"
+    });
+  });
+
+  it("409 U22_PRICE_CHANGED: no order, tells the new price, keeps the seats", async () => {
+    mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onError(
+        createApiError(409, {
+          statusCode: 409,
+          code: "U22_PRICE_CHANGED",
+          message: "Giá U22 vừa đổi thành 90.000đ. Vui lòng xác nhận lại.",
+          details: { u22Price: 90000 }
+        })
+      )
+    );
+
+    const setSelectedSeats = await sellWithVipCard();
+
+    await waitFor(() =>
+      expect(mocks.messageError).toHaveBeenCalledWith(
+        `Giá U22 vừa đổi thành ${formatMoney(90000)}. Chưa tạo đơn. Vui lòng mở lại "Quẹt thẻ VIP" để xác nhận giá mới.`
+      )
+    );
+    expect(mocks.messageSuccess).not.toHaveBeenCalledWith("Tạo đơn thành công");
+    expect(setSelectedSeats).not.toHaveBeenCalledWith([]);
+  });
+
+  it("400 U22_PRICE_CONFIRMATION_REQUIRED: shows the backend message and creates nothing", async () => {
+    mocks.createOrderMutate.mockImplementation((_body: OrderDto, options: CreateOrderOptions) =>
+      options.onError(
+        createApiError(400, {
+          statusCode: 400,
+          code: "U22_PRICE_CONFIRMATION_REQUIRED",
+          message: "Phiên bản POS chưa hỗ trợ giá U22 mới. Vui lòng cập nhật POS."
+        })
+      )
+    );
+
+    await sellWithVipCard();
+
+    await waitFor(() =>
+      expect(mocks.messageError).toHaveBeenCalledWith(
+        "Phiên bản POS chưa hỗ trợ giá U22 mới. Vui lòng cập nhật POS."
+      )
+    );
+  });
+
+  it("paper voucher: quotes with expectedU22Price, and a 409 quote drops U22 until the card is swiped again", async () => {
+    mocks.quoteOrder.mockImplementation(async (dto: OrderDto) => {
+      if (dto.voucherCode === "U22Ticket") {
+        throw createApiError(409, {
+          statusCode: 409,
+          code: "U22_PRICE_CHANGED",
+          message: "Giá U22 vừa đổi thành 90.000đ. Vui lòng xác nhận lại.",
+          details: { u22Price: 90000 }
+        });
+      }
+      return createQuote();
+    });
+    renderPaperVoucherActions(oneSeat);
+
+    fireEvent.click(screen.getByLabelText("Quẹt thẻ VIP"));
+    await applyVouchers(["LÔ-005"]);
+    await openVoucherSummary();
+    await waitForQuote(() => expect(getPrintButton()).toBeEnabled());
+    fireEvent.click(getPrintButton());
+    fireEvent.click(await screen.findByTestId("vip-card-confirm"));
+
+    await waitForQuote(() =>
+      expect(mocks.quoteOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ voucherCode: "U22Ticket", expectedU22Price: 70000 }),
+        expect.anything()
+      )
+    );
+    await waitForQuote(() =>
+      expect(mocks.messageWarning).toHaveBeenCalledWith(
+        'Giá U22 đã thay đổi hoặc chưa được xác nhận. Đã bỏ ưu đãi U22, vui lòng mở lại "Quẹt thẻ VIP" để xác nhận giá mới.'
+      )
+    );
+    await waitForQuote(() =>
+      expect(mocks.quoteOrder).toHaveBeenLastCalledWith(
+        expect.not.objectContaining({ voucherCode: "U22Ticket" }),
+        expect.anything()
+      )
+    );
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+  }, 30000);
 });

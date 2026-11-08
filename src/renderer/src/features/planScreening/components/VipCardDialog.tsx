@@ -2,6 +2,7 @@ import { ordersApi } from "@renderer/api/orders.api";
 import { useCustomer } from "@renderer/hooks/useCustomer";
 import { useAvailableVouchersForPos } from "@renderer/hooks/vouchers/useAvailableVouchersForPos";
 import { useConfigExchangePoints } from "@renderer/hooks/vouchers/useConfigExchangePoints";
+import { getSafeApiErrorMessage } from "@renderer/lib/apiError";
 import { formatMoney, formatNumber } from "@renderer/lib/utils";
 import { BatchProps, ListSeat } from "@shared/types";
 import type { InputRef } from "antd";
@@ -29,6 +30,8 @@ interface VipCardDialogProps {
     memberCardCode?: string;
     voucherCode?: string;
     pointReward?: number;
+    /** Giá U22 backend trả khi kiểm tra thẻ; gửi lại khi tạo đơn/báo giá để backend xác nhận. */
+    expectedU22Price?: number;
   }) => void;
   planScreenId: number;
   selectedSeats: ListSeat[];
@@ -37,6 +40,14 @@ interface VipCardDialogProps {
 }
 
 type NoticeTone = "warning" | "info" | "neutral";
+
+/** Lý do backend không áp U22 (`validateVoucher` → `reason`), trừ `used_today`/`holiday` có thông báo riêng. */
+const U22_REASON_MESSAGES: Record<string, string> = {
+  price_not_eligible: "Giá vé suất này không cao hơn giá U22, không áp dụng ưu đãi U22.",
+  not_u22: "Thẻ thành viên không đủ điều kiện ưu đãi U22.",
+  converted_to_member: "Thẻ U22 không còn hiệu lực vì khách hàng đã quá 22 tuổi.",
+  card_not_found: "Không tìm thấy thẻ thành viên."
+};
 
 const VOUCHER_TYPE_ID = {
   percent: 1,
@@ -258,6 +269,10 @@ const VipCardDialog = ({
   const [exchangePoints, setExchangePoints] = useState(0);
   const [isValidatingU22, setIsValidatingU22] = useState(false);
   const [u22ValidationReason, setU22ValidationReason] = useState<string | null>(null);
+  /** Giá U22 của ngày suất chiếu do backend trả (`validateVoucher`); không có thì không bán U22. */
+  const [u22Price, setU22Price] = useState<number | null>(null);
+  const [u22HolidayName, setU22HolidayName] = useState<string | null>(null);
+  const [u22ValidationError, setU22ValidationError] = useState<string | null>(null);
   const cardInputRef = useRef<InputRef>(null);
   const exchangePointInputRef = useRef<ElementRef<typeof InputNumber>>(null);
 
@@ -357,13 +372,24 @@ const VipCardDialog = ({
   const voucherItems = useMemo(() => vouchers?.items ?? [], [vouchers?.items]);
   const isSingleSeatSelected = selectedSeats.length === 1;
   const isU22UsedToday = u22ValidationReason === "used_today";
+  const isU22Holiday = u22ValidationReason === "holiday";
+  // Kiểm tra xong mà không có giá U22 (lỗi, ngày lễ, backend cũ, thẻ không đủ điều kiện): khóa U22.
+  const isU22PriceMissing =
+    isCurrentCustomerSearched &&
+    isU22Member &&
+    isSingleSeatSelected &&
+    !isValidatingU22 &&
+    !u22Price;
   const isU22Disabled =
     !isCurrentCustomerSearched ||
     hasSeatTypeDiscount ||
     !isU22Member ||
     !isSingleSeatSelected ||
     isValidatingU22 ||
-    isU22UsedToday;
+    isU22UsedToday ||
+    isU22Holiday ||
+    Boolean(u22ValidationError) ||
+    !u22Price;
 
   useEffect(() => {
     if (isU22Disabled && voucherType === "u22") {
@@ -392,6 +418,9 @@ const VipCardDialog = ({
     if (!isSingleSeatSelected) {
       setU22ValidationReason(null);
       setIsValidatingU22(false);
+      setU22Price(null);
+      setU22HolidayName(null);
+      setU22ValidationError(null);
     }
   }, [isSingleSeatSelected]);
 
@@ -443,6 +472,9 @@ const VipCardDialog = ({
       setStatus("error");
       setIsValidatingU22(false);
       setU22ValidationReason(null);
+      setU22Price(null);
+      setU22HolidayName(null);
+      setU22ValidationError(null);
       return;
     }
 
@@ -481,6 +513,9 @@ const VipCardDialog = ({
     const validateU22Voucher = async () => {
       setIsValidatingU22(true);
       setU22ValidationReason(null);
+      setU22Price(null);
+      setU22HolidayName(null);
+      setU22ValidationError(null);
 
       try {
         const validation = await ordersApi.validateVoucher({
@@ -493,10 +528,19 @@ const VipCardDialog = ({
 
         if (!isCancelled) {
           setU22ValidationReason(validation.isValid ? null : validation.reason || "invalid");
+          setU22Price(
+            validation.isValid && typeof validation.u22Price === "number"
+              ? validation.u22Price
+              : null
+          );
+          setU22HolidayName(validation.holidayName ?? null);
         }
-      } catch {
+      } catch (error) {
+        // Không đọc được giá U22 (503 cấu hình, ngày chưa có trong Quản lý ngày…): khóa U22, báo lý do.
         if (!isCancelled) {
           setU22ValidationReason(null);
+          setU22Price(null);
+          setU22ValidationError(getSafeApiErrorMessage(error, "Không kiểm tra được ưu đãi U22"));
         }
       } finally {
         if (!isCancelled) {
@@ -548,12 +592,21 @@ const VipCardDialog = ({
       return calculateVoucherDiscount(baseTotal, selectedSeats, selectedVoucher);
     }
 
-    if (voucherType === "u22" && is2DVersion) {
-      return Math.max(baseTotal - 55000, 0);
+    // Giá U22 do backend trả theo thứ của ngày suất chiếu; không có giá thì radio U22 đã bị khóa.
+    if (voucherType === "u22" && is2DVersion && u22Price) {
+      return Math.max(baseTotal - u22Price, 0);
     }
 
     return 0;
-  }, [hasSeatTypeDiscount, is2DVersion, selectedSeats, selectedVoucher, totalPrice, voucherType]);
+  }, [
+    hasSeatTypeDiscount,
+    is2DVersion,
+    selectedSeats,
+    selectedVoucher,
+    totalPrice,
+    u22Price,
+    voucherType
+  ]);
 
   const finalAmount = useMemo(
     () => (totalPrice || 0) - discountAmount,
@@ -679,6 +732,12 @@ const VipCardDialog = ({
       return;
     }
 
+    const isU22Selected = !hasSeatTypeDiscount && voucherType === "u22";
+    if (isU22Selected && !u22Price) {
+      message.error("Chưa có giá U22 cho suất chiếu này. Vui lòng kiểm tra lại thẻ.");
+      return;
+    }
+
     onBooking({
       customerId: customer?.id,
       memberCardCode: normalizedSearchText,
@@ -692,7 +751,8 @@ const VipCardDialog = ({
       pointReward:
         !hasSeatTypeDiscount && voucherType === "none" && exchangePoints > 0
           ? exchangePoints
-          : undefined
+          : undefined,
+      expectedU22Price: isU22Selected && u22Price ? u22Price : undefined
     });
     onCancel();
   };
@@ -713,6 +773,9 @@ const VipCardDialog = ({
     setStatus("");
     setIsValidatingU22(false);
     setU22ValidationReason(null);
+    setU22Price(null);
+    setU22HolidayName(null);
+    setU22ValidationError(null);
     setExchangePoints(0);
     setDraftExchangePoints(0);
     setIsExchangePointModalOpen(false);
@@ -889,6 +952,39 @@ const VipCardDialog = ({
             <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
               Thành viên U22 này đã sử dụng voucher hôm nay, nên không thể chọn ưu đãi U22 thêm lần
               nữa.
+            </NoticeCard>
+          )}
+
+          {!hasSeatTypeDiscount && isCustomerSearched && isU22Holiday && (
+            <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
+              {u22HolidayName
+                ? `Ngày suất chiếu là ngày lễ (${u22HolidayName}), không áp dụng ưu đãi U22.`
+                : "Ngày suất chiếu là ngày lễ, không áp dụng ưu đãi U22."}
+            </NoticeCard>
+          )}
+
+          {!hasSeatTypeDiscount && isCustomerSearched && u22ValidationError && (
+            <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
+              Không áp dụng được ưu đãi U22: {u22ValidationError}
+            </NoticeCard>
+          )}
+
+          {!hasSeatTypeDiscount &&
+            isU22PriceMissing &&
+            !isU22UsedToday &&
+            !isU22Holiday &&
+            !u22ValidationError && (
+              <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
+                {u22ValidationReason === null
+                  ? "Máy chủ chưa trả giá U22 cho suất chiếu này, chưa thể bán ưu đãi U22."
+                  : (U22_REASON_MESSAGES[u22ValidationReason] ??
+                    "Thẻ không đủ điều kiện ưu đãi U22 cho suất chiếu này.")}
+              </NoticeCard>
+            )}
+
+          {!hasSeatTypeDiscount && isCustomerSearched && u22Price !== null && !isU22Disabled && (
+            <NoticeCard tone="info" icon={<Info size={14} strokeWidth={2.25} />}>
+              Giá vé U22 của suất chiếu này: <strong>{formatMoney(u22Price)}</strong>
             </NoticeCard>
           )}
 

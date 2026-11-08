@@ -228,3 +228,27 @@ export interface PlanPricingProps {
 }
 
 export type ScreenMode = "normal" | "contract" | "invitation";
+
+/** Giá vé U22 theo thứ của ngày suất chiếu (bảng `U22PriceConfig`, một dòng). */
+export interface U22WeekPrices {
+  priceMon: number;
+  priceTue: number;
+  priceWed: number;
+  priceThu: number;
+  priceFri: number;
+  priceSat: number;
+  priceSun: number;
+}
+
+/** `GET/PUT /api/pos/u22-price-config`. */
+export interface U22PriceConfig extends U22WeekPrices {
+  version: number;
+  updatedUser: string;
+  /** ISO 8601 UTC */
+  updatedOnUtc: string;
+}
+
+/** Body `PUT /api/pos/u22-price-config`: đủ 7 giá + `version` đã đọc. */
+export interface UpdateU22PriceConfigDto extends U22WeekPrices {
+  version: number;
+}

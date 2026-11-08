@@ -25,6 +25,9 @@ export interface HolidayProps {
   createdOnUtc: string;
   createdUser: string;
   CreatedOnUtc: string;
+  /** Ngày lễ: không áp dụng U22. Backend cũ (chưa có cột) không trả trường này. */
+  isHoliday?: boolean;
+  holidayName?: string | null;
 }
 
 export interface BackgroundProps {

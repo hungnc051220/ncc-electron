@@ -6,6 +6,11 @@ import {
   ordersApi
 } from "@renderer/api/orders.api";
 import { getApiErrorCode, getApiErrorMessage, isRetryableApiError } from "@renderer/lib/apiError";
+import {
+  U22_PRICE_CHANGED,
+  U22_PRICE_CONFIRMATION_REQUIRED
+} from "@renderer/api/u22PriceConfig.api";
+import { getU22PriceErrorMessage, isU22PriceError } from "./u22PriceConfirmation";
 import ticketIcon from "@renderer/assets/icons/confirmation_number.svg";
 import { useDiscounts } from "@renderer/hooks/discounts/useDiscounts";
 import { useCancelOrder } from "@renderer/hooks/orders/useCancelOrder";
@@ -122,6 +127,8 @@ type BookingParams = {
   voucherCode?: string;
   pointCard?: number;
   pointReward?: number;
+  /** Giá U22 thu ngân đã thấy trong `VipCardDialog`; backend từ chối (409) nếu giá đã đổi. */
+  expectedU22Price?: number;
 };
 
 export const paymentTypes = [
@@ -649,6 +656,7 @@ const Actions = ({
       customerId: vipSelection?.customerId,
       memberCardCode: vipSelection?.memberCardCode,
       voucherCode: vipSelection?.voucherCode,
+      expectedU22Price: vipSelection?.expectedU22Price,
       pointCard: vipSelection?.pointCard,
       pointReward: vipSelection?.pointReward,
       discountGroups: discountGroupsPayload,
@@ -673,6 +681,22 @@ const Actions = ({
   ]);
   const paperVoucherQuote = usePaperVoucherOrderQuote(paperVoucherQuoteDto);
   const isPaperVoucherQuotePending = !!paperVoucherQuoteDto && !paperVoucherQuote.isReady;
+
+  // Báo giá voucher giấy bị từ chối vì giá U22 đã đổi (hoặc thiếu xác nhận): bỏ U22 đã chọn để thu
+  // ngân mở lại "Quẹt thẻ VIP" và xác nhận giá mới; không bán theo giá cũ.
+  const paperVoucherQuoteErrorCode = paperVoucherQuote.errorCode;
+  useEffect(() => {
+    if (
+      paperVoucherQuoteErrorCode !== U22_PRICE_CHANGED &&
+      paperVoucherQuoteErrorCode !== U22_PRICE_CONFIRMATION_REQUIRED
+    ) {
+      return;
+    }
+    setVipSelection((current) => (current?.voucherCode === "U22Ticket" ? null : current));
+    message.warning(
+      'Giá U22 đã thay đổi hoặc chưa được xác nhận. Đã bỏ ưu đãi U22, vui lòng mở lại "Quẹt thẻ VIP" để xác nhận giá mới.'
+    );
+  }, [message, paperVoucherQuoteErrorCode]);
 
   const paperVoucherAllowedMethods = paperVoucherQuote.quote?.allowedPaymentMethods;
   // Phương thức thu tiền (đơn có voucher giấy: thu phần còn lại); không chọn QR = tiền mặt.
@@ -874,6 +898,7 @@ const Actions = ({
       customerId: params?.customerId,
       memberCardCode: params?.memberCardCode,
       voucherCode: params?.voucherCode,
+      expectedU22Price: params?.expectedU22Price,
       pointCard: params?.pointCard,
       pointReward: params?.pointReward,
       discountGroups: discountGroupsPayload,
@@ -995,6 +1020,15 @@ const Actions = ({
         }
       },
       onError: (error: unknown) => {
+        // Giá U22 đã đổi / thiếu xác nhận: backend không tạo đơn, không ghi gì. Bỏ U22 đã chọn để thu
+        // ngân mở lại thẻ VIP và xác nhận giá mới.
+        if (isU22PriceError(error)) {
+          if (paperVoucherOrder) setPaperVoucherAttempt(null);
+          setVipSelection((current) => (current?.voucherCode === "U22Ticket" ? null : current));
+          message.error(getU22PriceErrorMessage(error));
+          return;
+        }
+
         if (paperVoucherOrder) {
           handlePaperVoucherOrderError(error, paperVoucherOrder);
           return;

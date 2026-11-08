@@ -66,7 +66,7 @@ const HolidayDialog = ({ open, onOpenChange, dateTypeId, year }: HolidayDialogPr
   return (
     <Modal
       open={open}
-      title={`Cập nhật ngày ${dateTypeId === 1 ? "thường" : "lễ"} năm ${year}`}
+      title={`Cập nhật loại giá "${dateTypeId === 1 ? "Giá ngày thường" : "Giá T6, T7, CN và ngày lễ"}" năm ${year}`}
       onOk={onOk}
       onCancel={() => onOpenChange(false)}
       okButtonProps={{
