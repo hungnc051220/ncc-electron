@@ -77,6 +77,7 @@ import {
   getPaperVoucherExistingOrderMessage,
   getPaperVoucherPaymentFallbackMessage,
   getPaperVoucherQrClosedMessage,
+  getPaperVoucherQrCaption,
   getPaperVoucherQrPaidMessage,
   getPaperVoucherQrShortPaymentMessage,
   getPaperVoucherQrUnknownStateMessage,
@@ -1426,11 +1427,9 @@ const Actions = ({
       const result = await createPaperVoucherQrWithRetry(() => createQr.mutateAsync(qrRequest), {
         delays,
         shouldStop: () => !isStillOpen(),
-        onRetry: (retry, failure) =>
-          showPaperVoucherQrPending(
-            pendingQr,
-            `${failure.message} Đang tự tạo lại QR (lần ${retry}/${delays.length})...`
-          )
+        // Trong lúc tự tạo lại, màn QR hiện trạng thái "Đang tạo lại QR"; câu ngắn của lỗi chỉ hiện khi hết lượt.
+        onRetry: (_retry, failure) =>
+          showPaperVoucherQrPending(pendingQr, getPaperVoucherQrCaption(failure))
       });
       if (!isStillOpen()) return;
       if (result.ok) {
@@ -1444,7 +1443,8 @@ const Actions = ({
     pendingQr: QrDialogData,
     failure: PaperVoucherQrCreateFailure
   ) => {
-    showPaperVoucherQrPending(pendingQr, failure.message);
+    // Màn QR: câu ngắn dưới khung QR; toast: thông báo đầy đủ.
+    showPaperVoucherQrPending(pendingQr, getPaperVoucherQrCaption(failure));
     if (isPaperVoucherQrCreateRetryable(failure)) {
       message.warning(failure.message);
       return;

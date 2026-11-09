@@ -2,6 +2,7 @@ import { AxiosError, AxiosHeaders, type AxiosResponse } from "axios";
 import { describe, expect, it, vi } from "vitest";
 import { PaymentType } from "@shared/types";
 import {
+  getPaperVoucherQrCaption,
   buildPaperVoucherPayloadKey,
   classifyPaperVoucherOrderError,
   classifyPaperVoucherQrCreateError,
@@ -502,6 +503,25 @@ describe("create-qr of a paper voucher order (N6)", () => {
       ).message
     ).toBe("Không tìm thấy đơn hàng");
   });
+
+  it.each([
+    ["in-progress", "Máy chủ đang tạo QR. Thử lại sau vài giây."],
+    ["guard-unavailable", "Máy chủ tạm thời lỗi. Đơn và voucher vẫn được giữ."],
+    ["outcome-unknown", "Máy chủ chưa phản hồi. Đơn và voucher vẫn được giữ."]
+  ] as const)("QR screen caption for %s is one short sentence", (inputKind, expectedCaption) => {
+    expect(getPaperVoucherQrCaption({ kind: inputKind, message: "long guidance" })).toBe(
+      expectedCaption
+    );
+  });
+
+  it.each(["not-reusable", "rejected"] as const)(
+    "QR screen caption for %s keeps the backend message",
+    (inputKind) => {
+      expect(
+        getPaperVoucherQrCaption({ kind: inputKind, message: "Không tìm thấy đơn hàng" })
+      ).toBe("Không tìm thấy đơn hàng");
+    }
+  );
 
   it("backs off 1 s, 2 s, 4 s between retries, then stops (no endless retry)", async () => {
     const waits: number[] = [];

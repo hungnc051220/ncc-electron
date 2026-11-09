@@ -1127,7 +1127,7 @@ test("P6-E2E-13 [E05 N6] Redis lỗi khi tạo QR: đơn và voucher được gi
   await expect.poll(() => qaOrderIds().length, { timeout: DB_TIMEOUT }).toBe(1);
   const [orderId] = qaOrderIds();
   // 503 REQUEST_GUARD_UNAVAILABLE: tự thử lại 3 lần (1 s, 2 s, 4 s) rồi giữ màn QR chưa có mã.
-  await expect(qrUnavailable(pos.page)).toContainText("Máy chủ tạm thời chưa tạo được QR", {
+  await expect(qrUnavailable(pos.page)).toContainText("Máy chủ tạm thời lỗi", {
     timeout: 30000
   });
   await expect.poll(() => createQrCalls(pos!)).toBe(4);

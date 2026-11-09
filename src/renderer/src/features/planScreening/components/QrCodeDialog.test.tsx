@@ -57,7 +57,8 @@ describe("QrCodeDialog", () => {
     expect(screen.getByText("Thanh toán QR Code")).toBeInTheDocument();
     expect(screen.getByText("Conan")).toBeInTheDocument();
     expect(screen.getByText("A1, A2")).toBeInTheDocument();
-    expect(screen.getAllByText((content) => content.replace(/\s/g, "") === "0₫")).toHaveLength(3);
+    // Tiền vé 0 ₫ và tổng thanh toán 0 ₫; không có dòng giảm giá khi giảm giá = 0.
+    expect(screen.getAllByText((content) => content.replace(/\s/g, "") === "0₫")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Kiểm tra lại giao dịch TT" })).toBeInTheDocument();
   });
 
@@ -68,9 +69,10 @@ describe("QrCodeDialog", () => {
     fireEvent.click(screen.getByTestId("countdown-expire"));
 
     expect(onCancel).not.toHaveBeenCalled();
-    expect(
-      screen.getAllByText(/kết thúc hoặc check lại giao dịch thanh toán/i).length
-    ).toBeGreaterThan(0);
+    expect(screen.getByText("Hết thời gian chờ thanh toán")).toBeInTheDocument();
+    expect(screen.getByText(/kiểm tra lại giao dịch hoặc kết thúc/i)).toBeInTheDocument();
+    // Hết giờ: đồng hồ cát đứng yên.
+    expect(screen.getByTestId("animated-hourglass")).toHaveAttribute("data-paused", "true");
   });
 
   it("calls onCheckTransaction when clicking the retry button", () => {
@@ -128,9 +130,9 @@ describe("QrCodeDialog with a paper voucher", () => {
   it("shows the ticket total, the voucher payment and the QR amount from create-qr", () => {
     render(<QrCodeDialog open dataQr={voucherQrData} />);
 
-    expect(screen.getByText("Tổng tiền vé:")).toBeInTheDocument();
+    expect(screen.getByText("Tiền vé")).toBeInTheDocument();
     expect(textOf("qr-ticket-total")).toBe(money(100000));
-    expect(screen.getByText("Thanh toán bằng Voucher giấy:")).toBeInTheDocument();
+    expect(screen.getByText("Voucher giấy")).toBeInTheDocument();
     expect(textOf("qr-paper-voucher-applied")).toBe(money(80000));
     expect(screen.getByText("Cần thanh toán thêm")).toBeInTheDocument();
     expect(textOf("qr-payable-amount")).toBe(money(20000));
@@ -152,12 +154,11 @@ describe("QrCodeDialog with a paper voucher", () => {
   it("keeps the discount display of an order without paper voucher", () => {
     render(<QrCodeDialog open dataQr={baseQrData} />);
 
-    expect(screen.getByText("Giảm giá:")).toBeInTheDocument();
+    expect(screen.getByText("Giảm giá")).toBeInTheDocument();
     expect(screen.getByText("Tổng thanh toán")).toBeInTheDocument();
-    // Tổng tiền vé = 120.000 + 20.000 giảm giá; thanh toán = tổng đơn.
-    expect(
-      screen.getByText((content) => content.replace(/\s/g, "") === money(140000))
-    ).toBeInTheDocument();
+    // Tiền vé = 120.000 + 20.000 giảm giá; thanh toán = tổng đơn.
+    expect(textOf("qr-ticket-total")).toBe(money(140000));
+    expect(textOf("qr-discount")).toBe(money(20000));
     expect(textOf("qr-payable-amount")).toBe(money(120000));
     expect(screen.queryByText(/Voucher giấy/)).not.toBeInTheDocument();
   });
@@ -182,7 +183,7 @@ describe("QrCodeDialog without a QR yet (paper voucher, create-qr failed)", () =
       />
     );
 
-    expect(screen.getByTestId("qr-unavailable")).toHaveTextContent("Chưa có mã QR");
+    expect(screen.getByTestId("qr-unavailable")).toHaveTextContent("Không tạo được mã QR");
     expect(screen.getByTestId("qr-unavailable")).toHaveTextContent(
       "Máy chủ tạm thời chưa tạo được QR."
     );
@@ -224,5 +225,100 @@ describe("QrCodeDialog without a QR yet (paper voucher, create-qr failed)", () =
 
     expect(screen.getByRole("button", { name: "Kết thúc" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Kiểm tra lại giao dịch TT" })).toBeDisabled();
+  });
+
+  it("while the QR is being created again: waiting state, no retry button, no error caption", () => {
+    render(
+      <QrCodeDialog
+        open
+        dataQr={pendingQrData}
+        qrUnavailableMessage="Máy chủ chưa phản hồi."
+        onRetryCreateQr={vi.fn()}
+        isRetryingQr
+      />
+    );
+
+    expect(screen.getByTestId("qr-unavailable")).toHaveTextContent("Đang tạo lại QR…");
+    expect(screen.queryByText("Không tạo được mã QR")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tạo lại QR" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a long backend reason to two lines with the full text on hover", () => {
+    const inputReason = "Nhà cung cấp từ chối tạo QR ".repeat(8).trim();
+
+    render(
+      <QrCodeDialog
+        open
+        dataQr={pendingQrData}
+        qrUnavailableMessage={inputReason}
+        onRetryCreateQr={vi.fn()}
+      />
+    );
+
+    const actualReason = screen.getByTitle(inputReason);
+    expect(actualReason).toHaveClass("line-clamp-2");
+  });
+});
+
+describe("QrCodeDialog payment details", () => {
+  it("lists the ticket price, the discount code, every paper voucher batch and the amount left", () => {
+    render(
+      <QrCodeDialog
+        open
+        dataQr={{
+          ...baseQrData,
+          orderTotal: 180000,
+          orderDiscount: 20000,
+          voucherCode: "NCC20K",
+          transactionAmount: 100000,
+          paperVoucher: {
+            orderTotal: 180000,
+            voucherApplied: 80000,
+            remainingPayable: 100000,
+            lines: [
+              { batchCode: "LÔ-901", quantity: 1 },
+              { batchCode: "LÔ-904", quantity: 2 }
+            ]
+          }
+        }}
+      />
+    );
+
+    expect(screen.getByText("· 2 ghế")).toBeInTheDocument();
+    expect(textOf("qr-ticket-total")).toBe(money(200000));
+    expect(screen.getByText("Mã giảm giá")).toBeInTheDocument();
+    expect(screen.getByText("NCC20K")).toBeInTheDocument();
+    expect(textOf("qr-discount")).toBe(money(20000));
+    expect(screen.getByText("LÔ-901 ×1")).toBeInTheDocument();
+    expect(screen.getByText("LÔ-904 ×2")).toBeInTheDocument();
+    expect(textOf("qr-paper-voucher-applied")).toBe(money(80000));
+    expect(screen.getByText("Cần thanh toán thêm")).toBeInTheDocument();
+    expect(textOf("qr-payable-amount")).toBe(money(100000));
+    expect(screen.getByText("Đơn #77")).toBeInTheDocument();
+  });
+
+  it("a U22 order shows its U22 price as the ticket price, without a discount line", () => {
+    render(
+      <QrCodeDialog
+        open
+        dataQr={{
+          ...baseQrData,
+          orderTotal: 70000,
+          orderDiscount: 10000,
+          voucherCode: "U22Ticket"
+        }}
+      />
+    );
+
+    expect(textOf("qr-ticket-total")).toBe(money(70000));
+    expect(screen.queryByTestId("qr-discount")).not.toBeInTheDocument();
+    expect(textOf("qr-payable-amount")).toBe(money(70000));
+  });
+
+  it("the hourglass runs while waiting for the payment", () => {
+    render(<QrCodeDialog open dataQr={baseQrData} />);
+
+    expect(screen.getByText("Đang chờ khách thanh toán")).toBeInTheDocument();
+    expect(screen.getByTestId("animated-hourglass")).toHaveAttribute("data-paused", "false");
   });
 });

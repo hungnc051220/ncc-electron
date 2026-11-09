@@ -858,3 +858,113 @@ body,
     }
   }
 }
+
+/* Đồng hồ cát động (components/AnimatedHourglass.tsx). Vòng 4 s: 0–78 % cát chảy, 82–100 % lật 180°. */
+.hg {
+  --hg-sand: #ffb319;
+  --hg-glass: currentColor;
+  overflow: visible;
+}
+.hg-glass {
+  fill: none;
+  stroke: var(--hg-glass);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.hg-cap {
+  fill: var(--hg-glass);
+}
+.hg-sand {
+  fill: var(--hg-sand);
+}
+.hg-stream {
+  stroke: var(--hg-sand);
+  stroke-width: 1;
+  stroke-dasharray: 1.4 1.2;
+  animation: hg-stream 4s linear infinite;
+}
+.hg-flip {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: hg-flip 4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.hg-sand-top {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: hg-top 4s linear infinite;
+}
+.hg-sand-bottom {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: hg-bottom 4s linear infinite;
+}
+@keyframes hg-flip {
+  0%,
+  82% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+@keyframes hg-top {
+  0% {
+    transform: scaleY(1);
+  }
+  78%,
+  100% {
+    transform: scaleY(0);
+  }
+}
+@keyframes hg-bottom {
+  0% {
+    transform: scaleY(0);
+  }
+  78%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes hg-stream {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+    stroke-dashoffset: -26;
+  }
+  78%,
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -27;
+  }
+}
+.hg-paused .hg-flip,
+.hg-paused .hg-sand-top,
+.hg-paused .hg-sand-bottom,
+.hg-paused .hg-stream {
+  animation: none;
+}
+.hg-paused .hg-sand-top,
+.hg-paused .hg-stream {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hg-flip,
+  .hg-sand-top,
+  .hg-sand-bottom,
+  .hg-stream {
+    animation: none;
+  }
+  .hg-stream {
+    opacity: 0;
+  }
+  .hg-sand-top,
+  .hg-sand-bottom {
+    transform: scaleY(0.5);
+  }
+}

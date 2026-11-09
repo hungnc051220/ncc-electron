@@ -25,6 +25,7 @@ import {
   PAPER_VOUCHER_NETWORK_ERROR_MESSAGE,
   PAPER_VOUCHER_PREVIOUS_NOT_RECORDED_MESSAGE,
   PAPER_VOUCHER_QR_CLOSE_UNKNOWN_MESSAGE,
+  PAPER_VOUCHER_QR_CAPTIONS,
   PAPER_VOUCHER_QR_CREATE_IN_PROGRESS_MESSAGE,
   PAPER_VOUCHER_QR_GUARD_UNAVAILABLE_MESSAGE,
   PAPER_VOUCHER_QR_OUTCOME_UNKNOWN_MESSAGE,
@@ -2746,8 +2747,9 @@ describe("Actions paper voucher QR hardening (B3)", () => {
           PAPER_VOUCHER_QR_GUARD_UNAVAILABLE_MESSAGE
         )
       );
+      // Màn QR: câu ngắn; toast: câu đầy đủ.
       expect(screen.getByTestId("qr-unavailable").textContent).toBe(
-        PAPER_VOUCHER_QR_GUARD_UNAVAILABLE_MESSAGE
+        PAPER_VOUCHER_QR_CAPTIONS["guard-unavailable"]
       );
       // 1 lần + 3 lần tự thử lại rồi dừng: không thử vô hạn.
       expect(mocks.createQrMutateAsync).toHaveBeenCalledTimes(4);
@@ -2802,7 +2804,7 @@ describe("Actions paper voucher QR hardening (B3)", () => {
         expect(mocks.messageWarning).toHaveBeenCalledWith(PAPER_VOUCHER_QR_OUTCOME_UNKNOWN_MESSAGE)
       );
       expect(screen.getByTestId("qr-unavailable").textContent).toBe(
-        PAPER_VOUCHER_QR_OUTCOME_UNKNOWN_MESSAGE
+        PAPER_VOUCHER_QR_CAPTIONS["outcome-unknown"]
       );
       expect(mocks.createQrMutateAsync).toHaveBeenCalledTimes(4);
       for (const [request] of mocks.createQrMutateAsync.mock.calls) {
@@ -2841,7 +2843,7 @@ describe("Actions paper voucher QR hardening (B3)", () => {
         )
       );
       expect(screen.getByTestId("qr-unavailable").textContent).toBe(
-        PAPER_VOUCHER_QR_CREATE_IN_PROGRESS_MESSAGE
+        PAPER_VOUCHER_QR_CAPTIONS["in-progress"]
       );
 
       const retryButton = screen.getByRole("button", { name: "Tao lai QR" });

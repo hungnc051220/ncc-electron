@@ -7,6 +7,7 @@ interface CountdownProps {
   setExpired: (value: boolean) => void;
 }
 
+/** Thời gian còn lại của QR (5 phút từ lúc tạo đơn), dạng m:ss; hết giờ thì gọi `setExpired(true)` và hiện 0:00. */
 const Countdown = ({ orderCreatedAt, expired, setExpired }: CountdownProps) => {
   const [timeLeft, setTimeLeft] = useState("");
 
@@ -20,7 +21,7 @@ const Countdown = ({ orderCreatedAt, expired, setExpired }: CountdownProps) => {
 
       if (remain <= 0) {
         setExpired(true);
-        setTimeLeft("00:00");
+        setTimeLeft("0:00");
         return false; // stop interval
       }
 
@@ -43,15 +44,17 @@ const Countdown = ({ orderCreatedAt, expired, setExpired }: CountdownProps) => {
 
   if (!orderCreatedAt) return null;
 
-  return expired ? (
-    <p className="text-chichi font-bold">Đã hết thời gian thanh toán</p>
-  ) : (
-    <div className="font-bold text-sm">
-      <p>
-        Bạn còn <span className="text-chichi">[{timeLeft}]</span> thời gian thanh toán
-      </p>
-      <p className="mt-1 text-trunks text-sm">Đang chờ thanh toán ...</p>
-    </div>
+  return (
+    <span
+      data-testid="qr-countdown"
+      className={
+        expired
+          ? "rounded-lg px-2.5 py-1 font-mono text-lg font-bold tabular-nums text-red-600 dark:text-red-400"
+          : "rounded-lg bg-white px-2.5 py-1 font-mono text-lg font-bold tabular-nums text-chichi shadow-sm dark:bg-white/10"
+      }
+    >
+      {expired ? "0:00" : timeLeft}
+    </span>
   );
 };
 

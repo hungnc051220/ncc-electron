@@ -132,6 +132,21 @@ export const classifyPaperVoucherQrCreateError = (error: unknown): PaperVoucherQ
   return { kind: "rejected", message: getApiErrorMessage(error, "Tạo QR thất bại") };
 };
 
+/**
+ * Câu ngắn dưới khung QR khi chưa có mã (màn QR chỉ đủ chỗ cho một câu). Thông báo đầy đủ (`failure.message`)
+ * vẫn hiện ở toast. Lỗi do backend từ chối giữ nguyên câu của backend.
+ */
+export const PAPER_VOUCHER_QR_CAPTIONS: Partial<
+  Record<PaperVoucherQrCreateFailure["kind"], string>
+> = {
+  "in-progress": "Máy chủ đang tạo QR. Thử lại sau vài giây.",
+  "guard-unavailable": "Máy chủ tạm thời lỗi. Đơn và voucher vẫn được giữ.",
+  "outcome-unknown": "Máy chủ chưa phản hồi. Đơn và voucher vẫn được giữ."
+};
+
+export const getPaperVoucherQrCaption = (failure: PaperVoucherQrCreateFailure) =>
+  PAPER_VOUCHER_QR_CAPTIONS[failure.kind] ?? failure.message;
+
 /** Lỗi tạm thời: được tự tạo lại QR (cùng đơn, tuần tự, có giới hạn). */
 export const isPaperVoucherQrCreateRetryable = (failure: PaperVoucherQrCreateFailure) =>
   failure.kind === "in-progress" ||
