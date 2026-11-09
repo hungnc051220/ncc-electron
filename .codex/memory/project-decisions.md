@@ -22,6 +22,8 @@ File này lưu các quyết định bền vững cho repo. Không dùng như cha
 - Nếu môi trường thiếu Python nên không validate skill tự động được, ghi rõ trong kết quả và fallback bằng review thủ công.
 - `messages` trong `src/main/update-policy.json` là changelog hiển thị cho người dùng cuối, không phải log kỹ thuật/CI. Nội dung phải mô tả thay đổi theo góc nhìn người dùng, tiếng Việt tự nhiên, ngắn gọn, dễ hiểu và không dùng thuật ngữ nội bộ như build, artifact, pipeline, workflow, Electron, IPC, refactor, patch, commit hoặc release job.
 - Ví dụ task `Thêm context menu copy/paste` nên viết message: `Thêm menu chuột phải giúp sao chép, dán và chọn nội dung nhanh hơn.`
+- Package manager là Yarn 1 (`yarn.lock`); thêm/nâng dependency bằng `yarn add`, không dùng `npm install` vì sẽ không cập nhật `yarn.lock`.
+- `antd` được pin version cố định (không dùng `^`) và `package.json` có `resolutions` ép `@rc-component/util` và `@rc-component/motion`. Pin `@rc-component/motion` để sửa lớp phủ xem ảnh không đóng. Khi nâng `antd`, phải so `@rc-component/util` trong `node_modules/antd/package.json` với resolution: nếu resolution thấp hơn range antd yêu cầu thì `Table` vỡ lúc runtime (ví dụ `isNonNullable is not a function`) dù typecheck/build vẫn pass. Nâng resolution lên bản thỏa range, rồi chạy test các màn có `Table`/`Tabs`. Hiện tại: `antd@6.7.0`, `@rc-component/util@1.14.1`, `@rc-component/motion@1.3.3`.
 
 ## Không Lưu Ở Đây
 

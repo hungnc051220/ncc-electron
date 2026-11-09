@@ -48,3 +48,10 @@ Playwright config dùng `testDir: ./e2e`, Chromium, base URL `http://127.0.0.1:4
 - `npm run typecheck`: chạy sau thay đổi test hoặc typing lớn.
 
 Nếu convention chưa rõ, follow the existing local pattern in the touched module.
+
+## Lỗi Test Đã Biết
+
+Ghi nhận ngày 2026-11-10, có sẵn từ trước khi nâng antd lên 6.7.0 (đã kiểm chứng lại trên antd 6.5.1). Xóa mục tương ứng khi đã sửa.
+
+- `src/renderer/src/permissions/PermissionGuard.test.tsx`: chạy vòng lặp đến khi hết heap (~4GB) và làm crash worker Vitest, nên `npm test` đầy đủ dừng giữa chừng (`Error: Channel closed`) và không in dòng tổng kết. Khi cần kết quả đầy đủ, chạy riêng các file còn lại hoặc loại file này ra tạm thời.
+- `src/renderer/src/api/orders.api.test.ts`: 3 test fail (`serializes combined filters for getAll`, `keeps explicit false filters and omits empty values`, `always excludes authorized payments from getAll`) vì `ordersApi.getAll` đã thêm `deleted:false` vào `filter` nhưng expectation của test chưa cập nhật.
