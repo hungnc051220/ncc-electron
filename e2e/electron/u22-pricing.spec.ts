@@ -269,11 +269,24 @@ const openHolidayMonth = async (page: Page, date: string) => {
   for (let index = 0; index < Number(date.slice(5, 7)); index += 1) await month.press("ArrowDown");
   await month.press("Enter");
   await expect(
-    page.locator(".ant-select").filter({ has: month }).getByText(`Tháng ${Number(date.slice(5, 7))}`)
+    page
+      .locator(".ant-select")
+      .filter({ has: month })
+      .getByText(`Tháng ${Number(date.slice(5, 7))}`)
   ).toBeVisible();
 };
 const dayRow = (page: Page, date: string) =>
   page.locator("tr.ant-table-row").filter({ hasText: date.split("-").reverse().join("/") });
+/** Cột thao tác như các bảng khác: nút "⋯" của hàng mở menu, rồi bấm mục. */
+const chooseDayAction = async (page: Page, date: string, action: string) => {
+  await dayRow(page, date)
+    .getByRole("button", { name: `Thao tác ngày ${date.split("-").reverse().join("/")}` })
+    .click();
+  await page
+    .locator(".ant-dropdown:not(.ant-dropdown-hidden)")
+    .getByRole("menuitem", { name: action })
+    .click();
+};
 
 // ---------- POS ----------
 const openScreening = async (page: Page, screen: typeof WEEKDAY) => {
@@ -377,7 +390,7 @@ test.describe("Giá vé U22 với API thật (BE local + CinemaTicketDev)", () =
     const page = session!.page;
     await openHolidayMonth(page, weekdayDate);
     const marked = waitApi(page, "PUT", /\/api\/pos\/date-in-year\/[\d-]+\/holiday$/);
-    await dayRow(page, weekdayDate).getByRole("button", { name: "Đánh dấu ngày lễ" }).click();
+    await chooseDayAction(page, weekdayDate, "Đánh dấu ngày lễ");
     const dialog = page.getByRole("dialog").filter({ hasText: "Tên ngày lễ" });
     await dialog.getByLabel("Tên ngày lễ").fill(HOLIDAY_NAME);
     await dialog.getByRole("button", { name: "Lưu" }).click();
@@ -399,7 +412,7 @@ test.describe("Giá vé U22 với API thật (BE local + CinemaTicketDev)", () =
     await openHolidayMonth(page, weekdayDate);
     await page.getByRole("tab", { name: /^Ngày lễ/ }).click();
     const unmarked = waitApi(page, "DELETE", /\/api\/pos\/date-in-year\/[\d-]+\/holiday$/);
-    await dayRow(page, weekdayDate).getByRole("button", { name: "Bỏ đánh dấu" }).click();
+    await chooseDayAction(page, weekdayDate, "Bỏ đánh dấu ngày lễ");
     await page.locator(".ant-modal-confirm").getByRole("button", { name: "Bỏ đánh dấu" }).click();
     expect((await unmarked).status()).toBe(200);
 

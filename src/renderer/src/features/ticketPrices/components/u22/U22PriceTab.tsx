@@ -4,6 +4,7 @@ import { U22_PRICE_CONFIG_UNAVAILABLE } from "@renderer/api/u22PriceConfig.api";
 import type { U22PriceConfig } from "@shared/types";
 import { Alert, Button, Card, Skeleton, Tag, theme, Tooltip, Typography } from "antd";
 import dayjs from "dayjs";
+import type { CSSProperties } from "react";
 import { Link } from "react-router";
 import {
   formatU22Price,
@@ -83,7 +84,12 @@ const U22PriceTab = ({ config, isLoading, error, onRetry }: U22PriceTabProps) =>
           <span>
             Giá U22 áp theo <strong>thứ của ngày suất chiếu</strong>. Ngày được đánh dấu{" "}
             <strong>ngày lễ</strong> trong Danh sách ngày không áp dụng U22.{" "}
-            <Link to="/holidays" style={{ color: token.colorLink }}>
+            {/* Rule toàn cục `a { color: inherit !important }` thắng style inline: dùng class app-link (ISS-12). */}
+            <Link
+              to="/holidays"
+              className="app-link"
+              style={{ "--app-link-color": token.colorLink } as CSSProperties}
+            >
               Mở Danh sách ngày
             </Link>
           </span>

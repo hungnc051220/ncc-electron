@@ -367,6 +367,16 @@ body,
     text-decoration: none;
   }
 
+  /* Link cần hiện màu link (vd. "Mở Danh sách ngày"): màu lấy từ token antd qua biến --app-link-color, đúng cả
+     sáng/tối. Phải nằm cùng layer với rule `a` ở trên: !important trong layer thắng !important ngoài layer (ISS-12). */
+  a.app-link {
+    color: var(--app-link-color) !important;
+  }
+
+  a.app-link:hover {
+    text-decoration: underline;
+  }
+
   .version-info-modal .ant-modal-container {
     padding: 0 !important;
     overflow: hidden;

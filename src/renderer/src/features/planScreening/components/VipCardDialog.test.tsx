@@ -188,7 +188,7 @@ describe("VipCardDialog exclusive discounts", { timeout: 30000 }, () => {
 describe("VipCardDialog U22 price from the backend", { timeout: 30000 }, () => {
   const U22_RADIO = "Áp dụng ưu đãi cho thành viên U22";
 
-  const searchCard = async () => {
+  const searchCard = async (filmVersionCode = "2D") => {
     const props = {
       open: true,
       onCancel: vi.fn(),
@@ -197,7 +197,7 @@ describe("VipCardDialog U22 price from the backend", { timeout: 30000 }, () => {
       planScreenId: 1,
       selectedSeats,
       hasSeatTypeDiscount: false,
-      filmVersionCode: "2D"
+      filmVersionCode
     };
     render(<VipCardDialog {...props} />);
     fireEvent.change(screen.getByPlaceholderText("Nhập số thẻ"), { target: { value: "VIP123" } });
@@ -279,6 +279,48 @@ describe("VipCardDialog U22 price from the backend", { timeout: 30000 }, () => {
       ).toBeInTheDocument()
     );
     expect(screen.getByRole("radio", { name: U22_RADIO })).toBeDisabled();
+  });
+
+  it.each(["3D", "IMAX_3D"])(
+    "locks U22 on a %s screening, says U22 is 2D only and never sends U22Ticket",
+    async (inputVersionCode) => {
+      vi.mocked(ordersApi.validateVoucher).mockResolvedValue({
+        isValid: false,
+        discountAmount: 0,
+        reason: "not_2d"
+      });
+      const props = await searchCard(inputVersionCode);
+
+      await waitFor(() =>
+        expect(
+          screen.getByText(
+            (_content, element) =>
+              element?.tagName !== "BODY" &&
+              Array.from(element?.childNodes ?? []).some(
+                (node) => node.nodeType === Node.TEXT_NODE
+              ) &&
+              (element?.textContent ?? "").includes(
+                `Ưu đãi U22 chỉ áp dụng cho suất chiếu 2D (suất này: ${inputVersionCode}). Giá vé giữ nguyên.`
+              )
+          )
+        ).toBeInTheDocument()
+      );
+      expect(screen.getByRole("radio", { name: U22_RADIO })).toBeDisabled();
+      expect(
+        screen.queryByText("Máy chủ chưa trả giá U22 cho suất chiếu này, chưa thể bán ưu đãi U22.")
+      ).not.toBeInTheDocument();
+      confirmBooking();
+      expect(props.onBooking).toHaveBeenCalledWith(
+        expect.objectContaining({ voucherCode: "PROMO", expectedU22Price: undefined })
+      );
+    }
+  );
+
+  it("keeps U22 available on an IMAX_2D screening", async () => {
+    vi.mocked(ordersApi.validateVoucher).mockResolvedValue(U22_APPLIED);
+    await searchCard("IMAX_2D");
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: U22_RADIO })).toBeEnabled());
   });
 
   it("does not send expectedU22Price for a campaign voucher", async () => {

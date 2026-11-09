@@ -77,7 +77,7 @@ const HolidayModal = ({
       onCancel={markHoliday.isPending ? undefined : onClose}
       confirmLoading={markHoliday.isPending}
       okButtonProps={{ disabled: unchanged }}
-      maskClosable={false}
+      mask={{ closable: false }}
       destroyOnHidden
     >
       <Form<FieldType>

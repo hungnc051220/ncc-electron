@@ -197,6 +197,19 @@ const expectTabCounts = async (days: HolidayProps[]) => {
     ).toBeInTheDocument();
   }
 };
+/** Mở menu "⋯" của một ngày (cột thao tác như các bảng khác) và bấm một mục. */
+const chooseDayAction = async (dateValue: string, action: string) => {
+  fireEvent.click(await screen.findByRole("button", { name: `Thao tác ngày ${label(dateValue)}` }));
+  // Popup Dropdown cũ vẫn có thể nằm trong DOM; popup vừa mở luôn gắn cuối body.
+  const menu = await waitFor(() => {
+    const menus = document.querySelectorAll<HTMLElement>(
+      ".ant-dropdown:not(.ant-dropdown-hidden) [role='menu']"
+    );
+    if (!menus.length) throw new Error("Menu thao tác chưa mở");
+    return menus[menus.length - 1];
+  });
+  fireEvent.click(within(menu).getByRole("menuitem", { name: action }));
+};
 const lastDialog = () => {
   const dialogs = screen.getAllByRole("dialog");
   return dialogs[dialogs.length - 1];
@@ -367,13 +380,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     const state = await setupServer(buildYear(), [target.dateValue]);
     renderPage();
 
-    fireEvent.click(
-      within(
-        await screen
-          .findByText(label(target.dateValue))
-          .then((cell) => cell.closest("tr") as HTMLElement)
-      ).getByRole("button", { name: "Đánh dấu ngày lễ" })
-    );
+    await chooseDayAction(target.dateValue, "Đánh dấu ngày lễ");
     const dialog = await screen.findByRole("dialog");
     expect(
       await within(dialog).findByText(
@@ -403,7 +410,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     openTab(/^Ngày lễ/);
 
     await screen.findByText("Quốc khánh");
-    fireEvent.click(within(rowOf(label(HOLIDAY))).getByRole("button", { name: "Sửa" }));
+    await chooseDayAction(HOLIDAY, "Cập nhật");
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("button", { name: "Lưu" })).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText("Tên ngày lễ"), {
@@ -427,11 +434,8 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     renderPage();
     openTab(/^Ngày lễ/);
 
-    fireEvent.click(
-      within(
-        await screen.findByText("Lễ cuối tuần").then((cell) => cell.closest("tr") as HTMLElement)
-      ).getByRole("button", { name: "Bỏ đánh dấu" })
-    );
+    await screen.findByText("Lễ cuối tuần");
+    await chooseDayAction(saturday.dateValue, "Bỏ đánh dấu ngày lễ");
     await waitFor(() =>
       expect(
         screen.getAllByText(`Bỏ đánh dấu ngày lễ ${label(saturday.dateValue)}?`).length
@@ -682,13 +686,47 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     expect(state.initializeCalls[0].holidays).toEqual(DEFAULT_HOLIDAYS);
   });
 
+  it("a year missing some days warns, lists default holidays without a row, and creates only the missing days", async () => {
+    // Năm đủ ngày lễ mặc định nhưng mất cả tháng 12 (vd. dòng bị xóa tay).
+    const isDecember = (dateValue: string) => dateValue.startsWith(`${YEAR}-12-`);
+    const state = await setupServer(buildYear(true).filter((item) => !isDecember(item.dateValue)));
+    const decemberHolidays = DEFAULT_HOLIDAYS.filter((holiday) => isDecember(holiday.dateValue));
+    renderPage();
+
+    const alert = await screen.findByTestId("partial-year-alert", undefined, { timeout: 10000 });
+    expect(alert).toHaveTextContent(`Năm ${YEAR} còn thiếu 31 ngày`);
+
+    const classification = await openClassificationDialog();
+    expect(within(classification).getByTestId("default-holiday-no-row-line")).toHaveTextContent(
+      `${decemberHolidays.length} ngày lễ mặc định chưa có trong Danh sách ngày`
+    );
+    expect(within(classification).queryByText(/Đủ \d+ ngày lễ mặc định/)).not.toBeInTheDocument();
+    fireEvent.click(within(classification).getByRole("button", { name: "Hủy" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Tạo các ngày còn thiếu" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(`Tạo các ngày còn thiếu năm ${YEAR}`)).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("checkbox")).toHaveLength(decemberHolidays.length);
+    expect(within(dialog).getByTestId("initialize-year-summary")).toHaveTextContent("Tạo 31 ngày");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Khởi tạo" }));
+
+    await waitFor(() => expect(state.initializeCalls).toHaveLength(1));
+    expect(state.initializeCalls[0]).toEqual({
+      year: YEAR,
+      weekendDays: [5, 6, 0],
+      holidays: decemberHolidays
+    });
+    await waitFor(() => expect(screen.queryByTestId("partial-year-alert")).not.toBeInTheDocument());
+  });
+
   it("hides every write action without holidays.update", async () => {
     await setupServer();
     renderPage(false);
 
     expect(await screen.findByRole("tab", { name: /^Ngày thường/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Thêm ngày lễ/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Đánh dấu ngày lễ" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Thao tác ngày/ })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Thiết lập phân loại ngày/ })
     ).not.toBeInTheDocument();

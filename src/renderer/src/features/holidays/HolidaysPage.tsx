@@ -1,6 +1,6 @@
 // Danh sách ngày: phân loại Ngày thường / Cuối tuần theo dữ liệu thực tế (`DateTypeId`, thiết lập theo thứ bằng
 // "Thiết lập phân loại ngày"), Ngày lễ (`IsHoliday`) ưu tiên hiển thị. Màn này không hiển thị giá vé.
-import Icon from "@ant-design/icons";
+import Icon, { MoreOutlined } from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
 import PageHeader from "@renderer/components/PageHeader";
@@ -16,10 +16,10 @@ import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import type { HolidayProps } from "@shared/types";
 import type { TableProps } from "antd";
-import { Alert, Button, DatePicker, Empty, Select, Space, Tabs, Tag } from "antd";
+import { Alert, Button, DatePicker, Dropdown, Empty, Select, Tabs, Tag } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { CalendarDays, PlusIcon } from "lucide-react";
+import { CalendarDays, CalendarPlus, CalendarX2, PlusIcon, SquarePen } from "lucide-react";
 import { useMemo, useState } from "react";
 import DayClassificationDialog from "./components/DayClassificationDialog";
 import HolidayModal, { type HolidayModalState } from "./components/HolidayModal";
@@ -128,6 +128,17 @@ const HolidaysPage = () => {
     });
   };
 
+  const onDayAction = (key: string, day: HolidayProps) => {
+    if (key === "mark") setHolidayModal({ mode: "add", dateValue: day.dateValue });
+    if (key === "edit")
+      setHolidayModal({
+        mode: "edit",
+        dateValue: day.dateValue,
+        holidayName: day.holidayName ?? ""
+      });
+    if (key === "unmark") confirmUnmark(day);
+  };
+
   const columns: TableProps<HolidayProps>["columns"] = [
     {
       title: "STT",
@@ -161,47 +172,57 @@ const HolidaysPage = () => {
         return <Tag color={TAB_COLORS[tab]}>{DATE_TAB_LABELS[tab]}</Tag>;
       }
     },
+    // Cột thao tác giống các bảng khác: không tiêu đề, nút "⋯" mở menu, ghim bên phải.
     ...(canUpdate
       ? [
           {
-            title: "Thao tác",
+            title: "",
             key: "operation",
-            width: 220,
-            render: (_: unknown, day: HolidayProps) =>
-              day.isHoliday ? (
-                <Space size={4}>
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={() =>
-                      setHolidayModal({
-                        mode: "edit",
-                        dateValue: day.dateValue,
-                        holidayName: day.holidayName ?? ""
-                      })
-                    }
-                  >
-                    Sửa
-                  </Button>
-                  <Button size="small" type="link" danger onClick={() => confirmUnmark(day)}>
-                    Bỏ đánh dấu
-                  </Button>
-                </Space>
-              ) : (
+            width: 50,
+            align: "center" as const,
+            fixed: "right" as const,
+            render: (_: unknown, day: HolidayProps) => (
+              <Dropdown
+                menu={{
+                  items: day.isHoliday
+                    ? [
+                        { key: "edit", icon: <SquarePen size={16} />, label: "Cập nhật" },
+                        {
+                          key: "unmark",
+                          icon: <CalendarX2 size={16} />,
+                          label: "Bỏ đánh dấu ngày lễ",
+                          danger: true
+                        }
+                      ]
+                    : [
+                        { key: "mark", icon: <CalendarPlus size={16} />, label: "Đánh dấu ngày lễ" }
+                      ],
+                  onClick: ({ key }) => onDayAction(key, day)
+                }}
+                arrow
+                trigger={["click"]}
+              >
                 <Button
+                  type="text"
                   size="small"
-                  type="link"
-                  onClick={() => setHolidayModal({ mode: "add", dateValue: day.dateValue })}
-                >
-                  Đánh dấu ngày lễ
-                </Button>
-              )
+                  icon={<MoreOutlined />}
+                  aria-label={`Thao tác ngày ${formatDate(day.dateValue)}`}
+                />
+              </Dropdown>
+            )
           }
         ]
       : [])
   ];
 
   const yearIsEmpty = !isFetching && !isError && normalizedDays.length === 0;
+  // Năm thiếu một phần dòng (vd. dòng bị xóa tay): suất chiếu vào ngày thiếu không bán được U22 (ISS-13).
+  const daysInSelectedYear = dayjs(`${selectedYear + 1}-01-01`).diff(
+    dayjs(`${selectedYear}-01-01`),
+    "day"
+  );
+  const missingDayCount = Math.max(daysInSelectedYear - normalizedDays.length, 0);
+  const yearIsPartial = !isFetching && !isError && normalizedDays.length > 0 && missingDayCount > 0;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden px-4 pt-4">
@@ -267,6 +288,23 @@ const HolidaysPage = () => {
         }))}
       />
 
+      {yearIsPartial && (
+        <Alert
+          type="warning"
+          showIcon
+          data-testid="partial-year-alert"
+          title={`Năm ${selectedYear} còn thiếu ${formatNumber(missingDayCount)} ngày trong Danh sách ngày`}
+          description="Suất chiếu vào các ngày còn thiếu không áp dụng được ưu đãi U22 và chưa có phân loại ngày. Tạo các ngày còn thiếu để phân loại theo thứ và đánh dấu ngày lễ mặc định; ngày đã có giữ nguyên."
+          action={
+            canCreate ? (
+              <Button size="small" onClick={() => setInitializeOpen(true)}>
+                Tạo các ngày còn thiếu
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+
       {isError ? (
         <Alert
           type="error"
@@ -331,7 +369,11 @@ const HolidaysPage = () => {
       )}
 
       {isInitializeOpen && (
-        <InitializeYearDialog year={selectedYear} onClose={() => setInitializeOpen(false)} />
+        <InitializeYearDialog
+          year={selectedYear}
+          existingDates={knownDates}
+          onClose={() => setInitializeOpen(false)}
+        />
       )}
 
       {isClassificationOpen && (

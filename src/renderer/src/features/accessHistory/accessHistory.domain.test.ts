@@ -188,6 +188,7 @@ describe("access history registry", () => {
       "PaperVoucherBatch",
       "CancelReason",
       "U22PriceConfig",
+      "DateInYear",
       "Customer",
       "User"
     ]);
@@ -861,5 +862,52 @@ describe("U22 price config activity (StaffAuditLog rows written by PUT /api/pos/
 
   it("is offered in the model filter", () => {
     expect(getModelDefinition("U22PriceConfig")?.label).toBe("Giá vé U22");
+  });
+});
+
+describe("DateInYear activity (StaffAuditLog rows written by the holiday routes and Khởi tạo năm)", () => {
+  const markRecord = {
+    id: 9501,
+    userId: 39193040,
+    username: "admin",
+    model: "DateInYear",
+    entityId: "2026-09-02",
+    action: "UPDATE",
+    timestamp: "2026-11-09T20:10:00+07:00",
+    oldValues: JSON.stringify({ isHoliday: false, holidayName: null }),
+    newValues: JSON.stringify({ isHoliday: true, holidayName: "Quốc khánh" }),
+    changedFields: "isHoliday,holidayName"
+  };
+
+  it("names the day and lists the holiday flag and name", () => {
+    const result = buildActivityViewModel(markRecord);
+
+    expect(result.modelLabel).toBe("Danh sách ngày");
+    expect(result.entityLabel).toContain("2026-09-02");
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_MODEL");
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_FIELDS");
+    expect(result.changes.map((change) => change.label)).toEqual(["Ngày lễ", "Tên ngày lễ"]);
+  });
+
+  it("describes Khởi tạo năm without unknown fields", () => {
+    const result = buildActivityViewModel({
+      ...markRecord,
+      id: 9502,
+      entityId: "2027",
+      action: "CREATE",
+      oldValues: null,
+      newValues: JSON.stringify({
+        year: 2027,
+        createdDays: 365,
+        weekendDays: [0, 5, 6],
+        weekendDayCount: 157,
+        holidayCount: 1,
+        holidays: ["2027-09-02 Quốc khánh"]
+      }),
+      changedFields: null
+    });
+
+    expect(result.entityLabel).toContain("2027");
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_FIELDS");
   });
 });

@@ -142,7 +142,10 @@ const U22PriceEditDialog = ({ config, onClose }: U22PriceEditDialogProps) => {
   return (
     <Modal
       open
-      width={760}
+      centered
+      width="min(760px, calc(100vw - 32px))"
+      // Chế độ "Chỉnh riêng từng thứ" cao hơn màn 1366×768: cuộn trong thân dialog, footer Lưu/Hủy luôn hiện (ISS-11).
+      styles={{ body: { maxHeight: "calc(100vh - 220px)", overflowY: "auto" } }}
       title="Chỉnh sửa giá vé U22"
       okText="Lưu giá"
       cancelText={conflict ? "Đóng" : "Hủy"}
@@ -151,7 +154,7 @@ const U22PriceEditDialog = ({ config, onClose }: U22PriceEditDialogProps) => {
       cancelButtonProps={{ disabled: saving }}
       onOk={submit}
       onCancel={saving ? undefined : onClose}
-      maskClosable={false}
+      mask={{ closable: false }}
       destroyOnHidden
     >
       <div className="flex flex-col gap-4">

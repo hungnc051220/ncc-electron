@@ -409,6 +409,24 @@ const MODEL_REGISTRY_VALUE: Record<string, AuditModelDefinition> = {
       priceSun: field("Giá Chủ nhật", "money", 7)
     }
   },
+  // Danh sách ngày: BE ghi StaffAuditLog khi đánh dấu / đổi tên / bỏ đánh dấu ngày lễ (EntityId = ngày, UPDATE)
+  // và khi "Khởi tạo năm" (EntityId = năm, CREATE). Ngày lễ quyết định ưu đãi U22 có được áp hay không.
+  DateInYear: {
+    label: "Danh sách ngày",
+    sentenceLabel: "danh sách ngày",
+    entityNamePaths: [],
+    allowCommonFields: false,
+    fields: {
+      isHoliday: field("Ngày lễ", "boolean", 1),
+      holidayName: field("Tên ngày lễ", "text", 2),
+      year: field("Năm", "number", 3),
+      createdDays: field("Số ngày tạo", "number", 4),
+      weekendDayCount: field("Số ngày cuối tuần", "number", 5),
+      holidayCount: field("Số ngày lễ", "number", 6),
+      weekendDays: field("Thứ xếp cuối tuần (0 = Chủ nhật)", "json", 7),
+      holidays: field("Ngày lễ đã đánh dấu", "json", 8)
+    }
+  },
   Customer: USER_ACCOUNT_MODEL_DEFINITION,
   User: USER_ACCOUNT_MODEL_DEFINITION
 };

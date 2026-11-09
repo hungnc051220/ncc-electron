@@ -46,7 +46,8 @@ const U22_REASON_MESSAGES: Record<string, string> = {
   price_not_eligible: "Giá vé suất này không cao hơn giá U22, không áp dụng ưu đãi U22.",
   not_u22: "Thẻ thành viên không đủ điều kiện ưu đãi U22.",
   converted_to_member: "Thẻ U22 không còn hiệu lực vì khách hàng đã quá 22 tuổi.",
-  card_not_found: "Không tìm thấy thẻ thành viên."
+  card_not_found: "Không tìm thấy thẻ thành viên.",
+  not_2d: "Ưu đãi U22 chỉ áp dụng cho suất chiếu 2D."
 };
 
 const VOUCHER_TYPE_ID = {
@@ -369,6 +370,12 @@ const VipCardDialog = ({
   );
 
   const isU22Member = customer?.currentCardId === 12;
+  // U22 chỉ áp cho suất 2D (2D, IMAX_2D), cùng quy tắc với backend: suất khác khóa hẳn lựa chọn U22 để không
+  // gửi U22Ticket cho một đơn mà POS không giảm giá.
+  const is2DVersion = useMemo(
+    () => filmVersionCode?.toUpperCase().includes("2D") ?? false,
+    [filmVersionCode]
+  );
   const voucherItems = useMemo(() => vouchers?.items ?? [], [vouchers?.items]);
   const isSingleSeatSelected = selectedSeats.length === 1;
   const isU22UsedToday = u22ValidationReason === "used_today";
@@ -377,6 +384,7 @@ const VipCardDialog = ({
   const isU22PriceMissing =
     isCurrentCustomerSearched &&
     isU22Member &&
+    is2DVersion &&
     isSingleSeatSelected &&
     !isValidatingU22 &&
     !u22Price;
@@ -384,6 +392,7 @@ const VipCardDialog = ({
     !isCurrentCustomerSearched ||
     hasSeatTypeDiscount ||
     !isU22Member ||
+    !is2DVersion ||
     !isSingleSeatSelected ||
     isValidatingU22 ||
     isU22UsedToday ||
@@ -575,11 +584,6 @@ const VipCardDialog = ({
 
     return voucherItems.find((item) => item.batchId === selectedBatchId);
   }, [selectedBatchId, voucherItems, voucherType]);
-
-  const is2DVersion = useMemo(
-    () => filmVersionCode?.toUpperCase().includes("2D") ?? false,
-    [filmVersionCode]
-  );
 
   const discountAmount = useMemo(() => {
     const baseTotal = totalPrice || 0;
@@ -1034,10 +1038,11 @@ const VipCardDialog = ({
             />
           )}
 
-          {isCustomerSearched && !hasSeatTypeDiscount && voucherType === "u22" && !is2DVersion && (
-            <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-              Suất chiếu 3D không tính ưu đãi U22. Giá vé giữ nguyên theo giá hiện tại.
-            </div>
+          {isCurrentCustomerSearched && !hasSeatTypeDiscount && isU22Member && !is2DVersion && (
+            <NoticeCard tone="warning" icon={<AlertTriangle size={14} strokeWidth={2.25} />}>
+              Ưu đãi U22 chỉ áp dụng cho suất chiếu 2D
+              {filmVersionCode ? ` (suất này: ${filmVersionCode})` : ""}. Giá vé giữ nguyên.
+            </NoticeCard>
           )}
 
           <div className="rounded-md border border-slate-200 bg-gray-100 p-4 dark:border-white/10 dark:bg-app-bg-container">

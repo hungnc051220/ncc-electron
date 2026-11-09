@@ -121,6 +121,12 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
       return day !== undefined && !day.isHoliday;
     });
   }, [days, defaultHolidays]);
+  // Ngày lễ mặc định không có dòng ngày (năm thiếu một phần): không đánh dấu được ở đây, phải tạo ngày trước (ISS-13).
+  const holidaysWithoutRow = useMemo(() => {
+    if (days.length === 0) return [];
+    const known = new Set(days.map((day) => day.dateValue));
+    return defaultHolidays.filter((holiday) => !known.has(holiday.dateValue));
+  }, [days, defaultHolidays]);
   const [pickedHolidays, setPickedHolidays] = useState<{ year: number; dates: string[] }>({
     year,
     dates: []
@@ -284,9 +290,26 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
     </Tooltip>
   );
   // Ngày lễ mặc định còn thiếu: Admin tự chọn ngày cần đánh dấu (mặc định không chọn ngày nào).
+  const noRowLine = canEdit && holidaysWithoutRow.length > 0 && (
+    <span
+      className="flex w-full items-center gap-1.5 text-[13px]"
+      data-testid="default-holiday-no-row-line"
+    >
+      <Info size={16} style={{ color: token.colorWarning }} />
+      <span>
+        {formatNumber(holidaysWithoutRow.length)} ngày lễ mặc định chưa có trong Danh sách ngày (năm
+        còn thiếu ngày):{" "}
+        <Text type="secondary" className="text-[13px]">
+          {shortDates(holidaysWithoutRow.map((holiday) => holiday.dateValue))}
+        </Text>
+        . Dùng &quot;Tạo các ngày còn thiếu&quot; trên Danh sách ngày.
+      </span>
+    </span>
+  );
   const holidayLine =
     canEdit &&
-    (missingHolidays.length === 0 ? (
+    (missingHolidays.length === 0 &&
+    holidaysWithoutRow.length > 0 ? null : missingHolidays.length === 0 ? (
       <Tooltip
         title={defaultHolidays
           .map((holiday) => `${holiday.holidayName} (${formatDate(holiday.dateValue)})`)
@@ -358,6 +381,7 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
         {exceptionLine}
         {holidayLine}
+        {noRowLine}
       </div>
     </section>
   );
@@ -463,7 +487,7 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
         </div>
       }
       onCancel={onClose}
-      maskClosable={!reclassify.isPending}
+      mask={{ closable: !reclassify.isPending }}
       styles={{ body: { maxHeight: "calc(100vh - 220px)", overflowY: "auto" } }}
       footer={
         <div

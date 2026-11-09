@@ -15,6 +15,8 @@ const { Text } = Typography;
 
 type InitializeYearDialogProps = {
   year: number;
+  /** Ngày (YYYY-MM-DD) đã có của năm: chỉ tạo các ngày còn thiếu, ngày lễ mặc định chỉ liệt kê trên ngày sẽ tạo. */
+  existingDates?: ReadonlySet<string>;
   onClose: () => void;
 };
 
@@ -25,20 +27,27 @@ const daysOfYear = (year: number) => {
   );
 };
 
-const InitializeYearDialog = ({ year, onClose }: InitializeYearDialogProps) => {
+const InitializeYearDialog = ({ year, existingDates, onClose }: InitializeYearDialogProps) => {
   const { message } = useAntdApp();
   const initializeYear = useInitializeYear();
   const [templateKey, setTemplateKey] = useState<string>(WEEKDAY_TEMPLATES[0].key);
-  const defaultHolidays = useMemo(() => getDefaultHolidays(year), [year]);
+  const isPartialYear = (existingDates?.size ?? 0) > 0;
+  const defaultHolidays = useMemo(
+    () => getDefaultHolidays(year).filter((holiday) => !existingDates?.has(holiday.dateValue)),
+    [existingDates, year]
+  );
   const [selected, setSelected] = useState<string[]>(() =>
     defaultHolidays.map((holiday) => holiday.dateValue)
   );
-  const days = useMemo(() => daysOfYear(year), [year]);
+  const days = useMemo(
+    () => daysOfYear(year).filter((day) => !existingDates?.has(day.format("YYYY-MM-DD"))),
+    [existingDates, year]
+  );
   const template =
     WEEKDAY_TEMPLATES.find((item) => item.key === templateKey) ?? WEEKDAY_TEMPLATES[0];
   const weekendDays = weekendDaysOf(template.config);
   const weekendCount = days.filter((item) => weekendDays.includes(item.day())).length;
-  const allSelected = selected.length === defaultHolidays.length;
+  const allSelected = defaultHolidays.length > 0 && selected.length === defaultHolidays.length;
 
   const submit = () =>
     initializeYear.mutate(
@@ -66,14 +75,14 @@ const InitializeYearDialog = ({ year, onClose }: InitializeYearDialogProps) => {
       open
       centered
       width="min(760px, calc(100vw - 32px))"
-      title={`Khởi tạo năm ${year}`}
+      title={isPartialYear ? `Tạo các ngày còn thiếu năm ${year}` : `Khởi tạo năm ${year}`}
       okText="Khởi tạo"
       cancelText="Hủy"
       onOk={submit}
       onCancel={initializeYear.isPending ? undefined : onClose}
       confirmLoading={initializeYear.isPending}
       cancelButtonProps={{ disabled: initializeYear.isPending }}
-      maskClosable={false}
+      mask={{ closable: false }}
       styles={{ body: { maxHeight: "calc(100vh - 220px)", overflowY: "auto" } }}
     >
       <div className="flex flex-col gap-4">
@@ -96,7 +105,7 @@ const InitializeYearDialog = ({ year, onClose }: InitializeYearDialogProps) => {
             <Button
               size="small"
               type="link"
-              disabled={initializeYear.isPending}
+              disabled={initializeYear.isPending || defaultHolidays.length === 0}
               onClick={() =>
                 setSelected(allSelected ? [] : defaultHolidays.map((holiday) => holiday.dateValue))
               }
@@ -115,6 +124,11 @@ const InitializeYearDialog = ({ year, onClose }: InitializeYearDialogProps) => {
               label: `${dayjs(holiday.dateValue).format("DD/MM")} · ${holiday.holidayName}`
             }))}
           />
+          {defaultHolidays.length === 0 && (
+            <Text type="secondary" className="text-[13px]">
+              Không có ngày lễ mặc định nào nằm trong các ngày sẽ tạo.
+            </Text>
+          )}
           <Text type="secondary" className="text-[13px]">
             Gồm 11 ngày nghỉ lễ theo luật (Tết Nguyên đán, Giỗ Tổ tính theo âm lịch Việt Nam) và 6
             ngày lễ NCC. Bỏ chọn ngày không áp dụng; ngày nghỉ liền kề, nghỉ bù có thể sửa sau trên
@@ -122,6 +136,9 @@ const InitializeYearDialog = ({ year, onClose }: InitializeYearDialogProps) => {
           </Text>
         </section>
         <Text data-testid="initialize-year-summary">
+          {isPartialYear && (
+            <>Năm đã có {formatNumber(existingDates?.size ?? 0)} ngày (giữ nguyên). </>
+          )}
           Tạo <strong>{formatNumber(days.length)}</strong> ngày:{" "}
           {formatNumber(days.length - weekendCount)} ngày thường, {formatNumber(weekendCount)} ngày
           cuối tuần; đánh dấu <strong>{formatNumber(selected.length)}</strong> ngày lễ.
