@@ -135,6 +135,58 @@ describe("U22PriceEditDialog", { timeout: 30000 }, () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("newer config arriving while the dialog is open (refetch on focus/reconnect) → conflict, the stale draft is never sent", async () => {
+    const state = await setupU22Server();
+    const onClose = vi.fn();
+    const view = (config: U22PriceConfig) => (
+      <U22TestProviders>
+        <U22PriceEditDialog config={config} onClose={onClose} />
+      </U22TestProviders>
+    );
+    const { rerender } = render(view(SEED_U22_CONFIG));
+    typePrice("Giá Thứ 2 – Thứ 5", "57000");
+
+    rerender(
+      view({
+        ...SEED_U22_CONFIG,
+        priceFri: 80000,
+        priceSat: 80000,
+        priceSun: 80000,
+        version: 2,
+        updatedUser: "ketoan01",
+        updatedOnUtc: "2026-11-08T03:12:00.000Z"
+      })
+    );
+
+    expect(screen.getByText("Giá U22 vừa được cập nhật bởi người khác")).toBeInTheDocument();
+    expect(screen.getByText(/ketoan01 đã lưu lúc 08\/11\/2026 10:12/)).toBeInTheDocument();
+    expect(getSaveButton()).toBeDisabled();
+    fireEvent.click(getSaveButton());
+    expect(state.putBodies).toHaveLength(0);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("a refetch returning the same version keeps editing possible and saves with the opened version", async () => {
+    const state = await setupU22Server();
+    const onClose = vi.fn();
+    const view = (config: U22PriceConfig) => (
+      <U22TestProviders>
+        <U22PriceEditDialog config={config} onClose={onClose} />
+      </U22TestProviders>
+    );
+    const { rerender } = render(view(SEED_U22_CONFIG));
+    typePrice("Giá Thứ 2 – Thứ 5", "57000");
+
+    rerender(view({ ...SEED_U22_CONFIG }));
+    fireEvent.click(getSaveButton());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.queryByText("Giá U22 vừa được cập nhật bởi người khác")).not.toBeInTheDocument();
+    expect(state.putBodies).toEqual([
+      expect.objectContaining({ priceMon: 57000, priceFri: 70000, version: 1 })
+    ]);
+  });
+
   it.each([
     [
       400,

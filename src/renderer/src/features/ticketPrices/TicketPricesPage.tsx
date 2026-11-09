@@ -27,7 +27,7 @@ import dayjs from "dayjs";
 type TicketPricesTab = "prices" | "u22";
 
 const TAB_ITEMS: TabsProps["items"] = [
-  { key: "prices", label: "Giá vé" },
+  { key: "prices", label: "Giá vé thường" },
   { key: "u22", label: "Giá vé U22" }
 ];
 

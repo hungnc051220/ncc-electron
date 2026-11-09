@@ -187,6 +187,7 @@ describe("access history registry", () => {
       "Position",
       "PaperVoucherBatch",
       "CancelReason",
+      "U22PriceConfig",
       "Customer",
       "User"
     ]);
@@ -800,5 +801,65 @@ describe("paper voucher batch activity (StaffAuditLog rows written by the backen
     expect(result.title).toBe("Xóa lô voucher giấy");
     expect(result.detailTitle).toBe("Thông tin đã xóa");
     expect(result.entityLabel).toBe("LÔ-003");
+  });
+});
+
+describe("U22 price config activity (StaffAuditLog rows written by PUT /api/pos/u22-price-config)", () => {
+  // Dạng bản ghi thật trên CinemaTicketDev (StaffAuditLog 9383): 7 giá theo thứ + version.
+  const record = {
+    id: 9383,
+    userId: 39193040,
+    username: "admin",
+    model: "U22PriceConfig",
+    entityId: "1",
+    action: "UPDATE",
+    timestamp: "2026-11-09T13:48:01+07:00",
+    oldValues: JSON.stringify({
+      version: 48,
+      priceMon: 55000,
+      priceTue: 55000,
+      priceWed: 55000,
+      priceThu: 55000,
+      priceFri: 70000,
+      priceSat: 70000,
+      priceSun: 70000
+    }),
+    newValues: JSON.stringify({
+      version: 49,
+      priceMon: 65000,
+      priceTue: 65000,
+      priceWed: 65000,
+      priceThu: 55000,
+      priceFri: 80000,
+      priceSat: 80000,
+      priceSun: 70000
+    }),
+    changedFields: "priceMon,priceTue,priceWed,priceThu,priceFri,priceSat,priceSun,version"
+  };
+
+  it("names the U22 price change and lists each changed weekday price, without the version", () => {
+    const result = buildActivityViewModel(record);
+
+    expect(result.title).toBe("Cập nhật giá vé U22");
+    expect(result.modelLabel).toBe("Giá vé U22");
+    expect(result.entityLabel).toBe("Giá vé U22");
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_MODEL");
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_FIELDS");
+    expect(result.changes.map((change) => change.label)).toEqual([
+      "Giá Thứ 2",
+      "Giá Thứ 3",
+      "Giá Thứ 4",
+      "Giá Thứ 6",
+      "Giá Thứ 7"
+    ]);
+    expect(result.changes[0]).toMatchObject({
+      beforeText: formatAuditMoney(55000),
+      afterText: formatAuditMoney(65000)
+    });
+    expect(JSON.stringify(result.summaryItems)).not.toContain("chưa được hỗ trợ");
+  });
+
+  it("is offered in the model filter", () => {
+    expect(getModelDefinition("U22PriceConfig")?.label).toBe("Giá vé U22");
   });
 });

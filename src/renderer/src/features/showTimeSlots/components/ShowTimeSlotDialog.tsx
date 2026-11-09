@@ -120,14 +120,14 @@ const ShowTimeSlotDialog = ({
             placeholder="Chọn ngày áp dụng"
             options={[
               { label: "Ngày thường", value: 1 },
-              { label: "Ngày lễ", value: 2 }
+              { label: "Cuối tuần", value: 2 }
             ]}
           />
         </Form.Item>
         <Form.Item<FieldType>
           name="name"
           label="Tên khung giờ"
-          rules={[{ required: true, message: "Chọn tên khung giờ" }]}
+          rules={[{ required: true, message: "Nhập tên khung giờ" }]}
         >
           <Input placeholder="Nhập tên khung giờ" />
         </Form.Item>

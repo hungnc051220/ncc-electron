@@ -1,9 +1,9 @@
-import { holidaysApi } from "@renderer/api/holidays.api";
+import { holidaysApi, type InitializeYearBody } from "@renderer/api/holidays.api";
 import { planScreeningsApi } from "@renderer/api/planScreenings.api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { holidaysKeys } from "./keys";
 
-/** Mọi ngày của năm trong DateInYear (Quản lý ngày phân tab ở FE). */
+/** Mọi ngày của năm trong DateInYear (Danh sách ngày phân tab ở FE). */
 export const useDateInYear = (year: number) =>
   useQuery({
     queryKey: holidaysKeys.year(year),
@@ -44,10 +44,47 @@ export const useUnmarkHoliday = () => {
   });
 };
 
-export const usePopulateYear = () => {
+/**
+ * Lưu "Thiết lập ngày": đổi phân loại nền (`DateTypeId`) của đúng các ngày được chọn qua `bulk-create` hiện
+ * có (`specialDates` MM-DD, không dùng `daysInWeek` để không ghi đè ngày đặc biệt), rồi đánh dấu các ngày lễ
+ * mặc định Admin đã chọn qua `PUT :dateValue/holiday` hiện có. Ngày đã là ngày lễ không bị đụng tới.
+ */
+export const useReclassifyDays = () => {
   const invalidate = useInvalidateHolidays();
   return useMutation({
-    mutationFn: (year: number) => holidaysApi.populateYear(year),
-    onSuccess: invalidate
+    mutationFn: async ({
+      year,
+      toNormal,
+      toWeekend,
+      holidaysToMark = []
+    }: {
+      year: number;
+      toNormal: string[];
+      toWeekend: string[];
+      holidaysToMark?: { dateValue: string; holidayName: string }[];
+    }) => {
+      const batches = [
+        { dateTypeId: 1, specialDates: toNormal },
+        { dateTypeId: 2, specialDates: toWeekend }
+      ].filter((batch) => batch.specialDates.length > 0);
+      for (const batch of batches) {
+        await holidaysApi.create({ year, daysInWeek: [], specificDate: null, ...batch });
+      }
+      for (const holiday of holidaysToMark) {
+        await holidaysApi.markHoliday(holiday.dateValue, holiday.holidayName);
+      }
+    },
+    // Lỗi giữa chừng: vẫn tải lại để bảng hiện đúng phần đã lưu.
+    onSettled: invalidate
+  });
+};
+
+/** "Khởi tạo năm": các ngày còn thiếu + phân loại theo thứ + ngày lễ đã chọn, trong một lệnh (transaction). */
+export const useInitializeYear = () => {
+  const invalidate = useInvalidateHolidays();
+  return useMutation({
+    mutationFn: ({ year, ...body }: { year: number } & InitializeYearBody) =>
+      holidaysApi.initializeYear(year, body),
+    onSettled: invalidate
   });
 };

@@ -89,7 +89,7 @@ const ShowTimeSlotsPage = () => {
       key: "dateTypeId",
       dataIndex: "dateTypeId",
       sorter: (a, b) => a.dateTypeId - b.dateTypeId,
-      render: (value: number) => (value === 1 ? "Ngày thường" : "Ngày lễ")
+      render: (value: number) => (value === 1 ? "Ngày thường" : "Cuối tuần")
     },
     {
       title: "Thời gian bắt đầu",

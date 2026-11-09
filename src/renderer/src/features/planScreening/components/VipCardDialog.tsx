@@ -536,7 +536,7 @@ const VipCardDialog = ({
           setU22HolidayName(validation.holidayName ?? null);
         }
       } catch (error) {
-        // Không đọc được giá U22 (503 cấu hình, ngày chưa có trong Quản lý ngày…): khóa U22, báo lý do.
+        // Không đọc được giá U22 (503 cấu hình, ngày chưa có trong Danh sách ngày…): khóa U22, báo lý do.
         if (!isCancelled) {
           setU22ValidationReason(null);
           setU22Price(null);

@@ -93,23 +93,34 @@ type U22PriceEditDialogProps = {
 
 const U22PriceEditDialog = ({ config, onClose }: U22PriceEditDialogProps) => {
   const { message } = useAntdApp();
-  const saved = useMemo(() => pickU22Prices(config), [config]);
+  // Bản chụp cấu hình lúc mở dialog: bản nháp được sửa trên giá trị này và luôn gửi kèm version của nó.
+  // `config` vẫn là dữ liệu sống (refetch khi focus/reconnect); nếu version đổi trong lúc mở nghĩa là người
+  // khác vừa lưu → hiện xung đột như 409, không để bản nháp cũ ghi đè âm thầm.
+  const [baseline] = useState(config);
+  const saved = useMemo(() => pickU22Prices(baseline), [baseline]);
   const [prices, setPrices] = useState<U22DraftPrices>(saved);
   const [expanded, setExpanded] = useState(hasCustomPrices(saved));
   const [submitted, setSubmitted] = useState(false);
-  const [conflict, setConflict] = useState<ConflictInfo | null>(null);
+  const [serverConflict, setServerConflict] = useState<ConflictInfo | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const updateMutation = useUpdateU22PriceConfig();
 
   const invalidDays = getInvalidDays(prices);
   const changed = getChangedDays(saved, prices).length > 0;
+  // Sau khi chính dialog này lưu thành công, cache nhận version mới trước khi đóng: không coi là xung đột.
+  const isOwnSave = updateMutation.isPending || updateMutation.isSuccess;
+  const liveConflict: ConflictInfo | null =
+    !isOwnSave && config.version !== baseline.version
+      ? { updatedUser: config.updatedUser, updatedOnUtc: config.updatedOnUtc }
+      : null;
+  const conflict = serverConflict ?? liveConflict;
 
   const submit = () => {
     setSubmitted(true);
     setServerError(null);
-    if (invalidDays.length > 0) return;
+    if (invalidDays.length > 0 || conflict) return;
     updateMutation.mutate(
-      { ...toU22WeekPrices(prices), version: config.version },
+      { ...toU22WeekPrices(prices), version: baseline.version },
       {
         onSuccess: () => {
           message.success("Đã lưu giá vé U22");
@@ -117,7 +128,7 @@ const U22PriceEditDialog = ({ config, onClose }: U22PriceEditDialogProps) => {
         },
         onError: (error) => {
           if (getApiErrorCode(error) === U22_PRICE_CONFIG_CHANGED) {
-            setConflict(readConflict(error));
+            setServerConflict(readConflict(error));
             return;
           }
           setServerError(getSafeApiErrorMessage(error, "Không lưu được giá vé U22"));

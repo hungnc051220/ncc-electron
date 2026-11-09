@@ -250,7 +250,7 @@ const U22PriceFields = ({
       )}
 
       <Text type="secondary">
-        Giá áp theo <strong>thứ của ngày suất chiếu</strong>. Ngày lễ trong Quản lý ngày không áp
+        Giá áp theo <strong>thứ của ngày suất chiếu</strong>. Ngày lễ trong Danh sách ngày không áp
         dụng U22.
       </Text>
     </div>

@@ -1,4 +1,4 @@
-// Thêm/sửa ngày lễ (Quản lý ngày V2): một ngày, một tên. Ngày lễ không áp dụng ưu đãi U22.
+// Thêm/sửa ngày lễ (Danh sách ngày): một ngày, một tên. Ngày lễ không áp dụng ưu đãi U22.
 import { useMarkHoliday } from "@renderer/hooks/holidays/useDateManagement";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getSafeApiErrorMessage } from "@renderer/lib/apiError";

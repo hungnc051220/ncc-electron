@@ -2,7 +2,7 @@
 import { getApiErrorCode, getSafeApiErrorMessage } from "@renderer/lib/apiError";
 import { U22_PRICE_CONFIG_UNAVAILABLE } from "@renderer/api/u22PriceConfig.api";
 import type { U22PriceConfig } from "@shared/types";
-import { Alert, Button, Card, Skeleton, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Card, Skeleton, Tag, theme, Tooltip, Typography } from "antd";
 import dayjs from "dayjs";
 import { Link } from "react-router";
 import {
@@ -48,6 +48,8 @@ type U22PriceTabProps = {
 };
 
 const U22PriceTab = ({ config, isLoading, error, onRetry }: U22PriceTabProps) => {
+  // Màu theo token antd: đúng cả giao diện sáng và tối (không dùng màu Tailwind cố định).
+  const { token } = theme.useToken();
   if (error) {
     const unavailable = getApiErrorCode(error) === U22_PRICE_CONFIG_UNAVAILABLE;
     return (
@@ -80,8 +82,10 @@ const U22PriceTab = ({ config, isLoading, error, onRetry }: U22PriceTabProps) =>
         title={
           <span>
             Giá U22 áp theo <strong>thứ của ngày suất chiếu</strong>. Ngày được đánh dấu{" "}
-            <strong>ngày lễ</strong> trong Quản lý ngày không áp dụng U22.{" "}
-            <Link to="/holidays">Mở Quản lý ngày</Link>
+            <strong>ngày lễ</strong> trong Danh sách ngày không áp dụng U22.{" "}
+            <Link to="/holidays" style={{ color: token.colorLink }}>
+              Mở Danh sách ngày
+            </Link>
           </span>
         }
       />
@@ -95,7 +99,11 @@ const U22PriceTab = ({ config, isLoading, error, onRetry }: U22PriceTabProps) =>
         </div>
         <div className="mb-4 grid grid-cols-2 gap-4">
           {U22_GROUPS.map((group) => (
-            <div key={group.key} className="flex flex-col gap-1 rounded-md bg-gray-50 p-3">
+            <div
+              key={group.key}
+              className="flex flex-col gap-1 rounded-md p-3"
+              style={{ background: token.colorFillAlter, color: token.colorText }}
+            >
               <Text type="secondary">{group.label}</Text>
               <GroupPrice prices={prices} group={group} />
             </div>
@@ -105,7 +113,8 @@ const U22PriceTab = ({ config, isLoading, error, onRetry }: U22PriceTabProps) =>
           {U22_DAYS.map((day) => (
             <div
               key={day.key}
-              className="flex flex-col items-center rounded-md border border-gray-200 p-2"
+              className="flex flex-col items-center rounded-md border p-2"
+              style={{ borderColor: token.colorBorderSecondary }}
             >
               <span>{day.label}</span>
               <strong data-testid={`u22-day-${day.key}`}>{formatU22Price(prices[day.key])}</strong>

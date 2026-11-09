@@ -109,6 +109,8 @@ export interface AuditModelDefinition {
   fields: Record<string, AuditFieldDefinition>;
   entityNamePaths: string[];
   allowCommonFields?: boolean;
+  /** Tên đối tượng cố định cho bảng cấu hình một dòng (không có trường tên), thay cho "Nhãn #Id". */
+  fixedEntityLabel?: string;
 }
 
 export interface AuditActionDefinition {

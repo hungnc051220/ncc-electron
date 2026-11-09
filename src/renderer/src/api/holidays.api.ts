@@ -13,9 +13,26 @@ export interface HolidaysQuery {
 export interface HolidayDto {
   year: number;
   dateTypeId: number;
-  daysInWeek: string[];
+  /** `dayjs().day()` (0 = Chủ nhật … 6 = Thứ 7): đổi mọi ngày của các thứ này trong năm. */
+  daysInWeek: number[];
+  /** `MM-DD`: đổi đúng các ngày này. */
   specialDates: string[];
   specificDate: string | null;
+}
+
+/** Body của "Khởi tạo năm" (`POST /api/pos/date-in-year/initialize/:year`). */
+export interface InitializeYearBody {
+  /** `dayjs().day()` (0 = Chủ nhật … 6 = Thứ 7) được xếp Cuối tuần; các thứ khác là Ngày thường. */
+  weekendDays: number[];
+  /** Ngày lễ đánh dấu trên các ngày được tạo. */
+  holidays: { dateValue: string; holidayName: string }[];
+}
+
+export interface InitializeYearResult {
+  year: number;
+  createdDays: number;
+  weekendDayCount: number;
+  holidayCount: number;
 }
 
 export const holidaysApi = {
@@ -56,7 +73,7 @@ export const holidaysApi = {
     const res = await api.delete(`/api/pos/date-in-year/${dateValue}`);
     return res.data;
   },
-  /** Mọi ngày của một năm (tối đa 366 dòng); Quản lý ngày phân tab ở FE. */
+  /** Mọi ngày của một năm (tối đa 366 dòng); Danh sách ngày phân tab ở FE. */
   getYear: async (year: number): Promise<HolidayProps[]> => {
     const filter = { dateValue: { between: [`${year}-01-01`, `${year}-12-31`] } };
     const query = queryString.stringify({
@@ -77,9 +94,12 @@ export const holidaysApi = {
     const res = await api.delete(`/api/pos/date-in-year/${dateValue}/holiday`);
     return res.data;
   },
-  /** Tạo các ngày còn thiếu của năm (không đổi ngày đã có). */
-  populateYear: async (year: number): Promise<HolidayProps[]> => {
-    const res = await api.post(`/api/pos/date-in-year/populate/${year}`);
+  /**
+   * Khởi tạo năm trong một transaction ở backend: tạo các ngày còn thiếu, phân loại theo thứ và đánh dấu
+   * ngày lễ đã chọn. Ngày đã có không bị đổi.
+   */
+  initializeYear: async (year: number, body: InitializeYearBody): Promise<InitializeYearResult> => {
+    const res = await api.post(`/api/pos/date-in-year/initialize/${year}`, body);
     return res.data;
   }
 };

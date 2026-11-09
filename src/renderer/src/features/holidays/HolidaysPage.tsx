@@ -1,5 +1,5 @@
-// Quản lý ngày V2: Ngày thường (T2–T5), Cuối tuần (T6–CN), Ngày lễ (IsHoliday). Ngày lễ không áp U22.
-// Loại giá (`DateTypeId`, dùng khi lên lịch suất chiếu) vẫn chỉnh bằng "Cập nhật loại giá ngày" như trước.
+// Danh sách ngày: phân loại Ngày thường / Cuối tuần theo dữ liệu thực tế (`DateTypeId`, thiết lập theo thứ bằng
+// "Thiết lập phân loại ngày"), Ngày lễ (`IsHoliday`) ưu tiên hiển thị. Màn này không hiển thị giá vé.
 import Icon from "@ant-design/icons";
 import AppBreadcrumb from "@renderer/components/AppBreadcrumb";
 import AutoHeightTable from "@renderer/components/AutoHeightTable";
@@ -7,7 +7,6 @@ import PageHeader from "@renderer/components/PageHeader";
 import RefreshButton from "@renderer/components/RefreshButton";
 import {
   useDateInYear,
-  usePopulateYear,
   useScreeningDates,
   useUnmarkHoliday
 } from "@renderer/hooks/holidays/useDateManagement";
@@ -17,13 +16,14 @@ import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import type { HolidayProps } from "@shared/types";
 import type { TableProps } from "antd";
-import { Alert, Button, DatePicker, Dropdown, Empty, Select, Space, Tabs } from "antd";
+import { Alert, Button, DatePicker, Empty, Select, Space, Tabs, Tag } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { ChevronDown, PlusIcon } from "lucide-react";
+import { CalendarDays, PlusIcon } from "lucide-react";
 import { useMemo, useState } from "react";
-import HolidayDialog from "./components/HolidayDialog";
+import DayClassificationDialog from "./components/DayClassificationDialog";
 import HolidayModal, { type HolidayModalState } from "./components/HolidayModal";
+import InitializeYearDialog from "./components/InitializeYearDialog";
 import {
   classifyDate,
   DATE_TAB_LABELS,
@@ -31,8 +31,7 @@ import {
   formatDate,
   formatWeekday,
   getTabAfterUnmark,
-  normalizeDateValue,
-  PRICE_TYPE_LABELS
+  normalizeDateValue
 } from "./dateClassification";
 
 const MONTH_OPTIONS = [
@@ -41,6 +40,7 @@ const MONTH_OPTIONS = [
 ];
 
 const TABS: DateTab[] = ["normal", "weekend", "holiday"];
+const TAB_COLORS: Record<DateTab, string> = { normal: "blue", weekend: "purple", holiday: "red" };
 
 const HolidaysPage = () => {
   const { message, modal } = useAntdApp();
@@ -50,14 +50,14 @@ const HolidaysPage = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [holidayModal, setHolidayModal] = useState<HolidayModalState | null>(null);
-  const [priceTypeDialog, setPriceTypeDialog] = useState<number | null>(null);
+  const [isClassificationOpen, setClassificationOpen] = useState(false);
+  const [isInitializeOpen, setInitializeOpen] = useState(false);
   const [highlighted, setHighlighted] = useState<string | null>(null);
 
   const selectedYear = year.year();
   const { data: days = [], isFetching, isError, error, refetch } = useDateInYear(selectedYear);
   const { data: screeningDates } = useScreeningDates(selectedYear);
   const unmarkHoliday = useUnmarkHoliday();
-  const populateYear = usePopulateYear();
   const { can } = usePermission();
   const canUpdate = can("holidays", "update");
   const canCreate = can("holidays", "create") || canUpdate;
@@ -97,15 +97,15 @@ const HolidaysPage = () => {
   };
 
   const confirmUnmark = (day: HolidayProps) => {
-    const backTo = DATE_TAB_LABELS[getTabAfterUnmark(day.dateValue)];
+    const backTo = DATE_TAB_LABELS[getTabAfterUnmark(day)];
     const hasScreenings = screeningDates?.has(day.dateValue);
     modal.confirm({
       title: `Bỏ đánh dấu ngày lễ ${formatDate(day.dateValue)}?`,
       content: (
         <div className="flex flex-col gap-1">
           <span>
-            {day.holidayName ? `"${day.holidayName}" ` : ""}sẽ trở về tab {backTo}. Loại giá của
-            ngày không đổi.
+            {day.holidayName ? `"${day.holidayName}" ` : ""}sẽ trở về tab {backTo}. Phân loại nền
+            của ngày không đổi.
           </span>
           {hasScreenings && (
             <span className="text-gray-500">
@@ -127,18 +127,6 @@ const HolidaysPage = () => {
           })
     });
   };
-
-  const initializeYear = () =>
-    populateYear.mutate(selectedYear, {
-      onSuccess: (created) =>
-        message.success(
-          `Đã khởi tạo ${formatNumber(created?.length ?? 0)} ngày cho năm ${selectedYear}`
-        ),
-      onError: (populateError) =>
-        message.error(
-          getSafeApiErrorMessage(populateError, `Không khởi tạo được năm ${selectedYear}`)
-        )
-    });
 
   const columns: TableProps<HolidayProps>["columns"] = [
     {
@@ -166,10 +154,12 @@ const HolidaysPage = () => {
       ? [{ title: "Tên ngày lễ", key: "holidayName", dataIndex: "holidayName" as const }]
       : []),
     {
-      title: "Loại giá (lên lịch suất chiếu)",
-      key: "dateTypeId",
-      dataIndex: "dateTypeId",
-      render: (value: number) => PRICE_TYPE_LABELS[value] ?? value
+      title: "Phân loại ngày",
+      key: "classification",
+      render: (_: unknown, day: HolidayProps) => {
+        const tab = classifyDate(day);
+        return <Tag color={TAB_COLORS[tab]}>{DATE_TAB_LABELS[tab]}</Tag>;
+      }
     },
     ...(canUpdate
       ? [
@@ -221,20 +211,13 @@ const HolidaysPage = () => {
           <>
             <RefreshButton loading={isFetching} onRefresh={() => refetch()} />
             {canUpdate && (
-              <Dropdown
-                trigger={["click"]}
-                menu={{
-                  items: [
-                    { key: "1", label: `Đặt "${PRICE_TYPE_LABELS[1]}"` },
-                    { key: "2", label: `Đặt "${PRICE_TYPE_LABELS[2]}"` }
-                  ],
-                  onClick: ({ key }) => setPriceTypeDialog(Number(key))
-                }}
+              <Button
+                // Icon nét của lucide (không bọc antd Icon: Icon tô fill currentColor làm icon bị đặc).
+                icon={<CalendarDays size={16} />}
+                onClick={() => setClassificationOpen(true)}
               >
-                <Button>
-                  Cập nhật loại giá ngày <ChevronDown size={14} />
-                </Button>
-              </Dropdown>
+                Thiết lập phân loại ngày
+              </Button>
             )}
             {canUpdate && (
               <Button
@@ -299,7 +282,7 @@ const HolidaysPage = () => {
       ) : yearIsEmpty ? (
         <Empty description={`Năm ${selectedYear} chưa có dữ liệu ngày`}>
           {canCreate && (
-            <Button type="primary" loading={populateYear.isPending} onClick={initializeYear}>
+            <Button type="primary" onClick={() => setInitializeOpen(true)}>
               Khởi tạo năm {selectedYear}
             </Button>
           )}
@@ -312,7 +295,9 @@ const HolidaysPage = () => {
           bordered
           size="small"
           loading={isFetching}
-          rowClassName={(record) => (record.dateValue === highlighted ? "bg-amber-50" : "")}
+          rowClassName={(record) =>
+            record.dateValue === highlighted ? "bg-amber-50 dark:bg-amber-400/15" : ""
+          }
           pagination={{
             current,
             pageSize,
@@ -345,14 +330,14 @@ const HolidaysPage = () => {
         />
       )}
 
-      {priceTypeDialog !== null && (
-        <HolidayDialog
-          open
-          onOpenChange={(open) => {
-            if (!open) setPriceTypeDialog(null);
-          }}
-          year={selectedYear}
-          dateTypeId={priceTypeDialog}
+      {isInitializeOpen && (
+        <InitializeYearDialog year={selectedYear} onClose={() => setInitializeOpen(false)} />
+      )}
+
+      {isClassificationOpen && (
+        <DayClassificationDialog
+          initialYear={selectedYear}
+          onClose={() => setClassificationOpen(false)}
         />
       )}
     </div>

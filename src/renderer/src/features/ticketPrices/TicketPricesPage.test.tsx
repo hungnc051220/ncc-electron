@@ -64,7 +64,7 @@ describe("TicketPricesPage", { timeout: 30000 }, () => {
     expect(screen.getByTestId("u22-group-weekend")).toHaveTextContent("70.000đ");
     expect(screen.getByTestId("u22-day-priceSat")).toHaveTextContent("70.000đ");
     expect(screen.getByTestId("u22-last-update")).toHaveTextContent("migration · 08/11/2026 09:00");
-    expect(screen.getByRole("link", { name: "Mở Quản lý ngày" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Mở Danh sách ngày" })).toHaveAttribute(
       "href",
       "/holidays"
     );

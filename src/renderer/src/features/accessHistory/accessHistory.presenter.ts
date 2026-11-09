@@ -254,6 +254,9 @@ const getEntityLabel = (
     };
   }
 
+  if (definition?.fixedEntityLabel)
+    return { label: definition.fixedEntityLabel, source: undefined };
+
   const entityCode = record.entityId === null ? null : String(record.entityId);
   return {
     label: entityCode ? `${modelLabel} #${entityCode}` : modelLabel,

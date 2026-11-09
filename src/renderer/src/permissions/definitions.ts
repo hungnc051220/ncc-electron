@@ -114,7 +114,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   {
     key: "holidays",
     module: "Quản lý danh sách",
-    label: "Quản lý ngày",
+    label: "Danh sách ngày",
     route: "/holidays",
     actions: ["access", "list", "view", "create", "update", "delete"]
   },

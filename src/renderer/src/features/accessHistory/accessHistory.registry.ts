@@ -392,6 +392,23 @@ const MODEL_REGISTRY_VALUE: Record<string, AuditModelDefinition> = {
       deleted: COMMON_FIELDS.deleted
     }
   },
+  // Cấu hình giá vé U22 (một dòng, BE ghi StaffAuditLog khi PUT /api/pos/u22-price-config).
+  U22PriceConfig: {
+    label: "Giá vé U22",
+    sentenceLabel: "giá vé U22",
+    entityNamePaths: [],
+    fixedEntityLabel: "Giá vé U22",
+    allowCommonFields: false,
+    fields: {
+      priceMon: field("Giá Thứ 2", "money", 1),
+      priceTue: field("Giá Thứ 3", "money", 2),
+      priceWed: field("Giá Thứ 4", "money", 3),
+      priceThu: field("Giá Thứ 5", "money", 4),
+      priceFri: field("Giá Thứ 6", "money", 5),
+      priceSat: field("Giá Thứ 7", "money", 6),
+      priceSun: field("Giá Chủ nhật", "money", 7)
+    }
+  },
   Customer: USER_ACCOUNT_MODEL_DEFINITION,
   User: USER_ACCOUNT_MODEL_DEFINITION
 };
@@ -448,6 +465,8 @@ const SENSITIVE_FIELD_PATTERNS = [
 
 const TECHNICAL_FIELDS = new Set([
   "id",
+  // Bộ đếm khóa lạc quan (vd. U22PriceConfig.version): không phải nội dung nghiệp vụ.
+  "version",
   "storeid",
   "createdat",
   "updatedat",
