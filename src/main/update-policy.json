@@ -1,10 +1,13 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.121",
+  "latestVersion": "1.0.122",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
   "messages": [
+    "Thêm giá vé U22 theo từng ngày trong tuần, thu ngân xem và xác nhận giá U22 trước khi bán vé.",
+    "Thêm Danh sách ngày để đánh dấu ngày lễ và phân loại ngày trong năm.",
+    "Làm mới màn thanh toán QR, dễ theo dõi trạng thái thanh toán hơn.",
     "Thêm quản lý voucher giấy và cho phép thanh toán phần còn lại bằng VietQR, VNPay QR ngay tại quầy."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.121"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.122"
 }
