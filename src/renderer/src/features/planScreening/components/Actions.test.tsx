@@ -3251,6 +3251,25 @@ describe("Actions paper voucher QR hardening (B3)", () => {
       expect(paidMessages()).toHaveLength(1);
       expect(window.api.sendQrClose).toHaveBeenCalledTimes(1);
     }, 30000);
+
+    it("socket success closes the QR while Kiểm tra lại is still in flight: selling waits for it to end", async () => {
+      await openVoucherQrWithCode(PaymentType.VNPAY);
+      const detail = deferred<unknown>();
+      mocks.getOrderDetail.mockReturnValue(detail.promise);
+
+      fireEvent.click(screen.getByRole("button", { name: "Kiem tra QR" }));
+      await waitFor(() => expect(mocks.getOrderDetail).toHaveBeenCalledTimes(1));
+      await act(async () => {
+        paymentUpdatedHandler?.({ paymentStatus: 30, orderId: String(VOUCHER_QR_ORDER_ID) });
+      });
+      await waitFor(() => expect(screen.queryByTestId("qr-dialog")).not.toBeInTheDocument());
+
+      // A new sale started now would have its QR silently dropped by the busy QR lock.
+      expect(getPrintButton()).toBeDisabled();
+      await act(async () => detail.resolve(createVoucherQrDetail("applied", "success")));
+      await waitFor(() => expect(getPrintButton()).toBeEnabled());
+      expect(paidMessages()).toHaveLength(1);
+    }, 30000);
   });
 });
 

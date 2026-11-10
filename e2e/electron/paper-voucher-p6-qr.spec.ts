@@ -1164,7 +1164,13 @@ test("P6-E2E-28 [E05 N6] Redis hồi phục: Tạo lại QR cùng đơn → mộ
     redis: { mode: "error", keyPrefix: "paper-voucher:qr-creation:" }
   });
   await printButton(pos.page).click();
-  await expect(qrUnavailable(pos.page)).toBeVisible({ timeout: 30000 });
+  // Chờ hết lượt tự thử lại (4 create-qr) và thông báo cuối: trước đó nút Tạo lại QR đang loading và bỏ qua click,
+  // còn lượt tự thử lại kế tiếp sẽ tự tạo được QR khi Redis hồi phục (thì bấm đúp không được kiểm tra).
+  await expect(qrUnavailable(pos.page)).toContainText("Máy chủ tạm thời chưa tạo được QR", {
+    timeout: 30000
+  });
+  await expect.poll(() => createQrCalls(pos!)).toBe(4);
+  await expect(qrUnavailable(pos.page)).not.toContainText("Đang tự tạo lại");
   const [orderId] = qaOrderIds();
 
   await qaApi("POST", "/__qa/api/faults", { clear: true });
