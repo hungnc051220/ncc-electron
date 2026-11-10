@@ -13,7 +13,9 @@ import {
   UpdatePolicy,
   UpdateReadyInfo,
   UpdateDownloadProgress,
-  UpdateInfo
+  UpdateInfo,
+  UpdateCheckResult,
+  UpdateErrorPayload
 } from "@shared/types";
 
 // Custom APIs for renderer
@@ -74,7 +76,7 @@ const api: PreloadAPI = {
   saveFile: (params) => ipcRenderer.invoke("save-file", params),
   getVersion: (): Promise<string> => ipcRenderer.invoke("app:get-version"),
   getUpdatePolicy: (): Promise<UpdatePolicy> => ipcRenderer.invoke("app:get-update-policy"),
-  checkUpdate: () => ipcRenderer.invoke("app:check-update"),
+  checkUpdate: (): Promise<UpdateCheckResult> => ipcRenderer.invoke("app:check-update"),
   startDownload: (): Promise<void> => ipcRenderer.invoke("app:start-download"),
   install: (options?: { isSilent?: boolean }): Promise<void> =>
     ipcRenderer.invoke("app:install-update", options),
@@ -99,8 +101,8 @@ const api: PreloadAPI = {
     ipcRenderer.on("update:ready", handler);
     return () => ipcRenderer.removeListener("update:ready", handler);
   },
-  onError: (cb: (msg: string) => void) => {
-    const handler = (_: unknown, msg: string) => cb(msg);
+  onError: (cb: (error: UpdateErrorPayload) => void) => {
+    const handler = (_: unknown, error: UpdateErrorPayload) => cb(error);
     ipcRenderer.on("update:error", handler);
     return () => ipcRenderer.removeListener("update:error", handler);
   },
