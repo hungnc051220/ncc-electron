@@ -73,7 +73,11 @@ function setQuittingForUpdate(isInstalling: boolean) {
   if (isInstalling) {
     hasConfirmedAppQuit = true;
     isQuitConfirmationOpen = false;
+    return;
   }
+
+  // Cài cập nhật thất bại: app tiếp tục chạy nên lần thoát sau phải hỏi xác nhận như bình thường.
+  hasConfirmedAppQuit = false;
 }
 
 async function confirmAppQuit(parentWindow?: BrowserWindow | null) {

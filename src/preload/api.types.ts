@@ -13,7 +13,9 @@ import {
   UpdatePolicy,
   UpdateReadyInfo,
   UpdateDownloadProgress,
-  UpdateInfo
+  UpdateInfo,
+  UpdateCheckResult,
+  UpdateErrorPayload
 } from "@shared/types";
 
 export interface CustomerScreenPayload {
@@ -69,14 +71,14 @@ export interface PreloadAPI {
   saveFile(params: SaveFileParams): Promise<SaveFileResult>;
   getVersion(): Promise<string>;
   getUpdatePolicy(): Promise<UpdatePolicy>;
-  checkUpdate(): Promise<UpdateInfo | null>;
+  checkUpdate(): Promise<UpdateCheckResult>;
   startDownload(): Promise<void>;
   install(options?: { isSilent?: boolean }): Promise<void>;
   onAvailable(cb: (info: UpdateInfo) => void): () => void;
   onUpdatePolicy(cb: (policy: UpdatePolicy) => void): () => void;
   onProgress(cb: (progress: UpdateDownloadProgress) => void): () => void;
   onReady(cb: (info?: UpdateReadyInfo) => void): () => void;
-  onError(cb: (msg: string) => void): () => void;
+  onError(cb: (error: UpdateErrorPayload) => void): () => void;
   getPrinters: () => Promise<Electron.PrinterInfo[]>;
   sendThemeUpdate: (theme: AppTheme) => void;
   requestTheme: () => void;

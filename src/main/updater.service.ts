@@ -1,6 +1,20 @@
 import { app, BrowserWindow, ipcMain } from "electron";
+import { join } from "path";
 import { autoUpdater, UpdateInfo as ElectronUpdateInfo } from "electron-updater";
-import { UpdateMode, UpdatePolicy } from "@shared/types";
+import {
+  UpdateCheckResult,
+  UpdateErrorCode,
+  UpdateErrorPayload,
+  UpdateErrorStage,
+  UpdateMode,
+  UpdatePolicy
+} from "@shared/types";
+import {
+  appendUpdateErrorLog,
+  classifyUpdateError,
+  createUpdateErrorLogEntry,
+  createUpdateErrorPayload
+} from "./update-error";
 
 const appReleaseChannel = process.env.APP_RELEASE_CHANNEL ?? "latest";
 const defaultUpdatePolicyUrl =
@@ -9,6 +23,11 @@ const updatePolicyUrl = process.env.APP_UPDATE_POLICY_URL || defaultUpdatePolicy
 
 let latestPolicy: UpdatePolicy | null = null;
 let latestMode: UpdateMode = "optional";
+let isCheckInProgress = false;
+let isStartupCheck = false;
+let isDownloadInProgress = false;
+let isInstallRequested = false;
+const reportedErrors = new WeakSet<object>();
 
 function safeSend(win: BrowserWindow, channel: string, ...args: unknown[]) {
   if (win.isDestroyed() || win.webContents.isDestroyed()) {
@@ -88,6 +107,63 @@ function resolvePolicyMode(policy: UpdatePolicy): UpdateMode {
   return policy.mode;
 }
 
+function getUpdaterLogPath() {
+  return join(app.getPath("logs"), "updater.log");
+}
+
+interface LogUpdateErrorOptions {
+  error: unknown;
+  stage: UpdateErrorStage;
+  source: string;
+  code?: UpdateErrorCode;
+}
+
+/** Ghi log kỹ thuật (đã che thông tin nhạy cảm) và trả về mã lỗi đã chuẩn hóa. */
+function logUpdateError({ error, stage, source, code }: LogUpdateErrorOptions): UpdateErrorCode {
+  const resolvedCode = code ?? classifyUpdateError(error, stage);
+  const entry = createUpdateErrorLogEntry({
+    error,
+    code: resolvedCode,
+    stage,
+    source,
+    appVersion: app.getVersion()
+  });
+
+  console.error("[updater]", JSON.stringify(entry));
+  void appendUpdateErrorLog(getUpdaterLogPath(), entry);
+
+  return resolvedCode;
+}
+
+interface ReportUpdateErrorOptions extends LogUpdateErrorOptions {
+  notify: boolean;
+}
+
+/**
+ * Một lỗi của electron-updater vừa phát event `error` vừa reject promise; WeakSet đảm bảo mỗi lỗi
+ * chỉ được log và báo renderer một lần.
+ */
+function reportUpdateError(win: BrowserWindow, options: ReportUpdateErrorOptions) {
+  const { error, stage, notify } = options;
+  const isObjectError = Boolean(error) && typeof error === "object";
+
+  if (isObjectError && reportedErrors.has(error as object)) {
+    return createUpdateErrorPayload(options.code ?? classifyUpdateError(error, stage), stage);
+  }
+
+  if (isObjectError) {
+    reportedErrors.add(error as object);
+  }
+
+  const payload: UpdateErrorPayload = createUpdateErrorPayload(logUpdateError(options), stage);
+
+  if (notify) {
+    safeSend(win, "update:error", payload);
+  }
+
+  return payload;
+}
+
 async function fetchUpdatePolicy(): Promise<UpdatePolicy> {
   if (!updatePolicyUrl) {
     return createFallbackPolicy();
@@ -112,7 +188,7 @@ async function fetchUpdatePolicy(): Promise<UpdatePolicy> {
 
     return normalizePolicy(await response.json());
   } catch (error) {
-    console.error("[updater] fetch policy failed", error);
+    logUpdateError({ error, stage: "check", source: "policy-fetch" });
     return createFallbackPolicy();
   }
 }
@@ -133,27 +209,11 @@ function emitPolicy(win: BrowserWindow, policy: UpdatePolicy) {
   });
 }
 
-function getLinuxManualInstallMessage() {
-  return [
-    "Không thể cài cập nhật tự động cho gói Linux hiện tại.",
-    "Nếu đang dùng AppImage, hãy mở ứng dụng trực tiếp từ file .AppImage để hệ thống nhận biến APPIMAGE.",
-    "Nếu đang dùng bản .deb, vui lòng tải và cài file .deb hoặc .AppImage mới từ trang phát hành."
-  ].join(" ");
-}
-
-function getUpdateErrorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-
-  if (process.platform === "linux" && /pkexec|polkit|error code 127/i.test(message)) {
-    return `${message}. Máy Linux không chạy được trình nâng quyền pkexec/Polkit, vui lòng cài thủ công bản mới.`;
-  }
-
-  return message;
-}
-
 async function refreshPolicy(win?: BrowserWindow) {
   latestPolicy = await fetchUpdatePolicy();
   latestMode = resolvePolicyMode(latestPolicy);
+  // Khi policy tạm dừng cập nhật, bản đã tải sẵn trong phiên này không tự cài lúc thoát app.
+  autoUpdater.autoInstallOnAppQuit = latestPolicy.enabled;
 
   if (win) {
     emitPolicy(win, latestPolicy);
@@ -165,6 +225,41 @@ async function refreshPolicy(win?: BrowserWindow) {
   };
 }
 
+function getActiveStage(): UpdateErrorStage {
+  if (isInstallRequested) return "install";
+  if (isCheckInProgress) return "check";
+  if (isDownloadInProgress) return "download";
+
+  return "check";
+}
+
+async function runUpdateCheck(win: BrowserWindow, isStartup: boolean): Promise<UpdateCheckResult> {
+  isCheckInProgress = true;
+  // Lần kiểm tra chạy nền lúc khởi động chỉ ghi log khi lỗi, không làm phiền thu ngân.
+  isStartupCheck = isStartup;
+
+  try {
+    const result = await autoUpdater.checkForUpdates();
+
+    return {
+      status: "checked",
+      info: result?.updateInfo ? createUpdatePayload(result.updateInfo) : null
+    };
+  } catch (error) {
+    const payload = reportUpdateError(win, {
+      error,
+      stage: "check",
+      source: "checkForUpdates",
+      notify: !isStartup
+    });
+
+    return { status: "failed", error: payload };
+  } finally {
+    isCheckInProgress = false;
+    isStartupCheck = false;
+  }
+}
+
 interface SetupUpdaterOptions {
   onInstallUpdateStateChange?: (isInstalling: boolean) => void;
 }
@@ -173,29 +268,47 @@ export function setupUpdater(win: BrowserWindow, setupOptions?: SetupUpdaterOpti
   const isDev = !app.isPackaged;
   const isDevReleaseChannel = appReleaseChannel === "dev";
 
+  const resetInstallState = () => {
+    isInstallRequested = false;
+    setupOptions?.onInstallUpdateStateChange?.(false);
+  };
+
   ipcMain.handle("app:get-version", () => app.getVersion());
 
   ipcMain.handle("app:get-update-policy", async () => {
     return refreshPolicy(win);
   });
 
-  ipcMain.handle("app:check-update", async () => {
+  ipcMain.handle("app:check-update", async (): Promise<UpdateCheckResult> => {
     const policy = await refreshPolicy(win);
 
     if (!policy.enabled) {
-      return null;
+      return { status: "disabled" };
     }
 
-    if (isDev) return null;
+    if (isDev) return { status: "checked", info: null };
 
-    const result = await autoUpdater.checkForUpdates();
-    return result?.updateInfo ? createUpdatePayload(result.updateInfo) : null;
+    return runUpdateCheck(win, false);
   });
 
   ipcMain.handle("app:start-download", () => {
-    if (isDev) return;
+    if (isDev || latestPolicy?.enabled === false) return;
 
-    autoUpdater.downloadUpdate();
+    isDownloadInProgress = true;
+    // electron-updater tự gộp các lần gọi trùng khi đang tải, nên retry không tạo download thứ hai.
+    void autoUpdater
+      .downloadUpdate()
+      .catch((error: unknown) => {
+        reportUpdateError(win, {
+          error,
+          stage: "download",
+          source: "downloadUpdate",
+          notify: true
+        });
+      })
+      .finally(() => {
+        isDownloadInProgress = false;
+      });
   });
 
   ipcMain.handle("app:install-update", (_, options?: { isSilent?: boolean }) => {
@@ -204,16 +317,24 @@ export function setupUpdater(win: BrowserWindow, setupOptions?: SetupUpdaterOpti
     }
 
     if (process.platform === "linux" && !process.env.APPIMAGE) {
-      safeSend(win, "update:error", getLinuxManualInstallMessage());
+      reportUpdateError(win, {
+        error: new Error("Linux package is not an AppImage (APPIMAGE env missing)"),
+        stage: "install",
+        source: "install-precheck",
+        code: "UPDATE_MANUAL_INSTALL_REQUIRED",
+        notify: true
+      });
       return;
     }
 
+    isInstallRequested = true;
+    setupOptions?.onInstallUpdateStateChange?.(true);
+
     try {
-      setupOptions?.onInstallUpdateStateChange?.(true);
       autoUpdater.quitAndInstall(Boolean(options?.isSilent), true);
     } catch (error) {
-      setupOptions?.onInstallUpdateStateChange?.(false);
-      safeSend(win, "update:error", getUpdateErrorMessage(error));
+      reportUpdateError(win, { error, stage: "install", source: "quitAndInstall", notify: true });
+      resetInstallState();
     }
   });
 
@@ -243,13 +364,23 @@ export function setupUpdater(win: BrowserWindow, setupOptions?: SetupUpdaterOpti
     });
   });
 
-  autoUpdater.on("error", (err) => {
-    safeSend(win, "update:error", getUpdateErrorMessage(err));
-  });
+  autoUpdater.on("error", (error) => {
+    const stage = getActiveStage();
 
-  void refreshPolicy(win).then((policy) => {
-    if (policy.enabled) {
-      void autoUpdater.checkForUpdates();
+    reportUpdateError(win, {
+      error,
+      stage,
+      source: "autoUpdater:error",
+      notify: !(stage === "check" && isStartupCheck)
+    });
+
+    // quitAndInstall thất bại không throw mà chỉ phát event: trả app về trạng thái bình thường.
+    if (stage === "install") {
+      resetInstallState();
     }
   });
+
+  void refreshPolicy(win).then((policy) =>
+    policy.enabled ? runUpdateCheck(win, true) : undefined
+  );
 }
