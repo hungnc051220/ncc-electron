@@ -211,7 +211,10 @@ export const getScreeningU22Status = ({
   }
   if (policy.priceMode === "UNIFORM") return blockedStatus("Đồng giá", U22_STATUS_TOOLTIPS.uniform);
   if (versionCode && !isU22Version(versionCode)) {
-    return blockedStatus(`Không hỗ trợ ${versionCode.trim().toUpperCase()}`, U22_STATUS_TOOLTIPS.version);
+    return blockedStatus(
+      `Không hỗ trợ ${versionCode.trim().toUpperCase()}`,
+      U22_STATUS_TOOLTIPS.version
+    );
   }
   // Muốn kết luận "được xét" hay "tắt thủ công" thì phải biết đủ chính sách ngày và phiên bản phim.
   if (!day || typeof day.isHoliday !== "boolean" || typeof day.isPromotionExcluded !== "boolean") {

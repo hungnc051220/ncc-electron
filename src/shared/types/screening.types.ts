@@ -25,7 +25,7 @@ export interface PlanScreeningDetailProps {
   orders: string[];
   listSeats: ListSeat[][];
   /** Chính sách U22 theo suất (backend V3.2); backend cũ không trả. */
-  u22Policy?: PlanScreeningU22Policy;
+  u22Policy?: PlanScreeningU22Policy | null;
 }
 
 /** Lý do U22 đang bị chặn cho một suất (`GET /api/pos/plan-screenings/:id` → `u22Policy.blockedReasons`). */

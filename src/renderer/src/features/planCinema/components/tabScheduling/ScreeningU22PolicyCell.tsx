@@ -2,11 +2,13 @@
 // hàng khi thật sự hợp lệ ("Bật lại" cho suất bị quản lý tắt, "Tắt" cho suất đang được xét). Lý do bắt buộc (ngày lễ,
 // ngày không áp U22, Đồng giá, phiên bản) hiện nhỏ màu xám dưới badge và không có thao tác bật. Đổi U22 qua
 // PATCH `{ u22Enabled }`, có xác nhận; không đổi giá, không đụng ưu đãi khác.
+import { invalidatePlanScreeningsQueries } from "@renderer/hooks/planScreenings/invalidatePlanScreeningsQueries";
 import { useUpdatePlanScreening } from "@renderer/hooks/planScreenings/useUpdatePlanScreening";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getApiErrorCode, getSafeApiErrorMessage } from "@renderer/lib/apiError";
 import { isPlanScreeningLocked } from "@renderer/lib/utils";
 import type { HolidayProps, PlanScreeningDetailProps } from "@shared/types";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, Tag, Tooltip, Typography } from "antd";
 import dayjs from "dayjs";
 import { getScreeningU22Status, getU22PolicyInvalidMessage } from "./u22Screening";
@@ -14,6 +16,8 @@ import { getScreeningU22Status, getU22PolicyInvalidMessage } from "./u22Screenin
 type ScreeningU22PolicyCellProps = {
   screening: PlanScreeningDetailProps;
   canUpdate: boolean;
+  /** Backend V3.2 trên DB đủ cấu trúc (`rules.ready`): chỉ khi đó mới có thao tác bật/tắt U22 theo suất. */
+  canToggle: boolean;
   /** Ngày chiếu trong Danh sách ngày; `undefined` khi chưa tải được. */
   day?: Pick<HolidayProps, "isHoliday" | "isPromotionExcluded"> | null;
   /** Phiên bản phim của suất; `undefined` khi chưa biết. */
@@ -23,7 +27,12 @@ type ScreeningU22PolicyCellProps = {
 const PENDING_TRANSACTIONS_MESSAGE =
   "Suất chiếu đang có giao dịch dở dang (đơn tạm hoặc thanh toán đang chờ), chưa đổi được ưu đãi U22. Vui lòng thử lại sau.";
 
-const TAG_COLORS = { success: "success", warning: "warning", error: "error", default: undefined } as const;
+const TAG_COLORS = {
+  success: "success",
+  warning: "warning",
+  error: "error",
+  default: undefined
+} as const;
 
 /** Thông báo lỗi khi đổi U22 của suất. */
 export const getU22ToggleErrorMessage = (error: unknown) => {
@@ -38,16 +47,18 @@ export const getU22ToggleErrorMessage = (error: unknown) => {
 const ScreeningU22PolicyCell = ({
   screening,
   canUpdate,
+  canToggle,
   day,
   versionCode
 }: ScreeningU22PolicyCellProps) => {
   const { message, modal } = useAntdApp();
+  const queryClient = useQueryClient();
   const updatePlanScreening = useUpdatePlanScreening();
   const status = getScreeningU22Status({ policy: screening.u22Policy, day, versionCode });
   if (!status) return null;
 
   const isLocked = isPlanScreeningLocked(screening.projectDate, screening.projectTime);
-  const action = canUpdate && !isLocked ? status.action : null;
+  const action = canUpdate && canToggle && !isLocked ? status.action : null;
   const enabling = action === "enable";
   const screeningLabel = `${dayjs(screening.projectDate).format("DD/MM/YYYY")} ${dayjs(screening.projectTime).format("HH:mm")} · ${screening.filmInfo?.filmName ?? `#${screening.filmId}`}`;
 
@@ -70,16 +81,26 @@ const ScreeningU22PolicyCell = ({
         updatePlanScreening
           .mutateAsync({ id: screening.id, dto: { u22Enabled: enabling } })
           .then(() =>
-            message.success(enabling ? "Đã cho phép xét U22 cho suất" : "Đã tắt ưu đãi U22 cho suất")
+            message.success(
+              enabling ? "Đã cho phép xét U22 cho suất" : "Đã tắt ưu đãi U22 cho suất"
+            )
           )
-          .catch((error: unknown) => message.error(getU22ToggleErrorMessage(error)))
+          .catch((error: unknown) => {
+            message.error(getU22ToggleErrorMessage(error));
+            // Điều kiện của suất/ngày có thể vừa đổi: tải lại để badge và thao tác phản ánh đúng máy chủ.
+            void invalidatePlanScreeningsQueries(queryClient);
+          })
     });
 
   return (
     <div className="flex flex-col justify-center gap-0.5">
       <div className="flex items-center gap-2 whitespace-nowrap">
         <Tooltip title={status.tooltip}>
-          <Tag color={TAG_COLORS[status.tone]} variant="filled" className="m-0 px-2 text-xs leading-5">
+          <Tag
+            color={TAG_COLORS[status.tone]}
+            variant="filled"
+            className="m-0 px-2 text-xs leading-5"
+          >
             {status.label}
           </Tag>
         </Tooltip>

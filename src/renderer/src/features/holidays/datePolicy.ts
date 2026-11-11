@@ -10,7 +10,7 @@
  *   chưa đọc được. Chỉ U22 bị chặn theo ngày; các ưu đãi khác không đổi.
  */
 import type { HolidayProps, PricingRules } from "@shared/types";
-import { DATE_TAB_LABELS, formatWeekday, getBaseTab } from "./dateClassification";
+import { getBaseTab } from "./dateClassification";
 
 type DayFlags = Pick<
   HolidayProps,
@@ -19,22 +19,6 @@ type DayFlags = Pick<
 
 /** Backend V3.2 có đủ cấu trúc DB: cho phép các thao tác mới (giá vé áp dụng, không áp ưu đãi, U22 theo suất). */
 export const isRulesReady = (rules?: PricingRules | null) => Boolean(rules?.ready);
-
-/** "Ngày thường" / "Cuối tuần" theo `DateTypeId`, bỏ qua cờ lễ. */
-export const getBaseTypeLabel = (day: Pick<HolidayProps, "dateTypeId">) =>
-  DATE_TAB_LABELS[getBaseTab(day)];
-
-export const HOLIDAY_PRICE_MODE_LABELS = {
-  holiday: "Giá ngày lễ",
-  weekday: "Theo ngày trong tuần"
-} as const;
-
-/** Nhãn chế độ giá của ngày lễ; `null` khi chưa biết (không đọc được hoặc backend cũ). */
-export const getHolidayPriceModeLabel = (applyHolidayPrice?: boolean | null) => {
-  if (applyHolidayPrice === true) return HOLIDAY_PRICE_MODE_LABELS.holiday;
-  if (applyHolidayPrice === false) return HOLIDAY_PRICE_MODE_LABELS.weekday;
-  return null;
-};
 
 export const PRICE_MODE_UNREADABLE_NOTE =
   "Không đọc được chế độ giá của ngày lễ. Máy chủ từ chối tra giá cho ngày này cho tới khi đọc được.";
@@ -57,19 +41,6 @@ export const getTicketPriceGroup = (day: DayFlags): TicketPriceGroup => {
   return getBaseTab(day) === "weekend"
     ? { label: "Giá cuối tuần", tone: "weekend" }
     : { label: "Giá ngày thường", tone: "normal" };
-};
-
-/**
- * Preview trực tiếp của lựa chọn "Giá vé áp dụng" trong dialog Chỉnh sửa ngày lễ, vd. "Thứ 3 — Áp dụng giá
- * ngày thường." / "Thứ 7 — Áp dụng giá cuối tuần.".
- */
-export const describeHolidayPriceChoice = (
-  day: Pick<HolidayProps, "dateValue" | "dateTypeId">,
-  applyHolidayPrice: boolean
-) => {
-  if (applyHolidayPrice) return "Áp dụng giá ngày lễ.";
-  const group = getBaseTab(day) === "weekend" ? "cuối tuần" : "ngày thường";
-  return `${formatWeekday(day.dateValue)} — Áp dụng giá ${group}.`;
 };
 
 /**

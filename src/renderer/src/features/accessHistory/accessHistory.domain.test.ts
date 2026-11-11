@@ -902,7 +902,7 @@ describe("DateInYear activity (StaffAuditLog rows written by the holiday routes 
     expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_FIELDS");
     expect(result.changes.map((change) => change.label)).toEqual(["Giá vé áp dụng"]);
     expect(JSON.stringify(result.changes)).toContain("Giá ngày lễ");
-    expect(JSON.stringify(result.changes)).toContain("Theo ngày trong tuần");
+    expect(JSON.stringify(result.changes)).toContain("Theo giá ngày trong tuần");
   });
 
   it("describes Khởi tạo năm without unknown fields", () => {

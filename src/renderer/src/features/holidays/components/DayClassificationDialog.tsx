@@ -3,6 +3,7 @@
 // đã bỏ (vd. đổi ngày nghỉ liền kề 01/09 → 03/09). Đọc cấu hình thực tế từ dữ liệu ngày của năm, chỉ ghi các ngày
 // thực sự đổi. Luôn giữ nguyên ngày đặc biệt NCC cấu hình riêng và ngày lễ đã có (kể cả tên).
 import { useDateInYear, useReclassifyDays } from "@renderer/hooks/holidays/useDateManagement";
+import { PRICING_SCHEMA_NOT_READY_MESSAGE } from "@renderer/api/pricingRules.api";
 import { usePricingRules } from "@renderer/hooks/ticketPrices/usePricingRules";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getSafeApiErrorMessage } from "@renderer/lib/apiError";
@@ -98,7 +99,9 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
   const { data: rawDays = [], isFetching, isError, error } = useDateInYear(year);
   const reclassify = useReclassifyDays();
   // Backend V3.2 đủ cấu trúc: ngày lễ mặc định được đánh dấu kèm "Giá vé áp dụng" gợi ý (20/10, 31/10, 20/11
-  // theo ngày trong tuần). Backend cũ / chưa đủ cấu trúc: chỉ gửi tên, backend giữ chế độ giá đang lưu.
+  // theo ngày trong tuần). Backend cũ (rules 404 → `null`): chỉ gửi tên. Chưa biết (đang tải / lỗi → `undefined`)
+  // hoặc DB chưa đủ cấu trúc: không đánh dấu, vì backend V3.2 mặc định "Giá ngày lễ" cho ngày lễ mới và gợi ý
+  // "Theo giá ngày trong tuần" sẽ bị mất.
   const { data: pricingRules } = usePricingRules();
   const canSavePriceMode = isRulesReady(pricingRules);
 
@@ -141,6 +144,13 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
   const holidaysToMark = missingHolidays.filter((holiday) =>
     pickedDates.includes(holiday.dateValue)
   );
+  const holidayMarkBlockReason =
+    pricingRules === undefined
+      ? "Chưa tải được cấu hình giá vé từ máy chủ, chưa thể đánh dấu ngày lễ mặc định. Vui lòng thử lại."
+      : pricingRules !== null && !canSavePriceMode
+        ? `${PRICING_SCHEMA_NOT_READY_MESSAGE} Chưa thể đánh dấu ngày lễ mặc định.`
+        : null;
+  const isHolidayMarkBlocked = holidaysToMark.length > 0 && holidayMarkBlockReason !== null;
   const changedCount = plan.toNormal.length + plan.toWeekend.length;
   const hasChanges = changedCount + holidaysToMark.length > 0;
   const holidaysTouched = [...plan.toNormal, ...plan.toWeekend].filter((day) => day.isHoliday);
@@ -471,6 +481,14 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
           {weekdayList}
           <div className="flex flex-col gap-3 lg:pt-8">{rules}</div>
         </div>
+        {isHolidayMarkBlocked && (
+          <Alert
+            type="warning"
+            showIcon
+            title={holidayMarkBlockReason}
+            data-testid="holiday-mark-blocked"
+          />
+        )}
       </>
     );
   };
@@ -515,7 +533,7 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
               type="primary"
               onClick={save}
               loading={reclassify.isPending}
-              disabled={!canEdit || !hasChanges || isFetching}
+              disabled={!canEdit || !hasChanges || isFetching || isHolidayMarkBlocked}
             >
               Lưu thiết lập
             </Button>

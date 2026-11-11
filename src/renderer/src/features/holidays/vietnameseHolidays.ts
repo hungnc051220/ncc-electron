@@ -5,14 +5,14 @@
  *   Tết Nguyên đán 5 ngày (ngày cuối năm âm lịch → mùng 4); Giỗ Tổ Hùng Vương 10/3 âm lịch; 30/4; 1/5;
  *   Quốc khánh 02/09 và ngày liền kề mặc định 01/09 (năm nào khác thì Admin sửa tay). Gợi ý "Giá ngày lễ".
  * - 6 ngày lễ của NCC (kế hoạch D18): 14/02, 08/03, 24/12 gợi ý "Giá ngày lễ" (chính sách giá vé công bố);
- *   20/10, 31/10, 20/11 gợi ý "Theo ngày trong tuần" — vẫn nằm ở tab Ngày lễ, không áp U22, nhưng không bị ép
+ *   20/10, 31/10, 20/11 gợi ý "Theo giá ngày trong tuần" — vẫn nằm ở tab Ngày lễ, không áp U22, nhưng không bị ép
  *   giá ngày lễ.
  * Trùng ngày (vd. 14/02/2029 là Tết Mùng 2) thì chỉ giữ một dòng, ưu tiên ngày nghỉ lễ luật định.
  * Âm lịch quy đổi theo thuật toán của Hồ Ngọc Đức (múi giờ +7, lịch Việt Nam).
  */
 import dayjs from "dayjs";
 
-/** `applyHolidayPrice`: gợi ý "Giá vé áp dụng" (`true` = Giá ngày lễ, `false` = Theo ngày trong tuần). */
+/** `applyHolidayPrice`: gợi ý "Giá vé áp dụng" (`true` = Giá ngày lễ, `false` = Theo giá ngày trong tuần). */
 export type DefaultHoliday = { dateValue: string; holidayName: string; applyHolidayPrice: boolean };
 
 const TIME_ZONE = 7;
@@ -129,10 +129,6 @@ export const NCC_HOLIDAYS = [
   { monthDay: "11-20", holidayName: "Nhà giáo Việt Nam", applyHolidayPrice: false },
   { monthDay: "12-24", holidayName: "Giáng sinh", applyHolidayPrice: true }
 ] as const;
-
-/** "Giá vé áp dụng" gợi ý cho một ngày lễ NCC (`MM-DD` khớp); `undefined` với các ngày khác. */
-export const getSuggestedApplyHolidayPrice = (dateValue: string): boolean | undefined =>
-  NCC_HOLIDAYS.find(({ monthDay }) => dateValue.slice(5, 10) === monthDay)?.applyHolidayPrice;
 
 const getNccHolidays = (year: number): DefaultHoliday[] =>
   NCC_HOLIDAYS.map(({ monthDay, holidayName, applyHolidayPrice }) => ({

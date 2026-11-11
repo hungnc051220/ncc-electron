@@ -22,7 +22,17 @@ import { formatNumber } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import type { HolidayProps, PricingRules } from "@shared/types";
 import type { MenuProps, TableProps } from "antd";
-import { Alert, Button, DatePicker, Dropdown, Empty, Select, Tabs, Tooltip, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  DatePicker,
+  Dropdown,
+  Empty,
+  Select,
+  Tabs,
+  Tooltip,
+  Typography
+} from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import {
@@ -124,8 +134,10 @@ const HolidaysPage = () => {
   const { data: days = [], isFetching, isError, error, refetch } = useDateInYear(selectedYear);
   const { data: screeningDates } = useScreeningDates(selectedYear);
   const { data: rulesData } = usePricingRules();
-  // `undefined` (đang tải / lỗi) và `null` (backend cũ) đều coi là chưa hỗ trợ.
+  // Hiển thị: `undefined` (đang tải / lỗi) và `null` (backend cũ) đều coi là chưa hỗ trợ. Ghi dữ liệu ngày lễ hàng
+  // loạt (Khởi tạo năm) thì phân biệt: chưa biết → chặn, backend cũ → chỉ gửi tên.
   const rules = rulesData ?? null;
+  const isRulesUnknown = rulesData === undefined;
   const isSchemaBlocked = Boolean(rules) && !isRulesReady(rules);
   const unmarkHoliday = useUnmarkHoliday();
   const { can } = usePermission();
@@ -170,8 +182,7 @@ const HolidaysPage = () => {
    * chiếu giá suất chiếu" (chỉ đọc) khi người dùng có quyền.
    */
   const notifyDaySaved = (dateValue: string, existingScreenings: number) => {
-    const showShortcut =
-      existingScreenings > 0 && canPreviewScreenings && !isPastDay(dateValue);
+    const showShortcut = existingScreenings > 0 && canPreviewScreenings && !isPastDay(dateValue);
     const key = `day-saved-${dateValue}`;
     message.success({
       key,
@@ -214,7 +225,8 @@ const HolidaysPage = () => {
             {day.holidayName ? `"${day.holidayName}" ` : "Ngày "}sẽ trở về tab {backTo}.
           </span>
           <span>
-            Giá tra mới theo phân loại gốc: <strong>{getHolidayResultPriceLabel(day, false)}</strong>.
+            Giá tra mới theo phân loại gốc:{" "}
+            <strong>{getHolidayResultPriceLabel(day, false)}</strong>.
           </span>
           <span>Các suất đã lưu giữ nguyên giá.</span>
           {/* Không khẳng định U22 chắc chắn được áp: còn tùy suất chiếu và khách hàng. */}
@@ -363,12 +375,17 @@ const HolidaysPage = () => {
           }
         ]
       : []),
-    {
-      title: "Ưu đãi U22",
-      key: "u22",
-      width: COLUMN_WIDTHS.u22,
-      render: (_: unknown, day: HolidayProps) => <U22PolicyBadge day={day} />
-    },
+    // Backend cũ (rules 404) không trả chính sách U22 theo ngày: không hiện cột (không ghi "Chưa xác định" cho mọi ngày).
+    ...(rules
+      ? [
+          {
+            title: "Ưu đãi U22",
+            key: "u22",
+            width: COLUMN_WIDTHS.u22,
+            render: (_: unknown, day: HolidayProps) => <U22PolicyBadge day={day} />
+          }
+        ]
+      : []),
     {
       title: "Thao tác",
       key: "operation",
@@ -403,7 +420,7 @@ const HolidaysPage = () => {
     COLUMN_WIDTHS.weekday +
     (showEventColumn ? COLUMN_WIDTHS.event : 0) +
     (rules ? COLUMN_WIDTHS.price : 0) +
-    COLUMN_WIDTHS.u22 +
+    (rules ? COLUMN_WIDTHS.u22 : 0) +
     COLUMN_WIDTHS.operation;
 
   const yearIsEmpty = !isFetching && !isError && normalizedDays.length === 0;
@@ -594,6 +611,7 @@ const HolidaysPage = () => {
           year={selectedYear}
           existingDates={knownDates}
           rules={rules}
+          rulesUnknown={isRulesUnknown}
           onClose={() => setInitializeOpen(false)}
         />
       )}

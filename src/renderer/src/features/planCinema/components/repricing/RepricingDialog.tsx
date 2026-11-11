@@ -220,8 +220,8 @@ const RepricingDialog = ({ open, onClose, date, initialDate }: RepricingDialogPr
             )}
             {showSource && (
               <Text type="secondary" className="text-xs">
-                Nguồn giá: {PRICE_SOURCE_LABELS[item.priceSource] ?? item.priceSource} (do người
-                lập chọn)
+                Nguồn giá: {PRICE_SOURCE_LABELS[item.priceSource] ?? item.priceSource} (do người lập
+                chọn)
               </Text>
             )}
           </div>

@@ -90,8 +90,7 @@ const HolidayModal = ({
   const hasScreenings = Boolean(!isEdit && selectedValue && screeningDates?.has(selectedValue));
   const priceModeChanged =
     canSavePriceMode && isEdit && selectedPriceMode !== (editedDay?.applyHolidayPrice ?? undefined);
-  const unchanged =
-    isEdit && (typedName ?? "").trim() === initialName.trim() && !priceModeChanged;
+  const unchanged = isEdit && (typedName ?? "").trim() === initialName.trim() && !priceModeChanged;
   const resultPrice =
     selectedDay && typeof selectedPriceMode === "boolean"
       ? getHolidayResultPriceLabel(selectedDay, selectedPriceMode)
@@ -110,8 +109,14 @@ const HolidayModal = ({
         ...(sendsPriceMode ? { applyHolidayPrice: values.applyHolidayPrice } : {})
       },
       {
+        // Giá cấu hình chỉ đổi khi ngày lễ mới dùng "Giá ngày lễ" (gửi tường minh, hoặc backend mặc định khi không
+        // gửi) hoặc khi đổi "Giá vé áp dụng"; ngày lễ mới "Theo giá ngày trong tuần" giữ nguyên giá.
         onSuccess: (saved) =>
-          onSaved({ dateValue, saved, priceChanged: !isEdit || priceModeChanged }),
+          onSaved({
+            dateValue,
+            saved,
+            priceChanged: isEdit ? priceModeChanged : saved.applyHolidayPrice !== false
+          }),
         onError: (error) => setServerError(getHolidaySaveErrorMessage(error))
       }
     );
@@ -151,7 +156,8 @@ const HolidayModal = ({
               validator: async (_, value: Dayjs | null) => {
                 if (!value || isEdit) return;
                 const day = daysByDate.get(value.format("YYYY-MM-DD"));
-                if (!day) throw new Error(`Ngày chưa có trong năm ${year}. Hãy khởi tạo năm trước.`);
+                if (!day)
+                  throw new Error(`Ngày chưa có trong năm ${year}. Hãy khởi tạo năm trước.`);
                 if (day.isHoliday) throw new Error("Ngày này đã là ngày lễ.");
               }
             }

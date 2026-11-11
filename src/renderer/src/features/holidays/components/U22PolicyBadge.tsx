@@ -5,10 +5,7 @@ import { Tag, Tooltip } from "antd";
 import { getDayU22Policy } from "../datePolicy";
 
 type U22PolicyBadgeProps = {
-  day: Pick<
-    HolidayProps,
-    "dateTypeId" | "isHoliday" | "applyHolidayPrice" | "isPromotionExcluded"
-  >;
+  day: Pick<HolidayProps, "dateTypeId" | "isHoliday" | "applyHolidayPrice" | "isPromotionExcluded">;
 };
 
 const U22PolicyBadge = ({ day }: U22PolicyBadgeProps) => {

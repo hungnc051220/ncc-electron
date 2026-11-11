@@ -151,7 +151,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const planFilmVersions = useMemo(
     () =>
       new Map(
-        (planFilms?.data ?? []).map((planFilm) => [planFilm.filmId, planFilm.film?.versionCode ?? null])
+        (planFilms?.data ?? []).map((planFilm) => [
+          planFilm.filmId,
+          planFilm.film?.versionCode ?? null
+        ])
       ),
     [planFilms]
   );
@@ -190,7 +193,9 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const dayByDate = useMemo(
     () =>
       new Map(
-        dayQueries.flatMap((query) => query.data ?? []).map((day) => [day.dateValue.slice(0, 10), day])
+        dayQueries
+          .flatMap((query) => query.data ?? [])
+          .map((day) => [day.dateValue.slice(0, 10), day])
       ),
     [dayQueries]
   );
@@ -350,6 +355,7 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
               <ScreeningU22PolicyCell
                 screening={record}
                 canUpdate={canUpdate}
+                canToggle={pricingRules?.ready === true}
                 day={dayByDate.get(dayjs(record.projectDate).format("YYYY-MM-DD"))}
                 versionCode={versionByFilmId.get(record.filmId)}
               />

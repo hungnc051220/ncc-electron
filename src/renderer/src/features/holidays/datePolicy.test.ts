@@ -1,12 +1,14 @@
 import type { HolidayProps, PricingRules } from "@shared/types";
 import { describe, expect, it } from "vitest";
 import {
-  describeHolidayPriceChoice,
   getDayDisplayName,
   getDayU22Policy,
-  getHolidayPriceModeLabel,
+  getHolidayResultPriceLabel,
   getTicketPriceGroup,
-  isRulesReady
+  isRulesReady,
+  U22_ALLOWED_TOOLTIP,
+  U22_BLOCKED_TOOLTIP,
+  U22_UNKNOWN_TOOLTIP
 } from "./datePolicy";
 
 const RULES: PricingRules = {
@@ -79,27 +81,14 @@ describe("getTicketPriceGroup (Giá vé theo cấu hình từng ngày)", () => {
   });
 });
 
-describe("describeHolidayPriceChoice (preview trong dialog Chỉnh sửa ngày lễ)", () => {
-  it("Giá ngày lễ", () => {
-    expect(describeHolidayPriceChoice(NCC_2026.oct20, true)).toBe("Áp dụng giá ngày lễ.");
-  });
-
-  it("Theo ngày trong tuần follows the base classification and the weekday", () => {
-    expect(describeHolidayPriceChoice(NCC_2026.oct20, false)).toBe(
-      "Thứ 3 — Áp dụng giá ngày thường."
-    );
-    expect(describeHolidayPriceChoice(NCC_2026.oct31, false)).toBe(
-      "Thứ 7 — Áp dụng giá cuối tuần."
-    );
-    expect(describeHolidayPriceChoice(NCC_2026.nov20, false)).toBe(
-      "Thứ 6 — Áp dụng giá cuối tuần."
-    );
-  });
-
-  it("price mode labels", () => {
-    expect(getHolidayPriceModeLabel(true)).toBe("Giá ngày lễ");
-    expect(getHolidayPriceModeLabel(false)).toBe("Theo ngày trong tuần");
-    expect(getHolidayPriceModeLabel(null)).toBeNull();
+describe("getHolidayResultPriceLabel (box Kết quả thiết lập của dialog ngày lễ)", () => {
+  it.each([
+    ["20/10 (Thứ 3) Giá ngày lễ", NCC_2026.oct20, true, "Giá ngày lễ"],
+    ["20/10 (Thứ 3) Theo giá ngày trong tuần", NCC_2026.oct20, false, "Giá ngày thường"],
+    ["31/10 (Thứ 7) Theo giá ngày trong tuần", NCC_2026.oct31, false, "Giá cuối tuần"],
+    ["20/11 (Thứ 6) Theo giá ngày trong tuần", NCC_2026.nov20, false, "Giá cuối tuần"]
+  ])("%s", (_label, input, applyHolidayPrice, expected) => {
+    expect(getHolidayResultPriceLabel(input, applyHolidayPrice)).toBe(expected);
   });
 });
 
@@ -115,25 +104,23 @@ describe("getDayU22Policy", () => {
     const excluded = day({ isPromotionExcluded: true });
     const actual = getDayU22Policy(excluded);
 
-    expect(actual).toEqual({
-      label: "Không áp dụng",
-      blocked: true,
-      reason: "Ngày không áp ưu đãi"
-    });
+    expect(actual).toEqual({ label: "Không áp dụng", blocked: true, reason: U22_BLOCKED_TOOLTIP });
     expect(JSON.stringify(actual)).not.toMatch(CLAIMS_ALL_PROMOTIONS);
   });
 
   it("unreadable promotion flag: undetermined (the server refuses U22)", () => {
-    expect(getDayU22Policy(day({ isPromotionExcluded: null }))).toMatchObject({
-      label: "Không xác định",
-      blocked: null
+    expect(getDayU22Policy(day({ isPromotionExcluded: null }))).toEqual({
+      label: "Chưa xác định",
+      blocked: null,
+      reason: U22_UNKNOWN_TOOLTIP
     });
   });
 
-  it("normal day: allowed under conditions", () => {
-    expect(getDayU22Policy(day({}))).toMatchObject({
-      label: "Cho phép theo điều kiện",
-      blocked: false
+  it("normal day: Có thể áp dụng (still subject to the customer and the screening)", () => {
+    expect(getDayU22Policy(day({}))).toEqual({
+      label: "Có thể áp dụng",
+      blocked: false,
+      reason: U22_ALLOWED_TOOLTIP
     });
   });
 });

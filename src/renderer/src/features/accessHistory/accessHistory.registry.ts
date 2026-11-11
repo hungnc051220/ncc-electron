@@ -45,7 +45,7 @@ const PLAN_CINEMA_STATUS_LABELS: Record<string, string> = {
 };
 
 /** "Giá vé áp dụng" của ngày lễ (`applyHolidayPrice`, V3.2). */
-const HOLIDAY_PRICE_MODE_LABELS = { true: "Giá ngày lễ", false: "Theo ngày trong tuần" };
+const HOLIDAY_PRICE_MODE_LABELS = { true: "Giá ngày lễ", false: "Theo giá ngày trong tuần" };
 
 const field = (
   label: string,

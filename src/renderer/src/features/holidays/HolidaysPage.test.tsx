@@ -22,7 +22,6 @@ import HolidaysPage from "./HolidaysPage";
 import {
   getDefaultHolidays,
   getStatutoryHolidays,
-  getSuggestedApplyHolidayPrice,
   lunarToSolar,
   NCC_HOLIDAYS
 } from "./vietnameseHolidays";
@@ -47,7 +46,6 @@ const day = (dateValue: string, extra: Partial<HolidayProps> = {}): HolidayProps
 });
 
 const label = (dateValue: string) => dayjs(dateValue).format("DD/MM/YYYY");
-const getBaseLabel = (item: HolidayProps) => (item.dateTypeId === 2 ? "Cuối tuần" : "Ngày thường");
 const isFriday = (dateValue: string) => dayjs(dateValue).day() === 5;
 
 /** Ngày T2–T5 đầu tiên của tháng 1: ngoại lệ được xếp Cuối tuần (như 01/01 trên dữ liệu thật). */
@@ -115,6 +113,27 @@ const asV32 = (days: HolidayProps[]) =>
   }));
 /** Không được ngụ ý hệ thống chặn mọi ưu đãi (phạm vi V3.2 chỉ U22). */
 const CLAIMS_ALL_PROMOTIONS = /mọi (ưu đãi|chương trình)|tất cả (ưu đãi|khuyến)/i;
+/** Ngày chưa qua trong năm đang xem (31/12 không bao giờ là ngày đã qua trong năm hiện tại). */
+const FUTURE_DAY = `${YEAR}-12-31`;
+/** Ngày đã qua (01/01), trừ khi test chạy đúng ngày 01/01. */
+const PAST_DAY = `${YEAR}-01-01`;
+const IS_PAST_DAY_PAST = dayjs().format("MM-DD") !== "01-01";
+const DAY_SAVED_MESSAGE = "Đã cập nhật thiết lập ngày. Giá các suất đã lập không tự thay đổi.";
+/** Mục của menu "⋯" đang mở (popup mới nhất). */
+const openDayMenu = async (dateValue: string) => {
+  fireEvent.click(await screen.findByRole("button", { name: `Thao tác ngày ${label(dateValue)}` }));
+  return waitFor(() => {
+    const menus = document.querySelectorAll<HTMLElement>(
+      ".ant-dropdown:not(.ant-dropdown-hidden) [role='menu']"
+    );
+    if (!menus.length) throw new Error("Menu thao tác chưa mở");
+    return menus[menus.length - 1];
+  });
+};
+const menuLabels = (menu: HTMLElement) =>
+  within(menu)
+    .getAllByRole("menuitem")
+    .map((item) => item.textContent);
 
 const setupServer = async (
   initialDays: HolidayProps[] = buildYear(),
@@ -345,9 +364,12 @@ describe("vietnameseHolidays", () => {
       { dateValue: "2027-10-31", holidayName: "Halloween", applyHolidayPrice: false },
       { dateValue: "2027-11-20", holidayName: "Nhà giáo Việt Nam", applyHolidayPrice: false }
     ]);
-    expect(getSuggestedApplyHolidayPrice("2026-10-20")).toBe(false);
-    expect(getSuggestedApplyHolidayPrice("2026-12-24")).toBe(true);
-    expect(getSuggestedApplyHolidayPrice("2026-11-24")).toBeUndefined();
+    const suggested = new Map(
+      getDefaultHolidays(2026).map((holiday) => [holiday.dateValue, holiday.applyHolidayPrice])
+    );
+    expect(suggested.get("2026-10-20")).toBe(false);
+    expect(suggested.get("2026-12-24")).toBe(true);
+    expect(suggested.has("2026-11-24")).toBe(false);
   });
 
   it("a NCC day falling on a statutory holiday is listed once, with the statutory name", () => {
@@ -424,7 +446,7 @@ describe("dateClassification", () => {
 describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
   beforeEach(() => queryClient.clear());
 
-  it("splits the days by their real classification; old backend (rules 404): no price claim, no amount", async () => {
+  it("splits the days by their real classification; old backend (rules 404): no price claim, no amount, no U22 column", async () => {
     // Một Thứ 6 xếp Ngày thường và một Thứ 4 xếp Cuối tuần: tab đi theo dữ liệu, không theo thứ.
     const days = buildYear();
     const friday = days.find((item) => isFriday(item.dateValue))!;
@@ -433,21 +455,21 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     renderPage();
 
     await expectTabCounts(days);
-    expect(await screen.findByRole("columnheader", { name: "U22" })).toBeInTheDocument();
-    // Backend cũ: không có cột giá vé, không khẳng định giá, không hiện số tiền, không có cột phân loại gốc.
+    expect(await screen.findByRole("columnheader", { name: "Thao tác" })).toBeInTheDocument();
+    // Backend cũ: không có cột giá vé / ưu đãi U22 (không ghi "Chưa xác định" cho mọi ngày), không hiện số tiền.
     expect(screen.queryByRole("columnheader", { name: "Giá vé" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Ưu đãi U22" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Phân loại gốc" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Chưa xác định")).not.toBeInTheDocument();
     expect(
       screen.queryByText(/Giá ngày lễ|Giá ngày thường|Giá cuối tuần|VNĐ|\d{2}[.,]000/)
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId("pricing-schema-alert")).not.toBeInTheDocument();
-    expect(screen.queryByText(/chưa áp dụng ưu tiên giá lễ/)).not.toBeInTheDocument();
 
     openTab(/^Ngày lễ/);
     expect(await screen.findByText("Quốc khánh")).toBeInTheDocument();
     const holidayRow = rowOf(label(HOLIDAY));
-    expect(within(holidayRow).getByText("Không áp dụng")).toBeInTheDocument();
-    expect(within(holidayRow).getByText("Ngày lễ")).toBeInTheDocument();
+    expect(within(holidayRow).queryByText("Không áp dụng")).not.toBeInTheDocument();
   });
 
   it("marks a day from its row; it moves to Ngày lễ and the U22 warning shows when it has screenings", async () => {
@@ -455,8 +477,9 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     const state = await setupServer(buildYear(), [target.dateValue]);
     renderPage();
 
-    await chooseDayAction(target.dateValue, "Đánh dấu ngày lễ");
+    await chooseDayAction(target.dateValue, "Thiết lập ngày lễ / sự kiện");
     const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Thiết lập ngày lễ / sự kiện")).toBeInTheDocument();
     expect(
       await within(dialog).findByText(
         "Ngày này đã có suất chiếu. Sau khi lưu, vé chưa bán của các suất này không được áp ưu đãi U22."
@@ -465,7 +488,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     fireEvent.change(within(dialog).getByLabelText("Tên ngày lễ"), {
       target: { value: "  Ngày thử nghiệm  " }
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
 
     await waitFor(() =>
       expect(state.days.find((item) => item.dateValue === target.dateValue)?.isHoliday).toBe(true)
@@ -481,7 +504,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     );
   });
 
-  it("renames a holiday; Lưu stays disabled until the name changes", async () => {
+  it("renames a holiday; Lưu thiết lập stays disabled until the name changes (old backend: name only)", async () => {
     const state = await setupServer();
     renderPage();
     openTab(/^Ngày lễ/);
@@ -493,18 +516,21 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     expect(
       within(dialog).queryByRole("radiogroup", { name: "Giá vé áp dụng" })
     ).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Lưu" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Lưu thiết lập" })).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText("Tên ngày lễ"), {
       target: { value: "Quốc khánh 2/9" }
     });
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Lưu" })).toBeEnabled());
-    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu" }));
+    await waitFor(() =>
+      expect(within(dialog).getByRole("button", { name: "Lưu thiết lập" })).toBeEnabled()
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
 
     await waitFor(() =>
       expect(state.days.find((item) => item.dateValue === HOLIDAY)?.holidayName).toBe(
         "Quốc khánh 2/9"
       )
     );
+    expect(state.markBodies).toEqual([{ holidayName: "Quốc khánh 2/9" }]);
   });
 
   it("unmarks a weekend holiday: it returns to Cuối tuần, its base classification is kept", async () => {
@@ -829,7 +855,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     // Ngày không áp ưu đãi: ở tab gốc, giữ giá ngày thường, U22 không áp dụng.
     expect(within(excludedRow).getByText("Giá ngày thường")).toBeInTheDocument();
     expect(within(excludedRow).getByText("Không áp dụng")).toBeInTheDocument();
-    expect(within(excludedRow).getByText("Ngày không áp ưu đãi")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Ưu đãi U22" })).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(CLAIMS_ALL_PROMOTIONS);
     expect(document.body.textContent).not.toMatch(/chưa áp dụng ưu tiên giá lễ/);
 
@@ -841,16 +867,15 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     expect(within(row31).getByText("Giá cuối tuần")).toBeInTheDocument();
     for (const row of [row20, row31]) {
       expect(within(row).getByText("Không áp dụng")).toBeInTheDocument();
-      expect(within(row).getByText("Ngày lễ")).toBeInTheDocument();
+      expect(within(row).queryByText("Có thể áp dụng")).not.toBeInTheDocument();
     }
     expect(within(rowOf("Quốc khánh")).getByText("Giá ngày lễ")).toBeInTheDocument();
   });
 
-  it("Chỉnh sửa ngày lễ: Theo ngày trong tuần with a live preview; the day stays in Ngày lễ and U22 stays off", async () => {
+  it("Chỉnh sửa ngày lễ: the stored price is preselected; Theo giá ngày trong tuần keeps the day a holiday without U22", async () => {
     const days = asV32(buildYear());
     const holiday = days.find((item) => item.dateValue === HOLIDAY)!;
-    const weekday = dayjs(HOLIDAY).day() === 0 ? "Chủ nhật" : `Thứ ${dayjs(HOLIDAY).day() + 1}`;
-    const group = holiday.dateTypeId === 2 ? "cuối tuần" : "ngày thường";
+    const weekdayPrice = holiday.dateTypeId === 2 ? "Giá cuối tuần" : "Giá ngày thường";
     useV32Backend();
     const state = await setupServer(days, [HOLIDAY]);
     renderPage(true, true);
@@ -861,19 +886,24 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     await chooseDayAction(HOLIDAY, "Chỉnh sửa ngày lễ");
     const dialog = await screen.findByRole("dialog");
     const radios = within(dialog).getByRole("radiogroup", { name: "Giá vé áp dụng" });
-    expect(within(radios).getByRole("radio", { name: "Giá ngày lễ" })).toBeChecked();
-    const preview = within(dialog).getByTestId("holiday-price-preview");
-    expect(preview).toHaveTextContent("Áp dụng giá ngày lễ.");
-    expect(preview).toHaveTextContent("Ưu đãi U22: Không áp dụng.");
-    expect(within(dialog).getByRole("button", { name: "Lưu" })).toBeDisabled();
-
-    fireEvent.click(within(radios).getByRole("radio", { name: "Theo ngày trong tuần" }));
-    await waitFor(() => expect(preview).toHaveTextContent(`${weekday} — Áp dụng giá ${group}.`));
-    expect(preview).toHaveTextContent("Ưu đãi U22: Không áp dụng.");
     expect(
-      within(dialog).getByText(/Các suất đã lập giữ giá đã lưu, không tự cập nhật/)
+      within(radios)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent)
+    ).toEqual(["Giá ngày lễ", "Theo giá ngày trong tuần"]);
+    expect(within(radios).getByRole("radio", { name: "Giá ngày lễ" })).toBeChecked();
+    const result = within(dialog).getByTestId("holiday-result-box");
+    expect(result).toHaveTextContent("Giá vé: Giá ngày lễ");
+    expect(result).toHaveTextContent("Ưu đãi U22: Không áp dụng");
+    expect(
+      within(dialog).getByText("Các suất chiếu đã lập giữ nguyên giá hiện tại.")
     ).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu" }));
+    expect(within(dialog).getByRole("button", { name: "Lưu thiết lập" })).toBeDisabled();
+
+    fireEvent.click(within(radios).getByRole("radio", { name: "Theo giá ngày trong tuần" }));
+    await waitFor(() => expect(result).toHaveTextContent(`Giá vé: ${weekdayPrice}`));
+    expect(result).toHaveTextContent("Ưu đãi U22: Không áp dụng");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
 
     await waitFor(() =>
       expect(state.markBodies).toEqual([{ holidayName: "Quốc khánh", applyHolidayPrice: false }])
@@ -885,29 +915,42 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
       dateTypeId: holiday.dateTypeId,
       isPromotionExcluded: false
     });
-    // Nhắc các suất đã lập giữ giá đã lưu, có lối tắt Kiểm tra giá suất chiếu.
-    expect((await screen.findAllByText("Các suất đã lập giữ giá đã lưu")).length).toBeGreaterThan(
-      0
-    );
-    expect(screen.getAllByText(/có 3 suất chiếu đã lập/).length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByRole("button", { name: "Kiểm tra giá suất chiếu" }).length
-    ).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole("button", { name: "Đóng" }).at(-1)!);
-
+    expect((await screen.findAllByText(DAY_SAVED_MESSAGE)).length).toBeGreaterThan(0);
     await waitFor(() =>
-      expect(
-        within(rowOf("Quốc khánh")).getByText(
-          holiday.dateTypeId === 2 ? "Giá cuối tuần" : "Giá ngày thường"
-        )
-      ).toBeInTheDocument()
+      expect(within(rowOf("Quốc khánh")).getByText(weekdayPrice)).toBeInTheDocument()
     );
-    const row = rowOf("Quốc khánh");
-    expect(within(row).getByText("Không áp dụng")).toBeInTheDocument();
+    expect(within(rowOf("Quốc khánh")).getByText("Không áp dụng")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /^Ngày lễ/ })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("Thêm ngày lễ on 20/10: Theo ngày trong tuần is suggested; the choice is sent", async () => {
+  it("renaming a weekday-priced holiday keeps its stored price choice (Theo giá ngày trong tuần is sent again)", async () => {
+    const days = asV32(buildYear());
+    Object.assign(days.find((item) => item.dateValue === HOLIDAY)!, { applyHolidayPrice: false });
+    useV32Backend();
+    const state = await setupServer(days);
+    renderPage();
+    openTab(/^Ngày lễ/);
+
+    await screen.findByText("Quốc khánh");
+    await chooseDayAction(HOLIDAY, "Chỉnh sửa ngày lễ");
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("radio", { name: "Theo giá ngày trong tuần" })).toBeChecked();
+    fireEvent.change(within(dialog).getByLabelText("Tên ngày lễ"), {
+      target: { value: "Quốc khánh 2/9" }
+    });
+    await waitFor(() =>
+      expect(within(dialog).getByRole("button", { name: "Lưu thiết lập" })).toBeEnabled()
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
+
+    await waitFor(() =>
+      expect(state.markBodies).toEqual([
+        { holidayName: "Quốc khánh 2/9", applyHolidayPrice: false }
+      ])
+    );
+  });
+
+  it("Thiết lập ngày lễ / sự kiện on 20/10: Giá ngày lễ is the default; Theo giá ngày trong tuần is an explicit choice", async () => {
     // Chỉ dữ liệu tháng 10 để 20/10 nằm ở trang đầu của tab gốc.
     const days = asV32(buildYear()).filter((item) => item.dateValue.startsWith(`${YEAR}-10-`));
     const oct20 = `${YEAR}-10-20`;
@@ -917,14 +960,18 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
 
     const baseTab = classifyDate(days.find((item) => item.dateValue === oct20)!);
     if (baseTab === "weekend") openTab(/^Cuối tuần/);
-    await chooseDayAction(oct20, "Đánh dấu ngày lễ");
+    await chooseDayAction(oct20, "Thiết lập ngày lễ / sự kiện");
     const dialog = await screen.findByRole("dialog");
     const radios = within(dialog).getByRole("radiogroup", { name: "Giá vé áp dụng" });
-    expect(within(radios).getByRole("radio", { name: "Theo ngày trong tuần" })).toBeChecked();
+    expect(within(radios).getByRole("radio", { name: "Giá ngày lễ" })).toBeChecked();
+    expect(within(dialog).getByTestId("holiday-result-box")).toHaveTextContent(
+      "Giá vé: Giá ngày lễ"
+    );
     fireEvent.change(within(dialog).getByLabelText("Tên ngày lễ"), {
       target: { value: "Phụ nữ Việt Nam" }
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu" }));
+    fireEvent.click(within(radios).getByRole("radio", { name: "Theo giá ngày trong tuần" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
 
     await waitFor(() =>
       expect(state.markBodies).toEqual([
@@ -933,7 +980,28 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     );
   });
 
-  it("marks a day Không áp ưu đãi: explains the price/U22 effect, PUTs the flag, keeps it in its base tab", async () => {
+  it("Thêm ngày lễ keeps the default Giá ngày lễ when nothing else is chosen (applyHolidayPrice true is sent)", async () => {
+    const days = asV32(buildYear()).filter((item) => item.dateValue.startsWith(`${YEAR}-10-`));
+    const oct20 = `${YEAR}-10-20`;
+    useV32Backend();
+    const state = await setupServer(days);
+    renderPage();
+
+    const baseTab = classifyDate(days.find((item) => item.dateValue === oct20)!);
+    if (baseTab === "weekend") openTab(/^Cuối tuần/);
+    await chooseDayAction(oct20, "Thiết lập ngày lễ / sự kiện");
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Tên ngày lễ"), {
+      target: { value: "Sự kiện QA" }
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
+
+    await waitFor(() =>
+      expect(state.markBodies).toEqual([{ holidayName: "Sự kiện QA", applyHolidayPrice: true }])
+    );
+  });
+
+  it("Không áp dụng U22 on a weekday: keeps its price and tab, PUTs the flag; then Cho phép xét U22 is offered", async () => {
     const days = asV32(buildYear());
     const target = days.find((item) => classifyDate(item) === "normal")!;
     useV32Backend();
@@ -941,21 +1009,27 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     renderPage();
 
     await waitFor(() => expect(rowOf(label(target.dateValue))).toBeInTheDocument());
-    await chooseDayAction(target.dateValue, "Đánh dấu không áp ưu đãi");
+    expect(within(rowOf(label(target.dateValue))).getByText("Có thể áp dụng")).toBeInTheDocument();
+    await chooseDayAction(target.dateValue, "Không áp dụng U22");
     const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByTestId("promotion-exclusion-summary")).toHaveTextContent(
+      "Giá vé: Giữ giá ngày thường"
+    );
+    expect(within(dialog).getByTestId("promotion-exclusion-summary")).toHaveTextContent(
+      "Ưu đãi U22: Không áp dụng"
+    );
     expect(
       within(dialog).getByText(
-        "Giữ nguyên giá theo phân loại gốc (Ngày thường); không chuyển thành giá ngày lễ."
+        "Không thay đổi giá các suất đã lưu và các chương trình ưu đãi khác."
       )
     ).toBeInTheDocument();
-    expect(within(dialog).getByText(/Hệ thống tự động chặn: U22\./)).toBeInTheDocument();
     expect(
-      within(dialog).getByText("Các ưu đãi khác không do hệ thống tự chặn và không thay đổi.")
+      await within(dialog).findByText(
+        "Ngày này đã có suất chiếu: vé bán sau khi lưu không được áp ưu đãi U22."
+      )
     ).toBeInTheDocument();
-    expect(
-      await within(dialog).findByText(/Vé chưa bán của các suất này sẽ không được áp ưu đãi U22/)
-    ).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Đánh dấu không áp ưu đãi" }));
+    expect(document.body.textContent).not.toMatch(CLAIMS_ALL_PROMOTIONS);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Xác nhận" }));
 
     await waitFor(() =>
       expect(state.exclusionCalls).toEqual([{ dateValue: target.dateValue, excluded: true }])
@@ -966,88 +1040,68 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
       dateTypeId: target.dateTypeId
     });
     await waitFor(() =>
-      expect(
-        within(rowOf(label(target.dateValue))).getByText("Ngày không áp ưu đãi")
-      ).toBeInTheDocument()
+      expect(within(rowOf(label(target.dateValue))).getByText("Không áp dụng")).toBeInTheDocument()
     );
+    expect(within(rowOf(label(target.dateValue))).getByText("Giá ngày thường")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /^Ngày thường/ })).toHaveAttribute(
       "aria-selected",
       "true"
     );
-  });
-
-  it("holiday menu: Chỉnh sửa ngày lễ, Xem chi tiết, Kiểm tra giá suất chiếu, Bỏ đánh dấu ngày lễ", async () => {
-    useV32Backend();
-    await setupServer(asV32(buildYear()));
-    renderPage(true, true);
-    openTab(/^Ngày lễ/);
-
-    await screen.findByText("Quốc khánh");
-    fireEvent.click(await screen.findByRole("button", { name: `Thao tác ngày ${label(HOLIDAY)}` }));
-    const menu = await waitFor(() => {
-      const menus = document.querySelectorAll<HTMLElement>(
-        ".ant-dropdown:not(.ant-dropdown-hidden) [role='menu']"
-      );
-      if (!menus.length) throw new Error("Menu thao tác chưa mở");
-      return menus[menus.length - 1];
-    });
-    expect(
-      within(menu)
-        .getAllByRole("menuitem")
-        .map((item) => item.textContent)
-    ).toEqual([
-      "Chỉnh sửa ngày lễ",
-      "Xem chi tiết",
-      "Kiểm tra giá suất chiếu",
-      "Bỏ đánh dấu ngày lễ"
+    expect(menuLabels(await openDayMenu(target.dateValue))).toEqual([
+      "Thiết lập ngày lễ / sự kiện",
+      "Cho phép xét U22"
     ]);
   });
 
-  it("Xem chi tiết: date, name, base classification, price mode, configured price, U22 and audit", async () => {
+  it("holiday menu: Chỉnh sửa ngày lễ / Đối chiếu giá suất chiếu / Bỏ đánh dấu ngày lễ; no Xem chi tiết; Đối chiếu locked on a past day", async () => {
     const days = asV32(buildYear());
-    Object.assign(days.find((item) => item.dateValue === HOLIDAY)!, { applyHolidayPrice: false });
+    for (const [dateValue, holidayName] of [
+      [FUTURE_DAY, "Tất niên QA"],
+      [PAST_DAY, "Tết Dương lịch"]
+    ]) {
+      Object.assign(days.find((item) => item.dateValue === dateValue)!, {
+        isHoliday: true,
+        holidayName,
+        applyHolidayPrice: true
+      });
+    }
     useV32Backend();
     await setupServer(days);
-    const auditQueries: string[] = [];
-    server.use(
-      http.get(`${API}/pos/audit-log`, ({ request }) => {
-        auditQueries.push(new URL(request.url).searchParams.get("filter") ?? "");
-        return HttpResponse.json({
-          data: [
-            {
-              id: 1,
-              model: "DateInYear",
-              entityId: HOLIDAY,
-              action: "UPDATE",
-              username: "planner",
-              timestamp: `${YEAR}-11-11T03:00:00.000Z`,
-              oldValues: { applyHolidayPrice: true },
-              newValues: { applyHolidayPrice: false },
-              changedFields: ["applyHolidayPrice"]
-            }
-          ],
-          total: 1
-        });
-      })
+    renderPage(true, true);
+    openTab(/^Ngày lễ/);
+    await screen.findByText("Quốc khánh");
+
+    const futureMenu = await openDayMenu(FUTURE_DAY);
+    expect(menuLabels(futureMenu)).toEqual([
+      "Chỉnh sửa ngày lễ",
+      "Đối chiếu giá suất chiếu",
+      "Bỏ đánh dấu ngày lễ"
+    ]);
+    expect(
+      within(futureMenu).getByRole("menuitem", { name: "Đối chiếu giá suất chiếu" })
+    ).not.toHaveAttribute("aria-disabled", "true");
+    expect(document.body.textContent).not.toMatch(
+      /Xem chi tiết|Chi tiết ngày|Kiểm tra giá suất chiếu/
     );
-    renderPage(true, false, true);
+    if (IS_PAST_DAY_PAST) {
+      const pastMenu = await openDayMenu(PAST_DAY);
+      expect(
+        within(pastMenu).getByRole("menuitem", { name: "Đối chiếu giá suất chiếu" })
+      ).toHaveAttribute("aria-disabled", "true");
+    }
+  });
+
+  it("without plan_cinema.view the holiday menu has no Đối chiếu giá suất chiếu", async () => {
+    useV32Backend();
+    await setupServer(asV32(buildYear()));
+    renderPage(true, false);
     openTab(/^Ngày lễ/);
 
     await screen.findByText("Quốc khánh");
-    await chooseDayAction(HOLIDAY, "Xem chi tiết");
-    const dialog = await screen.findByRole("dialog");
-    const holiday = days.find((item) => item.dateValue === HOLIDAY)!;
-    expect(within(dialog).getByText(`Chi tiết ngày ${label(HOLIDAY)}`)).toBeInTheDocument();
-    expect(within(dialog).getByText(getBaseLabel(holiday))).toBeInTheDocument();
-    expect(within(dialog).getByText("Theo ngày trong tuần")).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(holiday.dateTypeId === 2 ? "Giá cuối tuần" : "Giá ngày thường")
-    ).toBeInTheDocument();
-    expect(within(dialog).getByText("Không áp dụng")).toBeInTheDocument();
-    expect(
-      await within(dialog).findByText("Giá vé áp dụng: Giá ngày lễ → Theo ngày trong tuần")
-    ).toBeInTheDocument();
-    expect(JSON.parse(auditQueries[0])).toEqual({ model: "DateInYear", entityId: HOLIDAY });
+    expect(menuLabels(await openDayMenu(HOLIDAY))).toEqual([
+      "Chỉnh sửa ngày lễ",
+      "Bỏ đánh dấu ngày lễ"
+    ]);
   });
 
   it(
@@ -1075,11 +1129,8 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
         if (!menus.length) throw new Error("Menu thao tác chưa mở");
         return menus[menus.length - 1];
       });
-      expect(
-        within(menu)
-          .getAllByRole("menuitem")
-          .map((item) => item.textContent)
-      ).toEqual(["Đánh dấu ngày lễ", "Xem chi tiết"]);
+      // Không có thao tác V3.2 mới (Không áp dụng U22 / Cho phép xét U22) khi DB chưa đủ cấu trúc.
+      expect(menuLabels(menu)).toEqual(["Thiết lập ngày lễ / sự kiện"]);
 
       openTab(/^Ngày lễ/);
       await screen.findByText("Quốc khánh");
@@ -1094,13 +1145,16 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
           "Cơ sở dữ liệu chưa được cập nhật cấu trúc V3.2. Liên hệ quản trị hệ thống."
         )
       ).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("Chưa lưu được giá vé áp dụng; chỉ đổi được tên ngày lễ.")
+      ).toBeInTheDocument();
       fireEvent.change(within(dialog).getByLabelText("Tên ngày lễ"), {
         target: { value: "Quốc khánh 2/9" }
       });
       await waitFor(() =>
-        expect(within(dialog).getByRole("button", { name: "Lưu" })).toBeEnabled()
+        expect(within(dialog).getByRole("button", { name: "Lưu thiết lập" })).toBeEnabled()
       );
-      fireEvent.click(within(dialog).getByRole("button", { name: "Lưu" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
       // Chỉ đổi tên: không gửi "Giá vé áp dụng".
       await waitFor(() => expect(state.markBodies).toEqual([{ holidayName: "Quốc khánh 2/9" }]));
     }
@@ -1123,16 +1177,18 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     await screen.findByText("Quốc khánh");
     await chooseDayAction(HOLIDAY, "Chỉnh sửa ngày lễ");
     const dialog = await screen.findByRole("dialog");
-    fireEvent.click(within(dialog).getByRole("radio", { name: "Theo ngày trong tuần" }));
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Lưu" })).toBeEnabled());
-    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu" }));
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Theo giá ngày trong tuần" }));
+    await waitFor(() =>
+      expect(within(dialog).getByRole("button", { name: "Lưu thiết lập" })).toBeEnabled()
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu thiết lập" }));
 
     expect(
       await within(dialog).findByText(
         /Cơ sở dữ liệu chưa được cập nhật cấu trúc V3\.2.*Ngày lễ chưa được lưu\./
       )
     ).toBeInTheDocument();
-    expect(screen.queryByText("Đã cập nhật ngày lễ")).not.toBeInTheDocument();
+    expect(screen.queryByText(DAY_SAVED_MESSAGE)).not.toBeInTheDocument();
   });
 
   it("unmarking a holiday that is also promotion-excluded says U22 stays blocked and the new price basis", async () => {
@@ -1152,9 +1208,12 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     );
     const confirm = lastDialog();
     expect(
-      within(confirm).getByText("Ngày vẫn được đánh dấu không áp ưu đãi nên U22 tiếp tục bị chặn.")
+      within(confirm).getByText(
+        "Ưu đãi U22 vẫn không áp dụng vì ngày đang được đánh dấu không áp dụng U22."
+      )
     ).toBeInTheDocument();
-    expect(within(confirm).getByText(/Giá vé tra mới sẽ theo phân loại gốc/)).toBeInTheDocument();
+    expect(within(confirm).getByText(/Giá tra mới theo phân loại gốc/)).toBeInTheDocument();
+    expect(within(confirm).getByText("Các suất đã lưu giữ nguyên giá.")).toBeInTheDocument();
     fireEvent.click(within(confirm).getByRole("button", { name: "Bỏ đánh dấu" }));
 
     await waitFor(() =>
@@ -1165,27 +1224,17 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     );
   });
 
-  it("old backend (rules 404): no promotion-exclusion action, no price column", async () => {
+  it("old backend (rules 404): no promotion-exclusion action, no price or U22 column", async () => {
     const days = buildYear();
     const target = days.find((item) => classifyDate(item) === "normal")!;
     await setupServer(days);
     renderPage();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: `Thao tác ngày ${label(target.dateValue)}` })
-    );
-    const menu = await waitFor(() => {
-      const menus = document.querySelectorAll<HTMLElement>(
-        ".ant-dropdown:not(.ant-dropdown-hidden) [role='menu']"
-      );
-      if (!menus.length) throw new Error("Menu thao tác chưa mở");
-      return menus[menus.length - 1];
-    });
-    expect(
-      within(menu)
-        .getAllByRole("menuitem")
-        .map((item) => item.textContent)
-    ).toEqual(["Đánh dấu ngày lễ", "Xem chi tiết"]);
+    expect(menuLabels(await openDayMenu(target.dateValue))).toEqual([
+      "Thiết lập ngày lễ / sự kiện"
+    ]);
+    expect(screen.queryByRole("columnheader", { name: "Giá vé" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Ưu đãi U22" })).not.toBeInTheDocument();
   });
 
   it("Khởi tạo năm (V3.2): 17 default holidays with their price mode; 20/10, 31/10, 20/11 by weekday", async () => {
@@ -1220,9 +1269,15 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     expect(byWeekday).toEqual(["10-20", "11-20"]);
   });
 
-  it("Kiểm tra giá suất chiếu opens the read-only price check for that day (future screenings)", async () => {
+  it("Đối chiếu giá suất chiếu opens the read-only check of that (future) holiday", async () => {
+    const days = asV32(buildYear());
+    Object.assign(days.find((item) => item.dateValue === FUTURE_DAY)!, {
+      isHoliday: true,
+      holidayName: "Tất niên QA",
+      applyHolidayPrice: true
+    });
     useV32Backend();
-    await setupServer(asV32(buildYear()));
+    await setupServer(days);
     const previewBodies: unknown[] = [];
     server.use(
       http.post(`${API}/api/pos/plan-screenings/repricing/preview`, async ({ request }) => {
@@ -1231,6 +1286,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
           generatedAt: new Date().toISOString(),
           includePast: false,
           total: 0,
+          summary: { total: 0, matching: 0, differing: 0, unavailable: 0, past: 0 },
           items: []
         });
       })
@@ -1238,14 +1294,19 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
     renderPage(true, true);
     openTab(/^Ngày lễ/);
 
-    await screen.findByText("Quốc khánh");
-    await chooseDayAction(HOLIDAY, "Kiểm tra giá suất chiếu");
+    await screen.findByText("Tất niên QA");
+    await chooseDayAction(FUTURE_DAY, "Đối chiếu giá suất chiếu");
     expect(
-      await screen.findByText(/Chức năng điều chỉnh giá suất đang tạm ngừng/)
+      await screen.findByText(
+        "So sánh giá đã lưu với cấu hình giá hiện tại. Không thay đổi dữ liệu."
+      )
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(previewBodies).toEqual([{ fromDate: HOLIDAY, toDate: HOLIDAY, includePast: false }])
+      expect(previewBodies).toEqual([
+        { fromDate: FUTURE_DAY, toDate: FUTURE_DAY, includePast: false }
+      ])
     );
+    expect(await screen.findByText("Ngày này chưa có suất chiếu.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Áp dụng/ })).not.toBeInTheDocument();
   });
 
@@ -1259,20 +1320,118 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
       screen.queryByRole("button", { name: /Thiết lập phân loại ngày/ })
     ).not.toBeInTheDocument();
     const target = buildYear().find((item) => classifyDate(item) === "normal")!;
-    fireEvent.click(
-      await screen.findByRole("button", { name: `Thao tác ngày ${label(target.dateValue)}` })
-    );
-    const menu = await waitFor(() => {
-      const menus = document.querySelectorAll<HTMLElement>(
-        ".ant-dropdown:not(.ant-dropdown-hidden) [role='menu']"
-      );
-      if (!menus.length) throw new Error("Menu thao tác chưa mở");
-      return menus[menus.length - 1];
-    });
+    await waitFor(() => expect(rowOf(label(target.dateValue))).toBeInTheDocument());
+    // Không còn thao tác nào (dialog Chi tiết ngày đã bỏ): không hiện nút menu rỗng.
     expect(
-      within(menu)
-        .getAllByRole("menuitem")
-        .map((item) => item.textContent)
-    ).toEqual(["Xem chi tiết"]);
+      screen.queryByRole("button", { name: `Thao tác ngày ${label(target.dateValue)}` })
+    ).not.toBeInTheDocument();
+  });
+
+  it("QA-V32: price rules unknown (server error): Khởi tạo năm is blocked, no holiday is sent without its price choice", async () => {
+    const state = await setupServer([]);
+    server.use(
+      http.get(`${API}/api/pos/pricing/rules`, () =>
+        HttpResponse.json({ message: "boom" }, { status: 500 })
+      )
+    );
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: `Khởi tạo năm ${YEAR}` }, { timeout: 10000 })
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText("Chưa tải được cấu hình giá vé từ máy chủ")
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Khởi tạo" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Khởi tạo" }));
+    expect(state.initializeCalls).toEqual([]);
+  });
+
+  it("QA-V32: price rules unknown: default holidays cannot be marked from Thiết lập phân loại ngày", async () => {
+    const state = await setupServer(buildYear(false));
+    server.use(
+      http.get(`${API}/api/pos/pricing/rules`, () =>
+        HttpResponse.json({ message: "boom" }, { status: 500 })
+      )
+    );
+    renderPage();
+    const [picked] = DEFAULT_HOLIDAYS.filter((holiday) => holiday.dateValue !== HOLIDAY);
+
+    const dialog = await openClassificationDialog();
+    const line = within(dialog).getByTestId("default-holiday-line");
+    fireEvent.click(
+      within(line).getByRole("checkbox", {
+        name: new RegExp(picked.holidayName.replace(/[()]/g, "."))
+      })
+    );
+
+    expect(await within(dialog).findByTestId("holiday-mark-blocked")).toHaveTextContent(
+      "Chưa tải được cấu hình giá vé từ máy chủ"
+    );
+    expect(within(dialog).getByRole("button", { name: /Lưu thiết lập/ })).toBeDisabled();
+    expect(state.marked).toEqual([]);
+  });
+
+  it("QA-V32: V3.2 backend: default holidays marked from Thiết lập phân loại ngày carry their price choice (20/10 by weekday)", async () => {
+    useV32Backend();
+    const state = await setupServer(asV32(buildYear(false)));
+    renderPage();
+    const women = DEFAULT_HOLIDAYS.find((holiday) => holiday.dateValue.endsWith("-10-20"))!;
+    const labour = DEFAULT_HOLIDAYS.find((holiday) => holiday.dateValue.endsWith("-05-01"))!;
+    expect(await screen.findByRole("columnheader", { name: "Giá vé" })).toBeInTheDocument();
+
+    const dialog = await openClassificationDialog();
+    const line = within(dialog).getByTestId("default-holiday-line");
+    for (const holiday of [labour, women]) {
+      fireEvent.click(
+        within(line).getByRole("checkbox", { name: new RegExp(holiday.holidayName) })
+      );
+    }
+    expect(within(dialog).queryByTestId("holiday-mark-blocked")).not.toBeInTheDocument();
+    await confirmSave(dialog);
+
+    await waitFor(() => expect(state.markBodies).toHaveLength(2));
+    expect(state.markBodies).toEqual(
+      expect.arrayContaining([
+        { holidayName: labour.holidayName, applyHolidayPrice: true },
+        { holidayName: women.holidayName, applyHolidayPrice: false }
+      ])
+    );
+  });
+
+  it("QA-V32: month filter narrows every tab to that month (Tháng 9: only Quốc khánh in Ngày lễ)", async () => {
+    const days = asV32(buildYear());
+    useV32Backend();
+    await setupServer(days);
+    renderPage();
+
+    await expectTabCounts(days);
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Tháng" }));
+    fireEvent.click(await screen.findByTitle("Tháng 9"));
+
+    await expectTabCounts(days.filter((item) => dayjs(item.dateValue).month() === 8));
+    openTab(/^Ngày lễ/);
+    expect(await screen.findByText("Quốc khánh")).toBeInTheDocument();
+  });
+
+  it("QA-V32: the day list failing to load shows an error with Thử lại, never an empty year", async () => {
+    await setupServer();
+    let calls = 0;
+    server.use(
+      http.get(`${API}/api/pos/date-in-year`, () => {
+        calls += 1;
+        return HttpResponse.json({ message: "Lỗi máy chủ" }, { status: 500 });
+      })
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText("Không tải được danh sách ngày", undefined, { timeout: 15000 })
+    ).toBeInTheDocument();
+    expect(screen.queryByText(`Năm ${YEAR} chưa có dữ liệu ngày`)).not.toBeInTheDocument();
+    const before = calls;
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
+    await waitFor(() => expect(calls).toBeGreaterThan(before));
   });
 });

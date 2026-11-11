@@ -6,8 +6,6 @@ export interface AuditLogQuery {
   current: number;
   pageSize: number;
   model?: string;
-  /** Lọc theo bản ghi (vd. ngày `YYYY-MM-DD` của model `DateInYear`). */
-  entityId?: string;
   userId?: number;
   fromDate?: string;
   toDate?: string;
@@ -15,7 +13,7 @@ export interface AuditLogQuery {
 
 export const auditLogApi = {
   getAll: async (params: AuditLogQuery): Promise<ApiResponse<AuditLogProps>> => {
-    const { current, pageSize, model, entityId, userId, fromDate, toDate } = params;
+    const { current, pageSize, model, userId, fromDate, toDate } = params;
 
     const filter: Record<string, unknown> = {};
 
@@ -25,10 +23,6 @@ export const auditLogApi = {
 
     if (model) {
       filter.model = model;
-    }
-
-    if (entityId) {
-      filter.entityId = entityId;
     }
 
     if (fromDate && toDate) {

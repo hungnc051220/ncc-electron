@@ -3,7 +3,7 @@ import { AxiosError, AxiosHeaders } from "axios";
 import { describe, expect, it } from "vitest";
 import {
   getU22CheckboxState,
-  getU22PolicyDisplay,
+  getScreeningU22Status,
   getU22PolicyInvalidMessage,
   U22_NOT_2D_MESSAGE,
   U22_PROMOTION_EXCLUDED_MESSAGE,
@@ -191,52 +191,127 @@ describe("getU22PolicyInvalidMessage", () => {
   });
 });
 
-describe("getU22PolicyDisplay (cột U22 ở tab Giờ chiếu)", () => {
-  it("old backend: nothing to show", () => {
-    expect(getU22PolicyDisplay(undefined)).toBeNull();
+describe("getScreeningU22Status (cột Ưu đãi U22 ở tab Giờ chiếu)", () => {
+  const listOn = {
+    source: "SCREENING_POLICY" as const,
+    u22Enabled: true,
+    priceMode: "LIST" as const
+  };
+  const listOff = { ...listOn, u22Enabled: false };
+  const ordinaryDay = { isHoliday: false, isPromotionExcluded: false };
+
+  it("old backend (no u22Policy): nothing to show", () => {
+    expect(
+      getScreeningU22Status({ policy: undefined, day: ordinaryDay, versionCode: "2D" })
+    ).toBeNull();
   });
 
-  it("legacy screening keeps the current rule", () => {
+  it("policy unreadable: Chưa xác định, no action", () => {
     expect(
-      getU22PolicyDisplay({
-        source: "LEGACY_UNSPECIFIED",
-        u22Enabled: null,
-        priceMode: null
+      getScreeningU22Status({
+        policy: { source: "UNAVAILABLE", u22Enabled: null, priceMode: null },
+        day: ordinaryDay,
+        versionCode: "2D"
       })
-    ).toMatchObject({
-      detail: "Suất cũ: chưa có thiết lập U22 riêng (giữ quy tắc hiện tại)",
-      isEnabled: true,
-      canToggle: true
+    ).toMatchObject({ label: "Chưa xác định", tone: "default", action: null });
+  });
+
+  it("2D screening with U22 on, ordinary day: Có thể áp dụng, action Tắt", () => {
+    expect(getScreeningU22Status({ policy: listOn, day: ordinaryDay, versionCode: "2D" })).toEqual({
+      label: "Có thể áp dụng",
+      tone: "success",
+      tooltip: "Suất chiếu được phép xét U22 nếu khách hàng đáp ứng các điều kiện.",
+      reason: null,
+      action: "disable"
     });
   });
 
-  it("uniform-price screening: not applicable and not toggleable", () => {
+  it("legacy screening (no stored setting) keeps the current rule: Có thể áp dụng", () => {
     expect(
-      getU22PolicyDisplay({
-        source: "SCREENING_POLICY",
-        u22Enabled: false,
-        priceMode: "UNIFORM"
+      getScreeningU22Status({
+        policy: { source: "LEGACY_UNSPECIFIED", u22Enabled: null, priceMode: null },
+        day: ordinaryDay,
+        versionCode: "2D"
       })
+    ).toMatchObject({ label: "Có thể áp dụng", action: "disable" });
+  });
+
+  it("switched off by the manager on a valid screening: Không áp dụng (warning), action Bật lại", () => {
+    expect(
+      getScreeningU22Status({ policy: listOff, day: ordinaryDay, versionCode: "2D" })
     ).toMatchObject({
       label: "Không áp dụng",
-      canToggle: false,
-      detail: U22_UNIFORM_PRICE_MESSAGE
+      tone: "warning",
+      action: "enable"
     });
   });
 
-  it("enabled / disabled screenings", () => {
-    const base = {
-      source: "SCREENING_POLICY" as const,
-      priceMode: "LIST" as const
-    };
-    expect(getU22PolicyDisplay({ ...base, u22Enabled: true })).toMatchObject({
-      label: "Áp dụng",
-      isEnabled: true
+  it.each([
+    [
+      "holiday (whatever its price)",
+      { isHoliday: true, isPromotionExcluded: false },
+      listOff,
+      "2D",
+      "Ngày lễ"
+    ],
+    [
+      "promotion-excluded day",
+      { isHoliday: false, isPromotionExcluded: true },
+      listOff,
+      "2D",
+      "Ngày không áp U22"
+    ],
+    ["Đồng giá", ordinaryDay, { ...listOff, priceMode: "UNIFORM" as const }, "2D", "Đồng giá"],
+    ["3D film", ordinaryDay, listOff, "3D", "Không hỗ trợ 3D"]
+  ])(
+    "mandatory block %s: Không áp dụng (error) with its reason and NO enable action",
+    (_label, day, policy, versionCode, reason) => {
+      expect(getScreeningU22Status({ policy, day, versionCode })).toMatchObject({
+        label: "Không áp dụng",
+        tone: "error",
+        reason,
+        action: null
+      });
+    }
+  );
+
+  it("MANUAL price is not Đồng giá: U22 stays applicable", () => {
+    expect(
+      getScreeningU22Status({
+        policy: { ...listOn, priceMode: "MANUAL" },
+        day: ordinaryDay,
+        versionCode: "2D"
+      })
+    ).toMatchObject({ label: "Có thể áp dụng", action: "disable" });
+  });
+
+  it("missing day policy or film version: Chưa xác định instead of a guessed Có thể áp dụng", () => {
+    expect(
+      getScreeningU22Status({ policy: listOn, day: undefined, versionCode: "2D" })
+    ).toMatchObject({
+      label: "Chưa xác định",
+      action: null
     });
-    expect(getU22PolicyDisplay({ ...base, u22Enabled: false })).toMatchObject({
-      label: "Không áp dụng",
-      isEnabled: false,
-      canToggle: true
+    expect(
+      getScreeningU22Status({
+        policy: listOn,
+        day: { isHoliday: false, isPromotionExcluded: null },
+        versionCode: "2D"
+      })
+    ).toMatchObject({ label: "Chưa xác định", action: null });
+    expect(
+      getScreeningU22Status({ policy: listOn, day: ordinaryDay, versionCode: undefined })
+    ).toMatchObject({
+      label: "Chưa xác định",
+      action: null
+    });
+  });
+
+  it("a known 2D version never shows Chưa xác định when the day is known (IMAX_2D included)", () => {
+    expect(
+      getScreeningU22Status({ policy: listOn, day: ordinaryDay, versionCode: "IMAX_2D" })
+    ).toMatchObject({
+      label: "Có thể áp dụng"
     });
   });
 });

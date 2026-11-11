@@ -27,6 +27,11 @@ type InitializeYearDialogProps = {
    * lỗi tương thích, không cho khởi tạo.
    */
   rules?: PricingRules | null;
+  /**
+   * Chưa biết khả năng của backend (rules đang tải hoặc lỗi): không khởi tạo, vì backend V3.2 mặc định "Giá ngày lễ"
+   * cho ngày lễ gửi thiếu "Giá vé áp dụng" (20/10, 31/10, 20/11 sẽ mất gợi ý "Theo giá ngày trong tuần").
+   */
+  rulesUnknown?: boolean;
   onClose: () => void;
 };
 
@@ -48,6 +53,7 @@ const InitializeYearDialog = ({
   year,
   existingDates,
   rules,
+  rulesUnknown = false,
   onClose
 }: InitializeYearDialogProps) => {
   const { message } = useAntdApp();
@@ -56,6 +62,7 @@ const InitializeYearDialog = ({
   const isPartialYear = (existingDates?.size ?? 0) > 0;
   const showPriceMode = Boolean(rules);
   const isSchemaBlocked = Boolean(rules) && !isRulesReady(rules);
+  const isBlocked = isSchemaBlocked || rulesUnknown;
   const defaultHolidays = useMemo(
     () => getDefaultHolidays(year).filter((holiday) => !existingDates?.has(holiday.dateValue)),
     [existingDates, year]
@@ -119,12 +126,20 @@ const InitializeYearDialog = ({
       onOk={submit}
       onCancel={initializeYear.isPending ? undefined : onClose}
       confirmLoading={initializeYear.isPending}
-      okButtonProps={{ disabled: isSchemaBlocked }}
+      okButtonProps={{ disabled: isBlocked }}
       cancelButtonProps={{ disabled: initializeYear.isPending }}
       mask={{ closable: false }}
       styles={{ body: { maxHeight: "calc(100vh - 220px)", overflowY: "auto" } }}
     >
       <div className="flex flex-col gap-4">
+        {rulesUnknown && (
+          <Alert
+            type="warning"
+            showIcon
+            title="Chưa tải được cấu hình giá vé từ máy chủ"
+            description="Chưa khởi tạo được năm vì chưa xác định được giá vé áp dụng của ngày lễ. Vui lòng thử lại."
+          />
+        )}
         {isSchemaBlocked && (
           <Alert
             type="error"

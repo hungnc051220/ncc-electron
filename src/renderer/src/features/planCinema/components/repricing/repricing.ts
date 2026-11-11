@@ -88,7 +88,9 @@ export type RepricingComparison =
 export const getRepricingComparison = (item: RepricingPreviewItem): RepricingComparison => {
   if (item.isPast) return { kind: "past", label: "Đã bắt đầu" };
   if (!item.configured) return { kind: "unavailable", label: "Không tính được giá" };
-  return item.differs ? { kind: "differs", label: "Có chênh lệch" } : { kind: "same", label: "Khớp" };
+  return item.differs
+    ? { kind: "differs", label: "Có chênh lệch" }
+    : { kind: "same", label: "Khớp" };
 };
 
 /** Đếm theo kết quả đối chiếu khi backend cũ không trả `summary` (backend trả toàn bộ suất). */
