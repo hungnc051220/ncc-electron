@@ -189,6 +189,7 @@ describe("access history registry", () => {
       "CancelReason",
       "U22PriceConfig",
       "DateInYear",
+      "PlanScreeningPricing",
       "Customer",
       "User"
     ]);
@@ -889,6 +890,21 @@ describe("DateInYear activity (StaffAuditLog rows written by the holiday routes 
     expect(result.changes.map((change) => change.label)).toEqual(["Ngày lễ", "Tên ngày lễ"]);
   });
 
+  it("labels the holiday price mode change (V3.2 Giá vé áp dụng)", () => {
+    const result = buildActivityViewModel({
+      ...markRecord,
+      id: 9503,
+      oldValues: JSON.stringify({ applyHolidayPrice: true }),
+      newValues: JSON.stringify({ applyHolidayPrice: false }),
+      changedFields: "applyHolidayPrice"
+    });
+
+    expect(result.diagnostics.map((item) => item.code)).not.toContain("UNKNOWN_FIELDS");
+    expect(result.changes.map((change) => change.label)).toEqual(["Giá vé áp dụng"]);
+    expect(JSON.stringify(result.changes)).toContain("Giá ngày lễ");
+    expect(JSON.stringify(result.changes)).toContain("Theo ngày trong tuần");
+  });
+
   it("describes Khởi tạo năm without unknown fields", () => {
     const result = buildActivityViewModel({
       ...markRecord,
@@ -902,7 +918,8 @@ describe("DateInYear activity (StaffAuditLog rows written by the holiday routes 
         weekendDays: [0, 5, 6],
         weekendDayCount: 157,
         holidayCount: 1,
-        holidays: ["2027-09-02 Quốc khánh"]
+        holidays: ["2027-09-02 Quốc khánh"],
+        weekdayPriceHolidays: ["2027-10-20 Phụ nữ Việt Nam"]
       }),
       changedFields: null
     });

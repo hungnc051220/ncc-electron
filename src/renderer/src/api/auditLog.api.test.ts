@@ -31,4 +31,23 @@ describe("auditLogApi", () => {
     expect(query.get("pageSize")).toBe("20");
     expect(query.get("sort")).toBe("timestamp.desc");
   });
+
+  it("filters one record by model and entityId (Danh sách ngày → Xem chi tiết)", async () => {
+    const getSpy = vi.spyOn(api, "get").mockResolvedValue({
+      data: { data: [], pageCount: 0, totalCount: 0 }
+    });
+
+    await auditLogApi.getAll({
+      current: 1,
+      pageSize: 10,
+      model: "DateInYear",
+      entityId: "2026-10-20"
+    });
+
+    const query = new URL(getSpy.mock.calls[0][0], "https://ncc.local").searchParams;
+    expect(JSON.parse(query.get("filter") ?? "{}")).toEqual({
+      model: "DateInYear",
+      entityId: "2026-10-20"
+    });
+  });
 });

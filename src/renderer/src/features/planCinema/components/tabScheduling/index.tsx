@@ -9,13 +9,21 @@ import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { compareNullableText } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
 import { PlanScreeningDetailProps } from "@shared/types";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { filmsApi } from "@renderer/api/films.api";
+import { holidaysApi } from "@renderer/api/holidays.api";
+import { filmsKey } from "@renderer/hooks/films/keys";
+import { holidaysKeys } from "@renderer/hooks/holidays/keys";
+import { usePlanFilms } from "@renderer/hooks/planFilms/usePlanCinemas";
+import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
 import type { TableColumnsType, TableProps } from "antd";
 import { Button, DatePicker, Modal, Select } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import AddSchedulingDialog from "./AddSchedulingDialog";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import { usePricingRules } from "@renderer/hooks/ticketPrices/usePricingRules";
+import RepricingDialog from "../repricing/RepricingDialog";
+import ScreeningU22PolicyCell from "./ScreeningU22PolicyCell";
 
 interface TabSchedulingProps {
   planCinemaId?: number;
@@ -132,6 +140,61 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
     [screeningsPages]
   );
 
+  // Cột "Ưu đãi U22": danh sách suất chỉ trả thiết lập U22 đã lưu (không kèm lý do chặn theo ngày, không có phiên
+  // bản phim). Phiên bản lấy từ phim của kế hoạch; phim của suất không còn trong kế hoạch thì tra chi tiết phim.
+  // Chính sách ngày lấy từ Danh sách ngày. Thiếu dữ liệu → "Chưa xác định".
+  const { data: planFilms, isSuccess: isPlanFilmsLoaded } = usePlanFilms({
+    current: 1,
+    pageSize: 100,
+    planCinemaId
+  });
+  const planFilmVersions = useMemo(
+    () =>
+      new Map(
+        (planFilms?.data ?? []).map((planFilm) => [planFilm.filmId, planFilm.film?.versionCode ?? null])
+      ),
+    [planFilms]
+  );
+  const filmIdsOutsidePlan = useMemo(
+    () =>
+      isPlanFilmsLoaded
+        ? [...new Set(screenings.map((screening) => screening.filmId))].filter(
+            (filmId) => !!filmId && !planFilmVersions.has(filmId)
+          )
+        : [],
+    [isPlanFilmsLoaded, planFilmVersions, screenings]
+  );
+  const filmDetailQueries = useQueries({
+    queries: filmIdsOutsidePlan.map((filmId) => ({
+      queryKey: filmsKey.getDetail(filmId),
+      queryFn: () => filmsApi.getDetail(filmId)
+    }))
+  });
+  const versionByFilmId = useMemo(() => {
+    const versions = new Map(planFilmVersions);
+    filmDetailQueries.forEach((query, index) => {
+      if (query.data) versions.set(filmIdsOutsidePlan[index], query.data.versionCode ?? null);
+    });
+    return versions;
+  }, [filmDetailQueries, filmIdsOutsidePlan, planFilmVersions]);
+  const screeningYears = useMemo(
+    () => [...new Set(screenings.map((screening) => dayjs(screening.projectDate).year()))],
+    [screenings]
+  );
+  const dayQueries = useQueries({
+    queries: screeningYears.map((year) => ({
+      queryKey: holidaysKeys.year(year),
+      queryFn: () => holidaysApi.getYear(year)
+    }))
+  });
+  const dayByDate = useMemo(
+    () =>
+      new Map(
+        dayQueries.flatMap((query) => query.data ?? []).map((day) => [day.dateValue.slice(0, 10), day])
+      ),
+    [dayQueries]
+  );
+
   const selectedScreenings = useMemo(
     () =>
       screenings
@@ -166,6 +229,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
   const { can } = usePermission();
   const canUpdate = can("plan_cinema", "update");
   const canDelete = can("plan_cinema", "delete");
+  const { data: pricingRules } = usePricingRules();
+  // "Đối chiếu giá suất chiếu" (chỉ đọc) chỉ hiện khi backend có `GET pricing/rules` (V3.2) và người dùng có quyền xem.
+  const canPreviewRepricing = Boolean(pricingRules) && can("plan_cinema", "view");
+  const [isRepricingOpen, setRepricingOpen] = useState(false);
 
   const roomSelect = useInfiniteSelectOptions({
     queryKey: ["screening-rooms"],
@@ -271,7 +338,25 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
       dataIndex: "priceOfPosition3",
       render: (value) => formatTicketPriceDisplay(value),
       sorter: (a, b) => compareTicketPriceValue(a.priceOfPosition3, b.priceOfPosition3)
-    }
+    },
+    // Chính sách U22 theo suất: chỉ khi DB có bảng `PlanScreeningPolicy`.
+    ...(pricingRules?.schema.screeningPolicy
+      ? [
+          {
+            title: "Ưu đãi U22",
+            key: "u22Policy",
+            width: 180,
+            render: (_: unknown, record: PlanScreeningDetailProps) => (
+              <ScreeningU22PolicyCell
+                screening={record}
+                canUpdate={canUpdate}
+                day={dayByDate.get(dayjs(record.projectDate).format("YYYY-MM-DD"))}
+                versionCode={versionByFilmId.get(record.filmId)}
+              />
+            )
+          }
+        ]
+      : [])
   ];
 
   const rowSelection: TableProps<PlanScreeningDetailProps>["rowSelection"] = {
@@ -325,6 +410,9 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
             virtual={false}
             loading={roomSelect.loading}
           />
+          {canPreviewRepricing && (
+            <Button onClick={() => setRepricingOpen(true)}>Đối chiếu giá suất chiếu</Button>
+          )}
           {canUpdate && (
             <AddSchedulingDialog
               planCinemaId={planCinemaId!}
@@ -379,6 +467,10 @@ const TabScheduling = ({ planCinemaId }: TabSchedulingProps) => {
           </div>
         )}
       </Modal>
+
+      {isRepricingOpen && (
+        <RepricingDialog open initialDate={date} onClose={() => setRepricingOpen(false)} />
+      )}
     </div>
   );
 };

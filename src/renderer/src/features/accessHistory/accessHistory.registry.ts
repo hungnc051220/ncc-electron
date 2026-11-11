@@ -44,6 +44,9 @@ const PLAN_CINEMA_STATUS_LABELS: Record<string, string> = {
   4: "Đã lưu trữ"
 };
 
+/** "Giá vé áp dụng" của ngày lễ (`applyHolidayPrice`, V3.2). */
+const HOLIDAY_PRICE_MODE_LABELS = { true: "Giá ngày lễ", false: "Theo ngày trong tuần" };
+
 const field = (
   label: string,
   kind: AuditValueKind = "text",
@@ -409,8 +412,9 @@ const MODEL_REGISTRY_VALUE: Record<string, AuditModelDefinition> = {
       priceSun: field("Giá Chủ nhật", "money", 7)
     }
   },
-  // Danh sách ngày: BE ghi StaffAuditLog khi đánh dấu / đổi tên / bỏ đánh dấu ngày lễ (EntityId = ngày, UPDATE)
-  // và khi "Khởi tạo năm" (EntityId = năm, CREATE). Ngày lễ quyết định ưu đãi U22 có được áp hay không.
+  // Danh sách ngày: BE ghi StaffAuditLog khi đánh dấu / đổi tên / bỏ đánh dấu ngày lễ, đổi "Giá vé áp dụng" của
+  // ngày lễ, bật/tắt "Không áp ưu đãi" (EntityId = ngày, UPDATE) và khi "Khởi tạo năm" (EntityId = năm, CREATE).
+  // Ngày lễ hoặc ngày không áp ưu đãi quyết định ưu đãi U22 có được áp hay không.
   DateInYear: {
     label: "Danh sách ngày",
     sentenceLabel: "danh sách ngày",
@@ -419,12 +423,45 @@ const MODEL_REGISTRY_VALUE: Record<string, AuditModelDefinition> = {
     fields: {
       isHoliday: field("Ngày lễ", "boolean", 1),
       holidayName: field("Tên ngày lễ", "text", 2),
-      year: field("Năm", "number", 3),
-      createdDays: field("Số ngày tạo", "number", 4),
-      weekendDayCount: field("Số ngày cuối tuần", "number", 5),
-      holidayCount: field("Số ngày lễ", "number", 6),
-      weekendDays: field("Thứ xếp cuối tuần (0 = Chủ nhật)", "json", 7),
-      holidays: field("Ngày lễ đã đánh dấu", "json", 8)
+      applyHolidayPrice: field("Giá vé áp dụng", "boolean", 3, {
+        booleanLabels: HOLIDAY_PRICE_MODE_LABELS
+      }),
+      isPromotionExcluded: field("Không áp ưu đãi", "boolean", 4),
+      year: field("Năm", "number", 5),
+      createdDays: field("Số ngày tạo", "number", 6),
+      weekendDayCount: field("Số ngày cuối tuần", "number", 7),
+      holidayCount: field("Số ngày lễ", "number", 8),
+      promotionExcludedCount: field("Số ngày không áp ưu đãi", "number", 9),
+      weekendDays: field("Thứ xếp cuối tuần (0 = Chủ nhật)", "json", 10),
+      holidays: field("Ngày lễ đã đánh dấu", "json", 11),
+      promotionExcludedDates: field("Ngày không áp ưu đãi đã đánh dấu", "json", 12),
+      weekdayPriceHolidays: field("Ngày lễ theo giá ngày trong tuần", "json", 13)
+    }
+  },
+  // Nguồn giá của suất chiếu: BE ghi StaffAuditLog model `PlanScreeningPricing` (EntityId = Id suất) khi tạo/sửa
+  // suất có ảnh hưởng giá. Field lạ vẫn hiện theo cơ chế chung.
+  PlanScreeningPricing: {
+    label: "Nguồn giá suất chiếu",
+    sentenceLabel: "nguồn giá suất chiếu",
+    entityNamePaths: [],
+    allowCommonFields: false,
+    fields: {
+      priceMode: field("Chế độ giá", "text", 1),
+      priceSource: field("Nguồn giá", "text", 2),
+      pricingReason: field("Lý do nhóm giá", "text", 3),
+      baseDateTypeId: field("Phân loại gốc (DateTypeId)", "number", 4),
+      effectiveDateTypeId: field("Nhóm giá áp dụng", "number", 5),
+      isHoliday: field("Ngày lễ", "boolean", 6),
+      applyHolidayPrice: field("Giá vé áp dụng", "boolean", 7, {
+        booleanLabels: HOLIDAY_PRICE_MODE_LABELS
+      }),
+      daypartId: relationField("Khung giờ", "dayPart", 8),
+      priceOfPosition1: field("Giá vé vị trí 1", "ticketPrice", 10, { omitWhenEmpty: true }),
+      priceOfPosition2: field("Giá vé vị trí 2", "ticketPrice", 11, { omitWhenEmpty: true }),
+      priceOfPosition3: field("Giá vé vị trí 3", "ticketPrice", 12, { omitWhenEmpty: true }),
+      priceOfPosition4: field("Giá vé vị trí 4", "ticketPrice", 13, { omitWhenEmpty: true }),
+      listPricings: field("Giá bảng", "json", 20),
+      reason: field("Lý do", "text", 21)
     }
   },
   Customer: USER_ACCOUNT_MODEL_DEFINITION,

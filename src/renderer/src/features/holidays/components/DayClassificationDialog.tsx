@@ -3,6 +3,7 @@
 // đã bỏ (vd. đổi ngày nghỉ liền kề 01/09 → 03/09). Đọc cấu hình thực tế từ dữ liệu ngày của năm, chỉ ghi các ngày
 // thực sự đổi. Luôn giữ nguyên ngày đặc biệt NCC cấu hình riêng và ngày lễ đã có (kể cả tên).
 import { useDateInYear, useReclassifyDays } from "@renderer/hooks/holidays/useDateManagement";
+import { usePricingRules } from "@renderer/hooks/ticketPrices/usePricingRules";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
 import { getSafeApiErrorMessage } from "@renderer/lib/apiError";
 import { formatNumber } from "@renderer/lib/utils";
@@ -40,6 +41,7 @@ import {
   WEEKDAYS,
   type WeekdayConfig
 } from "../dateClassification";
+import { isRulesReady } from "../datePolicy";
 import { getDefaultHolidays } from "../vietnameseHolidays";
 
 const { Text } = Typography;
@@ -95,6 +97,10 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
   const [draft, setDraft] = useState<{ year: number; config: WeekdayConfig } | null>(null);
   const { data: rawDays = [], isFetching, isError, error } = useDateInYear(year);
   const reclassify = useReclassifyDays();
+  // Backend V3.2 đủ cấu trúc: ngày lễ mặc định được đánh dấu kèm "Giá vé áp dụng" gợi ý (20/10, 31/10, 20/11
+  // theo ngày trong tuần). Backend cũ / chưa đủ cấu trúc: chỉ gửi tên, backend giữ chế độ giá đang lưu.
+  const { data: pricingRules } = usePricingRules();
+  const canSavePriceMode = isRulesReady(pricingRules);
 
   const days = useMemo(
     () => rawDays.map((day) => ({ ...day, dateValue: normalizeDateValue(day.dateValue) })),
@@ -190,7 +196,11 @@ const DayClassificationDialog = ({ initialYear, onClose }: DayClassificationDial
             year,
             toNormal: plan.toNormal.map((day) => toMonthDay(day.dateValue)),
             toWeekend: plan.toWeekend.map((day) => toMonthDay(day.dateValue)),
-            holidaysToMark
+            holidaysToMark: holidaysToMark.map(({ dateValue, holidayName, applyHolidayPrice }) =>
+              canSavePriceMode
+                ? { dateValue, holidayName, applyHolidayPrice }
+                : { dateValue, holidayName }
+            )
           })
           .then(() => {
             message.success(

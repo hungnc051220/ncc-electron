@@ -1,15 +1,19 @@
 /**
- * Ngày lễ mặc định của một năm dương lịch (PO chốt 2026-11-09):
+ * Ngày lễ gợi ý khi "Khởi tạo năm" / "Thiết lập ngày" (chỉ là đề xuất cấu hình, Admin chọn/bỏ từng ngày và đổi
+ * "Giá vé áp dụng" của từng ngày; không dùng để tính giá). Mọi ngày lễ đều không áp dụng ưu đãi U22 (V3.2):
  * - 11 ngày nghỉ lễ theo luật định Việt Nam (Bộ luật Lao động 2019, Điều 112): Tết Dương lịch 01/01;
  *   Tết Nguyên đán 5 ngày (ngày cuối năm âm lịch → mùng 4); Giỗ Tổ Hùng Vương 10/3 âm lịch; 30/4; 1/5;
- *   Quốc khánh 02/09 và ngày liền kề mặc định 01/09 (năm nào khác thì Admin sửa tay).
- * - 6 ngày lễ của NCC (kế hoạch D18): 14/02, 08/03, 20/10, 31/10, 20/11, 24/12.
- * Trùng ngày (vd. 14/02/2029 là Tết Mùng 2) thì chỉ giữ một dòng, ưu tiên tên ngày nghỉ lễ luật định.
+ *   Quốc khánh 02/09 và ngày liền kề mặc định 01/09 (năm nào khác thì Admin sửa tay). Gợi ý "Giá ngày lễ".
+ * - 6 ngày lễ của NCC (kế hoạch D18): 14/02, 08/03, 24/12 gợi ý "Giá ngày lễ" (chính sách giá vé công bố);
+ *   20/10, 31/10, 20/11 gợi ý "Theo ngày trong tuần" — vẫn nằm ở tab Ngày lễ, không áp U22, nhưng không bị ép
+ *   giá ngày lễ.
+ * Trùng ngày (vd. 14/02/2029 là Tết Mùng 2) thì chỉ giữ một dòng, ưu tiên ngày nghỉ lễ luật định.
  * Âm lịch quy đổi theo thuật toán của Hồ Ngọc Đức (múi giờ +7, lịch Việt Nam).
  */
 import dayjs from "dayjs";
 
-export type DefaultHoliday = { dateValue: string; holidayName: string };
+/** `applyHolidayPrice`: gợi ý "Giá vé áp dụng" (`true` = Giá ngày lễ, `false` = Theo ngày trong tuần). */
+export type DefaultHoliday = { dateValue: string; holidayName: string; applyHolidayPrice: boolean };
 
 const TIME_ZONE = 7;
 const INT = Math.floor;
@@ -116,20 +120,25 @@ const fromJd = (jd: number) => {
 export const lunarToSolar = (lunarDay: number, lunarMonth: number, lunarYear: number) =>
   fromJd(lunarToJd(lunarDay, lunarMonth, lunarYear));
 
-/** Ngày lễ riêng của NCC (`MM-DD`, tên chuẩn theo kế hoạch D18). */
+/** Ngày lễ riêng của NCC (`MM-DD`, tên chuẩn theo kế hoạch D18) và "Giá vé áp dụng" gợi ý. */
 export const NCC_HOLIDAYS = [
-  { monthDay: "02-14", holidayName: "Valentine" },
-  { monthDay: "03-08", holidayName: "Quốc tế Phụ nữ" },
-  { monthDay: "10-20", holidayName: "Phụ nữ Việt Nam" },
-  { monthDay: "10-31", holidayName: "Halloween" },
-  { monthDay: "11-20", holidayName: "Nhà giáo Việt Nam" },
-  { monthDay: "12-24", holidayName: "Giáng sinh" }
+  { monthDay: "02-14", holidayName: "Valentine", applyHolidayPrice: true },
+  { monthDay: "03-08", holidayName: "Quốc tế Phụ nữ", applyHolidayPrice: true },
+  { monthDay: "10-20", holidayName: "Phụ nữ Việt Nam", applyHolidayPrice: false },
+  { monthDay: "10-31", holidayName: "Halloween", applyHolidayPrice: false },
+  { monthDay: "11-20", holidayName: "Nhà giáo Việt Nam", applyHolidayPrice: false },
+  { monthDay: "12-24", holidayName: "Giáng sinh", applyHolidayPrice: true }
 ] as const;
 
+/** "Giá vé áp dụng" gợi ý cho một ngày lễ NCC (`MM-DD` khớp); `undefined` với các ngày khác. */
+export const getSuggestedApplyHolidayPrice = (dateValue: string): boolean | undefined =>
+  NCC_HOLIDAYS.find(({ monthDay }) => dateValue.slice(5, 10) === monthDay)?.applyHolidayPrice;
+
 const getNccHolidays = (year: number): DefaultHoliday[] =>
-  NCC_HOLIDAYS.map(({ monthDay, holidayName }) => ({
+  NCC_HOLIDAYS.map(({ monthDay, holidayName, applyHolidayPrice }) => ({
     dateValue: `${year}-${monthDay}`,
-    holidayName
+    holidayName,
+    applyHolidayPrice
   }));
 
 /** Mỗi ngày một dòng: dòng xuất hiện trước (ngày nghỉ lễ luật định) được giữ. */
@@ -148,15 +157,24 @@ export const getStatutoryHolidays = (year: number): DefaultHoliday[] => {
     { jd: tet + 1, label: "Mùng 2" },
     { jd: tet + 2, label: "Mùng 3" },
     { jd: tet + 3, label: "Mùng 4" }
-  ].map(({ jd, label }) => ({ dateValue: fromJd(jd), holidayName: `Tết Nguyên đán (${label})` }));
-  const solar = (monthDay: string, holidayName: string) => ({
+  ].map(({ jd, label }) => ({
+    dateValue: fromJd(jd),
+    holidayName: `Tết Nguyên đán (${label})`,
+    applyHolidayPrice: true
+  }));
+  const solar = (monthDay: string, holidayName: string): DefaultHoliday => ({
     dateValue: `${year}-${monthDay}`,
-    holidayName
+    holidayName,
+    applyHolidayPrice: true
   });
   return [
     solar("01-01", "Tết Dương lịch"),
     ...tetDays,
-    { dateValue: lunarToSolar(10, 3, year), holidayName: "Giỗ Tổ Hùng Vương" },
+    {
+      dateValue: lunarToSolar(10, 3, year),
+      holidayName: "Giỗ Tổ Hùng Vương",
+      applyHolidayPrice: true
+    },
     solar("04-30", "Ngày Giải phóng miền Nam"),
     solar("05-01", "Ngày Quốc tế Lao động"),
     solar("09-01", "Quốc khánh (nghỉ liền kề)"),

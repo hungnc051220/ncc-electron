@@ -24,6 +24,25 @@ export interface PlanScreeningDetailProps {
   filmInfo: FilmInfo;
   orders: string[];
   listSeats: ListSeat[][];
+  /** Chính sách U22 theo suất (backend V3.2); backend cũ không trả. */
+  u22Policy?: PlanScreeningU22Policy;
+}
+
+/** Lý do U22 đang bị chặn cho một suất (`GET /api/pos/plan-screenings/:id` → `u22Policy.blockedReasons`). */
+export type U22BlockedReason =
+  | "U22_DISABLED"
+  | "UNIFORM_PRICE"
+  | "HOLIDAY"
+  | "PROMOTION_EXCLUDED"
+  | "UNSUPPORTED_VERSION";
+
+/** Chính sách U22 của một suất (contract V3.2 mục 4.1). Backend luôn áp dụng khi bán, không có flag. */
+export interface PlanScreeningU22Policy {
+  /** `SCREENING_POLICY` có dòng chính sách; `LEGACY_UNSPECIFIED` suất cũ; `UNAVAILABLE` chưa có bảng/đọc lỗi. */
+  source: "SCREENING_POLICY" | "LEGACY_UNSPECIFIED" | "UNAVAILABLE";
+  u22Enabled: boolean | null;
+  priceMode: PlanScreeningPriceMode | null;
+  blockedReasons?: U22BlockedReason[];
 }
 
 export interface RoomInfo {
@@ -222,9 +241,161 @@ export interface PlanFilmProps {
   film: FilmInfo;
 }
 
+/**
+ * Lý do nhóm giá (`POST /api/pos/pricing/plan-pricing`, V3.2): `HOLIDAY` khi ngày lễ chọn "Giá ngày lễ"
+ * (`isHoliday && applyHolidayPrice`), còn lại `BASE` (theo phân loại gốc `DateTypeId`).
+ */
+export type PricingReason = "BASE" | "HOLIDAY";
+
+/**
+ * Giá bảng cho một suất định lập. `dayPartId` + `pricings` có từ trước; các trường còn lại do backend V3.2
+ * thêm (backend cũ không trả), nên đều là tùy chọn.
+ */
 export interface PlanPricingProps {
   dayPartId: number;
   pricings: Record<string, number>;
+  dateValue?: string;
+  time?: string;
+  baseDateTypeId?: number;
+  isHoliday?: boolean;
+  holidayName?: string | null;
+  /** Chế độ giá của ngày lễ: `true` giá ngày lễ, `false` theo ngày trong tuần; `null` khi không phải ngày lễ. */
+  applyHolidayPrice?: boolean | null;
+  /** Chỉ để hiển thị; `null` khi backend không đọc được cờ. */
+  isPromotionExcluded?: boolean | null;
+  effectiveDateTypeId?: number;
+  pricingReason?: PricingReason;
+  dayPartName?: string;
+  dayPartFromTime?: string;
+  dayPartToTime?: string;
+  /** Phiên bản giá FE gửi lại khi lưu suất để backend phát hiện giá đã lỗi thời (409 `PRICING_STALE`). */
+  pricingVersion?: string;
+}
+
+/** Nguồn giá khi lập suất: theo bảng giá, giá nhập tay (sửa ô giá) hoặc Đồng giá (checkbox Đồng giá). */
+export type PlanScreeningPriceMode = "LIST" | "MANUAL" | "UNIFORM";
+
+/**
+ * `GET /api/pos/pricing/rules` (contract V3.2 mục 2): năng lực thật của backend, không có feature flag. Backend
+ * cũ trả 404 → FE coi là chưa hỗ trợ và ẩn chức năng mới.
+ */
+export interface PricingRules {
+  ruleVersion: string;
+  /** Cấu trúc DB backend đọc được. */
+  schema: {
+    /** Cột `DateInYear.ApplyHolidayPrice` (chế độ giá của ngày lễ). */
+    holidayPriceMode: boolean;
+    /** Cột `DateInYear.IsPromotionExcluded` (ngày không áp ưu đãi). */
+    promotionExclusion: boolean;
+    /** Bảng `PlanScreeningPolicy` (U22 theo từng suất). */
+    screeningPolicy: boolean;
+  };
+  /** Đủ cả ba cấu trúc. `false`: FE báo lỗi tương thích và không cho lưu các thao tác mới. */
+  ready: boolean;
+  /** Ưu đãi backend tự chặn vào ngày lễ / ngày không áp ưu đãi. Bản V3.2 chỉ có `["U22"]`. */
+  enforcedPolicies: string[];
+}
+
+/** Kết quả `POST /api/pos/plan-screenings` (V3.2 trả thêm `u22Policy` để FE chỉ báo đã lưu khi thật sự lưu). */
+export interface CreatePlanScreeningResult {
+  id?: number;
+  u22Policy?: PlanScreeningU22Policy;
+}
+
+/** Body 409 `PRICING_STALE` khi lưu suất bằng giá đã lỗi thời (`details`). */
+export interface PricingStaleDetails {
+  dateValue?: string;
+  time?: string;
+  requested?: {
+    daypartId?: number | null;
+    pricingVersion?: string | null;
+    priceMode?: PlanScreeningPriceMode | null;
+    priceOfPosition1?: string;
+    priceOfPosition2?: string;
+    priceOfPosition3?: string;
+    priceOfPosition4?: string;
+  };
+  /** Giá bảng hiện tại, cùng shape với plan-pricing; `null` nếu backend không tính được. */
+  current?: PlanPricingProps | null;
+}
+
+/** Bốn ô giá snapshot của suất chiếu (`MÃ:giá`, rỗng nếu không dùng). */
+export interface PlanScreeningPriceSnapshot {
+  priceOfPosition1: string;
+  priceOfPosition2: string;
+  priceOfPosition3: string;
+  priceOfPosition4: string;
+}
+
+export type RepricingPriceSource =
+  | "LIST"
+  | "MANUAL"
+  | "UNIFORM"
+  | "LEGACY_UNSPECIFIED"
+  | "MATCHES_STORED_LIST"
+  | "DIFFERS_UNKNOWN"
+  | "UNKNOWN";
+
+export interface RepricingBlocker {
+  code: string;
+  message: string;
+}
+
+/**
+ * Một suất trong kết quả `POST /api/pos/plan-screenings/repricing/preview` (contract V3.2 mục 6, chỉ đọc).
+ * `stored` = "Giá đang lưu" (snapshot đã dùng để bán); `configured` = "Giá theo cấu hình hiện tại".
+ */
+export interface RepricingPreviewItem {
+  planScreenId: number;
+  planCinemaId: number | null;
+  projectDate: string;
+  projectTime: string;
+  roomId: number;
+  roomName: string | null;
+  filmId: number;
+  filmName: string | null;
+  versionCode: string | null;
+  /** Suất đã qua: chỉ tra cứu lịch sử, không bao giờ có đề xuất. */
+  isPast: boolean;
+  stored: PlanScreeningPriceSnapshot & { daypartId: number | null; dayPartName: string | null };
+  configured:
+    | (PlanScreeningPriceSnapshot & {
+        daypartId: number;
+        dayPartName: string | null;
+        effectiveDateTypeId: number;
+        pricingReason: PricingReason;
+        pricingVersion: string;
+      })
+    | null;
+  configuredError: { code: string; message: string } | null;
+  priceSource: RepricingPriceSource;
+  /** Giá đang lưu khác giá theo cấu hình hiện tại (chỉ là thông tin). */
+  differs: boolean;
+  /** Thông tin (vé đã bán, ghế đang giữ…); chức năng điều chỉnh đang tạm ngừng. */
+  blockers: RepricingBlocker[];
+}
+
+/** Đếm suất theo kết quả đối chiếu (`summary` của preview; backend cũ không trả thì FE tự tính từ `items`). */
+export interface RepricingPreviewSummary {
+  /** Mọi suất backend trả. */
+  total: number;
+  /** Có giá theo cấu hình và không chênh lệch. */
+  matching: number;
+  /** Có chênh lệch. */
+  differing: number;
+  /** Không tính được giá theo cấu hình (`configuredError`). */
+  unavailable: number;
+  /** Suất đã bắt đầu (chỉ tra cứu). */
+  past: number;
+}
+
+export interface RepricingPreviewResult {
+  generatedAt: string;
+  /** Kết quả có gồm suất đã qua (tra cứu) hay không. */
+  includePast: boolean;
+  total: number;
+  summary?: RepricingPreviewSummary;
+  items: RepricingPreviewItem[];
 }
 
 export type ScreenMode = "normal" | "contract" | "invitation";
