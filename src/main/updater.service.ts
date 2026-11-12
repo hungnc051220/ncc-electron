@@ -61,15 +61,23 @@ function compareVersions(a: string, b: string) {
   return 0;
 }
 
-function normalizePolicy(value: unknown): UpdatePolicy {
-  if (!value || typeof value !== "object") {
-    return createFallbackPolicy();
+/**
+ * Policy hợp lệ phải là object có `enabled` kiểu boolean; mọi payload khác trả về null để
+ * caller áp dụng FAIL-CLOSED.
+ */
+function normalizePolicy(value: unknown): UpdatePolicy | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
   }
 
   const raw = value as Partial<UpdatePolicy>;
 
+  if (typeof raw.enabled !== "boolean") {
+    return null;
+  }
+
   return {
-    enabled: raw.enabled !== false,
+    enabled: raw.enabled,
     latestVersion: typeof raw.latestVersion === "string" ? raw.latestVersion : undefined,
     minSupportedVersion:
       typeof raw.minSupportedVersion === "string" ? raw.minSupportedVersion : undefined,
@@ -81,9 +89,17 @@ function normalizePolicy(value: unknown): UpdatePolicy {
   };
 }
 
-function createFallbackPolicy(): UpdatePolicy {
+/**
+ * FAIL-CLOSED: không tải/đọc được policy hợp lệ thì không kiểm tra, không mời, không tải cập nhật
+ * (giống `enabled=false`). Chỉ policy hợp lệ mới giữ hành vi cập nhật như trước.
+ */
+function createFailClosedPolicy(): UpdatePolicy {
+  console.warn(
+    "[updater] update policy unavailable or invalid; update checks disabled (fail-closed)"
+  );
+
   return {
-    enabled: true,
+    enabled: false,
     minSupportedVersion: "0.0.0",
     mode: "optional"
   };
@@ -166,7 +182,7 @@ function reportUpdateError(win: BrowserWindow, options: ReportUpdateErrorOptions
 
 async function fetchUpdatePolicy(): Promise<UpdatePolicy> {
   if (!updatePolicyUrl) {
-    return createFallbackPolicy();
+    return createFailClosedPolicy();
   }
 
   try {
@@ -186,10 +202,16 @@ async function fetchUpdatePolicy(): Promise<UpdatePolicy> {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    return normalizePolicy(await response.json());
+    const policy = normalizePolicy(await response.json());
+
+    if (!policy) {
+      throw new Error("Invalid update policy: expected an object with a boolean `enabled`");
+    }
+
+    return policy;
   } catch (error) {
     logUpdateError({ error, stage: "check", source: "policy-fetch" });
-    return createFallbackPolicy();
+    return createFailClosedPolicy();
   }
 }
 
@@ -292,7 +314,8 @@ export function setupUpdater(win: BrowserWindow, setupOptions?: SetupUpdaterOpti
   });
 
   ipcMain.handle("app:start-download", () => {
-    if (isDev || latestPolicy?.enabled === false) return;
+    // Fail-closed: chỉ tải khi policy hợp lệ gần nhất cho phép (chưa có policy cũng không tải).
+    if (isDev || latestPolicy?.enabled !== true) return;
 
     isDownloadInProgress = true;
     // electron-updater tự gộp các lần gọi trùng khi đang tải, nên retry không tạo download thứ hai.

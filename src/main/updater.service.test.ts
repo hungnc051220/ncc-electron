@@ -109,6 +109,7 @@ describe("setupUpdater", () => {
       autoInstallOnAppQuit: true
     });
     vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -127,6 +128,9 @@ describe("setupUpdater", () => {
       expect(mocks.updater.autoInstallOnAppQuit).toBe(false);
       expect(send).not.toHaveBeenCalledWith("update:available", expect.anything());
       expect(getSentErrors(send)).toEqual([]);
+      // Policy hợp lệ enabled=false không phải lỗi: không ghi log fail-closed.
+      expect(mocks.appendLog).not.toHaveBeenCalled();
+      expect(console.warn).not.toHaveBeenCalled();
     });
 
     it("returns disabled for a manual check and never starts a download", async () => {
@@ -151,26 +155,128 @@ describe("setupUpdater", () => {
     expect(mocks.updater.allowDowngrade).not.toBe(true);
   });
 
-  it("documents the fail-open fallback: an unreachable policy still allows the check", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => {
-        throw new Error("getaddrinfo ENOTFOUND raw.githubusercontent.com");
-      })
+  describe("fail-closed when the policy cannot be fetched or is invalid", () => {
+    const networkError = async () => {
+      throw new Error("getaddrinfo ENOTFOUND raw.githubusercontent.com");
+    };
+    const httpError = async () => ({ ok: false, status: 404, json: async () => ({}) });
+    const invalidJson = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON");
+      }
+    });
+
+    const failureCases = [
+      {
+        name: "fetch error (network)",
+        mockFetch: () => vi.fn(networkError),
+        expectedCode: "UPDATE_NETWORK"
+      },
+      { name: "HTTP 404", mockFetch: () => vi.fn(httpError), expectedCode: "UPDATE_UNKNOWN" },
+      { name: "invalid JSON", mockFetch: () => vi.fn(invalidJson), expectedCode: "UPDATE_UNKNOWN" },
+      {
+        name: "JSON null",
+        mockFetch: () => mockPolicyResponse(null),
+        expectedCode: "UPDATE_UNKNOWN"
+      },
+      {
+        name: "JSON array",
+        mockFetch: () => mockPolicyResponse([]),
+        expectedCode: "UPDATE_UNKNOWN"
+      },
+      {
+        name: "object without enabled",
+        mockFetch: () => mockPolicyResponse({ latestVersion: "1.0.123", mode: "force" }),
+        expectedCode: "UPDATE_UNKNOWN"
+      },
+      {
+        name: "enabled as a string",
+        mockFetch: () => mockPolicyResponse(createPolicy({ enabled: "true" })),
+        expectedCode: "UPDATE_UNKNOWN"
+      }
+    ];
+
+    it.each(failureCases)(
+      "$name: logs it, never checks on startup and disables install-on-quit",
+      async ({ mockFetch, expectedCode }) => {
+        vi.stubGlobal("fetch", mockFetch());
+
+        const { send } = await setupUpdaterUnderTest();
+
+        expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled();
+        expect(mocks.updater.autoInstallOnAppQuit).toBe(false);
+        expect(send).toHaveBeenCalledWith(
+          "update:policy",
+          expect.objectContaining({ enabled: false, mode: "optional" })
+        );
+        expect(send).not.toHaveBeenCalledWith("update:available", expect.anything());
+        expect(getSentErrors(send)).toEqual([]);
+        expect(mocks.appendLog).toHaveBeenCalledWith(
+          expect.stringContaining("updater.log"),
+          expect.objectContaining({ source: "policy-fetch", code: expectedCode })
+        );
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("fail-closed"));
+      }
     );
 
-    await setupUpdaterUnderTest();
+    it.each(failureCases)(
+      "$name: a manual check returns disabled and never downloads",
+      async ({ mockFetch }) => {
+        vi.stubGlobal("fetch", mockFetch());
+        const { invoke } = await setupUpdaterUnderTest();
 
-    expect(mocks.updater.checkForUpdates).toHaveBeenCalledTimes(1);
-    expect(mocks.appendLog).toHaveBeenCalledWith(
-      expect.stringContaining("updater.log"),
-      expect.objectContaining({ source: "policy-fetch", code: "UPDATE_NETWORK" })
+        const actualResult = await invoke("app:check-update");
+        await invoke("app:start-download");
+        await flush();
+
+        expect(actualResult).toEqual({ status: "disabled" });
+        expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled();
+        expect(mocks.updater.downloadUpdate).not.toHaveBeenCalled();
+      }
     );
+
+    it("resumes normal checks once a valid enabled policy is fetched again", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockImplementationOnce(networkError)
+        .mockImplementation(async () => ({
+          ok: true,
+          status: 200,
+          json: async () => createPolicy()
+        }));
+      vi.stubGlobal("fetch", fetchMock);
+      const { invoke } = await setupUpdaterUnderTest();
+      expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled();
+
+      const actualResult = await invoke("app:check-update");
+
+      expect(actualResult).toMatchObject({ status: "checked", info: { version: "1.0.122" } });
+      expect(mocks.updater.checkForUpdates).toHaveBeenCalledTimes(1);
+      expect(mocks.updater.autoInstallOnAppQuit).toBe(true);
+    });
   });
 
   describe("when the policy is enabled", () => {
     beforeEach(() => {
       vi.stubGlobal("fetch", mockPolicyResponse(createPolicy()));
+    });
+
+    it("checks once on startup, allows install-on-quit and lets the cashier download", async () => {
+      const { invoke, send } = await setupUpdaterUnderTest();
+
+      expect(mocks.updater.checkForUpdates).toHaveBeenCalledTimes(1);
+      expect(mocks.updater.autoInstallOnAppQuit).toBe(true);
+      expect(send).toHaveBeenCalledWith(
+        "update:policy",
+        expect.objectContaining({ enabled: true, latestVersion: "1.0.122" })
+      );
+
+      await invoke("app:start-download");
+      await flush();
+
+      expect(mocks.updater.downloadUpdate).toHaveBeenCalledTimes(1);
     });
 
     it("keeps a failed startup check silent for the cashier but logs it once", async () => {
