@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ticketPricesKeys } from "./keys";
 
 /**
- * Quy tắc giá và khả năng của backend (`GET /api/pos/pricing/rules`). `data === null`: backend cũ (404);
+ * Quy tắc giá và khả năng của backend (`GET /api/pos/pricing/rules/current`, alias F-01). `data === null`: backend cũ (404);
  * `data === undefined` (đang tải hoặc lỗi khác): coi như chưa hỗ trợ, FE ẩn các chức năng mới.
  */
 export const usePricingRules = () =>

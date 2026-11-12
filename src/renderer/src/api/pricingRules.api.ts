@@ -36,11 +36,17 @@ export const normalizePricingRules = (raw: unknown): PricingRules => {
 export const PRICING_SCHEMA_NOT_READY_MESSAGE =
   "Cơ sở dữ liệu chưa được cập nhật cấu trúc V3.2. Liên hệ quản trị hệ thống.";
 
+/**
+ * Nhận diện backend V3.2 qua alias 2 đoạn (F-01): backend cũ trả 404 sạch cho `rules/current`, còn `GET /pricing/rules`
+ * trên backend cũ rơi vào route `:id` và trả 500 (không phân biệt được với lỗi thật). Chỉ 404 mới là "backend cũ".
+ */
+export const PRICING_RULES_PATH = "/api/pos/pricing/rules/current";
+
 export const pricingRulesApi = {
-  /** Năng lực của backend; `null` khi backend cũ chưa có endpoint (404). */
+  /** Năng lực của backend; `null` khi backend cũ chưa có endpoint (404). Lỗi khác (500…) được ném ra. */
   get: async (): Promise<PricingRules | null> => {
     try {
-      const res = await api.get("/api/pos/pricing/rules");
+      const res = await api.get(PRICING_RULES_PATH);
       return normalizePricingRules(res.data);
     } catch (error) {
       if (getApiErrorStatus(error) === 404) return null;

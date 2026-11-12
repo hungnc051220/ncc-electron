@@ -90,7 +90,7 @@ type InitializeCall = {
 };
 type MarkBody = { holidayName: string; applyHolidayPrice?: boolean };
 
-/** Năng lực backend V3.2 (`GET /api/pos/pricing/rules`). Không gọi: backend cũ (404, handler mặc định). */
+/** Năng lực backend V3.2 (`GET /api/pos/pricing/rules/current`). Không gọi: backend cũ (404, handler mặc định). */
 const V32_RULES = {
   ruleVersion: "holiday-v3.2",
   schema: { holidayPriceMode: true, promotionExclusion: true, screeningPolicy: true },
@@ -103,7 +103,7 @@ const SCHEMA_NOT_READY_RULES = {
   ready: false
 };
 const useV32Backend = (rules: Record<string, unknown> = V32_RULES) =>
-  server.use(http.get(`${API}/api/pos/pricing/rules`, () => HttpResponse.json(rules)));
+  server.use(http.get(`${API}/api/pos/pricing/rules/current`, () => HttpResponse.json(rules)));
 /** Dữ liệu ngày như backend V3.2 trả: có `applyHolidayPrice` và `isPromotionExcluded`. */
 const asV32 = (days: HolidayProps[]) =>
   days.map((item) => ({
@@ -1330,7 +1330,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
   it("QA-V32: price rules unknown (server error): Khởi tạo năm is blocked, no holiday is sent without its price choice", async () => {
     const state = await setupServer([]);
     server.use(
-      http.get(`${API}/api/pos/pricing/rules`, () =>
+      http.get(`${API}/api/pos/pricing/rules/current`, () =>
         HttpResponse.json({ message: "boom" }, { status: 500 })
       )
     );
@@ -1351,7 +1351,7 @@ describe("HolidaysPage (Danh sách ngày)", { timeout: 30000 }, () => {
   it("QA-V32: price rules unknown: default holidays cannot be marked from Thiết lập phân loại ngày", async () => {
     const state = await setupServer(buildYear(false));
     server.use(
-      http.get(`${API}/api/pos/pricing/rules`, () =>
+      http.get(`${API}/api/pos/pricing/rules/current`, () =>
         HttpResponse.json({ message: "boom" }, { status: 500 })
       )
     );

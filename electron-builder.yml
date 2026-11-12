@@ -9,6 +9,8 @@ files:
   - "!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
   - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+  # Báo cáo QA / tài liệu nội bộ không được nằm trong installer (vd docs/agents/u22-testapiv3-qa-report.md).
+  - "!docs/**"
 asarUnpack:
   - resources/**
 win:

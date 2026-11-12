@@ -136,7 +136,7 @@ const setup = async ({
   await initApi(API);
   const state = { creates: [] as CreateBody[], pricing };
   server.use(
-    http.get(`${API}/api/pos/pricing/rules`, () => HttpResponse.json(rules)),
+    http.get(`${API}/api/pos/pricing/rules/current`, () => HttpResponse.json(rules)),
     http.get(`${API}/api/pos/plan-film`, () =>
       HttpResponse.json({
         data: [

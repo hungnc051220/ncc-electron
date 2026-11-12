@@ -1,7 +1,7 @@
 // Danh sách ngày (V3.2): ba tab Ngày thường / Cuối tuần theo phân loại gốc thực tế (`DateTypeId`) và Ngày lễ
 // (`IsHoliday`, ưu tiên hiển thị). Mỗi ngày lễ tự chọn "Giá vé áp dụng" (Theo giá ngày trong tuần hoặc Giá ngày lễ) và
 // vẫn nằm ở tab Ngày lễ; ngày lễ luôn không áp dụng U22. Ngày tắt U22 (`IsPromotionExcluded`) ở tab gốc.
-// Không có feature flag: khả năng của backend đọc từ `GET /api/pos/pricing/rules`; backend cũ (404) thì ẩn thông
+// Không có feature flag: khả năng của backend đọc từ `GET /api/pos/pricing/rules/current`; backend cũ (404) thì ẩn thông
 // tin/thao tác mới, DB chưa đủ cấu trúc (`ready = false`) thì báo lỗi tương thích.
 import Icon, { MoreOutlined } from "@ant-design/icons";
 import { PRICING_SCHEMA_NOT_READY_MESSAGE } from "@renderer/api/pricingRules.api";

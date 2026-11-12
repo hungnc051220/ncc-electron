@@ -88,7 +88,7 @@ const setup = async (
   await initApi(API);
   const state = { previews: [] as PreviewBody[], writes: 0 };
   server.use(
-    http.get(`${API}/api/pos/pricing/rules`, () => HttpResponse.json(RULES)),
+    http.get(`${API}/api/pos/pricing/rules/current`, () => HttpResponse.json(RULES)),
     http.post(`${API}/api/pos/plan-screenings/repricing/preview`, async ({ request }) => {
       const body = (await request.json()) as PreviewBody;
       state.previews.push(body);
