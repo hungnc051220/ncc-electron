@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "latestVersion": "1.0.122",
   "minSupportedVersion": "1.0.91",
   "mode": "optional",
