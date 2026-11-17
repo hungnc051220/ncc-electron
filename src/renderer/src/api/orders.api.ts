@@ -12,6 +12,12 @@ import {
 } from "@shared/types";
 import queryString from "query-string";
 
+/**
+ * Request khóa/nhả/đọc ghế đang chọn không được treo vô hạn: một request treo giữ cờ đang đồng bộ của sơ đồ ghế
+ * và chặn mọi lần thử nhả lại. Quá hạn thì axios hủy request và luồng thử lại xử lý như lỗi mạng.
+ */
+export const SELECTING_CHAIRS_REQUEST_TIMEOUT_MS = 15_000;
+
 export interface OrdersQuery {
   current?: number;
   pageSize?: number;
@@ -380,11 +386,15 @@ export const ordersApi = {
     return res.data;
   },
   selectingChairs: async (operation: "add" | "remove", dto: SelectingChairsDto) => {
-    const res = await api.post(`/api/pos/seat/selecting-chairs/${operation}`, dto);
+    const res = await api.post(`/api/pos/seat/selecting-chairs/${operation}`, dto, {
+      timeout: SELECTING_CHAIRS_REQUEST_TIMEOUT_MS
+    });
     return res.data;
   },
   getSelectingChairs: async (planScreenId: number): Promise<SelectingChairSnapshot[]> => {
-    const res = await api.get(`/api/pos/seat/selecting-chairs/${planScreenId}`);
+    const res = await api.get(`/api/pos/seat/selecting-chairs/${planScreenId}`, {
+      timeout: SELECTING_CHAIRS_REQUEST_TIMEOUT_MS
+    });
     return res.data;
   }
 };

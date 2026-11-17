@@ -38,9 +38,13 @@ import {
 } from "./components/cancelOrderSelection";
 import {
   buildSeatOwnersByKey,
+  getLockReleaseDeadline,
+  getPendingReleaseRetryDelay,
+  getRateLimitDelayMs,
   getSelectionSyncRetryDelay,
   resolveSeatOwnership
 } from "./seatSelectionOwnership";
+import { useSelectingSeatsSnapshotPolling } from "./useSelectingSeatsSnapshotPolling";
 
 const SELECTION_SYNC_DEBOUNCE_MS = 40;
 const OWNERSHIP_STABILIZATION_MS = 250;
@@ -156,6 +160,13 @@ const PlanScreeningPage = () => {
   const selectingSeatsRetryAttemptRef = useRef(0);
   const selectingSeatsSyncGenerationRef = useRef(0);
   const runSelectingSeatsSyncRef = useRef<() => Promise<void>>(async () => undefined);
+  // Ghế đã bỏ chọn nhưng chưa nhả được trên server ("pending release"): mốc khóa chắc chắn hết TTL theo từng ghế,
+  // số lần thử ở chế độ chờ nhả, đã cảnh báo chưa, lỗi gần nhất (429) và yêu cầu chạy lại khi socket kết nối lại.
+  const lockReleaseDeadlineBySeatRef = useRef<Map<string, number>>(new Map());
+  const pendingReleaseAttemptRef = useRef(0);
+  const isPendingReleaseNotifiedRef = useRef(false);
+  const lastSelectingSyncErrorRef = useRef<unknown>(null);
+  const isSelectingSyncResumeRequestedRef = useRef(false);
 
   const {
     data,
@@ -250,17 +261,19 @@ const PlanScreeningPage = () => {
     if (!id || isCustomerMode || !posName) return [];
 
     const snapshots = await loadSelectingChairsSnapshot();
-    const ownSnapshot = snapshots.find(
+    // BE trả mỗi ghế đang chọn là một mục riêng (một key Redis cho mỗi ghế), nên phải gộp mọi mục của máy này.
+    // Chỉ lấy mục đầu tiên sẽ làm máy "quên" các ghế còn lại: không bao giờ nhả chúng và gửi add trùng (400).
+    const ownSnapshots = snapshots.filter(
       (snapshot) => snapshot.planScreenId === Number(id) && snapshot.posName === posName
     );
 
-    if (!ownSnapshot) return [];
+    if (ownSnapshots.length === 0) return [];
 
-    const ownSeatKeys = [
+    const ownSeatKeys = ownSnapshots.flatMap((ownSnapshot) => [
       ...parseSelectingSeatIndexes(ownSnapshot.selectingChairIndexF1, 1),
       ...parseSelectingSeatIndexes(ownSnapshot.selectingChairIndexF2, 2),
       ...parseSelectingSeatIndexes(ownSnapshot.selectingChairIndexF3, 3)
-    ];
+    ]);
 
     const uniqueSeatKeys = Array.from(new Set(ownSeatKeys));
     const seatMap = new Map(
@@ -501,6 +514,201 @@ const PlanScreeningPage = () => {
     }
   }, [verifyCurrentSelectedSeatsOwnership]);
 
+  // Khóa của máy khác đang hiển thị: đồng bộ lại snapshot định kỳ, vì Redis hết TTL không phát event (BUG-02b).
+  useSelectingSeatsSnapshotPolling({
+    enabled:
+      Boolean(id) &&
+      !isCustomerMode &&
+      Boolean(posName) &&
+      Object.keys(selectingSeatsByOther).length > 0,
+    resetKey: `${id}:${posName}`,
+    loadSnapshot: loadSelectingChairsSnapshot
+  });
+
+  /**
+   * Ghi mốc khóa chắc chắn hết TTL theo ghế. Có `acquiredAt` (vừa khóa thành công) thì ghi đè; không có (ghế biết qua
+   * snapshot) thì chỉ điền ghế chưa có mốc, dùng trần `now + TTL` vì khóa không thể sống lâu hơn thế.
+   */
+  const rememberLockDeadlines = useCallback((seats: ListSeat[], acquiredAt?: number) => {
+    const deadlines = lockReleaseDeadlineBySeatRef.current;
+
+    seats.forEach((seat) => {
+      const seatKey = getSeatKey(seat);
+      if (acquiredAt === undefined && deadlines.has(seatKey)) return;
+
+      deadlines.set(seatKey, getLockReleaseDeadline(acquiredAt ?? Date.now()));
+    });
+  }, []);
+
+  const getPendingReleaseSeatKeys = useCallback(
+    () =>
+      syncedSelectedSeatsRef.current
+        .map((seat) => getSeatKey(seat))
+        .filter((seatKey) => !desiredSelectedSeatKeysRef.current.has(seatKey)),
+    []
+  );
+
+  /**
+   * Ghế chờ nhả đã quá mốc TTL: khóa trên server chắc chắn đã hết nên ngừng gửi remove. Remove chỉ xóa key
+   * `selecting-chairs-{suất}-{posName}-{ghế}` của chính máy này, nhưng dừng ở TTL tránh chạm khóa mới nếu có máy
+   * khác cấu hình trùng posName.
+   */
+  const dropExpiredPendingReleases = useCallback(() => {
+    rememberLockDeadlines(syncedSelectedSeatsRef.current);
+
+    const now = Date.now();
+    const deadlines = lockReleaseDeadlineBySeatRef.current;
+    const expiredSeatKeys = new Set(
+      getPendingReleaseSeatKeys().filter((seatKey) => (deadlines.get(seatKey) ?? now) <= now)
+    );
+    if (expiredSeatKeys.size === 0) return false;
+
+    syncedSelectedSeatsRef.current = syncedSelectedSeatsRef.current.filter(
+      (seat) => !expiredSeatKeys.has(getSeatKey(seat))
+    );
+    syncedSelectedSeatKeysRef.current = new Set(
+      syncedSelectedSeatsRef.current.map((seat) => getSeatKey(seat))
+    );
+    expiredSeatKeys.forEach((seatKey) => deadlines.delete(seatKey));
+    console.info(
+      `[selecting-chairs] pending release reached the lock TTL: ${Array.from(expiredSeatKeys).join(",")}`
+    );
+
+    return true;
+  }, [getPendingReleaseSeatKeys, rememberLockDeadlines]);
+
+  const finishPendingRelease = useCallback(
+    (outcome: "synced" | "expired") => {
+      if (pendingReleaseAttemptRef.current === 0) return;
+
+      const wasNotified = isPendingReleaseNotifiedRef.current;
+      pendingReleaseAttemptRef.current = 0;
+      isPendingReleaseNotifiedRef.current = false;
+      console.info(`[selecting-chairs] pending release finished: ${outcome}`);
+      if (!wasNotified) return;
+
+      if (outcome === "expired") {
+        message.warning(
+          "Không xác nhận được việc giải phóng ghế. Trạng thái giữ ghế trên máy chủ đã tự hết hạn"
+        );
+      } else {
+        message.success("Đã đồng bộ lại trạng thái ghế với máy chủ");
+      }
+    },
+    [message]
+  );
+
+  /** Chế độ chờ nhả: thử lại theo backoff có jitter (429 theo Retry-After), không quá mốc TTL của ghế sớm nhất. */
+  const schedulePendingReleaseRetry = useCallback(() => {
+    pendingReleaseAttemptRef.current += 1;
+    selectingSeatsRetryAttemptRef.current = 0;
+    const attempt = pendingReleaseAttemptRef.current;
+
+    if (!isPendingReleaseNotifiedRef.current) {
+      isPendingReleaseNotifiedRef.current = true;
+      message.warning("Chưa thể giải phóng trạng thái ghế trên máy chủ. Hệ thống đang tự thử lại");
+    }
+
+    const now = Date.now();
+    const nextLockExpiry = Math.min(
+      ...getPendingReleaseSeatKeys().map(
+        (seatKey) => lockReleaseDeadlineBySeatRef.current.get(seatKey) ?? now
+      )
+    );
+    const delay = Math.min(
+      getPendingReleaseRetryDelay(attempt, {
+        minDelayMs: getRateLimitDelayMs(lastSelectingSyncErrorRef.current)
+      }),
+      Math.max(0, nextLockExpiry - now)
+    );
+
+    console.info(`[selecting-chairs] pending release retry #${attempt} in ${delay}ms`);
+    syncTimeoutRef.current = setTimeout(() => {
+      syncTimeoutRef.current = null;
+      void runSelectingSeatsSyncRef.current();
+    }, delay);
+  }, [getPendingReleaseSeatKeys, message]);
+
+  /** Hẹn lần đồng bộ kế tiếp khi local và server còn lệch sau một lượt đồng bộ. */
+  const scheduleSelectingSeatsRetry = useCallback(
+    (syncSucceeded: boolean) => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+
+      const unsyncedSeatKeys = new Set(
+        Array.from(desiredSelectedSeatKeysRef.current).filter(
+          (seatKey) => !syncedSelectedSeatKeysRef.current.has(seatKey)
+        )
+      );
+      const isResumeRequested = isSelectingSyncResumeRequestedRef.current;
+      isSelectingSyncResumeRequestedRef.current = false;
+
+      if (
+        !syncSucceeded &&
+        !isResumeRequested &&
+        unsyncedSeatKeys.size === 0 &&
+        pendingReleaseAttemptRef.current > 0
+      ) {
+        schedulePendingReleaseRetry();
+        return;
+      }
+
+      const retryDelay =
+        syncSucceeded || isResumeRequested
+          ? 0
+          : getSelectionSyncRetryDelay(selectingSeatsRetryAttemptRef.current);
+
+      if (retryDelay !== null) {
+        syncTimeoutRef.current = setTimeout(() => {
+          syncTimeoutRef.current = null;
+          void runSelectingSeatsSyncRef.current();
+        }, retryDelay);
+        return;
+      }
+
+      selectingSeatsRetryAttemptRef.current = 0;
+
+      if (unsyncedSeatKeys.size > 0) {
+        removeLocalSelectedSeats(unsyncedSeatKeys);
+        message.error("Không thể giữ một số ghế sau nhiều lần thử. Các ghế đó đã được bỏ chọn");
+        return;
+      }
+
+      // Chỉ còn ghế cần nhả: không bỏ cuộc (BUG-02), chuyển sang chế độ chờ nhả tới khi nhả được hoặc hết TTL.
+      schedulePendingReleaseRetry();
+    },
+    [message, removeLocalSelectedSeats, schedulePendingReleaseRetry]
+  );
+
+  /**
+   * Socket kết nối lại: mạng vừa có lại nên chạy đồng bộ ngay thay vì chờ lịch backoff. Đang có lượt đồng bộ chạy dở
+   * thì chỉ đánh dấu, lượt đó kết thúc sẽ chạy lại ngay một lần (không gửi request chồng nhau).
+   */
+  const resumeSelectingSeatsSync = useCallback(() => {
+    if (isSelectingSeatsSyncDisposedRef.current) return;
+    if (
+      areSeatKeySetsEqual(syncedSelectedSeatKeysRef.current, desiredSelectedSeatKeysRef.current)
+    ) {
+      return;
+    }
+
+    if (isSelectingSeatsSyncingRef.current) {
+      isSelectingSyncResumeRequestedRef.current = true;
+      return;
+    }
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+
+    selectingSeatsRetryAttemptRef.current = 0;
+    if (pendingReleaseAttemptRef.current > 0) pendingReleaseAttemptRef.current = 1;
+    console.info("[selecting-chairs] socket reconnected: resuming the pending selection sync");
+    void runSelectingSeatsSyncRef.current();
+  }, []);
+
   useEffect(() => {
     mutateSelectingChairsRef.current = mutateSelectingChairsAsync;
   }, [mutateSelectingChairsAsync]);
@@ -627,6 +835,10 @@ const PlanScreeningPage = () => {
         return;
       }
 
+      // Snapshot đang bay được đọc trước event này: bỏ kết quả của nó để không ghi đè trạng thái mới hơn.
+      // Event luôn hẹn reconcile/verify bằng snapshot mới bên dưới.
+      selectingSeatsRequestIdRef.current += 1;
+
       const seatKeys = [
         ...parseSelectingSeatIndexes(payload.selectingChairIndexF1, 1),
         ...parseSelectingSeatIndexes(payload.selectingChairIndexF2, 2),
@@ -682,6 +894,8 @@ const PlanScreeningPage = () => {
     });
 
     const cleanupSocketConnect = onSocketConnect(() => {
+      resumeSelectingSeatsSync();
+
       if (desiredSelectedSeatKeysRef.current.size > 0) {
         scheduleOwnershipVerification(0);
       } else {
@@ -704,6 +918,7 @@ const PlanScreeningPage = () => {
     loadSelectingSeatsByOther,
     parseSelectingSeatIndexes,
     posName,
+    resumeSelectingSeatsSync,
     scheduleSelectingSeatsExpiryReconcile,
     scheduleOwnershipVerification
   ]);
@@ -772,6 +987,7 @@ const PlanScreeningPage = () => {
     if (!id || isCustomerMode || !posName || isSelectingSeatsSyncDisposedRef.current) return;
     if (isSelectingSeatsSyncingRef.current) return;
 
+    const hasExpiredPendingRelease = dropExpiredPendingReleases();
     const syncGeneration = selectingSeatsSyncGenerationRef.current;
 
     const syncedSeatKeys = syncedSelectedSeatKeysRef.current;
@@ -779,6 +995,11 @@ const PlanScreeningPage = () => {
 
     if (areSeatKeySetsEqual(syncedSeatKeys, desiredSeatKeys)) {
       selectingSeatsRetryAttemptRef.current = 0;
+      isSelectingSyncResumeRequestedRef.current = false;
+      finishPendingRelease(hasExpiredPendingRelease ? "expired" : "synced");
+      // Ví dụ chọn lại ghế đang chờ nhả: khóa cũ trên server vẫn là của máy này, không cần add lại nhưng phải
+      // xác nhận lại quyền giữ để ghế không bị kẹt ở trạng thái chờ xác nhận.
+      if (desiredSeatKeys.size > 0) scheduleOwnershipVerification(0);
       return;
     }
 
@@ -797,6 +1018,7 @@ const PlanScreeningPage = () => {
           operation: "add",
           dto: buildSelectingDto(Number(id), posName, addedSeats)
         });
+        rememberLockDeadlines(addedSeats, Date.now());
       }
 
       if (removedSeats.length > 0) {
@@ -822,8 +1044,12 @@ const PlanScreeningPage = () => {
 
       syncSucceeded = true;
       selectingSeatsRetryAttemptRef.current = 0;
+      lastSelectingSyncErrorRef.current = null;
       syncedSelectedSeatsRef.current = targetSeats;
       syncedSelectedSeatKeysRef.current = targetSeatKeys;
+      lockReleaseDeadlineBySeatRef.current.forEach((_, seatKey) => {
+        if (!targetSeatKeys.has(seatKey)) lockReleaseDeadlineBySeatRef.current.delete(seatKey);
+      });
 
       if (targetSeats.length > 0) {
         scheduleOwnershipVerification();
@@ -834,8 +1060,11 @@ const PlanScreeningPage = () => {
     } catch (error) {
       console.error("Failed to sync selecting chairs:", error);
       selectingSeatsRetryAttemptRef.current += 1;
+      lastSelectingSyncErrorRef.current = error;
 
       try {
+        // Snapshot của chính máy là nguồn sự thật: ghế đã hết TTL hoặc đã được nhả thì không còn trong đó,
+        // nên lượt thử sau không gửi remove cho ghế không còn thuộc máy này.
         const serverSeats = await loadOwnSelectingSeatsSnapshot();
         if (
           isSelectingSeatsSyncDisposedRef.current ||
@@ -847,6 +1076,7 @@ const PlanScreeningPage = () => {
         syncedSelectedSeatsRef.current = serverSeats;
         const serverSeatKeys = new Set(serverSeats.map((seat) => getSeatKey(seat)));
         syncedSelectedSeatKeysRef.current = serverSeatKeys;
+        rememberLockDeadlines(serverSeats);
 
         // Chỉ verify ngay khi snapshot đã phản ánh đúng desired state (ví dụ server xử lý
         // thành công nhưng response mutation bị mất). Nếu snapshot chưa khớp, ownership
@@ -872,45 +1102,23 @@ const PlanScreeningPage = () => {
         !isSelectingSeatsSyncDisposedRef.current &&
         !areSeatKeySetsEqual(syncedSelectedSeatKeysRef.current, desiredSelectedSeatKeysRef.current)
       ) {
-        if (syncTimeoutRef.current) {
-          clearTimeout(syncTimeoutRef.current);
-        }
-
-        const retryAttempt = selectingSeatsRetryAttemptRef.current;
-        const retryDelay = syncSucceeded ? 0 : getSelectionSyncRetryDelay(retryAttempt);
-
-        if (retryDelay === null) {
-          selectingSeatsRetryAttemptRef.current = 0;
-          const unsyncedSeatKeys = new Set(
-            Array.from(desiredSelectedSeatKeysRef.current).filter(
-              (seatKey) => !syncedSelectedSeatKeysRef.current.has(seatKey)
-            )
-          );
-
-          if (unsyncedSeatKeys.size > 0) {
-            removeLocalSelectedSeats(unsyncedSeatKeys);
-            message.error("Không thể giữ một số ghế sau nhiều lần thử. Các ghế đó đã được bỏ chọn");
-          } else {
-            message.warning("Chưa thể giải phóng trạng thái ghế trên máy chủ");
-          }
-        } else {
-          syncTimeoutRef.current = setTimeout(() => {
-            syncTimeoutRef.current = null;
-            void runSelectingSeatsSyncRef.current();
-          }, retryDelay);
-        }
+        scheduleSelectingSeatsRetry(syncSucceeded);
       } else {
         selectingSeatsRetryAttemptRef.current = 0;
+        isSelectingSyncResumeRequestedRef.current = false;
+        if (!isSelectingSeatsSyncDisposedRef.current) finishPendingRelease("synced");
       }
     }
   }, [
+    dropExpiredPendingReleases,
+    finishPendingRelease,
     id,
     isCustomerMode,
     loadOwnSelectingSeatsSnapshot,
-    message,
     posName,
-    removeLocalSelectedSeats,
-    scheduleOwnershipVerification
+    rememberLockDeadlines,
+    scheduleOwnershipVerification,
+    scheduleSelectingSeatsRetry
   ]);
 
   useEffect(() => {
@@ -973,6 +1181,7 @@ const PlanScreeningPage = () => {
 
         syncedSelectedSeatsRef.current = serverSeats;
         syncedSelectedSeatKeysRef.current = new Set(serverSeats.map((seat) => getSeatKey(seat)));
+        rememberLockDeadlines(serverSeats);
 
         if (serverSeats.length > 0) {
           if (syncTimeoutRef.current) {
@@ -998,16 +1207,27 @@ const PlanScreeningPage = () => {
     isCustomerMode,
     loadOwnSelectingSeatsSnapshot,
     posName,
+    rememberLockDeadlines,
     runSelectingSeatsSync
   ]);
 
   useEffect(() => {
     if (!id || isCustomerMode || !posName) return;
 
+    // Trạng thái chờ nhả thuộc về một suất chiếu: đổi suất hoặc rời màn thì bỏ, khóa còn lại tự hết theo TTL.
+    const resetPendingReleaseState = () => {
+      pendingReleaseAttemptRef.current = 0;
+      isPendingReleaseNotifiedRef.current = false;
+      isSelectingSyncResumeRequestedRef.current = false;
+      lastSelectingSyncErrorRef.current = null;
+      lockReleaseDeadlineBySeatRef.current.clear();
+    };
+
     selectingSeatsSyncGenerationRef.current += 1;
     isSelectingSeatsSyncDisposedRef.current = false;
     selectingSeatsRetryAttemptRef.current = 0;
     ownershipVerificationRequestIdRef.current += 1;
+    resetPendingReleaseState();
 
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
@@ -1031,6 +1251,7 @@ const PlanScreeningPage = () => {
       isSelectingSeatsSyncDisposedRef.current = true;
       selectingSeatsSyncGenerationRef.current += 1;
       ownershipVerificationRequestIdRef.current += 1;
+      resetPendingReleaseState();
 
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
