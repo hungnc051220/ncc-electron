@@ -44,6 +44,8 @@ export function useAutoUpdater() {
     destroy: () => void;
     update: (configUpdate: Record<string, unknown>) => void;
   } | null>(null);
+  // Modal phiên bản đang mở có phải dạng bắt buộc không (không nút Đóng, không đóng bằng Esc/mask).
+  const isVersionModalForcedRef = useRef<boolean>(false);
   const hiddenProgressRef = useRef<boolean>(true);
   const latestUpdateRef = useRef<UpdateInfo | null>(null);
   const latestPolicyRef = useRef<UpdatePolicy | null>(null);
@@ -111,7 +113,8 @@ export function useAutoUpdater() {
   }, []);
 
   const closeVersionModal = useCallback(() => {
-    if (latestModeRef.current === "force") {
+    // Theo đúng modal đang hiển thị: modal tùy chọn (có nút Đóng) phải đóng được kể cả khi policy thô ghi `force`.
+    if (isVersionModalForcedRef.current) {
       return;
     }
 
@@ -267,7 +270,8 @@ export function useAutoUpdater() {
         modalRef.current?.destroy();
       }
 
-      modalRef.current = modal.info({
+      isVersionModalForcedRef.current = isForceUpdate;
+      const instance = modal.info({
         title: null,
         icon: null,
         footer: null,
@@ -278,6 +282,12 @@ export function useAutoUpdater() {
         closable: false,
         keyboard: !isForceUpdate,
         mask: { closable: !isForceUpdate },
+        // Đóng bằng Esc/mask: bỏ tham chiếu để lần cập nhật policy sau không thao tác trên modal đã đóng.
+        afterClose: () => {
+          if (modalRef.current !== instance) return;
+          modalRef.current = null;
+          isVersionModalForcedRef.current = false;
+        },
         styles: {
           body: {
             padding: 0
@@ -296,6 +306,7 @@ export function useAutoUpdater() {
           }
         })
       });
+      modalRef.current = instance;
     },
     [
       beginDownload,
@@ -317,10 +328,13 @@ export function useAutoUpdater() {
       const currentVersion = await ensureVersion();
       const updateMode = getEffectiveMode(nextUpdate);
       const latestVersion = getEffectiveLatestVersion(nextUpdate);
+      const isForceUpdate =
+        updateMode === "force" && Boolean(latestVersion && latestVersion !== currentVersion);
 
+      isVersionModalForcedRef.current = isForceUpdate;
       modalRef.current.update({
-        keyboard: updateMode !== "force",
-        mask: { closable: updateMode !== "force" },
+        keyboard: !isForceUpdate,
+        mask: { closable: !isForceUpdate },
         content: createElement(VersionInfoModalContent, {
           currentVersion,
           latestVersion,

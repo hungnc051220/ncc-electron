@@ -1,4 +1,4 @@
-import { act, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react";
 import { App } from "antd";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,16 +16,20 @@ const pausedPolicy: UpdatePolicy = {
 
 const wrapper = ({ children }: { children: ReactNode }) => <App>{children}</App>;
 
-const createApiMock = (policy: UpdatePolicy) => {
-  const listeners: { error?: ErrorListener } = {};
+const createApiMock = (policy: UpdatePolicy, currentVersion = "1.0.120") => {
+  const listeners: { error?: ErrorListener; available?: (info: unknown) => Promise<void> | void } =
+    {};
   const api = {
-    getVersion: vi.fn(async () => "1.0.120"),
+    getVersion: vi.fn(async () => currentVersion),
     getUpdatePolicy: vi.fn(async () => policy),
     checkUpdate: vi.fn(async () => ({ status: "checked" as const, info: null })),
     startDownload: vi.fn(async () => undefined),
     install: vi.fn(async () => undefined),
     quitApp: vi.fn(),
-    onAvailable: vi.fn(() => () => undefined),
+    onAvailable: vi.fn((cb: (info: unknown) => Promise<void> | void) => {
+      listeners.available = cb;
+      return () => undefined;
+    }),
     onUpdatePolicy: vi.fn(() => () => undefined),
     onProgress: vi.fn(() => () => undefined),
     onReady: vi.fn(() => () => undefined),
@@ -35,7 +39,22 @@ const createApiMock = (policy: UpdatePolicy) => {
     })
   };
 
-  return { api, emitError: (payload: unknown) => act(() => listeners.error?.(payload)) };
+  return {
+    api,
+    emitError: (payload: unknown) => act(() => listeners.error?.(payload)),
+    emitAvailable: (info: unknown) =>
+      act(async () => {
+        await listeners.available?.(info);
+      })
+  };
+};
+
+/** Policy đang ép 1.0.123 (file thô ghi mode force). */
+const forcedTo123Policy: UpdatePolicy = {
+  enabled: true,
+  latestVersion: "1.0.123",
+  minSupportedVersion: "1.0.123",
+  mode: "force"
 };
 
 describe("useAutoUpdater", () => {
@@ -125,6 +144,44 @@ describe("useAutoUpdater", () => {
 
     expect(screen.queryByText("Bạn đang dùng phiên bản mới nhất")).not.toBeInTheDocument();
     expect(screen.queryByText("Đã tìm thấy phiên bản mới")).not.toBeInTheDocument();
+  });
+
+  it("closes an optional update modal with Đóng even when the raw policy says force", async () => {
+    const { api, emitAvailable } = createApiMock(
+      { ...forcedTo123Policy, mode: "optional" },
+      "1.0.123"
+    );
+    window.api = api as unknown as typeof window.api;
+    renderHook(() => useAutoUpdater(), { wrapper });
+    await waitFor(() => expect(api.onAvailable).toHaveBeenCalled());
+
+    // Main bản cũ gửi policy thô (mode force) kèm mode đã tính cho máy 1.0.123 là optional.
+    await emitAvailable({ version: "1.0.124", mode: "optional", policy: forcedTo123Policy });
+    expect(await screen.findByText("Đã tìm thấy phiên bản mới")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+
+    await waitFor(
+      () => expect(screen.queryByText("Đã tìm thấy phiên bản mới")).not.toBeInTheDocument(),
+      {
+        timeout: 3000
+      }
+    );
+    expect(api.startDownload).not.toHaveBeenCalled();
+    expect(api.quitApp).not.toHaveBeenCalled();
+  });
+
+  it("keeps a forced update modal without Đóng for machines below the minimum version", async () => {
+    const { api, emitAvailable } = createApiMock(forcedTo123Policy, "1.0.122");
+    window.api = api as unknown as typeof window.api;
+    renderHook(() => useAutoUpdater(), { wrapper });
+    await waitFor(() => expect(api.onAvailable).toHaveBeenCalled());
+
+    await emitAvailable({ version: "1.0.124", mode: "force", policy: forcedTo123Policy });
+
+    expect(await screen.findByRole("button", { name: "Thoát chương trình" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Đóng" })).not.toBeInTheDocument();
+    expect(api.startDownload).toHaveBeenCalled();
   });
 
   it("does not surface an unhandled rejection when the check IPC itself fails", async () => {

@@ -215,12 +215,21 @@ async function fetchUpdatePolicy(): Promise<UpdatePolicy> {
   }
 }
 
+/**
+ * Policy gửi renderer luôn mang mode đã tính cho máy này (như `update:policy` và `app:get-update-policy`), không phải
+ * mode thô trong file: policy `force` + `latestVersion` đã đạt nghĩa là `optional` với máy này. Gửi mode thô làm renderer
+ * coi bản cập nhật tùy chọn là bắt buộc và nút "Đóng" của modal phiên bản không đóng được.
+ */
+function getResolvedPolicy(): UpdatePolicy | undefined {
+  return latestPolicy ? { ...latestPolicy, mode: latestMode } : undefined;
+}
+
 function createUpdatePayload(info: ElectronUpdateInfo | { version: string }) {
   return {
     version: info.version,
     mode: latestMode,
     messages: latestPolicy?.messages,
-    policy: latestPolicy ?? undefined
+    policy: getResolvedPolicy()
   };
 }
 
@@ -364,6 +373,9 @@ export function setupUpdater(win: BrowserWindow, setupOptions?: SetupUpdaterOpti
   if (isDev) return;
 
   autoUpdater.channel = isDevReleaseChannel ? "dev" : "latest";
+  // electron-updater tự bật allowDowngrade khi gán channel: máy mới hơn bản Latest (vd 1.0.124 khi Latest còn là
+  // 1.0.123) sẽ bị mời "cập nhật" về bản cũ. Không bao giờ hạ cấp qua updater; muốn hạ cấp thì cài tay installer cũ.
+  autoUpdater.allowDowngrade = false;
   autoUpdater.allowPrerelease = isDevReleaseChannel;
   autoUpdater.autoDownload = false;
 
@@ -383,7 +395,7 @@ export function setupUpdater(win: BrowserWindow, setupOptions?: SetupUpdaterOpti
   autoUpdater.on("update-downloaded", () => {
     safeSend(win, "update:ready", {
       mode: latestMode,
-      policy: latestPolicy ?? undefined
+      policy: getResolvedPolicy()
     });
   });
 

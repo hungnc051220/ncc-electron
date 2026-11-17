@@ -108,6 +108,16 @@ describe("setupUpdater", () => {
       quitAndInstall: vi.fn(),
       autoInstallOnAppQuit: true
     });
+    // Như electron-updater (AppUpdater.channel setter): gán channel thì tự bật allowDowngrade.
+    let channel: string | undefined;
+    Object.defineProperty(mocks.updater, "channel", {
+      configurable: true,
+      get: () => channel,
+      set: (value: string) => {
+        channel = value;
+        mocks.updater.allowDowngrade = true;
+      }
+    });
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
@@ -152,7 +162,52 @@ describe("setupUpdater", () => {
 
     await setupUpdaterUnderTest();
 
-    expect(mocks.updater.allowDowngrade).not.toBe(true);
+    expect(mocks.updater.channel).toBe("latest");
+    expect(mocks.updater.allowDowngrade).toBe(false);
+  });
+
+  it("sends the mode resolved for this machine, not the raw policy mode, with an update", async () => {
+    // Policy đang ép 1.0.123; máy đã ở 1.0.123 nên bản 1.0.124 chỉ là cập nhật tùy chọn.
+    mocks.appVersion = "1.0.123";
+    vi.stubGlobal(
+      "fetch",
+      mockPolicyResponse(
+        createPolicy({ mode: "force", latestVersion: "1.0.123", minSupportedVersion: "1.0.123" })
+      )
+    );
+    const { send } = await setupUpdaterUnderTest();
+
+    mocks.updater.emit("update-available", { version: "1.0.124" });
+    mocks.updater.emit("update-downloaded", { version: "1.0.124" });
+
+    const actualAvailable = send.mock.calls.find(
+      ([channel]) => channel === "update:available"
+    )?.[1];
+    const actualReady = send.mock.calls.find(([channel]) => channel === "update:ready")?.[1];
+    expect(actualAvailable).toMatchObject({
+      version: "1.0.124",
+      mode: "optional",
+      policy: { mode: "optional", minSupportedVersion: "1.0.123" }
+    });
+    expect(actualReady).toMatchObject({ mode: "optional", policy: { mode: "optional" } });
+  });
+
+  it("keeps force for machines below minSupportedVersion", async () => {
+    mocks.appVersion = "1.0.122";
+    vi.stubGlobal(
+      "fetch",
+      mockPolicyResponse(
+        createPolicy({ mode: "force", latestVersion: "1.0.123", minSupportedVersion: "1.0.123" })
+      )
+    );
+    const { send } = await setupUpdaterUnderTest();
+
+    mocks.updater.emit("update-available", { version: "1.0.124" });
+
+    const actualAvailable = send.mock.calls.find(
+      ([channel]) => channel === "update:available"
+    )?.[1];
+    expect(actualAvailable).toMatchObject({ mode: "force", policy: { mode: "force" } });
   });
 
   describe("fail-closed when the policy cannot be fetched or is invalid", () => {
