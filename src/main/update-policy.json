@@ -2,7 +2,7 @@
   "enabled": true,
   "latestVersion": "1.0.123",
   "minSupportedVersion": "1.0.123",
-  "mode": "force",
+  "mode": "optional",
   "messages": [
     "Bắt buộc cập nhật 1.0.123 để bán vé với hệ thống NCC V3.2.",
     "Giá vé U22 theo ngày chiếu của suất (T2–T5 / T6–CN); ngày lễ không áp dụng U22.",
