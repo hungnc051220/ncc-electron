@@ -251,6 +251,22 @@ describe("VipCardDialog U22 price from the backend", { timeout: 30000 }, () => {
     expect(screen.getByRole("radio", { name: U22_RADIO })).toBeDisabled();
   });
 
+  it.each([
+    ["promotion_excluded", "Ngày/suất chiếu này không áp dụng ưu đãi U22 theo chính sách NCC."],
+    ["screening_u22_disabled", "Ngày/suất chiếu này không áp dụng ưu đãi U22 theo chính sách NCC."],
+    ["uniform_price", "Suất chiếu Đồng giá không áp dụng ưu đãi U22."]
+  ])("locks U22 with reason %s and the NCC policy message", async (reason, expectedMessage) => {
+    vi.mocked(ordersApi.validateVoucher).mockResolvedValue({
+      isValid: false,
+      discountAmount: 0,
+      reason
+    });
+    await searchCard();
+
+    await waitFor(() => expect(screen.getByText(expectedMessage)).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: U22_RADIO })).toBeDisabled();
+  });
+
   it("locks U22 when the backend returns no u22Price (backend without U22 price config)", async () => {
     vi.mocked(ordersApi.validateVoucher).mockResolvedValue({
       isValid: true,

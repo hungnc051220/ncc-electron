@@ -47,7 +47,12 @@ const U22_REASON_MESSAGES: Record<string, string> = {
   not_u22: "Thẻ thành viên không đủ điều kiện ưu đãi U22.",
   converted_to_member: "Thẻ U22 không còn hiệu lực vì khách hàng đã quá 22 tuổi.",
   card_not_found: "Không tìm thấy thẻ thành viên.",
-  not_2d: "Ưu đãi U22 chỉ áp dụng cho suất chiếu 2D."
+  not_2d: "Ưu đãi U22 chỉ áp dụng cho suất chiếu 2D.",
+  // Ngày được NCC đánh dấu "Không áp ưu đãi" (không phải ngày lễ). Chỉ U22 bị chặn tự động.
+  promotion_excluded: "Ngày/suất chiếu này không áp dụng ưu đãi U22 theo chính sách NCC.",
+  // Chính sách U22 theo suất (suất Đồng giá, hoặc suất đã tắt U22).
+  uniform_price: "Suất chiếu Đồng giá không áp dụng ưu đãi U22.",
+  screening_u22_disabled: "Ngày/suất chiếu này không áp dụng ưu đãi U22 theo chính sách NCC."
 };
 
 const VOUCHER_TYPE_ID = {

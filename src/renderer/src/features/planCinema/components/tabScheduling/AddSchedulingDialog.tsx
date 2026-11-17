@@ -5,8 +5,10 @@ import { useTicketPricesByPlan } from "@renderer/hooks/ticketPrices/useTicketPri
 import { getApiErrorMessage } from "@renderer/lib/apiError";
 import { getPlanScreeningDateTime } from "@renderer/lib/utils";
 import { usePermission } from "@renderer/permissions/usePermission";
+import type { PlanScreeningPriceMode, PricingStaleDetails } from "@shared/types";
 import type { FormProps } from "antd";
 import {
+  Alert,
   Button,
   Checkbox,
   DatePicker,
@@ -15,15 +17,51 @@ import {
   InputNumber,
   Modal,
   Select,
-  TimePicker
+  TimePicker,
+  Typography
 } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import { usePricingRules } from "@renderer/hooks/ticketPrices/usePricingRules";
+import {
+  buildStaleComparisonRows,
+  getPlanPricingErrorMessage,
+  getPlanPricingReason,
+  getPricingBlockReason,
+  getPricingStaleDetails,
+  resolvePriceMode
+} from "./planPricing";
+import { getU22CheckboxState, getU22PolicyInvalidMessage } from "./u22Screening";
 
 const MIN_SCREENING_BREAK_MINUTES = 5;
+
+/** Body tạo ca chiếu (kèm nguồn giá và phiên bản giá để backend phát hiện giá cũ). */
+type CreateScreeningBody = {
+  planCinemaId: number;
+  projectDate: string;
+  projectTime: string;
+  filmId: number;
+  roomId: number;
+  daypartId?: number;
+  priceOfPosition1: string;
+  priceOfPosition2: string;
+  priceOfPosition3: string;
+  priceOfPosition4: string;
+  isOnlineSelling?: boolean;
+  priceMode: PlanScreeningPriceMode;
+  pricingVersion?: string;
+  /** Chỉ gửi khi DB có bảng chính sách U22 theo suất. */
+  u22Enabled?: boolean;
+};
+
+/**
+ * Field giá vị trí: người dùng sửa một trong các field này → giá nhập tay (`MANUAL`). Ô giá Đồng giá (`price`)
+ * không tính, vì Đồng giá đã là chế độ `UNIFORM` riêng.
+ */
+const PRICE_FORM_FIELDS = ["priceOfPosition1", "priceOfPosition2", "priceOfPosition3"];
 
 type FieldType = {
   filmId: number;
@@ -144,17 +182,18 @@ const AddSchedulingDialog = ({
   const [savedIndividualPrices, setSavedIndividualPrices] = useState<PositionPriceFormValues>(
     emptyPositionPriceFormValues
   );
-  const [pendingSubmitBody, setPendingSubmitBody] = useState<{
-    planCinemaId: number;
-    projectDate: string;
-    projectTime: string;
-    filmId: number;
-    roomId: number;
-    priceOfPosition1: string;
-    priceOfPosition2: string;
-    priceOfPosition3: string;
-    priceOfPosition4: string;
-    isOnlineSelling?: boolean;
+  const [pendingSubmitBody, setPendingSubmitBody] = useState<CreateScreeningBody | null>(null);
+  /**
+   * `LIST` = dùng giá bảng; `MANUAL` = người dùng đã sửa ô giá (không tự ghi đè). Đồng giá là `UNIFORM`, tính từ
+   * checkbox Đồng giá khi lưu.
+   */
+  const [priceMode, setPriceMode] = useState<PlanScreeningPriceMode>("LIST");
+  /** Lựa chọn tường minh của người dùng cho "Áp dụng ưu đãi U22"; `null` = chưa chạm (mặc định BẬT). */
+  const [u22UserChoice, setU22UserChoice] = useState<boolean | null>(null);
+  /** 409 `PRICING_STALE`: giá đã gửi và giá hiện tại để người dùng so sánh trước khi lưu lại. */
+  const [stalePricing, setStalePricing] = useState<{
+    body: CreateScreeningBody;
+    details: PricingStaleDetails;
   } | null>(null);
   const { message } = useAntdApp();
   const { can } = usePermission();
@@ -197,17 +236,26 @@ const AddSchedulingDialog = ({
     );
   }, [projectDate, projectTime]);
 
-  const {
-    data: planPricing,
-    error: planPricingError,
-    isError: isPlanPricingError,
-    isPlaceholderData: isPlanPricingPlaceholder
-  } = useTicketPricesByPlan({
+  const planPricingDto = {
     roomId,
     versionCode: selectedFilm?.film.versionCode ?? "",
     date: planPricingDateTime?.format(),
     filmId: selectedFilm?.filmId
-  });
+  };
+  const isPlanPricingEnabled = Boolean(
+    planPricingDto.date &&
+    planPricingDto.roomId &&
+    planPricingDto.versionCode &&
+    planPricingDto.filmId
+  );
+  const {
+    data: planPricing,
+    error: planPricingError,
+    isError: isPlanPricingError,
+    isFetching: isPlanPricingFetching,
+    isPlaceholderData: isPlanPricingPlaceholder,
+    refetch: refetchPlanPricing
+  } = useTicketPricesByPlan(planPricingDto);
 
   const mappedPlanPricing = useMemo(
     () => getPlanPricingValues(isPlanPricingPlaceholder ? undefined : planPricing?.pricings),
@@ -219,6 +267,38 @@ const AddSchedulingDialog = ({
     [mappedPlanPricing]
   );
 
+  // Không lưu khi giá đang tải, đang là giá cũ giữ chỗ, lỗi, hoặc phòng/phiên bản chưa có giá.
+  const pricingBlockReason = getPricingBlockReason({
+    isQueryEnabled: isPlanPricingEnabled,
+    isFetching: isPlanPricingFetching,
+    isPlaceholderData: isPlanPricingPlaceholder,
+    isError: isPlanPricingError,
+    hasPricing: activePositionFields.length > 0,
+    errorMessage: isPlanPricingError ? getPlanPricingErrorMessage(planPricingError) : null
+  });
+  const isPricingSettled = isPlanPricingEnabled && pricingBlockReason === null;
+  const pricingReason = isPlanPricingPlaceholder ? null : getPlanPricingReason(planPricing);
+
+  // Chính sách U22 theo suất: khóa TẮT ở Đồng giá / ngày lễ / ngày không áp ưu đãi / phiên bản không phải 2D; DB
+  // chưa có bảng chính sách thì khóa và không gửi; chưa đủ thông tin thì chặn lưu.
+  const {
+    data: pricingRules,
+    isLoading: isPricingRulesLoading,
+    refetch: refetchPricingRules
+  } = usePricingRules();
+  const u22State = getU22CheckboxState({
+    rules: pricingRules,
+    isRulesLoading: isPricingRulesLoading,
+    isPricingReady: isPricingSettled,
+    pricing: isPlanPricingPlaceholder ? null : planPricing,
+    versionCode: selectedFilm?.film.versionCode,
+    isUniform: isSamePrice,
+    userChoice: u22UserChoice
+  });
+  const isSaveBlockedByU22 = isPlanPricingEnabled && u22State.undetermined;
+  const isSaveBlockedByPricing =
+    (isPlanPricingEnabled && pricingBlockReason !== null) || isSaveBlockedByU22;
+
   const resetForm = () => {
     form.resetFields();
     form.setFieldsValue(defaultFormValues);
@@ -226,6 +306,18 @@ const AddSchedulingDialog = ({
     setIsSamePrice(false);
     setConfirmOfflineOpen(false);
     setPendingSubmitBody(null);
+    setPriceMode("LIST");
+    setU22UserChoice(null);
+    setStalePricing(null);
+  };
+
+  /** "Dùng lại giá bảng": bỏ giá nhập tay, tải lại giá bảng mới nhất và điền vào form. */
+  const restoreListPrices = () => {
+    setPriceMode("LIST");
+    setIsSamePrice(false);
+    form.setFieldValue("price", undefined);
+    form.setFieldsValue(getPositionPriceFormValues(mappedPlanPricing));
+    void refetchPlanPricing();
   };
 
   useEffect(() => {
@@ -271,19 +363,22 @@ const AddSchedulingDialog = ({
   );
 
   useEffect(() => {
+    // Giá nhập tay không bị giá bảng tự ghi đè; người dùng chọn "Dùng lại giá bảng" nếu muốn.
+    if (priceMode === "MANUAL") return;
     const pricingFormValues = getPositionPriceFormValues(mappedPlanPricing);
     if (open) {
       form.setFieldsValue(pricingFormValues);
     }
     setSavedIndividualPrices(pricingFormValues);
-  }, [mappedPlanPricing, form, open]);
+  }, [mappedPlanPricing, form, open, priceMode]);
 
   useEffect(() => {
     if (!open || !isPlanPricingError) {
       return;
     }
 
-    message.error(getApiErrorMessage(planPricingError, "Lấy giá vé theo kế hoạch thất bại"));
+    // Lỗi tra giá nghiệp vụ (khung giờ trùng, chưa đọc được giá vé ngày lễ…): báo rõ, không dùng giá 0đ.
+    message.error(getPlanPricingErrorMessage(planPricingError));
   }, [isPlanPricingError, message, open, planPricingError]);
 
   const applyUniformPriceToPositions = (uniformPrice: number) => {
@@ -345,35 +440,77 @@ const AddSchedulingDialog = ({
     return `Các ca chiếu trong cùng một phòng phải cách nhau ít nhất ${MIN_SCREENING_BREAK_MINUTES} phút.`;
   };
 
-  const submitCreatePlanScreening = (body: {
-    planCinemaId: number;
-    projectDate: string;
-    projectTime: string;
-    filmId: number;
-    roomId: number;
-    daypartId?: number;
-    priceOfPosition1: string;
-    priceOfPosition2: string;
-    priceOfPosition3: string;
-    priceOfPosition4: string;
-    isOnlineSelling?: boolean;
-  }) => {
+  const submitCreatePlanScreening = (body: CreateScreeningBody) => {
     createPlanScreening.mutate(
       { ...body, isOnlineSelling: body.isOnlineSelling ? 1 : 0 },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
           message.success("Thêm ca chiếu vào kế hoạch thành công");
+          // Chỉ báo đã lưu thiết lập U22 khi backend xác nhận có dòng chính sách của suất.
+          if (body.u22Enabled !== undefined) {
+            if (result?.u22Policy?.source === "SCREENING_POLICY") {
+              message.info(
+                result.u22Policy.u22Enabled
+                  ? "Đã lưu thiết lập U22 của suất: Áp dụng ưu đãi U22."
+                  : "Đã lưu thiết lập U22 của suất: Không áp dụng ưu đãi U22."
+              );
+            } else {
+              message.warning(
+                "Ca chiếu đã được thêm nhưng máy chủ chưa xác nhận thiết lập U22 của suất. Kiểm tra cột U22 trong danh sách giờ chiếu."
+              );
+            }
+          }
           resetForm();
           setOpen(false);
         },
         onError: (error: unknown) => {
+          const staleDetails = getPricingStaleDetails(error);
+          if (staleDetails) {
+            // Giá đã đổi (ngày lễ / khung giờ / bảng giá): không tự lưu lại, cho người dùng so sánh và xác nhận.
+            setConfirmOfflineOpen(false);
+            setPendingSubmitBody(null);
+            setStalePricing({ body, details: staleDetails });
+            void refetchPlanPricing();
+            return;
+          }
+          const u22InvalidMessage = getU22PolicyInvalidMessage(error);
+          if (u22InvalidMessage) {
+            // Ngày/suất vừa đổi điều kiện (vd. vừa thành ngày lễ): tải lại để checkbox U22 phản ánh đúng.
+            setConfirmOfflineOpen(false);
+            setPendingSubmitBody(null);
+            message.error(u22InvalidMessage);
+            void refetchPlanPricing();
+            void refetchPricingRules();
+            return;
+          }
           message.error(getApiErrorMessage(error, "Thêm ca chiếu vào kế hoạch thất bại"));
         }
       }
     );
   };
 
+  /** Người dùng đã xem so sánh giá: tải giá mới vào form, phải bấm lưu lại để xác nhận. */
+  const acceptStalePricing = () => {
+    const wasManual =
+      stalePricing?.body.priceMode === "MANUAL" || stalePricing?.body.priceMode === "UNIFORM";
+    setStalePricing(null);
+    if (wasManual) {
+      // Giữ giá nhập tay; chỉ cập nhật phiên bản giá mới nhất để lưu lại.
+      void refetchPlanPricing();
+      message.info("Đã tải lại giá bảng. Giá nhập tay được giữ nguyên, kiểm tra rồi bấm Lưu.");
+      return;
+    }
+    setPriceMode("LIST");
+    setIsSamePrice(false);
+    void refetchPlanPricing();
+    message.info("Đã tải giá mới vào form. Kiểm tra lại giá rồi bấm Lưu để xác nhận.");
+  };
+
   const onFinish: FormProps<FieldType>["onFinish"] = (values: FieldType) => {
+    if (isSaveBlockedByPricing) {
+      message.warning(pricingBlockReason ?? u22State.reason ?? "Giá vé chưa sẵn sàng");
+      return;
+    }
     const uniformPrice = Number(values.price);
     const hasUniformPrice = isSamePrice && Number.isFinite(uniformPrice);
     const screeningDateTime = getPlanScreeningDateTime(
@@ -406,7 +543,14 @@ const AddSchedulingDialog = ({
       return;
     }
 
-    const body = {
+    const submittedPrices = hasUniformPrice
+      ? {
+          priceOfPosition1: uniformPrice,
+          priceOfPosition2: uniformPrice,
+          priceOfPosition3: uniformPrice
+        }
+      : values;
+    const body: CreateScreeningBody = {
       planCinemaId,
       projectDate: dayjs(values.projectDate).format("YYYY-MM-DD"),
       projectTime: screeningDateTime?.format() ?? dayjs(values.projectTime).format(),
@@ -417,7 +561,11 @@ const AddSchedulingDialog = ({
       priceOfPosition2: normalizedPriceOfPosition2,
       priceOfPosition3: normalizedPriceOfPosition3,
       priceOfPosition4: "",
-      isOnlineSelling: values.isOnlineSelling
+      isOnlineSelling: values.isOnlineSelling,
+      priceMode: resolvePriceMode(priceMode, submittedPrices, mappedPlanPricing, isSamePrice),
+      ...(planPricing?.pricingVersion ? { pricingVersion: planPricing.pricingVersion } : {}),
+      // Backend cũ / DB chưa có bảng chính sách: không gửi `u22Enabled`.
+      ...(u22State.submit ? { u22Enabled: u22State.checked } : {})
     };
 
     if (values.isOnlineSelling === false) {
@@ -464,11 +612,25 @@ const AddSchedulingDialog = ({
         open={open}
         onCancel={onCancel}
         onOk={() => form.submit()}
-        okButtonProps={{ loading: createPlanScreening.isPending }}
+        okButtonProps={{
+          loading: createPlanScreening.isPending,
+          disabled: isSaveBlockedByPricing || Boolean(stalePricing)
+        }}
         cancelButtonProps={{ disabled: createPlanScreening.isPending }}
         width={900}
       >
-        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={defaultFormValues}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          initialValues={defaultFormValues}
+          onValuesChange={(changedValues: Record<string, unknown>) => {
+            // Người dùng tự sửa ô giá → giá nhập tay (setFieldsValue của giá bảng không kích hoạt sự kiện này).
+            if (Object.keys(changedValues).some((key) => PRICE_FORM_FIELDS.includes(key))) {
+              setPriceMode("MANUAL");
+            }
+          }}
+        >
           <div className="grid grid-cols-2 gap-3">
             <Form.Item<FieldType>
               name="filmId"
@@ -533,31 +695,54 @@ const AddSchedulingDialog = ({
               <Checkbox className="mt-10.5">Bán online</Checkbox>
             </Form.Item>
 
-            <Checkbox
-              checked={isSamePrice}
-              disabled={activePositionFields.length === 0}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setIsSamePrice(checked);
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                <Checkbox
+                  checked={isSamePrice}
+                  disabled={activePositionFields.length === 0}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    // Đồng giá là chế độ giá `UNIFORM` (tính khi lưu); bỏ Đồng giá trả về chế độ trước đó.
+                    setIsSamePrice(checked);
 
-                if (checked) {
-                  setSavedIndividualPrices({
-                    priceOfPosition1: form.getFieldValue("priceOfPosition1"),
-                    priceOfPosition2: form.getFieldValue("priceOfPosition2"),
-                    priceOfPosition3: form.getFieldValue("priceOfPosition3")
-                  });
+                    if (checked) {
+                      setSavedIndividualPrices({
+                        priceOfPosition1: form.getFieldValue("priceOfPosition1"),
+                        priceOfPosition2: form.getFieldValue("priceOfPosition2"),
+                        priceOfPosition3: form.getFieldValue("priceOfPosition3")
+                      });
 
-                  const currentPrice = Number(form.getFieldValue("price"));
-                  if (Number.isFinite(currentPrice)) {
-                    applyUniformPriceToPositions(currentPrice);
-                  }
-                } else {
-                  form.setFieldsValue(savedIndividualPrices);
-                }
-              }}
-            >
-              Đồng giá
-            </Checkbox>
+                      const currentPrice = Number(form.getFieldValue("price"));
+                      if (Number.isFinite(currentPrice)) {
+                        applyUniformPriceToPositions(currentPrice);
+                      }
+                    } else {
+                      form.setFieldsValue(savedIndividualPrices);
+                    }
+                  }}
+                >
+                  Đồng giá
+                </Checkbox>
+                {u22State.visible && (
+                  <Checkbox
+                    checked={u22State.checked}
+                    disabled={u22State.disabled}
+                    onChange={(e) => setU22UserChoice(e.target.checked)}
+                  >
+                    Áp dụng ưu đãi U22
+                  </Checkbox>
+                )}
+              </div>
+              {u22State.visible && u22State.reason && (
+                <Typography.Text
+                  type="secondary"
+                  className="text-xs"
+                  data-testid="u22-screening-reason"
+                >
+                  {u22State.reason}
+                </Typography.Text>
+              )}
+            </div>
 
             {!isSamePrice ? (
               <div className="bg-primary/10 col-span-2 grid grid-cols-3 gap-3 rounded-md border border-dashed border-primary p-3">
@@ -664,8 +849,96 @@ const AddSchedulingDialog = ({
                 </Form.Item>
               </div>
             )}
+
+            <div className="col-span-2 flex flex-col gap-2" data-testid="plan-pricing-status">
+              {pricingReason && (
+                <Alert
+                  type={planPricing?.pricingReason === "HOLIDAY" ? "warning" : "info"}
+                  showIcon
+                  title={pricingReason}
+                />
+              )}
+              {(priceMode === "MANUAL" || isSamePrice) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Typography.Text type="secondary">
+                    {isSamePrice
+                      ? "Đang dùng Đồng giá."
+                      : "Đang dùng giá nhập tay: giá bảng không tự ghi đè giá đã nhập."}
+                  </Typography.Text>
+                  <Button size="small" onClick={restoreListPrices}>
+                    Dùng lại giá bảng
+                  </Button>
+                </div>
+              )}
+              {isSaveBlockedByPricing && (pricingBlockReason || u22State.reason) && (
+                <Typography.Text type="secondary" data-testid="save-block-reason">
+                  {pricingBlockReason ?? u22State.reason}
+                </Typography.Text>
+              )}
+            </div>
           </div>
         </Form>
+      </Modal>
+
+      <Modal
+        open={Boolean(stalePricing)}
+        centered
+        width={560}
+        title="Giá vé của ca chiếu đã thay đổi"
+        okText="Tải giá mới vào form"
+        cancelText="Đóng"
+        onOk={acceptStalePricing}
+        onCancel={() => setStalePricing(null)}
+        mask={{ closable: false }}
+      >
+        {stalePricing && (
+          <div className="flex flex-col gap-3">
+            <Alert
+              type="warning"
+              showIcon
+              title="Ca chiếu chưa được lưu."
+              description="Giá bạn đã dùng không còn khớp với giá bảng hiện hành (ngày lễ, khung giờ hoặc bảng giá vừa thay đổi). Hãy kiểm tra giá mới rồi bấm Lưu để xác nhận; hệ thống không tự lưu lại bằng giá cũ."
+            />
+            {stalePricing.details.current && getPlanPricingReason(stalePricing.details.current) && (
+              <Typography.Text>
+                {getPlanPricingReason(stalePricing.details.current)}
+              </Typography.Text>
+            )}
+            <table className="w-full border-collapse text-sm" aria-label="So sánh giá vé">
+              <thead>
+                <tr className="text-left">
+                  <th className="border-b border-(--ant-color-border) py-1">Loại ghế</th>
+                  <th className="border-b border-(--ant-color-border) py-1">Giá đã dùng</th>
+                  <th className="border-b border-(--ant-color-border) py-1">Giá hiện hành</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buildStaleComparisonRows(
+                  stalePricing.details.requested ?? stalePricing.body,
+                  stalePricing.details.current
+                ).map((row) => (
+                  <tr key={row.seatType}>
+                    <td className="py-1">{row.seatType}</td>
+                    <td className="py-1">{row.requested}</td>
+                    <td
+                      className={
+                        row.changed ? "py-1 font-semibold text-(--ant-color-warning)" : "py-1"
+                      }
+                    >
+                      {row.current}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {stalePricing.body.priceMode !== "LIST" && (
+              <Typography.Text type="secondary">
+                Bạn đang dùng giá nhập tay: giá nhập tay được giữ nguyên, chỉ tải lại thông tin giá
+                bảng mới nhất.
+              </Typography.Text>
+            )}
+          </div>
+        )}
       </Modal>
 
       <Modal

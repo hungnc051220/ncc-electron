@@ -1,13 +1,26 @@
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import { ReloadOutlined } from "@ant-design/icons";
-import { UpdateDownloadProgress, UpdateInfo, UpdateMode, UpdatePolicy } from "@shared/types";
+import {
+  UpdateCheckResult,
+  UpdateDownloadProgress,
+  UpdateErrorPayload,
+  UpdateInfo,
+  UpdateMode,
+  UpdatePolicy
+} from "@shared/types";
 import VersionInfoModalContent from "@renderer/components/VersionInfoModalContent";
 import UpdateProgressNotification from "@renderer/components/UpdateProgressNotification";
 import UpdateProgressDock from "@renderer/components/UpdateProgressDock";
+import UpdateErrorNotificationActions from "@renderer/components/UpdateErrorNotificationActions";
 import { useAntdApp } from "@renderer/hooks/useAntdApp";
+import { getUpdateErrorContent, normalizeUpdateErrorPayload } from "@renderer/lib/updateError";
 
 const UPDATE_PROGRESS_NOTIFICATION_KEY = "update-progress-notification";
 const UPDATE_PROGRESS_DOCK_KEY = "update-progress-dock";
+const UPDATE_ERROR_NOTIFICATION_KEY = "update-error-notification";
+/** Bỏ qua lỗi trùng (cùng bước + mã) trong khoảng này để không spam khi mất mạng. */
+export const UPDATE_ERROR_DEDUPE_MS = 10_000;
+const UPDATE_ERROR_DURATION_SECONDS = 8;
 const INITIAL_PROGRESS: UpdateDownloadProgress = {
   percent: 0,
   transferred: 0,
@@ -16,8 +29,11 @@ const INITIAL_PROGRESS: UpdateDownloadProgress = {
 };
 const DEFAULT_UPDATE_MODE: UpdateMode = "optional";
 
+/** Policy `enabled=false`: không mời, không tải, không cài bản mới từ UI. */
+const isUpdatePaused = (policy?: UpdatePolicy | null) => policy?.enabled === false;
+
 export function useAutoUpdater() {
-  const { modal, message, notification } = useAntdApp();
+  const { modal, notification } = useAntdApp();
   const [version, setVersion] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
@@ -39,6 +55,9 @@ export function useAutoUpdater() {
   const openProgressNotificationRef = useRef<(progressInfo: UpdateDownloadProgress) => void>(
     () => undefined
   );
+  const handleUpdateErrorRef = useRef<(payload: UpdateErrorPayload) => void>(() => undefined);
+  const showVersionInfoRef = useRef<() => Promise<void>>(async () => undefined);
+  const lastUpdateErrorRef = useRef<{ signature: string; at: number } | null>(null);
 
   const ensureVersion = useCallback(async (): Promise<string> => {
     if (versionRef.current) {
@@ -55,11 +74,19 @@ export function useAutoUpdater() {
 
   const setLatestPolicy = useCallback((nextPolicy: UpdatePolicy | null) => {
     latestPolicyRef.current = nextPolicy;
-    latestModeRef.current = nextPolicy?.mode ?? DEFAULT_UPDATE_MODE;
+    // Policy tạm dừng cập nhật thì không bao giờ khóa màn hình theo mode force.
+    latestModeRef.current =
+      nextPolicy?.enabled === false
+        ? DEFAULT_UPDATE_MODE
+        : (nextPolicy?.mode ?? DEFAULT_UPDATE_MODE);
     setPolicy(nextPolicy);
   }, []);
 
   const getEffectiveMode = useCallback((info?: UpdateInfo | null): UpdateMode => {
+    if (isUpdatePaused(latestPolicyRef.current)) {
+      return DEFAULT_UPDATE_MODE;
+    }
+
     const mode = info?.mode ?? latestPolicyRef.current?.mode ?? latestModeRef.current;
     const latestVersion = info?.version ?? latestPolicyRef.current?.latestVersion;
 
@@ -76,6 +103,10 @@ export function useAutoUpdater() {
   }, []);
 
   const getEffectiveLatestVersion = useCallback((info?: UpdateInfo | null): string | null => {
+    if (isUpdatePaused(latestPolicyRef.current)) {
+      return null;
+    }
+
     return info?.version ?? latestPolicyRef.current?.latestVersion ?? null;
   }, []);
 
@@ -152,9 +183,53 @@ export function useAutoUpdater() {
     openProgressNotificationRef.current = openProgressNotification;
   }, [openProgressNotification]);
 
+  const resetDownloadState = useCallback(() => {
+    setIsDownloading(false);
+    setProgress(0);
+    isDownloadingRef.current = false;
+    hiddenProgressRef.current = true;
+    latestProgressRef.current = INITIAL_PROGRESS;
+    notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
+    closeProgressDock();
+  }, [closeProgressDock, notification]);
+
+  const showUpdateError = useCallback(
+    (payload: UpdateErrorPayload, onRetry?: () => void) => {
+      const signature = `${payload.stage}:${payload.code}`;
+      const now = Date.now();
+      const lastError = lastUpdateErrorRef.current;
+
+      if (lastError?.signature === signature && now - lastError.at < UPDATE_ERROR_DEDUPE_MS) {
+        return;
+      }
+
+      lastUpdateErrorRef.current = { signature, at: now };
+
+      const content = getUpdateErrorContent(payload);
+      const close = () => notification.destroy(UPDATE_ERROR_NOTIFICATION_KEY);
+      const retry = onRetry
+        ? () => {
+            close();
+            lastUpdateErrorRef.current = null;
+            onRetry();
+          }
+        : undefined;
+
+      notification[content.severity]({
+        key: UPDATE_ERROR_NOTIFICATION_KEY,
+        placement: "bottomRight",
+        duration: latestModeRef.current === "force" ? 0 : UPDATE_ERROR_DURATION_SECONDS,
+        title: content.title,
+        description: content.description,
+        actions: createElement(UpdateErrorNotificationActions, { onRetry: retry, onClose: close })
+      });
+    },
+    [notification]
+  );
+
   const beginDownload = useCallback(
     async (mode: UpdateMode = latestModeRef.current) => {
-      if (isDownloadingRef.current) {
+      if (isDownloadingRef.current || isUpdatePaused(latestPolicyRef.current)) {
         return;
       }
 
@@ -166,7 +241,16 @@ export function useAutoUpdater() {
       isDownloadingRef.current = true;
       closeProgressDock();
       openProgressNotification(INITIAL_PROGRESS);
-      await window.api?.startDownload();
+
+      try {
+        await window.api?.startDownload();
+      } catch {
+        handleUpdateErrorRef.current({
+          code: "UPDATE_UNKNOWN",
+          stage: "download",
+          retryable: true
+        });
+      }
     },
     [closeProgressDock, closeVersionModal, openProgressNotification]
   );
@@ -259,6 +343,10 @@ export function useAutoUpdater() {
     void window.api?.getUpdatePolicy().then(setLatestPolicy);
 
     const onAvailable = async (info: UpdateInfo) => {
+      if (isUpdatePaused(info.policy ?? latestPolicyRef.current)) {
+        return;
+      }
+
       latestUpdateRef.current = info;
       setAvailableUpdate(info);
       if (info.policy) {
@@ -328,14 +416,29 @@ export function useAutoUpdater() {
       });
     };
 
-    const onError = (msg: string) => {
-      setIsDownloading(false);
-      isDownloadingRef.current = false;
-      hiddenProgressRef.current = true;
-      notification.destroy(UPDATE_PROGRESS_NOTIFICATION_KEY);
-      closeProgressDock();
-      message.error("Lỗi cập nhật: " + msg);
+    const getRetryAction = (payload: UpdateErrorPayload) => {
+      if (!payload.retryable) return undefined;
+      if (payload.stage === "check") return () => void showVersionInfoRef.current();
+      if (payload.stage === "download") {
+        return () => void beginDownload(getEffectiveMode(latestUpdateRef.current));
+      }
+
+      return undefined;
     };
+
+    const onError = (rawPayload: unknown) => {
+      const payload = normalizeUpdateErrorPayload(rawPayload);
+
+      // Lỗi kiểm tra không được làm mất tiến trình của lượt tải đang chạy (nếu có).
+      if (payload.stage !== "check") {
+        resetDownloadState();
+        void updateVersionInfoModal(latestUpdateRef.current);
+      }
+
+      showUpdateError(payload, getRetryAction(payload));
+    };
+
+    handleUpdateErrorRef.current = onError;
 
     const unsubAvailable = window.api?.onAvailable(onAvailable);
     const unsubPolicy = window.api?.onUpdatePolicy(onUpdatePolicy);
@@ -355,32 +458,64 @@ export function useAutoUpdater() {
     beginDownload,
     ensureVersion,
     getEffectiveMode,
-    message,
     modal,
     notification,
     openProgressNotification,
     openVersionInfoModal,
+    resetDownloadState,
     setLatestPolicy,
+    showUpdateError,
     updateVersionInfoModal
   ]);
 
-  const manualCheck = async (): Promise<void> => {
-    const info = await window.api?.checkUpdate();
-    latestUpdateRef.current = info ?? null;
-    setAvailableUpdate(info ?? null);
+  const runManualCheck = async (): Promise<UpdateCheckResult> => {
+    let result: UpdateCheckResult;
+
+    try {
+      result = (await window.api?.checkUpdate()) ?? { status: "checked", info: null };
+    } catch {
+      result = {
+        status: "failed",
+        error: { code: "UPDATE_UNKNOWN", stage: "check", retryable: true }
+      };
+      handleUpdateErrorRef.current(result.error);
+    }
+
+    if (result.status === "failed") {
+      return result;
+    }
+
+    const info = result.status === "checked" ? result.info : null;
+    latestUpdateRef.current = info;
+    setAvailableUpdate(info);
     if (info?.policy) {
       setLatestPolicy(info.policy);
     }
 
-    if (!info) {
+    if (!info && !isDownloadingRef.current) {
       setProgress(0);
     }
+
+    return result;
+  };
+
+  const manualCheck = async (): Promise<void> => {
+    await runManualCheck();
   };
 
   const showVersionInfo = async (): Promise<void> => {
-    await manualCheck();
-    await openVersionInfoModal(latestUpdateRef.current ?? availableUpdate);
+    const result = await runManualCheck();
+
+    // Lỗi đã được báo bằng thông báo ngắn; không mở modal với thông tin phiên bản cũ.
+    if (result.status === "failed") {
+      return;
+    }
+
+    const fallbackUpdate = result.status === "disabled" ? null : availableUpdate;
+    await openVersionInfoModal(latestUpdateRef.current ?? fallbackUpdate);
   };
+
+  showVersionInfoRef.current = showVersionInfo;
 
   return { version, progress, policy, manualCheck, showVersionInfo };
 }

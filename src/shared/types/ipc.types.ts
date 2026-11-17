@@ -71,6 +71,30 @@ export interface UpdateReadyInfo {
   policy?: UpdatePolicy;
 }
 
+/** Bước cập nhật đang chạy khi lỗi xảy ra. */
+export type UpdateErrorStage = "check" | "download" | "install";
+
+/** Mã lỗi cập nhật đã chuẩn hóa; chi tiết kỹ thuật chỉ nằm trong log của main process. */
+export type UpdateErrorCode =
+  | "UPDATE_NETWORK"
+  | "UPDATE_METADATA_UNAVAILABLE"
+  | "UPDATE_DOWNLOAD_FAILED"
+  | "UPDATE_INSTALL_FAILED"
+  | "UPDATE_MANUAL_INSTALL_REQUIRED"
+  | "UPDATE_UNKNOWN";
+
+/** Payload `update:error` gửi sang renderer: không chứa message, stack hay URL gốc. */
+export interface UpdateErrorPayload {
+  code: UpdateErrorCode;
+  stage: UpdateErrorStage;
+  retryable: boolean;
+}
+
+export type UpdateCheckResult =
+  | { status: "checked"; info: UpdateInfo | null }
+  | { status: "disabled" }
+  | { status: "failed"; error: UpdateErrorPayload };
+
 export interface UpdaterContextType {
   version: string;
   progress: number;
