@@ -1,14 +1,11 @@
 {
   "enabled": true,
-  "latestVersion": "1.0.123",
-  "minSupportedVersion": "1.0.123",
-  "mode": "optional",
+  "latestVersion": "1.0.124",
+  "minSupportedVersion": "1.0.124",
+  "mode": "force",
   "messages": [
-    "Bắt buộc cập nhật 1.0.123 để bán vé với hệ thống NCC V3.2.",
-    "Giá vé U22 theo ngày chiếu của suất (T2–T5 / T6–CN); ngày lễ không áp dụng U22.",
-    "Danh sách ngày lễ: chọn áp giá ngày lễ hoặc giữ giá ngày thường cho từng ngày.",
-    "Lập lịch suất: chọn Đồng giá hoặc tắt U22 cho từng suất; xác nhận giá trước khi lưu.",
-    "Quản lý voucher giấy và thanh toán phần còn lại bằng VietQR, VNPay QR tại quầy."
+    "Ghế đã bỏ chọn được tự giải phóng khi mạng chập chờn, quầy khác không còn bị khóa ghế đến 5 phút.",
+    "Sơ đồ ghế tự làm mới các ghế đang được quầy khác chọn khi trạng thái đó đã hết hạn, kể cả sau khi mở lại màn hình."
   ],
-  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.123"
+  "releaseNotesUrl": "https://github.com/hungnc051220/ncc-electron/releases/tag/v1.0.124"
 }
