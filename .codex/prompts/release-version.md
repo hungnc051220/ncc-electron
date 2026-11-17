@@ -50,10 +50,10 @@ Nếu version chưa tăng hoặc tag `v<version>` có khả năng đã tồn t�
    - Ví dụ `Thêm context menu copy/paste` -> `Thêm menu chuột phải giúp sao chép, dán và chọn nội dung nhanh hơn.`
 10. Nếu không rõ thay đổi nào nên đưa vào `messages`, đọc git diff để đề xuất message user-facing; nếu vẫn không chắc, hỏi user xác nhận. Không tự ghi message kỹ thuật.
 11. Sau khi update-policy hợp lệ, chuẩn bị push tiếp theo policy repo:
-   - GitHub là remote chính để chạy GitHub Actions.
-   - Bitbucket là mirror/backup hoặc review nội bộ.
-   - Nếu push nhiều remote, push GitHub trước, Bitbucket sau.
-   - Nếu push GitHub fail, không push tiếp Bitbucket trừ khi user yêu cầu rõ.
+   - `origin` (`hungnc051220/ncc-electron`) là repository chính chạy GitHub Actions; `main` phải chứa đủ source của phiên bản phát hành.
+   - `company` (`anvui-org/legacy-ncc-admin-desktop-electron`) chỉ nhận backup qua nhánh riêng sau khi release trên `origin` thành công.
+   - Nếu push hoặc release trên `origin` fail, không backup sang `company` trừ khi user yêu cầu rõ.
+   - Chi tiết: mục "Repository Và Luồng Phát Hành" trong `AGENTS.md`.
 12. Nếu thiếu thông tin về release target, workflow trigger, secret, bucket hoặc server ngoài GitHub Releases, dừng và hỏi/ghi rõ cần user cung cấp gì.
 
 ## Quy Tắc An Toàn

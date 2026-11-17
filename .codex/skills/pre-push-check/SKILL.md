@@ -1,6 +1,6 @@
 ---
 name: pre-push-check
-description: Kiểm tra trước khi push code trong repo Electron + React + TypeScript này. Dùng khi user sắp push, muốn kiểm tra branch hiện tại, working tree, TypeScript, lint, test, build hoặc cần đảm bảo code an toàn trước khi đẩy lên remote GitHub/Bitbucket.
+description: Kiểm tra trước khi push code trong repo Electron + React + TypeScript này. Dùng khi user sắp push, muốn kiểm tra branch hiện tại, working tree, TypeScript, lint, test, build hoặc cần đảm bảo code an toàn trước khi đẩy lên `origin` (repository chính) hoặc backup sang `company`.
 ---
 
 # Pre-Push Check
@@ -13,9 +13,9 @@ Dùng skill này khi user nói sắp push, muốn kiểm tra branch, kiểm tra 
 
 - Đọc `package.json` trước khi chọn command.
 - Đọc `.github/workflows/*` nếu push có thể kích hoạt CI/release.
-- Kiểm tra remote thật bằng `git remote -v`; repo hiện có `github` và `origin` nhưng không hard-code nếu output đã thay đổi.
+- Kiểm tra remote thật bằng `git remote -v`; quy ước là `origin` = `hungnc051220/ncc-electron` (chính) và `company` = `anvui-org/legacy-ncc-admin-desktop-electron` (backup), nhưng không hard-code nếu output đã thay đổi.
 - Kiểm tra trạng thái bằng `git status --short`, `git branch --show-current`, và diff phù hợp.
-- GitHub là remote chính để chạy GitHub Actions; Bitbucket là mirror/backup hoặc review nội bộ.
+- `origin` chạy GitHub Actions và release; `company` chỉ là backup/review (mục "Repository Và Luồng Phát Hành" trong `AGENTS.md`).
 
 ## Checklist
 
@@ -34,9 +34,9 @@ Dùng skill này khi user nói sắp push, muốn kiểm tra branch, kiểm tra 
 - Không push nếu `typecheck`, `lint` hoặc build bắt buộc chưa pass.
 - Không tự push nếu user chưa yêu cầu rõ.
 - Không tự bịa remote name. Dùng remote từ `git remote -v`.
-- Nếu cần đẩy cả GitHub và Bitbucket, ưu tiên push GitHub trước để CI chạy sớm, sau đó mới push Bitbucket.
-- Nếu push GitHub fail, không push tiếp Bitbucket trừ khi user yêu cầu rõ.
-- Với repo hiện tại, GitHub Actions release liên quan tới remote GitHub; Bitbucket là `origin` theo cấu hình hiện thấy.
+- Push `origin` trước; chỉ backup sang `company` (nhánh riêng, không ghi đè nhánh/PR của nhóm) sau khi push/release trên `origin` thành công.
+- Nếu push `origin` fail, không push `company` trừ khi user yêu cầu rõ.
+- Push `main` của `origin` với version chưa có tag sẽ kích hoạt workflow release công khai.
 
 ## Khi Command Fail
 

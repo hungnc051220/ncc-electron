@@ -26,8 +26,8 @@ Inspect repo trước, không tự bịa script, remote, secret, bucket hoặc r
   - `npm run build`
 - Nếu command bắt buộc fail, dừng lại, tóm tắt lỗi, file liên quan và hướng sửa. Không push khi check bắt buộc chưa pass.
 - Không chạy `lint:fix`, `format`, build release hoặc push nếu user chưa yêu cầu rõ.
-- Nếu user yêu cầu push nhiều remote, ưu tiên GitHub trước để GitHub Actions chạy sớm, sau đó mới push Bitbucket.
-- Nếu push GitHub fail, không push tiếp Bitbucket trừ khi user yêu cầu rõ.
+- Repository chính là `origin` (`hungnc051220/ncc-electron`); `company` (`anvui-org/legacy-ncc-admin-desktop-electron`) chỉ nhận backup sau khi phát hành xong trên `origin`, qua nhánh riêng. Xem mục "Repository Và Luồng Phát Hành" trong `AGENTS.md`.
+- Nếu push hoặc release trên `origin` fail, không backup sang `company` trừ khi user yêu cầu rõ.
 
 ## Checklist Release
 

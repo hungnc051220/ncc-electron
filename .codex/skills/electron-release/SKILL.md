@@ -63,7 +63,7 @@ Khi kiểm tra local, phân biệt artifact mới theo `LastWriteTime`, version 
 ## Thông Tin Cần User Cung Cấp Khi Thiếu
 
 - Branch release đích và remote cần push.
-- Có phát hành GitHub, Bitbucket hay cả hai không.
+- Có cần backup sang `company` sau khi phát hành trên `origin` không, và nhánh backup nào.
 - Version/tag mong muốn nếu không dùng `package.json`.
 - Có cần cập nhật `update-policy.json` không, và nội dung message/release notes.
 - Release server/secret/bucket nếu khác GitHub Releases.

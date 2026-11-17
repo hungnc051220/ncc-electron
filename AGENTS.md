@@ -71,6 +71,21 @@ Khi user nói ngắn như “Tôi đã tăng version trong package.json, hãy re
 
 Trong one-shot release, `src/main/update-policy.json` là bước hậu release: chỉ cập nhật/push sau khi GitHub Actions build/release thành công và artifact/release hợp lệ. Trường `messages` trong file này là thông tin cập nhật/changelog hiển thị cho người dùng cuối, phải viết tiếng Việt tự nhiên, dễ hiểu, mô tả lợi ích hoặc hành vi mới; không dùng log kỹ thuật như build, artifact, pipeline, workflow, Electron, IPC, refactor, patch, commit hoặc release job.
 
+## Repository Và Luồng Phát Hành
+
+Quy ước chính thức từ 17/11/2026:
+
+| Remote    | Repository                                    | Vai trò                                                                                                                                                                |
+| --------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin`  | `hungnc051220/ncc-electron`                   | Repository **chính**, nguồn sự thật. `main` luôn là source đã phát hành mới nhất; GitHub Actions, version, tag, `update-policy.json` và installer đều quản lý tại đây. |
+| `company` | `anvui-org/legacy-ncc-admin-desktop-electron` | Repository **phụ**: backup, lịch sử phát triển, review/chia sẻ với nhóm. Không quyết định phiên bản phát hành.                                                         |
+
+Luồng cho mọi phiên bản: develop/hotfix → test → nhánh trên `origin` → `origin/main` → GitHub Release (workflow tự chạy khi push `main` với version chưa có tag) → backup sang `company`.
+
+- Không phát hành khi `origin/main` còn thiếu source của phiên bản đó; không đổi version chỉ để kích hoạt CI. Đưa source vào `main` bằng merge (bảo toàn lịch sử), không copy file, không force-push/reset `main`.
+- Backup sang `company` bằng nhánh riêng (ví dụ `backup/personal-main`). Không ghi đè, reset, force-push hoặc xóa nhánh/PR của nhóm; không tự merge code chưa được duyệt vào nhánh phát triển của công ty; không chạy workflow deploy/release của công ty.
+- Không dùng `company` làm nguồn phát hành production trừ khi chủ dự án yêu cầu rõ.
+
 ## Hướng Dẫn Test
 
 Vitest chạy trong jsdom với Testing Library, jest-dom, MSW, setup timezone dayjs, reset store và `queryClient.clear()` từ `src/renderer/src/test/setup.ts`. Dùng React Testing Library để test hành vi người dùng và trạng thái hiển thị. Dùng MSW khi cần mô phỏng network behavior; mock trực tiếp domain API cho test mutation hook hẹp nếu test gần đó đang theo pattern này. Dùng Playwright cho luồng end-to-end như booking/customer-display hoặc tích hợp trình duyệt.
@@ -92,7 +107,7 @@ Kiểm tra correctness, TypeScript safety, render thừa trong React, stale clos
 
 ## Skill Nội Bộ
 
-- [Pre-push check](.codex/skills/pre-push-check/SKILL.md): dùng trước khi push code lên GitHub/Bitbucket.
+- [Pre-push check](.codex/skills/pre-push-check/SKILL.md): dùng trước khi push code lên `origin` (repository chính) hoặc backup sang `company`.
 - [Electron release](.codex/skills/electron-release/SKILL.md): dùng khi build release, kiểm tra artifact và xử lý `update-policy.json`.
 
 ## Ràng Buộc
