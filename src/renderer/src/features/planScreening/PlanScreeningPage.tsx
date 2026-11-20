@@ -1,4 +1,5 @@
 import { usePlanScreeningDetail } from "@renderer/hooks/planScreenings/usePlanScreeningDetail";
+import { useEffectiveSeatIcon } from "@renderer/hooks/seatIconConfigs/useEffectiveSeatIcon";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { useThemeStore } from "@renderer/store/theme.store";
 import {
@@ -179,6 +180,12 @@ const PlanScreeningPage = () => {
     refetch: refetchOrdersByScreening
   } = useOrdersByScreening(Number(id));
   const { data: seatTypesRes } = useSeatTypes({ current: 1, pageSize: 1000 });
+  // Icon ghế đã bán của suất: một request theo phim + phòng, backend chọn cấu hình ưu tiên. Màn hình khách
+  // giữ giao diện mặc định (không gọi API, không nhận icon qua IPC) trong V1.
+  const { imageUrl: soldIconUrl, refetch: refetchEffectiveSeatIcon } = useEffectiveSeatIcon(
+    { filmId: data?.filmId, roomId: data?.roomId },
+    !isCustomerMode
+  );
   const { mutateAsync: mutateSelectingChairsAsync } = useSelectingChairs();
   const mutateSelectingChairsRef = useRef(mutateSelectingChairsAsync);
   const seatTypes = useMemo(() => seatTypesRes?.data || [], [seatTypesRes]);
@@ -1451,10 +1458,12 @@ const PlanScreeningPage = () => {
                   await Promise.allSettled([
                     refetchPlanScreeningDetail(),
                     refetchOrdersByScreening(),
-                    refreshSelectingChairs
+                    refreshSelectingChairs,
+                    ...(data?.filmId || data?.roomId ? [refetchEffectiveSeatIcon()] : [])
                   ]);
                 }
           }
+          soldIconUrl={isCustomerMode ? null : soldIconUrl}
         />
         {!isCustomerMode && data && (
           <Actions

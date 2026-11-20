@@ -29,7 +29,10 @@ const mocks = vi.hoisted(() => {
     planData: undefined as PlanScreeningDetailProps | undefined,
     posName: undefined as string | undefined,
     seatsProps: undefined as Record<string, unknown> | undefined,
-    actionsProps: undefined as Record<string, unknown> | undefined
+    actionsProps: undefined as Record<string, unknown> | undefined,
+    effectiveSeatIconArgs: [] as unknown[][],
+    soldIconUrl: null as string | null,
+    refetchEffectiveSeatIcon: vi.fn()
   };
 });
 
@@ -61,6 +64,13 @@ vi.mock("@renderer/hooks/orders/useOrdersByScreening", () => ({
     isFetching: false,
     refetch: mocks.refetchOrdersByScreening
   })
+}));
+
+vi.mock("@renderer/hooks/seatIconConfigs/useEffectiveSeatIcon", () => ({
+  useEffectiveSeatIcon: (...args: unknown[]) => {
+    mocks.effectiveSeatIconArgs.push(args);
+    return { imageUrl: mocks.soldIconUrl, refetch: mocks.refetchEffectiveSeatIcon };
+  }
 }));
 
 vi.mock("@renderer/hooks/seatTypes/useSeatTypes", () => ({
@@ -519,5 +529,59 @@ describe("PlanScreeningPage seat ownership", () => {
       },
       { timeout: 2000 }
     );
+  });
+});
+
+describe("PlanScreeningPage sold seat icon", () => {
+  const ICON = "https://res.anvui.vn/demo/image/upload/v1/attachments_ncc/admin/seat-icons/a.png";
+
+  beforeEach(() => {
+    mocks.getSelectingChairs.mockReset().mockResolvedValue([]);
+    mocks.refetchPlanScreeningDetail.mockReset().mockResolvedValue(undefined);
+    mocks.refetchOrdersByScreening.mockReset().mockResolvedValue(undefined);
+    mocks.refetchEffectiveSeatIcon.mockReset().mockResolvedValue(undefined);
+    mocks.effectiveSeatIconArgs = [];
+    mocks.seatsProps = undefined;
+    mocks.posName = "POS-01";
+    mocks.soldIconUrl = ICON;
+    mocks.planData = {
+      id: 410078,
+      filmId: 123,
+      roomId: 12,
+      listSeats: [[seat]]
+    } as PlanScreeningDetailProps;
+  });
+
+  it("asks the effective icon with the film and room of the screening and passes it to the seat map", () => {
+    render(<PlanScreeningPage />);
+
+    expect(mocks.effectiveSeatIconArgs.at(-1)).toEqual([{ filmId: 123, roomId: 12 }, true]);
+    expect(mocks.seatsProps?.soldIconUrl).toBe(ICON);
+  });
+
+  it("does not ask before the screening is loaded and passes no icon", () => {
+    mocks.planData = undefined;
+    mocks.soldIconUrl = null;
+
+    render(<PlanScreeningPage />);
+
+    expect(mocks.effectiveSeatIconArgs.at(-1)).toEqual([
+      { filmId: undefined, roomId: undefined },
+      true
+    ]);
+  });
+
+  it("re-reads the effective icon with the seat map refresh button", async () => {
+    render(<PlanScreeningPage />);
+
+    await act(async () => {
+      const onRefreshRequested = mocks.seatsProps?.onRefreshRequested as
+        | (() => Promise<void>)
+        | undefined;
+      await onRefreshRequested?.();
+    });
+
+    expect(mocks.refetchPlanScreeningDetail).toHaveBeenCalledTimes(1);
+    expect(mocks.refetchEffectiveSeatIcon).toHaveBeenCalledTimes(1);
   });
 });

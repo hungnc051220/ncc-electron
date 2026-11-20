@@ -54,6 +54,9 @@ vi.mock("@renderer/hooks/planScreenings/usePlanScreeningDetail", () => ({
 vi.mock("@renderer/hooks/orders/useOrdersByScreening", () => ({
   useOrdersByScreening: () => ({ data: [], isFetching: false, refetch: vi.fn() })
 }));
+vi.mock("@renderer/hooks/seatIconConfigs/useEffectiveSeatIcon", () => ({
+  useEffectiveSeatIcon: () => ({ imageUrl: null, refetch: vi.fn() })
+}));
 vi.mock("@renderer/hooks/seatTypes/useSeatTypes", () => ({
   useSeatTypes: () => ({ data: { data: [] } })
 }));

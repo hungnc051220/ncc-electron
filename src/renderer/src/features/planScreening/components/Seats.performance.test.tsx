@@ -13,6 +13,10 @@ vi.mock("@renderer/hooks/seatTypes/useSeatTypes", () => ({
   useSeatTypes: () => ({ data: { data: [] } })
 }));
 
+// Ảnh icon coi như đã nạp xong: chỉ đo số lần render của ghế.
+vi.mock("@renderer/hooks/seatIconConfigs/useSeatIconImage", () => ({
+  useSeatIconImage: (url?: string | null) => (url ? "loaded" : "idle")
+}));
 vi.mock("react-selecto", () => ({ default: () => null }));
 vi.mock("./TooltipFloating", () => ({ default: () => null }));
 vi.mock("@renderer/components/Legend", () => ({ default: () => null }));
@@ -144,6 +148,40 @@ describe("Seats render isolation", () => {
 
     expect(metrics.seatRenderCounts.get("S1")).toBe(2);
     expect(metrics.seatRenderCounts.get("S2")).toBe(1);
+    expect(getTotalSeatRenders()).toBe(101);
+  });
+
+  it("keeps the same isolation when the sold seat icon is shown", () => {
+    const ICON = "https://res.anvui.vn/demo/image/upload/v1/attachments_ncc/admin/seat-icons/a.png";
+    const { rerender } = render(
+      <MemoryRouter>
+        <Seats
+          data={planScreening}
+          orders={orders}
+          selectedSeats={selectedSeats}
+          pendingSelectedSeatKeys={["1-1"]}
+          setSelectedSeats={setSelectedSeats}
+          soldIconUrl={ICON}
+        />
+      </MemoryRouter>
+    );
+
+    expect(getTotalSeatRenders()).toBe(100);
+
+    rerender(
+      <MemoryRouter>
+        <Seats
+          data={planScreening}
+          orders={orders}
+          selectedSeats={selectedSeats}
+          selectingSeatsByOther={{ "1-1": "POS-B" }}
+          conflictedSelectedSeatKeys={["1-1"]}
+          setSelectedSeats={setSelectedSeats}
+          soldIconUrl={ICON}
+        />
+      </MemoryRouter>
+    );
+
     expect(getTotalSeatRenders()).toBe(101);
   });
 });
