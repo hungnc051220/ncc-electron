@@ -89,6 +89,12 @@ export const navConfig: NavConfigItem[] = [
         to: "/seat-types"
       },
       {
+        label: "Cấu hình icon ghế",
+        key: "seat-icon-configs",
+        permissionKey: "seat_icon_configs",
+        to: "/seat-icon-configs"
+      },
+      {
         label: "Danh sách phòng chiếu",
         key: "screening-rooms",
         permissionKey: "screening_rooms",

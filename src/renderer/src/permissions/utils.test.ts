@@ -119,6 +119,40 @@ describe("permissions/utils", () => {
     expect(hasPermission(assignments, "paper_vouchers", "access")).toBe(false);
   });
 
+  it("does not grant seat_icon_configs from the legacy seat types menu", () => {
+    const assignments = legacyMenusToAssignments([
+      {
+        id: 5,
+        customerRoleId: 99,
+        menu: "/seat-types",
+        menuName: "Loại ghế, vị trí",
+        readOnly: true,
+        edit: true
+      }
+    ]);
+
+    expect(canAccessRoute(assignments, "/seat-types")).toBe(true);
+    expect(canAccessRoute(assignments, "/seat-icon-configs")).toBe(false);
+    expect(hasPermission(assignments, "seat_icon_configs", "access")).toBe(false);
+  });
+
+  it("grants seat_icon_configs only from its own key", () => {
+    const assignments = legacyMenusToAssignments([
+      {
+        id: 6,
+        customerRoleId: 99,
+        menu: "seat_icon_configs",
+        menuName: "Cấu hình icon ghế",
+        readOnly: true,
+        edit: false
+      }
+    ]);
+
+    expect(canAccessRoute(assignments, "/seat-icon-configs")).toBe(true);
+    expect(hasPermission(assignments, "seat_icon_configs", "list")).toBe(true);
+    expect(hasPermission(assignments, "seat_icon_configs", "create")).toBe(false);
+  });
+
   it("keeps /vouchers and /paper-vouchers on separate permissions", () => {
     const assignments = legacyMenusToAssignments([
       {

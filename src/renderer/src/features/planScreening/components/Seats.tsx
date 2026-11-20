@@ -1,4 +1,5 @@
 import Legend from "@renderer/components/Legend";
+import { useSeatIconImage } from "@renderer/hooks/seatIconConfigs/useSeatIconImage";
 import { useSeatTypes } from "@renderer/hooks/seatTypes/useSeatTypes";
 import { cn, resolveOrderPaymentStatus } from "@renderer/lib/utils";
 import {
@@ -26,6 +27,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router";
 import Selecto from "react-selecto";
 import Seat from "./Seat";
+import { fitSeatSize, SEAT_COLUMN_GAP } from "./seatLayout";
 import TooltipFloating from "./TooltipFloating";
 import {
   buildCancelOrderSelection,
@@ -39,9 +41,6 @@ type TooltipPosition = {
   x: number;
   y: number;
 };
-
-const SEAT_COLUMN_GAP = 4;
-const SEAT_ROW_GAP = 3;
 
 interface SeatsProps {
   data?: PlanScreeningDetailProps;
@@ -68,6 +67,8 @@ interface SeatsProps {
   cancelOrderSelection?: CancelOrderSelection | null;
   onCancelOrderSelectionChange?: (selection: CancelOrderSelection | null) => void;
   onIncompleteCancelOrder?: () => void;
+  /** Ảnh icon hiệu lực của ghế đã bán (`GET /seat-icon-configs/effective`); không truyền = giao diện mặc định. */
+  soldIconUrl?: string | null;
 }
 
 const getSeatUniqueKey = (seat: ListSeat): string => {
@@ -98,7 +99,8 @@ const Seats = ({
   spotlightSeatKeys,
   cancelOrderSelection,
   onCancelOrderSelectionChange,
-  onIncompleteCancelOrder
+  onIncompleteCancelOrder,
+  soldIconUrl
 }: SeatsProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -115,6 +117,11 @@ const Seats = ({
 
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const returnTo = searchParams.get("returnTo");
+  // Nạp trước ảnh một lần cho cả sơ đồ (kể cả khi đang hủy vé để quay lại không phải chờ). Chỉ bật icon khi
+  // ảnh đã tải xong; ảnh lỗi ⇒ toàn bộ sơ đồ giữ giao diện mặc định. Chế độ hủy vé luôn dùng giao diện cũ.
+  const soldIconStatus = useSeatIconImage(soldIconUrl);
+  const activeSoldIconUrl =
+    !cancelMode && soldIconUrl && soldIconStatus === "loaded" ? soldIconUrl : null;
 
   const seats = data?.listSeats;
   const resolvedSeatTypes = useMemo(
@@ -611,34 +618,7 @@ const Seats = ({
 
     if (!maxRows || !maxSeatsPerRow) return null;
 
-    // ===== Layout constants (match CSS thật) =====
-    const seatGap = SEAT_COLUMN_GAP;
-    const rowGap = SEAT_ROW_GAP;
-    const safety = 8; // buffer chống overflow
-
-    // ===== Height-based seat size =====
-    const heightSeat = Math.floor((usableHeight - rowGap * (maxRows - 1) - safety) / maxRows);
-
-    // ===== Width-based seat size =====
-    // items = seats + 2 labels
-    const totalItems = maxSeatsPerRow + 2;
-
-    const widthSeat = Math.floor((usableWidth - seatGap * (totalItems - 1) - safety) / totalItems);
-
-    // ===== Lấy size nhỏ hơn =====
-    let size = Math.min(heightSeat, widthSeat);
-
-    // ===== Clamp POS-friendly =====
-    size = Math.max(12, Math.min(size, 42));
-
-    // ===== Verify thật grid width =====
-    const realGridWidth = size * totalItems + seatGap * (totalItems - 1);
-
-    if (realGridWidth > usableWidth) {
-      size -= 1;
-    }
-
-    return size;
+    return fitSeatSize(usableWidth, usableHeight, maxRows, maxSeatsPerRow);
   }, [seats, availableFloors]);
 
   // Tính toán kích thước ghế tự động để fit vào màn hình
@@ -760,6 +740,7 @@ const Seats = ({
               isCancelPrimary={cancelMode && cancelOrderSelection?.directSeatKey === seatUniqueKey}
               onHover={handleHover}
               onLeave={handleLeave}
+              soldIconUrl={activeSoldIconUrl}
             />
           );
         })}
@@ -793,7 +774,8 @@ const Seats = ({
     selectingSeatKeysByOther,
     pendingSelectedSeatKeySet,
     conflictedSelectedSeatKeySet,
-    spotlightSeatKeySet
+    spotlightSeatKeySet,
+    activeSoldIconUrl
   ]);
 
   if (!data) return null;
@@ -934,7 +916,22 @@ const Seats = ({
 
         <div className="flex flex-wrap justify-center gap-3 shrink-0">
           <Legend color="bg-whis" label="Đang chọn" />
-          <Legend color="bg-trunks dark:bg-gray-800" label="Ghế đã bán" />
+          {activeSoldIconUrl ? (
+            <div className="flex items-center gap-2">
+              <img
+                src={activeSoldIconUrl}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="size-3 xl:size-4 rounded-sm object-cover bg-trunks dark:bg-gray-700"
+              />
+              <span className="font-bold text-zeno dark:text-gray-200 text-[11px] xl:text-xs">
+                Ghế đã bán
+              </span>
+            </div>
+          ) : (
+            <Legend color="bg-trunks dark:bg-gray-800" label="Ghế đã bán" />
+          )}
           {seatTypeLegends.map((item) => (
             <div key={item.id} className="flex items-center gap-2">
               <div

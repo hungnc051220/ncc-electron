@@ -105,6 +105,14 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     actions: ["access", "list", "view", "create", "update", "delete"]
   },
   {
+    key: "seat_icon_configs",
+    module: "Quản lý danh sách",
+    label: "Cấu hình icon ghế",
+    route: "/seat-icon-configs",
+    description: "Ảnh thay cho ô ghế đã bán trên sơ đồ bán vé theo toàn rạp, phòng chiếu hoặc phim",
+    actions: ["access", "list", "view", "create", "update", "delete"]
+  },
+  {
     key: "screening_rooms",
     module: "Quản lý danh sách",
     label: "Phòng chiếu",

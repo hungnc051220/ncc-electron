@@ -33,6 +33,7 @@ import RevenueSharingPage from "./features/revenueSharing/RevenueSharingPage";
 import RefundsPage from "./features/refunds/RefundsPage";
 import ScreeningRoomSeatMapPage from "./features/screeningRooms/ScreeningRoomSeatMapPage";
 import ScreeningRoomsPage from "./features/screeningRooms/ScreeningRoomsPage";
+import SeatIconConfigsPage from "./features/seatIconConfigs/SeatIconConfigsPage";
 import SeatTypesPage from "./features/seatTypes/SeatTypesPage";
 import SettingPage from "./features/settings/SettingPage";
 import ShowtimesPage from "./features/showtimes/ShowtimesPage";
@@ -121,6 +122,10 @@ export const router = createHashRouter([
           {
             path: "/seat-types",
             element: withAccess("seat_types", <SeatTypesPage />)
+          },
+          {
+            path: "/seat-icon-configs",
+            element: withAccess("seat_icon_configs", <SeatIconConfigsPage />)
           },
           {
             path: "/revenue-sharing",

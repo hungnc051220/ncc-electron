@@ -1,6 +1,6 @@
 import { cn } from "@renderer/lib/utils";
 import type { ListSeat } from "@shared/types";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 
 const colorMap: { [key: string]: string } = {
   0: "bg-jiren text-trunks",
@@ -101,6 +101,11 @@ interface SeatProps {
   isCancelPrimary?: boolean;
   onHover?: (seat: ListSeat, e: React.MouseEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
+  /**
+   * Ảnh icon hiệu lực của ghế đã bán thông thường (`null`/`undefined` = giao diện hiện tại). Sơ đồ không
+   * truyền ở chế độ chọn ghế để hủy vé.
+   */
+  soldIconUrl?: string | null;
 }
 
 const Seat = ({
@@ -121,8 +126,26 @@ const Seat = ({
   isCancelRelated,
   isCancelPrimary,
   onHover,
-  onLeave
+  onLeave,
+  soldIconUrl
 }: SeatProps) => {
+  // Ảnh lỗi riêng ô này ⇒ quay về giao diện hiện tại (màu + mã ghế).
+  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null);
+  // Chỉ ghế đã bán thông thường: không giữ chỗ, chờ thanh toán, hợp đồng, vé mời, lối đi, đang chọn,
+  // không thuộc đơn đang chọn để hủy.
+  const isSoldIconShown =
+    !!soldIconUrl &&
+    failedIconUrl !== soldIconUrl &&
+    seat.status === 1 &&
+    !isPendingPayment &&
+    !seat.isHold &&
+    !seat.isContract &&
+    !seat.isInvitation &&
+    seat.type !== 12 &&
+    !isSelected &&
+    !isCancelRelated &&
+    !isCancelPrimary;
+
   const handleClick = useCallback(() => {
     if (canSelect && (!isSelectingByOther || isSelected)) {
       onSelect(seat);
@@ -140,6 +163,8 @@ const Seat = ({
     seat.status !== 1 &&
     seat.type !== 12;
 
+  // Viền loại ghế (VIP/đôi) của ghế đã bán giữ nguyên khi có ảnh: ảnh `absolute inset-0` nằm trong
+  // padding box nên không che viền (ô ghế là border-box).
   const shouldShowSoldSeatTypeBorder =
     !!seatColor &&
     seat.status === 1 &&
@@ -173,7 +198,9 @@ const Seat = ({
         isCancelRelated &&
           "opacity-100 saturate-100 bg-red-400 text-white ring-2 ring-red-200/80 z-10 dark:bg-red-700 dark:ring-red-300/60",
         isCancelPrimary &&
-          "bg-red-600 text-white ring-2 ring-red-100 shadow-[0_0_0_3px_rgba(220,38,38,0.45),0_6px_16px_rgba(127,29,29,0.35)] z-20 dark:bg-red-500 dark:ring-red-200"
+          "bg-red-600 text-white ring-2 ring-red-100 shadow-[0_0_0_3px_rgba(220,38,38,0.45),0_6px_16px_rgba(127,29,29,0.35)] z-20 dark:bg-red-500 dark:ring-red-200",
+        // Cắt ảnh theo góc bo của ô ghế.
+        isSoldIconShown && "overflow-hidden"
       )}
       style={{
         backgroundColor: shouldShowPositionColor ? seatColor : undefined,
@@ -206,15 +233,31 @@ const Seat = ({
           className="seat-conflict-flash pointer-events-none absolute inset-0 rounded-sm bg-red-500/45"
         />
       )}
-      <p
-        className={cn(
-          "relative text-xs",
-          isSelectingByOther && !isSelected && "font-bold underline"
-        )}
-        style={{ fontSize: `${Math.max(10, size * 0.25)}px` }}
-      >
-        {seat.type !== 12 ? seat.code : ""}
-      </p>
+      {isSoldIconShown ? (
+        // Ảnh phủ kín ô ghế, ẩn mã ghế; mã vẫn có trong data attribute, tooltip khi rê chuột và cho
+        // trình đọc màn hình.
+        <>
+          <img
+            src={soldIconUrl}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            onError={() => setFailedIconUrl(soldIconUrl)}
+            className="pointer-events-none absolute inset-0 size-full select-none object-cover"
+          />
+          <span className="sr-only">{seat.code}</span>
+        </>
+      ) : (
+        <p
+          className={cn(
+            "relative text-xs",
+            isSelectingByOther && !isSelected && "font-bold underline"
+          )}
+          style={{ fontSize: `${Math.max(10, size * 0.25)}px` }}
+        >
+          {seat.type !== 12 ? seat.code : ""}
+        </p>
+      )}
     </div>
   );
 };
@@ -249,7 +292,8 @@ const areSeatPropsEqual = (previous: SeatProps, next: SeatProps) =>
   previous.isCancelRelated === next.isCancelRelated &&
   previous.isCancelPrimary === next.isCancelPrimary &&
   previous.onHover === next.onHover &&
-  previous.onLeave === next.onLeave;
+  previous.onLeave === next.onLeave &&
+  previous.soldIconUrl === next.soldIconUrl;
 
 const MemoizedSeat = memo(Seat, areSeatPropsEqual);
 
